@@ -6,12 +6,14 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { setDraft } from '@/lib/onboardingDraft';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
+import { radius, space, type } from '@/theme/tokens';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function EmailScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const [email, setEmail] = useState('');
   const valid = email.length === 0 || EMAIL_RE.test(email);
 
@@ -22,28 +24,32 @@ export default function EmailScreen() {
 
   return (
     <Screen
+      onBack={() => router.back()}
       footer={
         <>
           <PrimaryButton
             label="Continue"
             onPress={() => next(true)}
             disabled={email.length > 0 && !valid}
+            testID="continue"
           />
-          <PrimaryButton label="Skip for now" variant="ghost" onPress={() => next(false)} />
+          <PrimaryButton label="Skip for now" variant="ghost" onPress={() => next(false)} testID="skip" />
         </>
       }
     >
-      <View style={styles.iconRow}>
-        <Ionicons name="mail-outline" size={22} color={colors.brand} />
-        <Text style={styles.title}>Optional, but helpful.</Text>
+      <View style={[styles.iconWrap, { backgroundColor: colors.brandTint }]}>
+        <Ionicons name="mail-outline" size={24} color={colors.accent} />
       </View>
-      <Text style={styles.sub}>
+      <Text style={[type.title, styles.title, { color: colors.ink }]} accessibilityRole="header">
+        Optional, but helpful.
+      </Text>
+      <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
         Add an email only if you'd like a way to recover your space later. It's never required and
         never shown to other users.
       </Text>
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, { borderColor: valid ? colors.border : colors.danger, color: colors.ink, backgroundColor: colors.surface }]}
         placeholder="Enter your email"
         placeholderTextColor={colors.inkMuted}
         autoCapitalize="none"
@@ -51,25 +57,34 @@ export default function EmailScreen() {
         autoCorrect={false}
         value={email}
         onChangeText={setEmail}
+        accessibilityLabel="Email address (optional)"
+        testID="email-input"
       />
-      {!valid ? <Text style={styles.err}>That doesn't look like a valid email.</Text> : null}
+      {!valid ? (
+        <Text style={[type.caption, { color: colors.danger, marginTop: space.sm }]}>
+          That doesn't look like a valid email.
+        </Text>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  iconRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.sm },
-  title: { ...type.title, color: colors.ink },
-  sub: { ...type.body, color: colors.inkMuted, marginBottom: space.lg },
+  iconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: space.md,
+  },
+  title: { marginBottom: space.xs },
+  sub: { marginBottom: space.lg },
   input: {
     height: 54,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
     paddingHorizontal: space.md,
     ...type.body,
-    color: colors.ink,
   },
-  err: { ...type.caption, color: colors.danger, marginTop: space.sm },
 });

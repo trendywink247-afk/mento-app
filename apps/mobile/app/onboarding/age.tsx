@@ -1,141 +1,88 @@
-import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { DobPicker, dobToISO, type Dob } from '@/components/DobPicker';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { setDraft } from '@/lib/onboardingDraft';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
+import { radius, space, type } from '@/theme/tokens';
 
-const MIN_AGE = 18; // mirrors server gate; server is the source of truth
-const ISO_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MIN_AGE = 18; // mirrors the server gate (server is the source of truth)
 
-function isoDate(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-    d.getDate(),
-  ).padStart(2, '0')}`;
-}
-
-function ageFrom(dob: Date, today = new Date()): number {
-  let age = today.getFullYear() - dob.getFullYear();
-  const m = today.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age -= 1;
+function ageFrom(dob: Dob, today = new Date()): number {
+  let age = today.getFullYear() - dob.year;
+  const m = today.getMonth() + 1 - dob.month;
+  if (m < 0 || (m === 0 && today.getDate() < dob.day)) age -= 1;
   return age;
 }
 
 export default function AgeScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const today = new Date();
-  const isWeb = Platform.OS === 'web';
+  // Default to the youngest allowed DOB so the gate is obvious and the picker isn't empty.
+  const [dob, setDob] = useState<Dob>({ day: 1, month: 1, year: today.getFullYear() - MIN_AGE });
 
-  const [dob, setDob] = useState<Date | null>(null);
-  const [webText, setWebText] = useState(''); // YYYY-MM-DD on web
-  const [show, setShow] = useState(Platform.OS === 'ios');
-
-  // Resolve the effective DOB from whichever input the platform uses.
-  let effectiveDob: Date | null = dob;
-  if (isWeb) {
-    effectiveDob =
-      ISO_RE.test(webText) && !Number.isNaN(Date.parse(webText)) ? new Date(`${webText}T00:00:00`) : null;
-  }
-
-  const age = effectiveDob ? ageFrom(effectiveDob, today) : null;
-  const underAge = age !== null && age < MIN_AGE;
-  const future = effectiveDob !== null && effectiveDob > today;
-  const canContinue = effectiveDob !== null && !underAge && !future;
-
-  const onNativeChange = (_: DateTimePickerEvent, selected?: Date) => {
-    if (Platform.OS === 'android') setShow(false);
-    if (selected) setDob(selected);
-  };
+  const age = ageFrom(dob, today);
+  const future = new Date(dob.year, dob.month - 1, dob.day) > today;
+  const underAge = !future && age < MIN_AGE;
+  const canContinue = !future && !underAge;
 
   const onContinue = () => {
-    if (!effectiveDob || !canContinue) return;
-    setDraft({ dob: isoDate(effectiveDob) });
+    if (!canContinue) return;
+    setDraft({ dob: dobToISO(dob) });
     router.push('/onboarding/email');
   };
 
   return (
     <Screen
+      onBack={() => router.back()}
       footer={
         <>
           {underAge ? (
-            <Text style={styles.block}>Mento is available to people {MIN_AGE} and older.</Text>
+            <Text style={[styles.block, { color: colors.danger }]}>
+              Mento is available to people {MIN_AGE} and older.
+            </Text>
           ) : null}
-          {future ? <Text style={styles.block}>That date is in the future.</Text> : null}
-          <PrimaryButton label="Continue" onPress={onContinue} disabled={!canContinue} />
+          {future ? (
+            <Text style={[styles.block, { color: colors.danger }]}>That date is in the future.</Text>
+          ) : null}
+          <PrimaryButton label="Continue" onPress={onContinue} disabled={!canContinue} testID="continue" />
         </>
       }
     >
-      <View style={styles.lockRow}>
-        <Ionicons name="shield-checkmark-outline" size={20} color={colors.brand} />
-        <Text style={type.caption}>Your age is never shown to other users.</Text>
+      <View style={[styles.shieldRow, { backgroundColor: colors.brandTint }]}>
+        <Ionicons name="shield-checkmark-outline" size={18} color={colors.accent} />
+        <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
+          Your age is never shown to other users.
+        </Text>
       </View>
 
-      <Text style={styles.title}>How old are you?</Text>
-      <Text style={styles.sub}>
+      <Text style={[type.title, styles.title, { color: colors.ink }]} accessibilityRole="header">
+        How old are you?
+      </Text>
+      <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
         Your date of birth helps us keep Mento safe, while keeping you anonymous.
       </Text>
 
-      {isWeb ? (
-        <TextInput
-          testID="dob-input"
-          style={styles.dateField}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor={colors.inkMuted}
-          autoCapitalize="none"
-          value={webText}
-          onChangeText={setWebText}
-        />
-      ) : Platform.OS === 'android' ? (
-        <Pressable style={styles.dateFieldRow} onPress={() => setShow(true)}>
-          <Text style={[type.body, { color: dob ? colors.ink : colors.inkMuted }]}>
-            {dob ? isoDate(dob) : 'Select your date of birth'}
-          </Text>
-          <Ionicons name="calendar-outline" size={20} color={colors.inkMuted} />
-        </Pressable>
-      ) : null}
-
-      {!isWeb && show ? (
-        <DateTimePicker
-          value={dob ?? new Date(today.getFullYear() - MIN_AGE, today.getMonth(), today.getDate())}
-          mode="date"
-          display="spinner"
-          maximumDate={today}
-          onChange={onNativeChange}
-          textColor={colors.ink}
-        />
-      ) : null}
+      <DobPicker value={dob} onChange={setDob} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  lockRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.lg },
-  title: { ...type.title, color: colors.ink, marginBottom: space.sm },
-  sub: { ...type.body, color: colors.inkMuted, marginBottom: space.lg },
-  dateField: {
-    height: 54,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: space.md,
-    ...type.body,
-    color: colors.ink,
-  },
-  dateFieldRow: {
-    height: 54,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    paddingHorizontal: space.md,
+  shieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: space.sm,
+    padding: space.sm,
+    borderRadius: radius.md,
+    marginBottom: space.lg,
   },
-  block: { ...type.caption, color: colors.danger, textAlign: 'center' },
+  title: { marginBottom: space.xs },
+  sub: { marginBottom: space.lg },
+  block: { ...type.caption, textAlign: 'center' },
 });
