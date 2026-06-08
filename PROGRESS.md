@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-06-09 (session 7) — Conversation Options sheet (end-to-end) ✅
+
+**Goal:** wire the Conversation Options sheet to the backend — lock/mask/pause/end/wipe/report/block — each a real flow; report/block safety-checked. Done.
+
+**Backend**
+- `conversation` router: `/lock`+`/unlock` (4-digit PIN, **pbkdf2-hashed**, never stored raw), `/status-mask`, `/pause`, plus existing `/end`+`/wipe`. `/report` and `/block` both **end the chat and file a `ModerationEvent`**; block sets `blocked=True`.
+- **Block prevents re-match** (Trust & Safety #9): `_pick_available_listener` excludes listeners the user has blocked. Deterministically tested.
+- **Report surfaces to a human reviewer, not just stored:** `ModerationEvent` gained `reviewed`/`reviewed_by` (migration `ff69c9001c14`); new `moderation` router exposes an **admin-token-guarded** `/moderation/queue` + `/{id}/resolve`. `ADMIN_TOKEN` in settings; empty = queue disabled.
+- `security.hash_pin`/`verify_pin`. Tests: **10 passed** (lock/unlock PIN, status/pause, report→queue, block→ends+blocked+no-rematch while a *different* user still matches that listener).
+
+**Mobile**
+- `components/chat/ConversationOptions.tsx` — shared custom overlay sheet (web + native), wired to new typed api methods. Report/Block/End/Wipe leave the chat (→ landing); lock/pause/status reflect server state inline. Added to **both** ChatScreen variants via the header ⋮ menu. `scrim` token added. `tsc` clean.
+
+**Verified on Expo web (Playwright):** sheet opens; lock(PIN)/pause/status-mask/end/wipe/report/block all work; **report & block land in the review queue and the blocked listener is excluded from re-match.** 0 console errors.
+
+**Note on running infra:** had a stale uvicorn (old code) holding :8000 — killed all `python` procs and restarted; new routes then registered. If endpoints 404 with `{"detail":"Not Found"}`, suspect a stale server.
+
+**Next:** journals + AI assistant; contribution surface; mentor discovery list; native device verification (Maestro) for the stream-chat-expo UI + the options sheet.
+
+---
+
 ## 2026-06-09 (session 6) — real-time Stream chat + server-side crisis enforcement ✅
 
 **Goal:** wire real-time Stream chat; make the crisis scan un-bypassable on the real message flow; keep Panda Wipe a real server delete; smoke-test on Expo web. Done.
