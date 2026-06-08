@@ -9,7 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import init_db
-from app.routers import conversation, health, match, onboarding, safety, stream_hooks
+from app.routers import (
+    conversation,
+    health,
+    match,
+    moderation,
+    onboarding,
+    safety,
+    stream_hooks,
+)
 
 logging.basicConfig(level=logging.INFO)
 settings = get_settings()
@@ -43,3 +51,4 @@ app.include_router(match.router, prefix=API)
 app.include_router(safety.router, prefix=API)
 app.include_router(conversation.router, prefix=API)
 app.include_router(stream_hooks.router, prefix=API)
+app.include_router(moderation.router, prefix=API)

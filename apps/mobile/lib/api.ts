@@ -30,6 +30,14 @@ export type ScanResult = {
   message: string | null;
 };
 
+export type ConversationState = {
+  id: string;
+  status: string;
+  is_locked: boolean;
+  is_paused: boolean;
+  status_mask: string | null;
+};
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -81,4 +89,23 @@ export const api = {
 
   wipeConversation: (id: string) =>
     request<{ status: string }>(`/conversations/${id}/wipe`, { method: 'POST' }, true),
+
+  // --- Conversation options sheet ---
+  lockConversation: (id: string, pin: string) =>
+    request<ConversationState>(`/conversations/${id}/lock`, { method: 'POST', body: JSON.stringify({ pin }) }, true),
+
+  unlockConversation: (id: string, pin: string) =>
+    request<ConversationState>(`/conversations/${id}/unlock`, { method: 'POST', body: JSON.stringify({ pin }) }, true),
+
+  setStatusMask: (id: string, mask: string | null) =>
+    request<ConversationState>(`/conversations/${id}/status-mask`, { method: 'POST', body: JSON.stringify({ mask }) }, true),
+
+  setPause: (id: string, paused: boolean) =>
+    request<ConversationState>(`/conversations/${id}/pause`, { method: 'POST', body: JSON.stringify({ paused }) }, true),
+
+  reportConversation: (id: string, reason: string | null) =>
+    request<{ status: string }>(`/conversations/${id}/report`, { method: 'POST', body: JSON.stringify({ reason }) }, true),
+
+  blockConversation: (id: string, reason: string | null) =>
+    request<{ status: string }>(`/conversations/${id}/block`, { method: 'POST', body: JSON.stringify({ reason }) }, true),
 };

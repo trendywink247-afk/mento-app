@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 
+import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { getStreamClient } from '@/lib/streamClient';
 import { colors, radius, space, type } from '@/theme/tokens';
@@ -36,12 +37,13 @@ type Msg = { id: string; text: string; mine: boolean };
 
 export default function ChatScreenWeb() {
   const router = useRouter();
-  const { listener, channel: channelId } = useLocalSearchParams<{
+  const { id: conversationId, listener, channel: channelId } = useLocalSearchParams<{
     id: string;
     listener?: string;
     channel?: string;
   }>();
   const listenerName = listener ?? 'Your listener';
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const [ready, setReady] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -135,6 +137,9 @@ export default function ChatScreenWeb() {
           <Text style={type.label}>{listenerName}</Text>
           <Text style={styles.status}>● Connected</Text>
         </View>
+        <Pressable onPress={() => setOptionsOpen(true)} hitSlop={12} testID="open-options">
+          <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
+        </Pressable>
       </View>
 
       {error ? (
@@ -178,6 +183,13 @@ export default function ChatScreenWeb() {
           </View>
         </View>
       )}
+
+      <ConversationOptions
+        conversationId={conversationId}
+        visible={optionsOpen}
+        onClose={() => setOptionsOpen(false)}
+        onLeft={() => router.replace('/')}
+      />
     </SafeAreaView>
   );
 }

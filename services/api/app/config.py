@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     jwt_ttl_days: int = 90
     min_age: int = 18
 
+    # Guards the moderation review queue. Empty = queue disabled (no console yet).
+    admin_token: str = ""
+
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"
     redis_url: str = "redis://localhost:6379/0"
 

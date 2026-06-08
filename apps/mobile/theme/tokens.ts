@@ -18,6 +18,7 @@ export const colors = {
   danger: '#E5534B',
   border: '#E6E2F2',
   onBrand: '#FFFFFF',
+  scrim: 'rgba(30,27,57,0.4)', // modal/sheet backdrop
 } as const;
 
 export const space = {

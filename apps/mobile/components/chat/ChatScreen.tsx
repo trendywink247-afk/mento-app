@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 import { Channel, Chat, MessageComposer, MessageList } from 'stream-chat-expo';
 
+import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { getStreamClient } from '@/lib/streamClient';
 import { colors, radius, space, type } from '@/theme/tokens';
@@ -30,7 +31,7 @@ type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
 
 export default function ChatScreen() {
   const router = useRouter();
-  const { listener, channel: channelId } = useLocalSearchParams<{
+  const { id: conversationId, listener, channel: channelId } = useLocalSearchParams<{
     id: string;
     listener?: string;
     channel?: string;
@@ -40,6 +41,7 @@ export default function ChatScreen() {
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   // Surface each crisis message once, so dismissing it isn't undone by later events.
   const shownRef = useRef<Set<string>>(new Set());
 
@@ -109,7 +111,9 @@ export default function ChatScreen() {
           <Text style={type.label}>{listenerName}</Text>
           <Text style={styles.status}>● Connected</Text>
         </View>
-        <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
+        <Pressable onPress={() => setOptionsOpen(true)} hitSlop={12} testID="open-options">
+          <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
+        </Pressable>
       </View>
 
       {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
@@ -133,6 +137,13 @@ export default function ChatScreen() {
           <Text style={[type.body, { color: colors.inkMuted }]}>Opening your conversation…</Text>
         </View>
       )}
+
+      <ConversationOptions
+        conversationId={conversationId}
+        visible={optionsOpen}
+        onClose={() => setOptionsOpen(false)}
+        onLeft={() => router.replace('/')}
+      />
     </SafeAreaView>
   );
 }

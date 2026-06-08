@@ -55,8 +55,8 @@ def db_session():
         with test_engine.begin() as conn:
             conn.execute(
                 text(
-                    "TRUNCATE conversations, listener_profiles, users, safety_flags "
-                    "RESTART IDENTITY CASCADE"
+                    "TRUNCATE conversations, listener_profiles, users, safety_flags, "
+                    "moderation_events RESTART IDENTITY CASCADE"
                 )
             )
     session = TestSession()

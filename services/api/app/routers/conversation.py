@@ -1,4 +1,10 @@
-"""Conversation lifecycle: end, and Panda Wipe (real server-side delete, DECISIONS §H.2)."""
+"""Conversation lifecycle + options sheet (DECISIONS §H.2, PRD §6/§11).
+
+Owner-only actions on a conversation: lock (PIN), status mask, pause notifications,
+end, Panda Wipe (real server delete), report, block. Report and block both END the
+conversation and file a moderation event; block additionally prevents that listener
+from ever being re-matched to this user (see services/matching).
+"""
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -8,9 +14,19 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.conversation import Conversation
-from app.models.enums import ConversationStatus
+from app.models.enums import ConversationStatus, ModerationLevel
 from app.models.listener import ListenerProfile
-from app.security import current_user_id
+from app.models.moderation import ModerationEvent
+from app.schemas import (
+    ConversationState,
+    LockRequest,
+    OkResult,
+    PauseRequest,
+    ReportRequest,
+    StatusMaskRequest,
+    UnlockRequest,
+)
+from app.security import current_user_id, hash_pin, verify_pin
 from app.services import stream
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
@@ -29,22 +45,95 @@ def _release_listener(db: Session, convo: Conversation) -> None:
         listener.active_conversations -= 1
 
 
-@router.post("/{convo_id}/end")
+def _state(convo: Conversation) -> ConversationState:
+    return ConversationState(
+        id=convo.id,
+        status=convo.status.value,
+        is_locked=convo.is_locked,
+        is_paused=convo.is_paused,
+        status_mask=convo.status_mask,
+    )
+
+
+# --- Options sheet: per-conversation controls ---
+@router.post("/{convo_id}/lock", response_model=ConversationState)
+def lock_conversation(
+    convo_id: str,
+    payload: LockRequest,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ConversationState:
+    """Lock the chat behind a 4-digit PIN. The PIN is hashed, never stored raw."""
+    convo = _owned(db, convo_id, user_id)
+    convo.pin_hash = hash_pin(payload.pin, convo.id)
+    convo.is_locked = True
+    db.commit()
+    db.refresh(convo)
+    return _state(convo)
+
+
+@router.post("/{convo_id}/unlock", response_model=ConversationState)
+def unlock_conversation(
+    convo_id: str,
+    payload: UnlockRequest,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ConversationState:
+    convo = _owned(db, convo_id, user_id)
+    if not verify_pin(payload.pin, convo.id, convo.pin_hash):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "incorrect PIN")
+    convo.is_locked = False
+    db.commit()
+    db.refresh(convo)
+    return _state(convo)
+
+
+@router.post("/{convo_id}/status-mask", response_model=ConversationState)
+def set_status_mask(
+    convo_id: str,
+    payload: StatusMaskRequest,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ConversationState:
+    """Panda Mask: present a chosen status to the other side (null clears it)."""
+    convo = _owned(db, convo_id, user_id)
+    convo.status_mask = payload.mask
+    db.commit()
+    db.refresh(convo)
+    return _state(convo)
+
+
+@router.post("/{convo_id}/pause", response_model=ConversationState)
+def set_pause(
+    convo_id: str,
+    payload: PauseRequest,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ConversationState:
+    """Panda Pause: mute notifications for this conversation."""
+    convo = _owned(db, convo_id, user_id)
+    convo.is_paused = payload.paused
+    db.commit()
+    db.refresh(convo)
+    return _state(convo)
+
+
+@router.post("/{convo_id}/end", response_model=OkResult)
 def end_conversation(
     convo_id: str,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
-) -> dict:
+) -> OkResult:
     """End the chat. Messages are NOT deleted (this matches the in-app copy)."""
     convo = _owned(db, convo_id, user_id)
     convo.status = ConversationStatus.ended
     convo.ended_at = datetime.now(timezone.utc)
     _release_listener(db, convo)
     db.commit()
-    return {"status": "ended"}
+    return OkResult(status="ended")
 
 
-@router.post("/{convo_id}/wipe")
+@router.post("/{convo_id}/wipe", response_model=dict)
 def wipe_conversation(
     convo_id: str,
     user_id: str = Depends(current_user_id),
@@ -59,3 +148,54 @@ def wipe_conversation(
     _release_listener(db, convo)
     db.commit()
     return {"status": "wiped", "deleted_from": ["device", "servers"]}
+
+
+# --- Report / Block (safety) ---
+def _file_moderation_and_end(
+    db: Session, convo: Conversation, user_id: str, reason: str | None, *, blocked: bool
+) -> None:
+    """Report/Block both file a moderation event (unreviewed → human queue) and end
+    the chat (DoD: 'removes the chat and files a moderation event')."""
+    db.add(
+        ModerationEvent(
+            reporter_id=user_id,
+            subject_id=convo.listener_id,
+            conversation_id=convo.id,
+            level=ModerationLevel.suspension if blocked else ModerationLevel.warning,
+            reason=reason,
+            blocked=blocked,
+            reviewed=False,
+        )
+    )
+    if convo.status == ConversationStatus.active:
+        convo.status = ConversationStatus.ended
+        convo.ended_at = datetime.now(timezone.utc)
+        _release_listener(db, convo)
+
+
+@router.post("/{convo_id}/report", response_model=OkResult)
+def report_conversation(
+    convo_id: str,
+    payload: ReportRequest,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    convo = _owned(db, convo_id, user_id)
+    _file_moderation_and_end(db, convo, user_id, payload.reason, blocked=False)
+    db.commit()
+    return OkResult(status="reported")
+
+
+@router.post("/{convo_id}/block", response_model=OkResult)
+def block_conversation(
+    convo_id: str,
+    payload: ReportRequest,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Block this listener: files a moderation event, ends the chat, and ensures the
+    listener can never be re-matched to this user (enforced in services/matching)."""
+    convo = _owned(db, convo_id, user_id)
+    _file_moderation_and_end(db, convo, user_id, payload.reason, blocked=True)
+    db.commit()
+    return OkResult(status="blocked")

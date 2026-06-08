@@ -14,6 +14,7 @@ from app.models.enums import (
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
+from app.models.moderation import ModerationEvent
 from app.models.user import User
 from app.services import stream
 
@@ -22,11 +23,25 @@ class NoListenerAvailable(Exception):
     """No approved, online listener has spare capacity right now."""
 
 
-def _pick_available_listener(db: Session, category: str | None) -> ListenerProfile | None:
+def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
+    """Listeners this user has blocked — never re-match them (Trust & Safety #9)."""
+    rows = db.execute(
+        select(ModerationEvent.subject_id).where(
+            ModerationEvent.reporter_id == user_id,
+            ModerationEvent.blocked.is_(True),
+        )
+    ).scalars().all()
+    return set(rows)
+
+
+def _pick_available_listener(
+    db: Session, category: str | None, blocked_ids: set[str]
+) -> ListenerProfile | None:
     """Lowest current load, then highest rank. Row-locked to avoid double-assignment.
 
     Pulls a small locked candidate set and prefers a category match in Python (portable
     across JSON/JSONB); falls back to the best available listener if none matches.
+    Listeners the user has blocked are excluded.
     """
     candidates = (
         db.execute(
@@ -43,6 +58,7 @@ def _pick_available_listener(db: Session, category: str | None) -> ListenerProfi
         .scalars()
         .all()
     )
+    candidates = [c for c in candidates if c.id not in blocked_ids]
     if not candidates:
         return None
     if category:
@@ -54,7 +70,8 @@ def _pick_available_listener(db: Session, category: str | None) -> ListenerProfi
 
 def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
     """Match the user to the next available listener and open a Stream channel."""
-    listener = _pick_available_listener(db, category)
+    blocked_ids = _blocked_listener_ids(db, user.id)
+    listener = _pick_available_listener(db, category, blocked_ids)
     if listener is None:
         raise NoListenerAvailable()
 

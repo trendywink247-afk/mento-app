@@ -1,7 +1,7 @@
 """Moderation events (PRD §11). Report/Block files one of these."""
 from __future__ import annotations
 
-from sqlalchemy import String, Text
+from sqlalchemy import Boolean, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -19,3 +19,8 @@ class ModerationEvent(UUIDMixin, TimestampMixin, Base):
     level: Mapped[ModerationLevel] = mapped_column(default=ModerationLevel.warning)
     reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     blocked: Mapped[bool] = mapped_column(default=False)
+
+    # Human review (PRD §11). Reports land here as unreviewed until a reviewer resolves
+    # them — surfaced, not just stored. (Full moderation console is Module C.)
+    reviewed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    reviewed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
