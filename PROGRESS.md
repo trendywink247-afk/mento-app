@@ -27,6 +27,11 @@
 
 **Not done (intentionally, per instruction):** no Stream real-time chat, no new features. Chat is still the local shell with the crisis scan wired.
 
+**⚠️ Open items to carry forward (logged, not yet actioned)**
+- **SQLite ≠ production stack.** The slice was verified on **SQLite**, but the real stack is **DigitalOcean Managed Postgres + Redis**. These differ on things that matter here: the "next-available" matcher relies on row-locking (`with_for_update(skip_locked=True)`), which is a **no-op on SQLite** — concurrency/double-assignment is therefore *not* yet proven. Also: **no Alembic migrations written yet** (dev uses `create_all`). **Must run against real Postgres (and exercise concurrent matching) before trusting under load.** Fine to defer; do not forget.
+- **Web shims are the expected web/native split (working as designed, not bugs).** The four web-specific accommodations — localStorage session fallback, `YYYY-MM-DD` text-input date picker, and the web deps — confirm **web is our test surface**. The **native** flows (SecureStore, the DateTimePicker spinner, haptics, biometric lock) are exercised only on web so far and **still need device verification later (Maestro on iOS/Android).**
+- **Stream real-time unit is gated on credentials.** Without `STREAM_API_KEY`/`STREAM_API_SECRET` in `services/api/.env`, Stream stays in stub mode and real-time cannot actually be verified (would be unrun code). Founder to add creds before that unit starts.
+
 **Next**
 1. Real-time chat via `stream-chat-expo` (stored `stream_token` + `stream_channel_id`).
 2. Wire conversation-options flows to the backend.
