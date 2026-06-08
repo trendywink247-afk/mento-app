@@ -26,10 +26,12 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Mento API", version="0.1.0", lifespan=lifespan)
 
 # Mobile app + Expo web. Tighten origins per environment before prod.
+# Auth is Bearer-token based (no cookies), so credentials are off — this keeps the
+# wildcard origin valid per the CORS spec (allow_credentials + "*" is rejected by browsers).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"] if settings.is_dev else [],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -4,6 +4,40 @@
 
 ---
 
+## 2026-06-08 (session 3) — slice runs clean end-to-end ✅
+
+**Goal:** get the onboarding → match → chat slice actually running and verified. Done.
+
+**Environment fixed**
+- Python wasn't actually installed (earlier attempt hadn't taken). Installed **Python 3.12.10** via winget (per-user: `%LOCALAPPDATA%\Programs\Python\Python312`). Note: a freshly-opened shell will have it on PATH; the agent invoked it by full path.
+- Backend deps installed into `services/api/.venv`; mobile deps via `npm install` + `npx expo install`.
+
+**Backend — verified (SQLite, no Postgres/Redis needed for this slice)**
+- API smoke (PowerShell) all passed: health; onboarding→persona+token; **age-gate blocks a minor (403)**; match→conversation + listener (Stream dev-stub channel); crisis scan benign=clean / "I want to die"→**suicidal + 2 helplines + support copy**; conversation end.
+
+**Mobile — `tsc --noEmit` clean (exit 0).**
+
+**UI smoke via Playwright (Expo web) — full path passed:** landing → DOB (web input) → skip email → growth companion (Surprise me) → connecting → **chat with persona "Misty Valley"**, then typed "honestly I want to die" → **crisis card rendered with Tele-MANAS · 14416 and KIRAN · 1800-599-0019** (tappable, 24×7) + support message. Screenshot saved (gitignored).
+
+**Bugs found & fixed during verification**
+1. **CORS:** `allow_credentials=True` + `allow_origins=["*"]` is rejected by browsers → set `allow_credentials=False` (Bearer-token auth, no cookies). `main.py`.
+2. **Web session storage:** `expo-secure-store` is unsupported on web and threw in `saveSession` → added a platform-aware store (localStorage on web, SecureStore on native). `lib/session.ts`.
+3. **Web date picker:** `@react-native-community/datetimepicker` doesn't render on web → added a `YYYY-MM-DD` text-input fallback on web (native keeps the spinner). `onboarding/age.tsx`.
+4. **Missing web deps:** added `react-native-web`, `react-dom`, `@expo/metro-runtime`, `expo-asset`. (A stale Metro cache also required `expo start -c` once.)
+
+**Not done (intentionally, per instruction):** no Stream real-time chat, no new features. Chat is still the local shell with the crisis scan wired.
+
+**Next**
+1. Real-time chat via `stream-chat-expo` (stored `stream_token` + `stream_channel_id`).
+2. Wire conversation-options flows to the backend.
+3. Decide Postgres-for-dev vs keep SQLite-dev / Postgres-prod; add Alembic migrations before staging.
+
+**How to resume / re-run the slice**
+- Backend: `cd services/api`; set `ENV=dev`, `DATABASE_URL=sqlite:///C:/Users/khana/mento/services/api/mento_dev.db`, `JWT_SECRET=dev-secret`; `.\.venv\Scripts\python.exe -m scripts.seed_listeners`; `.\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000 --reload`.
+- Mobile: `cd apps/mobile`; `npx expo start --web --port 8081` (add `-c` if a fix doesn't appear).
+
+---
+
 ## 2026-06-08 (session 2) — PRD patched + first build slice scaffolded
 
 **Done**

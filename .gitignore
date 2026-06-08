@@ -38,3 +38,9 @@ Thumbs.db
 coverage/
 .coverage
 htmlcov/
+
+# ---- Local dev artifacts ----
+*.db
+*.sqlite3
+.playwright-mcp/
+mento-crisis-card.png
