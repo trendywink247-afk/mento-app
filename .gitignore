@@ -1,0 +1,40 @@
+# ---- Node / Expo (apps/mobile) ----
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+*.tsbuildinfo
+.metro-health-check*
+npm-debug.*
+yarn-error.*
+
+# ---- Python / FastAPI (services/api) ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+
+# ---- Env & secrets ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+
+# ---- Build / logs ----
+*.log
+coverage/
+.coverage
+htmlcov/
