@@ -1,0 +1,54 @@
+name: API CI
+
+# Brings up the same Postgres the dev stack uses (services/api/docker-compose.yml),
+# applies Alembic migrations, then runs the test suite — including the matching
+# concurrency tests, which require real Postgres row-locking.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "services/api/**"
+      - ".github/workflows/api-ci.yml"
+  pull_request:
+    paths:
+      - "services/api/**"
+      - ".github/workflows/api-ci.yml"
+
+defaults:
+  run:
+    working-directory: services/api
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      # Matches the docker-compose Postgres published on localhost:5432.
+      DATABASE_URL: postgresql+psycopg://mento:mento@localhost:5432/mento
+      JWT_SECRET: ci-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/api/requirements-dev.txt
+
+      - name: Start Postgres + Redis (docker compose)
+        run: docker compose up -d --wait # waits for the healthchecks to pass
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Apply migrations
+        run: python -m alembic upgrade head
+
+      - name: Verify schema matches models
+        run: python -m alembic check # fails if a model change has no migration
+
+      - name: Run tests
+        run: python -m pytest
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

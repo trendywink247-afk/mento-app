@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-08 (session 5) — dev on Postgres by default + API CI ✅
+
+**Goal:** make dev and tests share one engine (Postgres), and add CI that proves it on every push. Done.
+
+**Dev → Postgres by default**
+- Confirmed the committed default was *already* Postgres (`config.py` default + `.env.example`); the session-3 SQLite usage was a shell override, not a default. Clarified the `.env.example` comment (localhost = docker-compose Postgres; managed Postgres in staging/prod). No `.env` file exists, so a fresh `uvicorn` already uses Postgres.
+- **Verified the slice on Postgres** (no `DATABASE_URL` override, default resolved): health ok → onboarding (persona "Deep Meadow" + token) → **age-gate blocks a minor (403)** → match (listener "Free Lake" + Stream stub channel) → **crisis scan → suicidal + Tele-MANAS 14416 + KIRAN 1800-599-0019 + support copy.**
+
+**CI** — `.github/workflows/api-ci.yml` (triggers on pushes/PRs touching `services/api/**`):
+`docker compose up -d --wait` (same compose as dev; waits on healthchecks) → `pip install -r requirements-dev.txt` → `alembic upgrade head` → `alembic check` (fails if a model change lacks a migration) → `pytest` → `compose down -v`.
+- **Simulated the exact sequence locally from a clean volume → green:** both containers healthy, migration applied, `alembic check` clean, **`2 passed`** (concurrency tests included).
+
+**Next**
+1. Real-time chat via `stream-chat-expo` (needs Stream creds in `.env`).
+2. Wire conversation-options flows to the backend.
+
+---
+
 ## 2026-06-08 (session 4) — Postgres + Alembic + matcher concurrency proven ✅
 
 **Goal:** stand up real Postgres for dev, write the first migrations, and *prove* the matcher can't double-assign under concurrency. Done.
