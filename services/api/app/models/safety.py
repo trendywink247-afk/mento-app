@@ -1,0 +1,24 @@
+"""Safety flag raised by the crisis scan (PRD §10). Human review follows."""
+from __future__ import annotations
+
+from sqlalchemy import Boolean, String
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.db import Base
+from app.models.enums import SafetySignal
+from app.models.mixins import TimestampMixin, UUIDMixin
+
+
+class SafetyFlag(UUIDMixin, TimestampMixin, Base):
+    __tablename__ = "safety_flags"
+
+    conversation_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
+    user_id: Mapped[str] = mapped_column(String(36), index=True)
+    signal: Mapped[SafetySignal] = mapped_column(default=SafetySignal.none, index=True)
+
+    # We store the matched signal, NOT the message body (minimize sensitive data).
+    matched_terms: Mapped[str | None] = mapped_column(String(255), nullable=True)
+
+    reviewed: Mapped[bool] = mapped_column(Boolean, default=False)
+    reviewed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    action: Mapped[str | None] = mapped_column(String(64), nullable=True)
