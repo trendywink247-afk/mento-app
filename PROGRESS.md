@@ -4,6 +4,39 @@
 
 ---
 
+## 2026-06-09 (session 6) — real-time Stream chat + server-side crisis enforcement ✅
+
+**Goal:** wire real-time Stream chat; make the crisis scan un-bypassable on the real message flow; keep Panda Wipe a real server delete; smoke-test on Expo web. Done.
+
+**Decision taken (founder):** crisis scan enforced via Stream **before-message-send webhook** (synchronous), with the explicit fail-mode below.
+
+**Backend — proven against LIVE Stream (cloudflared tunnel)**
+- `routers/stream_hooks.py`: `POST /stream/before-message-send` (sync enforcement) verifies `X-Signature` (**gzip-aware** — Stream signs the *decompressed* body), scans, writes a `SafetyFlag` (signal only), and augments the message with a `crisis` payload (support copy + helplines). `POST /stream/webhook` (async `message.new`) re-scans as the retried safety net. Dedupe via new `SafetyFlag.stream_message_id` (migration `ac14868c5699`).
+- `services/safety.py` shares one `scan_and_flag` path across both hooks + `/safety/scan`. `services/stream.py`: `verify_webhook`, `configure_webhooks` (sets `before_message_send_hook_url` + v2 `event_hooks` for `message.new`; +5000ms hook timeout). `scripts/configure_stream.py` points Stream at a base URL. `seed_listeners` now upserts listeners as Stream users.
+- **CRISIS PROOF (the critical one):** a crisis message sent **straight through the Stream API, bypassing the mobile UI**, still produced a `SafetyFlag` (suicidal) + the injected `crisis` field; benign did not. → enforcement is on the path, not in the client.
+- **Wipe PROOF:** message present on Stream before `/conversations/{id}/wipe`, gone after (`hard_delete`).
+- Tests: `tests/test_stream_webhook.py` (signature gate, flag+augment, benign pass-through, no double-flag). Matcher test stubs Stream to stay hermetic with creds present. **Full suite 6 passed.**
+- **Fail-mode (documented in CLAUDE.md §1):** before-send is **fail-open** (never hard-block a support chat); the retried `message.new` webhook re-scans anything missed during an outage → fail-open but **never silent**.
+
+**Mobile — real-time chat (native + web), proven on Expo web**
+- Platform-split chat: `components/chat/ChatScreen.tsx` (native, **stream-chat-expo** UI kit) + `ChatScreen.web.tsx` (web, **stream-chat JS client** + custom UI). `app/chat/[id].tsx` re-exports it. Split lives in a directly-imported component so expo-router's `require.context` never pulls the native build into the web bundle. `AppProviders` (native = GestureHandler+OverlayProvider, web = passthrough).
+- Crisis card renders from the **server-injected** `crisis` field (own message via send response, received via `message.new`) — client never scans.
+- **Web Playwright two-party smoke → PASS:** chat renders; listener→user message **delivers live**; a crisis message typed in the live UI renders the helpline card (Tele-MANAS 14416 + KIRAN). `tsc --noEmit` clean.
+
+**⚠️ What broke / carry forward**
+- **stream-chat-expo does NOT bundle on Expo web** (its RN new-arch internals fail under react-native-web). Resolved by the platform-split (web uses the JS client). **The native UI kit still needs on-device verification (Maestro/iOS/Android).**
+- **Stream secret was pasted in chat → ROTATE it** in the Stream dashboard. Creds live in gitignored `services/api/.env` + `apps/mobile/.env` (publishable key only).
+- **Webhook URL is an ephemeral cloudflared quick-tunnel** — re-run `cloudflared tunnel --url http://localhost:8000` then `python -m scripts.configure_stream <url>` each session; use a stable URL for staging.
+- Conversation-options UI (lock/pause/end/wipe/report) still not built; wipe exists as a backend endpoint only.
+
+**How to resume / re-run the live Stream flow**
+1. `cd services/api`; `docker compose up -d`; `.\.venv\Scripts\python.exe -m alembic upgrade head`; seed; run uvicorn on :8000.
+2. Tunnel: `cloudflared tunnel --url http://localhost:8000` → copy the trycloudflare URL.
+3. `.\.venv\Scripts\python.exe -m scripts.configure_stream https://<tunnel>`.
+4. Mobile web: `cd apps/mobile`; `npx expo start --web --port 8081 -c`.
+
+---
+
 ## 2026-06-08 (session 5) — dev on Postgres by default + API CI ✅
 
 **Goal:** make dev and tests share one engine (Postgres), and add CI that proves it on every push. Done.
