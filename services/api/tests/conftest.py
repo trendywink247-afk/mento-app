@@ -54,7 +54,10 @@ def db_session():
     if IS_POSTGRES:
         with test_engine.begin() as conn:
             conn.execute(
-                text("TRUNCATE conversations, listener_profiles, users RESTART IDENTITY CASCADE")
+                text(
+                    "TRUNCATE conversations, listener_profiles, users, safety_flags "
+                    "RESTART IDENTITY CASCADE"
+                )
             )
     session = TestSession()
     try:

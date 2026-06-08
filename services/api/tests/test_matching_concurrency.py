@@ -19,9 +19,19 @@ from app.models.conversation import Conversation
 from app.models.enums import ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.user import User
+from app.services import stream
 from app.services.matching import NoListenerAvailable, match_general
 
 from .conftest import TestSession, requires_postgres
+
+
+@pytest.fixture(autouse=True)
+def _stub_stream_channel(monkeypatch):
+    """Keep the matcher test hermetic: it proves DB row-locking, not Stream. Stub the
+    channel call so it doesn't hit the real Stream API when creds are present."""
+    monkeypatch.setattr(
+        stream, "create_dm_channel", lambda channel_id, user_id, listener_id: channel_id
+    )
 
 
 def _seed_listener(session, *, max_concurrent: int = 1) -> str:

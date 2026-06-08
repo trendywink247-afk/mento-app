@@ -7,6 +7,7 @@ from __future__ import annotations
 from app.db import SessionLocal, init_db
 from app.models.enums import Gender, ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
+from app.services import stream
 from app.services.persona import generate_persona
 
 SEED = [
@@ -35,7 +36,12 @@ def main() -> None:
                 )
             )
         db.commit()
-        print(f"Seeded {len(SEED)} listeners.")
+        # Listeners must exist as Stream users before they can be channel members
+        # (no-op in stub mode without creds). Done at seed, not on every match.
+        listeners = db.query(ListenerProfile).all()
+        for listener in listeners:
+            stream.upsert_user(listener.id, listener.persona_name, listener.persona_avatar)
+        print(f"Seeded {len(SEED)} listeners (upserted {len(listeners)} to Stream).")
     finally:
         db.close()
 

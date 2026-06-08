@@ -60,3 +60,45 @@ def wipe_channel(channel_id: str) -> None:
         logger.warning("Stream not configured — skipping wipe_channel(%s)", channel_id)
         return
     client.delete_channels([f"messaging:{channel_id}"], hard_delete=True)
+
+
+def is_configured() -> bool:
+    """True when real Stream credentials are present (not stub mode)."""
+    return _client() is not None
+
+
+def verify_webhook(body: bytes, signature: str | None) -> bool:
+    """Verify a Stream webhook's X-Signature (HMAC-SHA256 over the raw body).
+
+    Returns False in stub mode or without a signature — callers must reject, so an
+    unverified request never drives the safety scan.
+    """
+    client = _client()
+    if client is None or not signature:
+        return False
+    return client.verify_webhook(body, signature)
+
+
+def configure_webhooks(before_message_send_url: str, push_webhook_url: str) -> None:
+    """Point Stream at our webhook endpoints (idempotent; run once per tunnel URL).
+
+    - before_message_send_hook_url: synchronous enforcement (scan before delivery).
+      Stays a dedicated setting (not part of the v2 event_hooks array).
+    - event_hooks[webhook → message.new]: async push events — the retried safety net.
+    """
+    client = _client()
+    if client is None:
+        raise RuntimeError("Stream not configured — set STREAM_API_KEY/SECRET")
+    client.update_app_settings(
+        before_message_send_hook_url=before_message_send_url,
+        # Max per-attempt budget (covers dev-tunnel latency; prod is much faster).
+        before_message_send_hook_attempt_timeout_ms=5000,
+        event_hooks=[
+            {
+                "enabled": True,
+                "hook_type": "webhook",
+                "webhook_url": push_webhook_url,
+                "event_types": ["message.new"],
+            }
+        ],
+    )
