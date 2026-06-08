@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "Mento",
+    "slug": "mento",
+    "scheme": "mento",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#F6F4FB"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.mento.app"
+    },
+    "android": {
+      "package": "com.mento.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#F6F4FB"
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
