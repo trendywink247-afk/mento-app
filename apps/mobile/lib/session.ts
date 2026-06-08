@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 const SESSION_KEY = 'mento.session_token';
 const STREAM_KEY = 'mento.stream_token';
 const PERSONA_KEY = 'mento.persona';
+const COMPANION_COLOR_KEY = 'mento.companion_colour';
 
 type Store = {
   setItemAsync(key: string, value: string): Promise<void>;
@@ -50,10 +51,20 @@ export async function getPersona(): Promise<Persona | null> {
   return raw ? (JSON.parse(raw) as Persona) : null;
 }
 
+/** Growth-companion colour drives the per-user accent theme (see ThemeProvider). */
+export async function saveCompanionColor(color: string): Promise<void> {
+  await store.setItemAsync(COMPANION_COLOR_KEY, color);
+}
+
+export async function getCompanionColor(): Promise<string | null> {
+  return store.getItemAsync(COMPANION_COLOR_KEY);
+}
+
 export async function clearSession(): Promise<void> {
   await Promise.all([
     store.deleteItemAsync(SESSION_KEY),
     store.deleteItemAsync(STREAM_KEY),
     store.deleteItemAsync(PERSONA_KEY),
+    store.deleteItemAsync(COMPANION_COLOR_KEY),
   ]);
 }
