@@ -52,26 +52,32 @@ Journals already exist and carry into this app. Moderation is its own module, bu
 
 ---
 
-## 4. MVP scope — "for us, not the market"
+## 4. v1 scope
 
-A test build for 10–20 paid users to validate the chat experience. Explicitly **not** the polished v1.
+> _Updated 2026-06-08 per `DECISIONS.md` (Option A). The original "grey/white test build for 10–20 testers" framing is superseded: v1 is the polished light-mode app. `DECISIONS.md` governs on any conflict._
+
+The v1 target is a **polished, anonymous emotional-support app** (Module A) in light mode — not a throwaway test build. UPSC is the first community; mentor-led sessions and the UPSC self-assessment suite are later modules.
 
 **In scope**
-- Onboarding flow (§5)
+- Onboarding flow (§5), incl. the growth-companion (animal + colour) personalization
 - Working real-time chat: text + basic emoji, instant delivery, zero technical friction
-- New-chat ("+") flow with general + personal request routing
-- Mentor/listener profiles, searchable by issue / gender / availability
-- Journals (carried over) with two seeded channels
-- Transparent contribution surface ("coffee"), built but understated
+- New-chat ("+") flow with general + personal request routing (topic chips lean life/emotional)
+- Anonymous mentor/listener discovery, filterable by issue / gender / availability (no star ratings)
+- In-conversation controls: lock (PIN, simplified), status mask, pause, end + delete, report/block
+- Save-to-journal from chat; Journals (AI assistant → Finance, Mood/Daily, Mentor Notes)
+- End-of-conversation reflection (no points; decoupled from money)
+- Crisis & safety flow (§10) — non-negotiable
+- Transparent contribution surface ("coffee", §8), discoverable from the menu, never inside a conversation
 
-**Out of scope (deliberately deferred)**
-- Color system / branding (MVP is grey + white)
+**Out of scope (deferred to later modules)**
+- Module B: real mentor profiles + paid 1:1 sessions + mentor portal (MSG91 mentor verification)
+- UPSC self-assessment suite (The Mirror / Knowledge Assessment / Preparation Challenges) and UPSC Journey tracker
+- Community tab; hard email+password account gate (stay anonymous-first)
 - Full philosophy layer (notification tone, warnings, content voice)
-- Notification-based expense capture (§9, post-MVP)
-- Self-serve mentor portal (manual provisioning for now)
+- Notification-based expense capture (§13, post-MVP)
 - Group sessions
 
-**Visual:** grey-and-white only. The single intentional accent is the contribution affordance (§8) — kept subtle, never animated into the chat.
+**Visual:** light-mode **indigo / lavender** system (the mockups), consumed via design tokens (see `CLAUDE.md`). The contribution affordance stays subtle and is never animated into the chat.
 
 ---
 
@@ -97,9 +103,12 @@ Landing  →  "Start Chat"
 ## 6. Module A — Anonymous Chat (build first)
 
 ### 6.1 Identity
-- Each user gets an auto-assigned persona: a friendly random name + avatar, composed from neutral element pairs (nature, animals, etc.) — e.g. "Listening Panda."
-- Same generator for both sides of the conversation.
+> _Updated 2026-06-08 per `DECISIONS.md` §B._
+- Each user gets an auto-assigned persona: an evocative **`[Adjective/Scenic] [Nature]`** handle + scenic avatar (e.g. "Purple Valley", "Silent Mountain", "Guide Within"). One naming convention across the app; retire "Listening Panda", real first names, and photos from anonymous chat.
+- Same generator for **both** sides of the conversation.
 - Avatar/name persist per session so the relationship feels continuous.
+- **Module A / Module B identity split:** v1 anonymous chat uses personas only — **no real names, no real photos, no "Verified Mentor" badge.** Real mentor profiles belong to Module B (deferred) and must not appear in the v1 emotional-support chat.
+- The **growth companion** (animal + colour) is separate personalization/theme — it is **never** the chat handle.
 
 ### 6.2 Chat window (MVP)
 - Text + basic emoji only.
@@ -209,11 +218,13 @@ Risks: anonymity abuse, repeat users probing limits, opposite-gender harassment,
 ---
 
 ## 12. Journals & the personal-life agent
+> _Updated 2026-06-08 per `DECISIONS.md` §D.11 — channels expanded 2 → the set below._
 
 - Carry over existing journal infrastructure — do not rebuild.
-- Seed two channels: **Daily Journal** and **Expense Tracker.**
-- Conversational logging via the agent: user types "spent ₹40 on lunch," agent logs it to that day's finance entry. Same for free-form evening journaling.
-- "Save to journal" from chat (§6.2) feeds the same store.
+- v1 channels: **Finance** (= Expense Tracker), **Mood / Daily**, **Mentor Notes** (the save-to-journal destination from chat). **Gratitude** and **Panda Wisdom** are optional.
+- Conversational logging via the **AI Journal Assistant**: user types "spent ₹40 on lunch," it logs to that day's finance entry; free-form entries route to Mood/Daily. Same agent as PRD's personal-life agent.
+- "Save to journal" from chat (§6.2) feeds the same store (→ Mentor Notes).
+- The UPSC Journey study tracker seen in the mockups is **deferred** (UPSC-coaching, not the emotional-support core).
 
 ---
 
@@ -245,8 +256,15 @@ Core entities — refine in schema:
 ---
 
 ## 15. Tech stack
+> _Updated 2026-06-08 per `DECISIONS.md` + founder rulings. Canonical stack lives in `CLAUDE.md`._
 
-Aligns with your existing build: **FastAPI + PostgreSQL** backend, **React** web, **Expo / React Native** mobile. Real-time chat via WebSockets (or a managed layer if it ships faster for MVP). Reuse the existing journal + inbox modules from the UPSC app.
+- **Mobile:** Expo SDK 52 (React Native, TypeScript) — iOS + Android primary; web best-effort.
+- **Backend:** FastAPI (Python 3.12) + **DigitalOcean Managed Postgres** (SQLAlchemy 2.0 + Alembic) + **Redis** (presence, matching queue, rate limits).
+- **Messaging:** **Stream Chat** (presence / typing / read-state / push). Note: messages are stored server-side by Stream — copy and privacy policy must reflect this; "Panda Wipe" performs a real server-side delete (see §8 / `DECISIONS.md`). Do **not** claim on-device-only storage.
+- **Payments:** **Razorpay** as processor for transparent contributions (and, later, Module B session fees). **No subscription/membership tiers.**
+- **Auth (rulings):** **no phone in the user path.** Optional **email only**, for recovery. **MSG91** phone verification is reserved for **mentors** in deferred Module B. No password/name required for the anonymous user.
+- **Analytics:** PostHog (never message content or PII; crisis sessions excluded from retention metrics).
+- Reuse the existing journal + inbox patterns from the UPSC app.
 
 ---
 
@@ -272,10 +290,12 @@ Aligns with your existing build: **FastAPI + PostgreSQL** backend, **React** web
 ---
 
 ## 18. Timeline
+> _Updated 2026-06-08 per `DECISIONS.md`. v1 is the polished light-mode app, not a grey/white throwaway._
 
-- **Target:** ~1 month to MVP (May 24 ruled out).
-- **Build order:** Chat module → Mentor onboarding module → Moderation module.
-- **Cohort:** 5–10 mentors, 5–15 paid users, grey/white build, feedback-only objective.
+- **Build order:** Module A (anonymous chat) → Module B (mentor sessions + portal) → Module C (moderation).
+- **Module A v1** ships polished in light-mode indigo, with the crisis/safety flow built in from the start.
+- **First slice:** onboarding → anonymous match → live 1:1 chat (the sub-30-second promise), crisis-scan wired from day one.
+- **Cohort:** 5–10 vetted mentors, a small paid beta (qualified feedback over vanity installs).
 
 ---
 

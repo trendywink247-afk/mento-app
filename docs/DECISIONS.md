@@ -73,5 +73,19 @@ The mockups contain two different bottom navs: (1) `Chats · Journals · Mentors
 - Final issue-category names (now life/emotional-leaning per §E.14).
 - Under-18: block entirely at MVP? (PRD recommends yes.)
 - Crisis-helpline list: confirm current India numbers at build.
-- Real-time layer: WebSocket vs managed (Stream Chat) for fastest MVP.
+- Real-time layer: WebSocket vs managed (Stream Chat) for fastest MVP. → **Resolved H.0: Stream Chat.**
 - Listener training: minimum viable curriculum.
+
+---
+
+## H. Founder rulings — 2026-06-08 (the three flags, resolved)
+
+**0. Realtime layer.** Use **Stream Chat** (managed) for v1 speed.
+
+**1. Payments.** **Drop the ₹399/599/999 subscription tiers entirely** — they contradict the PRD and Option A. **Razorpay is the processor only.** The v1 money surface is the **transparent coffee/tip** from the mockups (**₹49–₹499 chips + open ceiling**, custom amount), framed as **supporting the team** — never gated, never required, **never inside a conversation**. Module B session fees come later, with that module.
+
+**2. Storage / "Panda Wipe".** **Keep Stream Chat.** The "Panda Wipe" copy **must match reality**: reword to an **honest deletion promise — deletes from your device AND our servers** — and implement a **real server-side delete-on-wipe** (Stream message + channel deletion). **Do not claim on-device-only / "we don't store your messages" anywhere** while Stream is the backend. The privacy policy must match the actual data flows (PRD §14).
+
+**3. Auth / OTP.** **No phone in the user flow.** **Optional email only**, used for recovery. **MSG91 phone verification is reserved for mentors** in the deferred Module B. (Confirms A.2.)
+
+**Build directive:** after the PRD patch, proceed to the first build slice — **onboarding → anonymous match → live chat**, with the **crisis-scan stub wired in from day one.**

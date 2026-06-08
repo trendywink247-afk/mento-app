@@ -91,12 +91,16 @@ Legend — **Build now?**: ✅ v1 · 🟡 v1 but simplified/needs work · 🔜 d
 
 ---
 
-## 6. Still open (need founder/CA input — carryover from PRD §20 + DECISIONS G)
+## 6. Decisions — resolved & still open
 
-1. **Razorpay tiers:** confirm contribution-only (₹49+) + Module B sessions, *not* ₹399/599/999 membership. *(Highest-priority money decision.)*
-2. **Message storage / "Panda Wipe" promise vs Stream Chat** — change copy or change architecture. *(Trust + legal.)*
-3. Under-18: block entirely at MVP? (PRD recommends yes.)
-4. Realtime layer: Stream Chat vs self-hosted WebSocket.
-5. Final issue-category names (life/emotional-leaning).
-6. Crisis-helpline list: confirm current India numbers at build.
-7. Listener training: minimum viable curriculum.
+**Resolved by founder rulings 2026-06-08 (see `DECISIONS.md` §H):**
+1. ✅ **Payments:** drop ₹399/599/999 tiers; Razorpay = processor only; v1 = transparent coffee/tip (₹49–499 + open ceiling), never gated/in-conversation. Module B fees later.
+2. ✅ **Storage / "Panda Wipe":** keep Stream Chat; reword copy to honest deletion (device **and** servers); implement real server-side delete; never claim on-device-only.
+3. ✅ **Auth/OTP:** no phone in user flow; optional email for recovery; MSG91 reserved for mentor verification (Module B).
+4. ✅ **Realtime layer:** Stream Chat.
+
+**Still open (founder / CA):**
+5. Under-18: block entirely at MVP? (PRD recommends yes.)
+6. Final issue-category names (life/emotional-leaning).
+7. Crisis-helpline list: confirm current India numbers at build (Tele-MANAS / KIRAN).
+8. Listener training: minimum viable curriculum.
