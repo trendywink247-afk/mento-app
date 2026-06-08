@@ -40,7 +40,11 @@ export default function ConnectingScreen() {
       clearDraft();
       router.replace({
         pathname: '/chat/[id]',
-        params: { id: match.conversation_id, listener: match.listener_persona_name },
+        params: {
+          id: match.conversation_id,
+          listener: match.listener_persona_name,
+          channel: match.stream_channel_id ?? '',
+        },
       });
     } catch (e) {
       const msg =
