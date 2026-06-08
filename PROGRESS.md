@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-09 (session 8) — Design system + onboarding re-skin (in progress) 🎨
+
+**Goal:** formalize the design system, then re-skin existing screens to the mockups and build the missing ones. Working flow-by-flow, committing + screenshotting each. Chat core untouched (no regression to crisis enforcement / blocked-listener guarantee).
+
+**Done this session**
+- **Design system (committed):** `theme/tokens.ts` (neutral light base + default accent + semantic colours, spacing, radius, typography, **elevation**); `theme/companion.ts` (growth-companion COLOUR → accent set, white-on-accent picked for **WCAG AA**); `theme/ThemeProvider`+`useTheme` (layers the per-user companion accent over the neutral base, **live switch + persistence**; `brand*` overridden so existing components theme automatically). Single source consumed by web + native. Light-mode only. `PrimaryButton` → accent + better a11y.
+- **Onboarding re-skin (committed, shown):** landing, **D/M/Y age gate** (`DobPicker` via `@react-native-picker/picker` — one coherent component; accessible `<select>` on web, native wheel/dropdown; age server-side), email, companion (**live colour theming** — picking a colour re-accents the whole app + persists), connecting (re-skinned guideline card; match logic unchanged). `Screen` shell gained a back header + scroll. A11y throughout.
+- **Verified on Expo web (Playwright):** landing → age (D/M/Y) → email → companion with **green theme applied live**; 0 console errors. Screenshots captured.
+
+**Next (per the approved order, each shown + committed):**
+1. Re-skin matching/chat to mockup spec (migrate chat to `useTheme` so it reflects the companion colour — carefully, no behaviour change).
+2. Re-skin conversation-options sheet + PIN-lock + end-conversation reflection.
+3. Build missing surfaces: **save-to-journal** long-press gesture + **Journals** (AI assistant, Finance, Mood, Mentor Notes), **My Chats** (returning-user landing, 4-tab nav), **completion/space-ready**.
+
+**Scope guard:** UPSC self-assessment / Mirror / Knowledge Assessment suite is **deferred** (DECISIONS Option A) — not building it.
+
+---
+
 ## 2026-06-09 (session 7) — Conversation Options sheet (end-to-end) ✅
 
 **Goal:** wire the Conversation Options sheet to the backend — lock/mask/pause/end/wipe/report/block — each a real flow; report/block safety-checked. Done.
