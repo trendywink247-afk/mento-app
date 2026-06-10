@@ -1,15 +1,21 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import type { ComponentProps } from 'react';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 import { Channel, Chat, MessageComposer, MessageList } from 'stream-chat-expo';
+
+// stream-chat-expo's star re-exports collide on the name `Theme` (the kit's UI theme vs
+// a stream-chat type), so derive the exact prop type from the component instead.
+type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { getStreamClient } from '@/lib/streamClient';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
+import { radius, space, type } from '@/theme/tokens';
 
 /**
  * Real-time 1:1 chat backed by a live Stream channel (stream-chat-expo).
@@ -18,6 +24,9 @@ import { colors, radius, space, type } from '@/theme/tokens';
  * before-message-send webhook (services/api), which can't be bypassed by the client.
  * When that webhook detects a crisis it augments the message with a `crisis` payload;
  * this screen simply renders the helpline card from that server-provided field.
+ *
+ * Re-skin pass: header/crisis migrated to the theme accent and the Stream kit's primary
+ * accent is themed to the companion colour. Message/crisis logic is unchanged.
  */
 
 type CrisisPayload = {
@@ -31,6 +40,7 @@ type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
 
 export default function ChatScreen() {
   const router = useRouter();
+  const { colors } = useTheme();
   const { id: conversationId, listener, channel: channelId } = useLocalSearchParams<{
     id: string;
     listener?: string;
@@ -44,6 +54,25 @@ export default function ChatScreen() {
   const [optionsOpen, setOptionsOpen] = useState(false);
   // Surface each crisis message once, so dismissing it isn't undone by later events.
   const shownRef = useRef<Set<string>>(new Set());
+
+  // Theme the Stream kit (v9 semantics tokens) to the mockup chat language: cream app
+  // bg, white incoming bubbles, lavender-tint outgoing bubbles with ink text, and the
+  // companion accent on primary controls (send button, links).
+  const streamTheme = useMemo<StreamChatStyle>(
+    () => ({
+      semantics: {
+        accentPrimary: colors.accent,
+        backgroundCoreApp: colors.bg,
+        chatBgIncoming: colors.surface,
+        chatTextIncoming: colors.ink,
+        chatBgOutgoing: colors.accentTint,
+        chatTextOutgoing: colors.ink,
+        chatTextTimestamp: colors.inkMuted,
+        buttonPrimaryBg: colors.accent,
+      },
+    }),
+    [colors],
+  );
 
   const surfaceCrisis = useCallback((message: CrisisCarrier | undefined) => {
     const payload = message?.crisis;
@@ -99,24 +128,47 @@ export default function ChatScreen() {
   }, [channelId, surfaceCrisis]);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.replace('/')} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={colors.ink} />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
+        <Pressable
+          onPress={() => router.replace('/')}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Leave conversation"
+        >
+          <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
-        <View style={styles.avatar}>
-          <Ionicons name="leaf-outline" size={18} color={colors.brand} />
+        <View style={[styles.avatar, { backgroundColor: colors.brandTint }]}>
+          <Ionicons name="leaf-outline" size={20} color={colors.accent} />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={type.label}>{listenerName}</Text>
-          <Text style={styles.status}>● Connected</Text>
+        <View style={{ flex: 1 }} accessible accessibilityRole="header">
+          <Text style={[type.label, { color: colors.ink }]} numberOfLines={1}>
+            {listenerName}
+          </Text>
+          <View style={styles.statusRow}>
+            <View style={[styles.dot, { backgroundColor: colors.success }]} />
+            <Text style={[type.caption, { color: colors.inkMuted }]}>Connected · Here to listen</Text>
+          </View>
         </View>
-        <Pressable onPress={() => setOptionsOpen(true)} hitSlop={12} testID="open-options">
+        <Pressable
+          onPress={() => setOptionsOpen(true)}
+          hitSlop={12}
+          testID="open-options"
+          accessibilityRole="button"
+          accessibilityLabel="Conversation options"
+        >
           <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
         </Pressable>
       </View>
 
-      {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
+      <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
+        <Ionicons name="lock-closed" size={13} color={colors.accent} />
+        <Text style={[type.caption, { color: colors.ink }]}>
+          This conversation is private. You're anonymous here.
+        </Text>
+      </View>
+
+      {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} colors={colors} /> : null}
 
       {error ? (
         <View style={styles.center}>
@@ -124,7 +176,7 @@ export default function ChatScreen() {
         </View>
       ) : channel ? (
         <View style={{ flex: 1 }} testID="chat-ready">
-          <Chat client={getStreamClient()}>
+          <Chat client={getStreamClient()} style={streamTheme}>
             <Channel channel={channel} doSendMessageRequest={doSendMessageRequest}>
               <MessageList />
               <MessageComposer />
@@ -133,7 +185,7 @@ export default function ChatScreen() {
         </View>
       ) : (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.brand} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={[type.body, { color: colors.inkMuted }]}>Opening your conversation…</Text>
         </View>
       )}
@@ -148,34 +200,47 @@ export default function ChatScreen() {
   );
 }
 
-function CrisisCard({ crisis, onDismiss }: { crisis: CrisisPayload; onDismiss: () => void }) {
+function CrisisCard({
+  crisis,
+  onDismiss,
+  colors,
+}: {
+  crisis: CrisisPayload;
+  onDismiss: () => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
   return (
-    <View style={styles.crisis} testID="crisis-card">
-      <Text style={styles.crisisText}>{crisis.support}</Text>
+    <View
+      style={[styles.crisis, { backgroundColor: colors.brandTint, borderColor: colors.accent }]}
+      testID="crisis-card"
+    >
+      <Text style={[type.body, { color: colors.ink }]}>{crisis.support}</Text>
       <View style={{ gap: space.sm }}>
         {crisis.helplines.map((h) => (
           <Pressable
             key={h.number}
-            style={styles.helpline}
+            style={[styles.helpline, { backgroundColor: colors.surface }]}
             onPress={() => void Linking.openURL(`tel:${h.number}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Call ${h.name} at ${h.number}, available ${h.hours}`}
           >
-            <Ionicons name="call-outline" size={18} color={colors.brand} />
-            <Text style={type.label}>
+            <Ionicons name="call-outline" size={18} color={colors.accent} />
+            <Text style={[type.label, { color: colors.ink }]}>
               {h.name} · {h.number}
             </Text>
-            <Text style={styles.hours}>{h.hours}</Text>
+            <Text style={[type.caption, { color: colors.inkMuted, marginLeft: 'auto' }]}>{h.hours}</Text>
           </Pressable>
         ))}
       </View>
-      <Pressable onPress={onDismiss} hitSlop={8} style={styles.crisisDismiss}>
-        <Text style={[type.caption, { color: colors.brand }]}>Close</Text>
+      <Pressable onPress={onDismiss} hitSlop={8} style={styles.crisisDismiss} accessibilityRole="button">
+        <Text style={[type.caption, { color: colors.accent }]}>Close</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -183,36 +248,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   avatar: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: radius.pill,
-    backgroundColor: colors.brandTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  status: { ...type.caption, color: colors.success },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  dot: { width: 7, height: 7, borderRadius: radius.pill },
+  privacy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+    paddingVertical: space.xs,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   crisis: {
     margin: space.md,
     padding: space.md,
     borderRadius: radius.md,
-    backgroundColor: colors.brandTint,
     borderWidth: 1,
-    borderColor: colors.brand,
     gap: space.sm,
   },
-  crisisText: { ...type.body, color: colors.ink },
   helpline: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    backgroundColor: colors.surface,
     borderRadius: radius.sm,
     padding: space.sm,
   },
-  hours: { ...type.caption, marginLeft: 'auto' },
   crisisDismiss: { alignSelf: 'flex-end' },
 });

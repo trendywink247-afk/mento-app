@@ -17,14 +17,18 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { getStreamClient } from '@/lib/streamClient';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
+import { radius, space, type } from '@/theme/tokens';
 
 /**
  * WEB chat (best-effort surface). Uses the stream-chat JS client directly with a custom
  * UI, because stream-chat-expo's RN UI kit doesn't bundle under react-native-web. Native
- * uses the kit ([id].native.tsx). Safety behaviour is identical: the crisis scan is
+ * uses the kit (ChatScreen.tsx). Safety behaviour is identical: the crisis scan is
  * enforced server-side in the Stream before-send webhook; this screen only renders the
  * server-provided `crisis` payload.
+ *
+ * This is a RE-SKIN pass: visual only (theme accent, persona header, privacy banner,
+ * empty state, bubbles). The connect/watch/send/crisis logic is unchanged.
  */
 
 type CrisisPayload = {
@@ -37,6 +41,7 @@ type Msg = { id: string; text: string; mine: boolean };
 
 export default function ChatScreenWeb() {
   const router = useRouter();
+  const { colors, elevation } = useTheme();
   const { id: conversationId, listener, channel: channelId } = useLocalSearchParams<{
     id: string;
     listener?: string;
@@ -125,30 +130,56 @@ export default function ChatScreenWeb() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.replace('/')} hitSlop={12}>
-          <Ionicons name="chevron-back" size={24} color={colors.ink} />
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      {/* Persona header card */}
+      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
+        <Pressable
+          onPress={() => router.replace('/')}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Leave conversation"
+        >
+          <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
-        <View style={styles.avatar}>
-          <Ionicons name="leaf-outline" size={18} color={colors.brand} />
+        <View style={[styles.avatar, { backgroundColor: colors.brandTint }]}>
+          <Ionicons name="leaf-outline" size={20} color={colors.accent} />
         </View>
-        <View style={{ flex: 1 }}>
-          <Text style={type.label}>{listenerName}</Text>
-          <Text style={styles.status}>● Connected</Text>
+        <View style={{ flex: 1 }} accessible accessibilityRole="header">
+          <Text style={[type.label, { color: colors.ink }]} numberOfLines={1}>
+            {listenerName}
+          </Text>
+          <View style={styles.statusRow}>
+            <View style={[styles.dot, { backgroundColor: colors.success }]} />
+            <Text style={[type.caption, { color: colors.inkMuted }]}>Connected · Here to listen</Text>
+          </View>
         </View>
-        <Pressable onPress={() => setOptionsOpen(true)} hitSlop={12} testID="open-options">
+        <Pressable
+          onPress={() => setOptionsOpen(true)}
+          hitSlop={12}
+          testID="open-options"
+          accessibilityRole="button"
+          accessibilityLabel="Conversation options"
+        >
           <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
         </Pressable>
       </View>
 
+      {/* Privacy banner */}
+      <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
+        <Ionicons name="lock-closed" size={13} color={colors.accent} />
+        <Text style={[type.caption, { color: colors.ink }]}>
+          This conversation is private. You're anonymous here.
+        </Text>
+      </View>
+
       {error ? (
         <View style={styles.center}>
+          <Ionicons name="cloud-offline-outline" size={36} color={colors.inkMuted} />
           <Text style={[type.body, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
         </View>
       ) : !ready ? (
         <View style={styles.center}>
-          <ActivityIndicator size="large" color={colors.brand} />
+          <ActivityIndicator size="large" color={colors.accent} />
           <Text style={[type.body, { color: colors.inkMuted }]}>Opening your conversation…</Text>
         </View>
       ) : (
@@ -156,29 +187,59 @@ export default function ChatScreenWeb() {
           <FlatList
             data={messages}
             keyExtractor={(m) => m.id}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, messages.length === 0 && styles.listEmpty]}
+            ListEmptyComponent={
+              <View style={styles.emptyWrap}>
+                <View style={[styles.emptyEmblem, { backgroundColor: colors.brandTint }]}>
+                  <Ionicons name="sparkles-outline" size={30} color={colors.accent} />
+                </View>
+                <Text style={[type.title, { color: colors.ink, textAlign: 'center' }]}>
+                  You're connected!
+                </Text>
+                <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
+                  This is a safe space to share, reflect and grow. Take your time.
+                </Text>
+              </View>
+            }
             renderItem={({ item }) => (
-              <View style={[styles.bubble, item.mine ? styles.mine : styles.theirs]}>
-                <Text style={[type.body, { color: item.mine ? colors.onBrand : colors.ink }]}>
+              <View
+                style={[
+                  styles.bubble,
+                  item.mine
+                    ? [styles.mine, { backgroundColor: colors.accent }]
+                    : [styles.theirs, { backgroundColor: colors.surface }, elevation.sm],
+                ]}
+                accessibilityRole="text"
+              >
+                <Text style={[type.body, { color: item.mine ? colors.onAccent : colors.ink }]}>
                   {item.text}
                 </Text>
               </View>
             )}
           />
-          {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
-          <View style={styles.composer}>
+          {crisis ? (
+            <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} colors={colors} />
+          ) : null}
+          <View style={[styles.composer, { borderTopColor: colors.border, backgroundColor: colors.surface }]}>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colors.border, backgroundColor: colors.bg, color: colors.ink }]}
               placeholder="Type a message…"
               placeholderTextColor={colors.inkMuted}
               value={draft}
               onChangeText={setDraft}
               onSubmitEditing={() => void send()}
               testID="composer-input"
+              accessibilityLabel="Message"
               multiline
             />
-            <Pressable style={styles.sendBtn} onPress={() => void send()} testID="composer-send">
-              <Ionicons name="arrow-up" size={20} color={colors.onBrand} />
+            <Pressable
+              style={[styles.sendBtn, { backgroundColor: colors.accent }]}
+              onPress={() => void send()}
+              testID="composer-send"
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
+            >
+              <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
             </Pressable>
           </View>
         </View>
@@ -194,34 +255,47 @@ export default function ChatScreenWeb() {
   );
 }
 
-function CrisisCard({ crisis, onDismiss }: { crisis: CrisisPayload; onDismiss: () => void }) {
+function CrisisCard({
+  crisis,
+  onDismiss,
+  colors,
+}: {
+  crisis: CrisisPayload;
+  onDismiss: () => void;
+  colors: ReturnType<typeof useTheme>['colors'];
+}) {
   return (
-    <View style={styles.crisis} testID="crisis-card">
-      <Text style={styles.crisisText}>{crisis.support}</Text>
+    <View
+      style={[styles.crisis, { backgroundColor: colors.brandTint, borderColor: colors.accent }]}
+      testID="crisis-card"
+    >
+      <Text style={[type.body, { color: colors.ink }]}>{crisis.support}</Text>
       <View style={{ gap: space.sm }}>
         {crisis.helplines.map((h) => (
           <Pressable
             key={h.number}
-            style={styles.helpline}
+            style={[styles.helpline, { backgroundColor: colors.surface }]}
             onPress={() => void Linking.openURL(`tel:${h.number}`)}
+            accessibilityRole="button"
+            accessibilityLabel={`Call ${h.name} at ${h.number}, available ${h.hours}`}
           >
-            <Ionicons name="call-outline" size={18} color={colors.brand} />
-            <Text style={type.label}>
+            <Ionicons name="call-outline" size={18} color={colors.accent} />
+            <Text style={[type.label, { color: colors.ink }]}>
               {h.name} · {h.number}
             </Text>
-            <Text style={styles.hours}>{h.hours}</Text>
+            <Text style={[type.caption, { color: colors.inkMuted, marginLeft: 'auto' }]}>{h.hours}</Text>
           </Pressable>
         ))}
       </View>
-      <Pressable onPress={onDismiss} hitSlop={8} style={styles.crisisDismiss}>
-        <Text style={[type.caption, { color: colors.brand }]}>Close</Text>
+      <Pressable onPress={onDismiss} hitSlop={8} style={styles.crisisDismiss} accessibilityRole="button">
+        <Text style={[type.caption, { color: colors.accent }]}>Close</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
+  safe: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -229,52 +303,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
   },
   avatar: {
-    width: 36,
-    height: 36,
+    width: 40,
+    height: 40,
     borderRadius: radius.pill,
-    backgroundColor: colors.brandTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  status: { ...type.caption, color: colors.success },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
-  list: { padding: space.md, gap: space.sm },
-  bubble: { maxWidth: '80%', borderRadius: radius.lg, padding: space.md },
-  mine: { alignSelf: 'flex-end', backgroundColor: colors.brand, borderBottomRightRadius: radius.sm },
-  theirs: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.surface,
-    borderBottomLeftRadius: radius.sm,
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  dot: { width: 7, height: 7, borderRadius: radius.pill },
+  privacy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+    paddingVertical: space.xs,
   },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
+  list: { padding: space.md, gap: space.sm },
+  listEmpty: { flexGrow: 1, justifyContent: 'center' },
+  emptyWrap: { alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg },
+  emptyEmblem: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: space.sm,
+  },
+  bubble: { maxWidth: '80%', borderRadius: radius.lg, paddingHorizontal: space.md, paddingVertical: space.sm },
+  mine: { alignSelf: 'flex-end', borderBottomRightRadius: radius.sm },
+  theirs: { alignSelf: 'flex-start', borderBottomLeftRadius: radius.sm },
   composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: space.sm,
     padding: space.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
   },
   input: {
     flex: 1,
     maxHeight: 120,
-    minHeight: 44,
+    minHeight: 46,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
     paddingHorizontal: space.md,
     paddingTop: space.sm,
     ...type.body,
-    color: colors.ink,
   },
   sendBtn: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: radius.pill,
-    backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -282,20 +363,15 @@ const styles = StyleSheet.create({
     margin: space.md,
     padding: space.md,
     borderRadius: radius.md,
-    backgroundColor: colors.brandTint,
     borderWidth: 1,
-    borderColor: colors.brand,
     gap: space.sm,
   },
-  crisisText: { ...type.body, color: colors.ink },
   helpline: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    backgroundColor: colors.surface,
     borderRadius: radius.sm,
     padding: space.sm,
   },
-  hours: { ...type.caption, marginLeft: 'auto' },
   crisisDismiss: { alignSelf: 'flex-end' },
 });
