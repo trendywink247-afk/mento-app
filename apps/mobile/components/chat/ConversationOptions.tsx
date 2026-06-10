@@ -22,10 +22,12 @@ type Props = {
   conversationId: string;
   visible: boolean;
   onClose: () => void;
-  onLeft: () => void; // called after end/wipe/report/block (navigate away)
+  onLeft: () => void; // called after wipe/report/block (navigate away)
+  /** Persona name, echoed on the reflection screen ("a better Purple Valley for you"). */
+  listenerName?: string;
 };
 
-export function ConversationOptions({ conversationId, visible, onClose, onLeft }: Props) {
+export function ConversationOptions({ conversationId, visible, onClose, onLeft, listenerName }: Props) {
   const router = useRouter();
   const { colors } = useTheme();
   const [flow, setFlow] = useState<SheetChoice | null>(null);
@@ -84,7 +86,22 @@ export function ConversationOptions({ conversationId, visible, onClose, onLeft }
           onChanged={setPaused}
         />
       ) : flow === 'end' ? (
-        <EndFlow conversationId={conversationId} onBack={() => setFlow(null)} onEnded={onLeft} />
+        <EndFlow
+          conversationId={conversationId}
+          onBack={() => setFlow(null)}
+          onEnded={(how) => {
+            // Plain End flows into the private reflection (mockup #23); Panda Wipe
+            // already had its "All clean!" closure, so it leaves directly.
+            if (how === 'end') {
+              router.replace({
+                pathname: '/reflection',
+                params: { conversation: conversationId, listener: listenerName ?? '' },
+              });
+            } else {
+              onLeft();
+            }
+          }}
+        />
       ) : (
         <ReportFlow conversationId={conversationId} onBack={() => setFlow(null)} onDone={onLeft} />
       )}

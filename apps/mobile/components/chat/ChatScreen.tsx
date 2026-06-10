@@ -258,7 +258,8 @@ export default function ChatScreen() {
         conversationId={conversationId}
         visible={optionsOpen}
         onClose={() => setOptionsOpen(false)}
-        onLeft={() => router.replace('/')}
+        onLeft={() => router.replace('/chats')}
+        listenerName={listenerName}
       />
     </SafeAreaView>
   );

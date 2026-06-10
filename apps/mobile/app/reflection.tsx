@@ -1,0 +1,183 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { IconBadge } from '@/components/IconBadge';
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { Panda } from '@/components/art/Panda';
+import { api } from '@/lib/api';
+import { useTheme } from '@/theme/ThemeProvider';
+import { font, radius, space, type } from '@/theme/tokens';
+
+/**
+ * End-of-conversation reflection (mockup #23, SCOPE §8): a private 5-node
+ * drained↔energized slider. No points, no XP, skippable via X. High energy may
+ * offer the coffee screen AFTER finish (post-conversation = allowed, opt-in).
+ */
+export default function ReflectionScreen() {
+  const router = useRouter();
+  const { colors } = useTheme();
+  const { conversation, listener } = useLocalSearchParams<{
+    conversation?: string;
+    listener?: string;
+  }>();
+  const [energy, setEnergy] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const leave = () => router.replace('/chats');
+
+  const finish = async () => {
+    if (!energy || busy) return;
+    setBusy(true);
+    try {
+      if (conversation) await api.saveReflection(conversation, energy);
+    } catch {
+      // The reflection is private and optional — never block leaving on it.
+    }
+    if (energy >= 4) router.replace({ pathname: '/coffee', params: { energy: 'high' } });
+    else leave();
+  };
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bgLavender }]} edges={['top', 'bottom']}>
+      <View style={styles.header}>
+        <Pressable
+          onPress={leave}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Skip reflection"
+          testID="reflection-skip"
+        >
+          <Ionicons name="close" size={26} color={colors.ink} />
+        </Pressable>
+      </View>
+
+      <View style={styles.body}>
+        <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+          Conversation ended
+        </Text>
+        <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
+          You've taken a thoughtful step today.{'\n'}We hope this space brought you some clarity
+          and comfort.
+        </Text>
+
+        <View style={styles.art}>
+          <Panda pose="wave" size={150} />
+        </View>
+
+        <Text style={[styles.question, { color: colors.ink }]}>
+          How would you rate this conversation?
+        </Text>
+        <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
+          Your feedback helps us create a better{'\n'}
+          {listener ?? 'Mento'} for you. 💜
+        </Text>
+
+        <View style={[styles.sliderCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.sliderRow}>
+            <Panda pose="sleep" size={52} />
+            <View style={styles.track}>
+              {[1, 2, 3, 4, 5].map((n) => {
+                const selected = energy === n;
+                return (
+                  <Pressable
+                    key={n}
+                    onPress={() => setEnergy(n)}
+                    hitSlop={10}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}
+                    accessibilityLabel={`Energy level ${n} of 5`}
+                    testID={`energy-${n}`}
+                    style={[
+                      styles.node,
+                      { backgroundColor: selected ? colors.accent : colors.surfaceAlt },
+                      selected && styles.nodeSelected,
+                    ]}
+                  >
+                    {selected ? <Ionicons name="checkmark" size={14} color={colors.onAccent} /> : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Panda pose="excited" size={52} />
+          </View>
+          <View style={styles.labels}>
+            <Text style={[type.label, { color: colors.ink }]}>Left drained</Text>
+            <Text style={[type.label, { color: colors.ink }]}>Left energized</Text>
+          </View>
+        </View>
+
+        <View style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
+          <IconBadge icon="shield-checkmark-outline" size={36} />
+          <View style={{ flex: 1 }}>
+            <Text style={[type.label, { color: colors.ink }]}>Your feedback is private</Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>
+              It's only for us and helps improve the support experience.
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.footer}>
+        <PrimaryButton
+          label="Finish"
+          onPress={() => void finish()}
+          disabled={!energy}
+          loading={busy}
+          testID="reflection-finish"
+        />
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  header: { paddingHorizontal: space.md, paddingTop: space.sm },
+  body: { flex: 1, paddingHorizontal: space.lg, gap: space.sm },
+  headline: {
+    fontFamily: font.sansHeavy,
+    fontSize: 28,
+    lineHeight: 36,
+    textAlign: 'center',
+    marginTop: space.xs,
+  },
+  center: { textAlign: 'center' },
+  art: { alignItems: 'center', marginVertical: space.sm },
+  question: {
+    fontFamily: font.sansHeavy,
+    fontSize: 21,
+    lineHeight: 28,
+    textAlign: 'center',
+    marginTop: space.sm,
+  },
+  sliderCard: { borderRadius: radius.lg, padding: space.md, marginTop: space.md, gap: space.sm },
+  sliderRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  track: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: space.xs,
+  },
+  node: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nodeSelected: { width: 30, height: 30, borderRadius: 15 },
+  labels: { flexDirection: 'row', justifyContent: 'space-between' },
+  privacy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderRadius: radius.md,
+    padding: space.sm,
+    marginTop: space.sm,
+  },
+  footer: { paddingHorizontal: space.lg, paddingBottom: space.md, paddingTop: space.sm },
+});

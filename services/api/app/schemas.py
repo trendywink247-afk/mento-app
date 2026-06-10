@@ -90,6 +90,11 @@ class OkResult(BaseModel):
     status: str
 
 
+# --- End-of-conversation reflection ---
+class ReflectionIn(BaseModel):
+    energy: int = Field(ge=1, le=5)  # 1 = left drained … 5 = left energized
+
+
 # --- Journals (v1: save-to-Mentor-Notes from chat) ---
 class MentorNoteIn(BaseModel):
     body: str = Field(min_length=1, max_length=4000)

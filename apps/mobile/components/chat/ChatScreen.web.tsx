@@ -447,6 +447,7 @@ export default function ChatScreenWeb() {
         visible={optionsOpen}
         onClose={() => setOptionsOpen(false)}
         onLeft={() => router.replace('/chats')}
+        listenerName={listenerName}
       />
     </SafeAreaView>
   );

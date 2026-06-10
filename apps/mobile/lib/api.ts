@@ -118,6 +118,9 @@ export const api = {
   blockConversation: (id: string, reason: string | null) =>
     request<{ status: string }>(`/conversations/${id}/block`, { method: 'POST', body: JSON.stringify({ reason }) }, true),
 
+  saveReflection: (id: string, energy: number) =>
+    request<{ status: string }>(`/conversations/${id}/reflection`, { method: 'POST', body: JSON.stringify({ energy }) }, true),
+
   // --- Journals (v1: save-to-Mentor-Notes from chat) ---
   saveMentorNote: (body: {
     body: string;

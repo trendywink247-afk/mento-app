@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -17,11 +18,13 @@ from app.models.conversation import Conversation
 from app.models.enums import ConversationStatus, ModerationLevel
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
+from app.models.reflection import ConversationReflection
 from app.schemas import (
     ConversationState,
     LockRequest,
     OkResult,
     PauseRequest,
+    ReflectionIn,
     ReportRequest,
     StatusMaskRequest,
     UnlockRequest,
@@ -148,6 +151,31 @@ def wipe_conversation(
     _release_listener(db, convo)
     db.commit()
     return {"status": "wiped", "deleted_from": ["device", "servers"]}
+
+
+@router.post("/{convo_id}/reflection", response_model=OkResult)
+def save_reflection(
+    convo_id: str,
+    payload: ReflectionIn,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Private end-of-conversation energy reflection (1 drained … 5 energized).
+
+    Ownership is verified here and then dropped — the stored row carries only the
+    conversation id and the value (no user id, no content, no points — T&S #5).
+    Idempotent: re-submitting updates the single row for the conversation.
+    """
+    _owned(db, convo_id, user_id)
+    existing = db.scalars(
+        select(ConversationReflection).where(ConversationReflection.conversation_id == convo_id)
+    ).first()
+    if existing:
+        existing.energy = payload.energy
+    else:
+        db.add(ConversationReflection(conversation_id=convo_id, energy=payload.energy))
+    db.commit()
+    return OkResult(status="ok")
 
 
 # --- Report / Block (safety) ---
