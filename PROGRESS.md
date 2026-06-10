@@ -24,7 +24,13 @@
 - **NEW `ready.tsx`** (#59): check badge, companion art in lavender arch, "You chose [Colour Animal]" serif, affirmations card, Enter My Space ›. **Flow rewired: companion → ready → connecting.**
 - **Connecting** (#5): two-windows scene, 5 guideline rows w/ pastel badges (mockup copy), lavender footer card; match logic + error/retry untouched.
 
-**Next:** Phase 2 — chat pixel pass + the save-to-Mentor-Notes loop (mentor header card, Today divider, accentTint sent bubbles + ✓✓, message actions, `POST /journals/mentor-notes`), then re-run the two-party web smoke.
+**Phase 2 — chat pixel pass + save-to-Mentor-Notes loop ✅**
+- **Backend:** `routers/journals.py` — `POST /journals/mentor-notes` (idempotent per Stream message id) + `GET` list; entries owner-scoped, ids in `meta` for dedupe only. **Tests: 3 new, full suite 13 passed** (needed `docker compose up -d` in `services/api` — Docker Desktop was down).
+- **Web chat (mockups #7/#8):** mentor header card (PersonaAvatar + presence dot, serif name, shield line, Connected pill), dismissible privacy line, "Today" pill divider, received = white bubble + avatar + timestamp, **sent = accentTint + ink** + time + ✓✓ (read events), `ChatBubblesScene` empty state, pill composer w/ inset ＋ + circular send FAB. **Tap a mentor message → "Was this helpful?" (♥/bookmark/copy) + Save-to-Mentor-Notes card.**
+- **Native:** header/privacy parity; long-press message menu gains **"Save to Mentor Notes"** (`messageActions` on stream-chat-expo v9); crisis card restyled (serif title, IconBadge helpline rows). Device verification still the tracked Maestro item.
+- **Proven live (Expo web + uvicorn + real Stream):** onboard → match → user msg → **listener reply sent via the Stream server API delivered live** → save → **persisted + read back via the API**; crisis-payload message renders the helpline card (enforcement path itself untouched + previously proven). 0 console errors.
+
+**Next:** Phase 3 — conversation controls to spec (numbered options sheet incl. **Buy the Team a Coffee** entry, PIN keypad, Panda Mask presets, Pause, End-vs-Wipe, Report/Block reasons) + the coffee screen (#28).
 
 **Open decisions:** none new (tab-set + avatar-style decisions were logged in the plan).
 
