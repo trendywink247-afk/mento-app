@@ -1,3 +1,14 @@
+import {
+  Lora_500Medium,
+  Lora_600SemiBold,
+} from '@expo-google-fonts/lora';
+import {
+  Nunito_400Regular,
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+} from '@expo-google-fonts/nunito';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -7,6 +18,19 @@ import { ThemeProvider } from '@/theme/ThemeProvider';
 import { colors } from '@/theme/tokens';
 
 export default function RootLayout() {
+  // Family names must match theme/tokens.ts `font`.
+  const [fontsLoaded] = useFonts({
+    Nunito_400Regular,
+    Nunito_600SemiBold,
+    Nunito_700Bold,
+    Nunito_800ExtraBold,
+    Lora_500Medium,
+    Lora_600SemiBold,
+  });
+  // Fonts are bundled locally (expo-google-fonts), so this resolves in a frame or two;
+  // the Expo splash stays up meanwhile — no flash of fallback type.
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaProvider>
       {/* Platform-split: native adds stream-chat-expo providers; web is a passthrough. */}

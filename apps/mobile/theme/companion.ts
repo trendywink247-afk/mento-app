@@ -22,7 +22,8 @@ export type AccentSet = {
 };
 
 export const COMPANION_COLORS: Record<CompanionColor, AccentSet> = {
-  purple: { accent: '#5B4FE3', accentPress: '#4A3FC9', accentTint: '#ECE9FD', onAccent: '#FFFFFF' },
+  // Purple is calibrated against the mockup CTA/swatch pixels (scripts/sample_mockup_colors.py).
+  purple: { accent: '#5847D6', accentPress: '#4736B8', accentTint: '#ECE6F8', onAccent: '#FFFFFF' },
   blue: { accent: '#2657C7', accentPress: '#1F49A8', accentTint: '#E4ECFE', onAccent: '#FFFFFF' },
   green: { accent: '#0B7A4F', accentPress: '#096540', accentTint: '#DCF1E7', onAccent: '#FFFFFF' },
   pink: { accent: '#C13B72', accentPress: '#A6315F', accentTint: '#FBE6EF', onAccent: '#FFFFFF' },
