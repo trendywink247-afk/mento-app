@@ -15,20 +15,27 @@ export function Screen({
   footer,
   onBack,
   scroll = false,
+  bg = 'cream',
 }: {
   children: ReactNode;
   footer?: ReactNode;
   onBack?: () => void;
   scroll?: boolean;
+  /** 'lavender' = the mockups' "ritual" screens (companion, reflection, coffee, PIN). */
+  bg?: 'cream' | 'lavender';
 }) {
   const { colors } = useTheme();
   const Body = scroll ? ScrollView : View;
   const bodyProps = scroll
     ? { contentContainerStyle: styles.scrollContent, showsVerticalScrollIndicator: false }
     : { style: styles.body };
+  const lavender = bg === 'lavender';
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: lavender ? colors.bgLavender : colors.bg }]}
+      edges={['top', 'bottom']}
+    >
       {onBack ? (
         <View style={styles.header}>
           <Pressable
@@ -37,8 +44,10 @@ export function Screen({
             accessibilityRole="button"
             accessibilityLabel="Go back"
             testID="back"
+            // Ritual screens float the chevron in a white circle (mockup #58).
+            style={lavender && [styles.backCircle, { backgroundColor: colors.surface }]}
           >
-            <Ionicons name="chevron-back" size={26} color={colors.ink} />
+            <Ionicons name="chevron-back" size={26} color={lavender ? colors.accent : colors.ink} />
           </Pressable>
         </View>
       ) : null}
@@ -51,6 +60,14 @@ export function Screen({
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   header: { paddingHorizontal: space.md, paddingTop: space.sm, paddingBottom: space.xs },
+  backCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
   body: { flex: 1, paddingHorizontal: space.lg, paddingTop: space.sm },
   scrollContent: { paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.lg },
   footer: { paddingHorizontal: space.lg, paddingBottom: space.md, paddingTop: space.sm, gap: space.sm },
