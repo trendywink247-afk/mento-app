@@ -1,13 +1,18 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
+import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
-import { radius, space, type } from '@/theme/tokens';
+import { font, radius, space, type } from '@/theme/tokens';
 
 /**
  * One coherent Day / Month / Year date-of-birth picker (DECISIONS §E.15), used on web
- * and native. @react-native-picker/picker renders an accessible <select> on web and the
- * native wheel/dropdown on device. Age is computed server-side from the DOB.
+ * and native. Styled per mockup #3: a single tinted card, three hairline-divided
+ * columns — chevron, big value, label inside. (The mockup's "Years/Months/Year"
+ * column labels were semantically wrong; ours stay Day/Month/Year.) The real
+ * @react-native-picker/picker sits invisibly over each column, so web keeps an
+ * accessible <select> and native keeps the wheel/dialog. Age is computed server-side.
  */
 
 export type Dob = { day: number; month: number; year: number };
@@ -19,6 +24,30 @@ const MONTHS = [
 
 function daysInMonth(month: number, year: number): number {
   return new Date(year, month, 0).getDate(); // month is 1-based here
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+function Column({
+  label,
+  display,
+  divider,
+  children,
+}: {
+  label: string;
+  display: string;
+  divider?: boolean;
+  children: ReactNode; // the invisible Picker overlay
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.col, divider && { borderLeftWidth: 1, borderLeftColor: colors.border }]}>
+      <Ionicons name="chevron-down" size={16} color={colors.inkMuted} />
+      <Text style={[styles.value, { color: colors.ink }]}>{display}</Text>
+      <Text style={[type.caption, { color: colors.inkMuted }]}>{label}</Text>
+      <View style={styles.overlay}>{children}</View>
+    </View>
+  );
 }
 
 export function DobPicker({
@@ -42,61 +71,46 @@ export function DobPicker({
     onChange(next);
   };
 
-  const col = [styles.col, { borderColor: colors.border, backgroundColor: colors.surface }];
-  const itemColor = { color: colors.ink };
-
   return (
-    <View style={styles.row}>
-      <View style={styles.field}>
-        <Text style={[type.caption, styles.cap]}>Day</Text>
-        <View style={col}>
-          <Picker
-            selectedValue={value.day}
-            onValueChange={(v) => set({ day: Number(v) })}
-            accessibilityLabel="Day of birth"
-            style={[styles.picker, itemColor]}
-            dropdownIconColor={colors.inkMuted}
-          >
-            {days.map((d) => (
-              <Picker.Item key={d} label={String(d)} value={d} color={colors.ink} />
-            ))}
-          </Picker>
-        </View>
-      </View>
+    <View style={[styles.card, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+      <Column label="Day" display={pad2(value.day)}>
+        <Picker
+          selectedValue={value.day}
+          onValueChange={(v) => set({ day: Number(v) })}
+          accessibilityLabel="Day of birth"
+          style={styles.picker}
+        >
+          {days.map((d) => (
+            <Picker.Item key={d} label={String(d)} value={d} color={colors.ink} />
+          ))}
+        </Picker>
+      </Column>
 
-      <View style={[styles.field, styles.fieldWide]}>
-        <Text style={[type.caption, styles.cap]}>Month</Text>
-        <View style={col}>
-          <Picker
-            selectedValue={value.month}
-            onValueChange={(v) => set({ month: Number(v) })}
-            accessibilityLabel="Month of birth"
-            style={[styles.picker, itemColor]}
-            dropdownIconColor={colors.inkMuted}
-          >
-            {MONTHS.map((m, i) => (
-              <Picker.Item key={m} label={m} value={i + 1} color={colors.ink} />
-            ))}
-          </Picker>
-        </View>
-      </View>
+      <Column label="Month" display={pad2(value.month)} divider>
+        <Picker
+          selectedValue={value.month}
+          onValueChange={(v) => set({ month: Number(v) })}
+          accessibilityLabel="Month of birth"
+          style={styles.picker}
+        >
+          {MONTHS.map((m, i) => (
+            <Picker.Item key={m} label={m} value={i + 1} color={colors.ink} />
+          ))}
+        </Picker>
+      </Column>
 
-      <View style={styles.field}>
-        <Text style={[type.caption, styles.cap]}>Year</Text>
-        <View style={col}>
-          <Picker
-            selectedValue={value.year}
-            onValueChange={(v) => set({ year: Number(v) })}
-            accessibilityLabel="Year of birth"
-            style={[styles.picker, itemColor]}
-            dropdownIconColor={colors.inkMuted}
-          >
-            {years.map((y) => (
-              <Picker.Item key={y} label={String(y)} value={y} color={colors.ink} />
-            ))}
-          </Picker>
-        </View>
-      </View>
+      <Column label="Year" display={String(value.year)} divider>
+        <Picker
+          selectedValue={value.year}
+          onValueChange={(v) => set({ year: Number(v) })}
+          accessibilityLabel="Year of birth"
+          style={styles.picker}
+        >
+          {years.map((y) => (
+            <Picker.Item key={y} label={String(y)} value={y} color={colors.ink} />
+          ))}
+        </Picker>
+      </Column>
     </View>
   );
 }
@@ -107,10 +121,16 @@ export function dobToISO(d: Dob): string {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', gap: space.sm },
-  field: { flex: 1 },
-  fieldWide: { flex: 1.4 },
-  cap: { marginBottom: space.xs },
-  col: { borderWidth: 1, borderRadius: radius.md, overflow: 'hidden' },
-  picker: { height: 54, width: '100%' },
+  card: {
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    paddingVertical: space.lg,
+  },
+  col: { flex: 1, alignItems: 'center', gap: space.sm },
+  value: { fontFamily: font.sansBold, fontSize: 28, lineHeight: 34 },
+  // The functional Picker covers the column invisibly: taps/keyboard/AT hit the real
+  // <select> (web) or wheel/dialog (native) while the styled display shows through.
+  overlay: { ...StyleSheet.absoluteFillObject, opacity: 0 },
+  picker: { width: '100%', height: '100%' },
 });

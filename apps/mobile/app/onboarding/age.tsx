@@ -6,9 +6,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { DobPicker, dobToISO, type Dob } from '@/components/DobPicker';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { LogoLockup } from '@/components/art/Logo';
 import { setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
-import { radius, space, type } from '@/theme/tokens';
+import { font, space, type } from '@/theme/tokens';
 
 const MIN_AGE = 18; // mirrors the server gate (server is the source of truth)
 
@@ -19,6 +20,8 @@ function ageFrom(dob: Dob, today = new Date()): number {
   return age;
 }
 
+/** Age gate per mockup #3: logo, 4-line headline ("anonymous." in soft lavender),
+ * shield + reassurance copy, lock note, then the single-card D/M/Y picker. */
 export default function AgeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -40,6 +43,7 @@ export default function AgeScreen() {
   return (
     <Screen
       onBack={() => router.back()}
+      scroll
       footer={
         <>
           {underAge ? (
@@ -50,39 +54,67 @@ export default function AgeScreen() {
           {future ? (
             <Text style={[styles.block, { color: colors.danger }]}>That date is in the future.</Text>
           ) : null}
-          <PrimaryButton label="Continue" onPress={onContinue} disabled={!canContinue} testID="continue" />
+          <PrimaryButton
+            label="Continue"
+            tone="ink"
+            trailing="arrow"
+            onPress={onContinue}
+            disabled={!canContinue}
+            testID="continue"
+          />
         </>
       }
     >
-      <View style={[styles.shieldRow, { backgroundColor: colors.brandTint }]}>
-        <Ionicons name="shield-checkmark-outline" size={18} color={colors.accent} />
-        <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
-          Your age is never shown to other users.
-        </Text>
+      <View style={styles.logoZone}>
+        <LogoLockup markSize={40} />
       </View>
 
-      <Text style={[type.title, styles.title, { color: colors.ink }]} accessibilityRole="header">
-        How old are you?
-      </Text>
-      <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-        Your date of birth helps us keep Mento safe, while keeping you anonymous.
+      <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+        Your age helps us{'\n'}keep Mento safe,{'\n'}while keeping you{'\n'}
+        <Text style={{ color: colors.accentSoft }}>anonymous.</Text>
       </Text>
 
+      <View style={styles.reassure}>
+        <Ionicons name="shield-checkmark-outline" size={34} color={colors.accentSoft} />
+        <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
+          We use your age to create appropriate conversations and maintain a safe space for
+          everyone.
+        </Text>
+        <View style={styles.lockRow}>
+          <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
+          <Text style={[type.caption, { color: colors.inkMuted }]}>
+            Your age is never shown to other users.
+          </Text>
+        </View>
+      </View>
+
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+      <Text style={[styles.question, { color: colors.ink }]}>How old are you?</Text>
       <DobPicker value={dob} onChange={setDob} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  shieldRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    padding: space.sm,
-    borderRadius: radius.md,
+  logoZone: { alignItems: 'center', marginTop: space.md, marginBottom: space.lg },
+  headline: {
+    fontFamily: font.sansHeavy,
+    fontSize: 28,
+    lineHeight: 38,
+    textAlign: 'center',
     marginBottom: space.lg,
   },
-  title: { marginBottom: space.xs },
-  sub: { marginBottom: space.lg },
+  reassure: { alignItems: 'center', gap: space.md, paddingHorizontal: space.md },
+  center: { textAlign: 'center' },
+  lockRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  divider: { height: 1, marginVertical: space.lg },
+  question: {
+    fontFamily: font.sansBold,
+    fontSize: 17,
+    lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: space.md,
+  },
   block: { ...type.caption, textAlign: 'center' },
 });
