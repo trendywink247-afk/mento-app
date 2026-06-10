@@ -1,5 +1,6 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
@@ -9,7 +10,20 @@ type Props = {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  variant?: 'primary' | 'ghost';
+  /**
+   * primary = filled pill. ghost = borderless accent text in a pill. link = plain
+   * accent text ("Skip for now" in the mockups).
+   */
+  variant?: 'primary' | 'ghost' | 'link';
+  /**
+   * accent = companion colour (post-onboarding CTAs). ink = deep-navy pill — the
+   * onboarding CTAs in the mockups ("Continue →", "Start a Conversation").
+   */
+  tone?: 'accent' | 'ink';
+  /** Leading Ionicons glyph (e.g. the chat bubble on "Start a Conversation"). */
+  icon?: keyof typeof Ionicons.glyphMap;
+  /** Trailing arrow per the mockups: '→' on onboarding, '›' on post-onboarding CTAs. */
+  trailing?: 'arrow' | 'chevron';
   /** Defaults to `label`; set when the visible label needs more screen-reader context. */
   accessibilityLabel?: string;
   accessibilityHint?: string;
@@ -22,18 +36,26 @@ export function PrimaryButton({
   loading,
   disabled,
   variant = 'primary',
+  tone = 'accent',
+  icon,
+  trailing,
   accessibilityLabel,
   accessibilityHint,
   testID,
 }: Props) {
   const { colors } = useTheme();
-  const isGhost = variant === 'ghost';
+  const filled = variant === 'primary';
   const inactive = disabled || loading;
+  const bg = tone === 'ink' ? colors.ink : colors.accent;
+  const bgPress = tone === 'ink' ? '#2A2F55' : colors.accentPress;
+  const fg = filled ? colors.onAccent : colors.accent;
+
   const handlePress = () => {
     if (inactive) return;
     if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
     onPress();
   };
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -44,18 +66,20 @@ export function PrimaryButton({
       disabled={inactive}
       testID={testID}
       style={({ pressed }) => [
-        styles.base,
-        { backgroundColor: isGhost ? 'transparent' : colors.accent },
-        pressed && !isGhost && { backgroundColor: colors.accentPress },
+        variant === 'link' ? styles.link : styles.base,
+        filled && { backgroundColor: pressed ? bgPress : bg },
         inactive && styles.disabled,
       ]}
     >
       {loading ? (
-        <ActivityIndicator color={isGhost ? colors.accent : colors.onAccent} />
+        <ActivityIndicator color={fg} />
       ) : (
-        <Text style={[type.label, styles.label, { color: isGhost ? colors.accent : colors.onAccent }]}>
-          {label}
-        </Text>
+        <View style={styles.row}>
+          {icon ? <Ionicons name={icon} size={18} color={fg} /> : null}
+          <Text style={[type.bodySemi, styles.label, { color: fg }]}>{label}</Text>
+          {trailing === 'arrow' ? <Ionicons name="arrow-forward" size={18} color={fg} /> : null}
+          {trailing === 'chevron' ? <Ionicons name="chevron-forward" size={18} color={fg} /> : null}
+        </View>
       )}
     </Pressable>
   );
@@ -70,6 +94,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingVertical: space.sm,
   },
+  link: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   disabled: { opacity: 0.5 },
   label: { fontSize: 16 },
 });
