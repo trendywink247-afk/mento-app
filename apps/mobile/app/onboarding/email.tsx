@@ -3,14 +3,18 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { LogoLockup } from '@/components/art/Logo';
 import { setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
-import { radius, space, type } from '@/theme/tokens';
+import { font, radius, space, type } from '@/theme/tokens';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Optional email per mockup #4 (centered, envelope badge, icon-in-field, "or" + skip
+ * link). Copy stays our honest recovery wording — not the mockup's marketing line. */
 export default function EmailScreen() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -25,66 +29,109 @@ export default function EmailScreen() {
   return (
     <Screen
       onBack={() => router.back()}
+      scroll
       footer={
         <>
           <PrimaryButton
             label="Continue"
+            tone="ink"
+            trailing="arrow"
             onPress={() => next(true)}
             disabled={email.length > 0 && !valid}
             testID="continue"
           />
-          <PrimaryButton label="Skip for now" variant="ghost" onPress={() => next(false)} testID="skip" />
+          <View style={styles.orRow}>
+            <View style={[styles.hairline, { backgroundColor: colors.border }]} />
+            <Text style={[type.caption, { color: colors.inkMuted }]}>or</Text>
+            <View style={[styles.hairline, { backgroundColor: colors.border }]} />
+          </View>
+          <PrimaryButton label="Skip for now" variant="link" onPress={() => next(false)} testID="skip" />
         </>
       }
     >
-      <View style={[styles.iconWrap, { backgroundColor: colors.brandTint }]}>
-        <Ionicons name="mail-outline" size={24} color={colors.accent} />
+      <View style={styles.logoZone}>
+        <LogoLockup markSize={40} />
       </View>
-      <Text style={[type.title, styles.title, { color: colors.ink }]} accessibilityRole="header">
+
+      <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
         Optional, but helpful.
       </Text>
       <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-        Add an email only if you'd like a way to recover your space later. It's never required and
-        never shown to other users.
+        Add an email only if you'd like a way to recover your space later. It's never required
+        and never shown to other users.
       </Text>
 
-      <TextInput
-        style={[styles.input, { borderColor: valid ? colors.border : colors.danger, color: colors.ink, backgroundColor: colors.surface }]}
-        placeholder="Enter your email"
-        placeholderTextColor={colors.inkMuted}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        autoCorrect={false}
-        value={email}
-        onChangeText={setEmail}
-        accessibilityLabel="Email address (optional)"
-        testID="email-input"
-      />
+      <View style={styles.badgeZone}>
+        <IconBadge icon="mail-outline" size={64} />
+      </View>
+
+      <View
+        style={[
+          styles.field,
+          { borderColor: valid ? colors.border : colors.danger, backgroundColor: colors.surface },
+        ]}
+      >
+        <Ionicons name="mail-outline" size={20} color={colors.accentSoft} />
+        <TextInput
+          style={[styles.input, { color: colors.ink }]}
+          placeholder="Enter your email"
+          placeholderTextColor={colors.inkMuted}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoCorrect={false}
+          value={email}
+          onChangeText={setEmail}
+          accessibilityLabel="Email address (optional)"
+          testID="email-input"
+        />
+      </View>
       {!valid ? (
-        <Text style={[type.caption, { color: colors.danger, marginTop: space.sm }]}>
+        <Text style={[type.caption, styles.error, { color: colors.danger }]}>
           That doesn't look like a valid email.
         </Text>
       ) : null}
+
+      <View style={styles.lockRow}>
+        <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
+        <Text style={[type.caption, styles.lockText, { color: colors.inkMuted }]}>
+          We respect your privacy. Your email will never be shared with other users.
+        </Text>
+      </View>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  iconWrap: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+  logoZone: { alignItems: 'center', marginTop: space.md, marginBottom: space.xl },
+  headline: {
+    fontFamily: font.sansHeavy,
+    fontSize: 30,
+    lineHeight: 38,
+    textAlign: 'center',
     marginBottom: space.md,
   },
-  title: { marginBottom: space.xs },
-  sub: { marginBottom: space.lg },
-  input: {
-    height: 54,
+  sub: { textAlign: 'center', marginBottom: space.xl, paddingHorizontal: space.sm },
+  badgeZone: { alignItems: 'center', marginBottom: space.xl },
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    height: 58,
     borderRadius: radius.md,
     borderWidth: 1,
     paddingHorizontal: space.md,
-    ...type.body,
   },
+  input: { flex: 1, height: '100%', ...type.body },
+  error: { marginTop: space.sm, textAlign: 'center' },
+  lockRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: space.xs,
+    marginTop: space.md,
+    paddingHorizontal: space.lg,
+  },
+  lockText: { textAlign: 'center', flexShrink: 1 },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginVertical: space.xs },
+  hairline: { flex: 1, height: 1 },
 });
