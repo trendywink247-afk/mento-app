@@ -1,15 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 export default function Landing() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  // Returning users (existing anonymous session) skip onboarding and land on My Chats;
+  // render nothing while the secure store resolves so the landing never flashes first.
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void getSessionToken().then((token) => {
+      if (!active) return;
+      if (token) router.replace('/chats');
+      else setChecked(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  if (!checked) return null;
 
   return (
     <Screen
