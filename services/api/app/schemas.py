@@ -90,6 +90,23 @@ class OkResult(BaseModel):
     status: str
 
 
+# --- Journals (v1: save-to-Mentor-Notes from chat) ---
+class MentorNoteIn(BaseModel):
+    body: str = Field(min_length=1, max_length=4000)
+    conversation_id: str | None = None
+    listener_persona: str | None = Field(default=None, max_length=64)
+    stream_message_id: str | None = None  # idempotency key for repeated saves
+
+
+class JournalEntryOut(BaseModel):
+    id: str
+    channel: str
+    body: str
+    source: str
+    meta: dict
+    created_at: str
+
+
 # --- Moderation review queue (admin) ---
 class ModerationItem(BaseModel):
     id: str

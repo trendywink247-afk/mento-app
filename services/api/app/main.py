@@ -12,6 +12,7 @@ from app.db import init_db
 from app.routers import (
     conversation,
     health,
+    journals,
     match,
     moderation,
     onboarding,
@@ -52,3 +53,4 @@ app.include_router(safety.router, prefix=API)
 app.include_router(conversation.router, prefix=API)
 app.include_router(stream_hooks.router, prefix=API)
 app.include_router(moderation.router, prefix=API)
+app.include_router(journals.router, prefix=API)
