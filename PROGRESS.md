@@ -36,7 +36,13 @@
 - **Proven live:** lock→wrong-PIN rejected→unlock; mask applied; pause confirmed; wipe→All clean→My Chats; Report&Block "Asking for money" → **2 moderation events verified in Postgres** (warning + suspension/blocked).
 - **Inventory mis-mappings confirmed by pixel** (fix with Phase 5 docs pass): `10.31.13 AM.jpeg` = post-reflection coffee (#24), `(1)` = Panda Pause (#25), `(2)` = End/Wipe (#26), `(3)` = Report/Block (#27).
 
-**Next:** Phase 4 — end-of-conversation reflection (#23): energy slider screen after End, `POST /conversations/{id}/reflection` (no identity-content linkage, no points), high-energy → optional coffee.
+**Phase 4 — end-of-conversation reflection (#23) ✅**
+- **Backend:** `conversation_reflections` (migration `5e070c058a36`) stores **only** `conversation_id` + `energy 1..5` — no user column (test-asserted), idempotent upsert, owner-checked then dropped. No points/XP anywhere. Suite **16 passed**.
+- **Mobile:** `/reflection` per mockup (wave panda, 5-node slider w/ sleeping/excited panda endpoints, persona name in copy, privacy card, X = skip, Finish gated on a pick). **Plain End → reflection; energy ≥ 4 → `/coffee?energy=high` after Finish** (opt-in, post-conversation = allowed). Wipe keeps its "All clean!" path.
+- **Proven live:** End → reflection → 5 → coffee (#24 headline); `energy=5` row in Postgres.
+- *Dev note:* running pytest truncates the dev DB's listeners (conftest fixtures) — re-run `scripts/seed_listeners.py` after a test run, or matches 503.
+
+**Next:** Phase 5 — new surfaces in order: My Chats (#54/55 + list-conversations endpoint), Mentors (list/profile/intro/request-sent), Journals (hub + Mentor Notes + Mood + Finance; AI assistant last, needs an LLM decision), lightweight Profile; fix MOCKUP_INVENTORY mis-mappings.
 
 **Open decisions:** none new (tab-set + avatar-style decisions were logged in the plan).
 
