@@ -40,7 +40,7 @@ export default function CompanionScreen() {
   const onContinue = () => {
     if (!animal || !colourPicked) return;
     setDraft({ companionAnimal: animal, companionColour: companionColor });
-    router.push('/onboarding/connecting');
+    router.push('/onboarding/ready');
   };
 
   // Surprise picks a visible selection (and re-accents live) — the user still confirms
