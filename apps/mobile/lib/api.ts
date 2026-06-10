@@ -38,6 +38,15 @@ export type ConversationState = {
   status_mask: string | null;
 };
 
+export type JournalEntry = {
+  id: string;
+  channel: string;
+  body: string;
+  source: string;
+  meta: Record<string, string | null>;
+  created_at: string;
+};
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -108,4 +117,14 @@ export const api = {
 
   blockConversation: (id: string, reason: string | null) =>
     request<{ status: string }>(`/conversations/${id}/block`, { method: 'POST', body: JSON.stringify({ reason }) }, true),
+
+  // --- Journals (v1: save-to-Mentor-Notes from chat) ---
+  saveMentorNote: (body: {
+    body: string;
+    conversation_id?: string | null;
+    listener_persona?: string | null;
+    stream_message_id?: string | null;
+  }) => request<JournalEntry>('/journals/mentor-notes', { method: 'POST', body: JSON.stringify(body) }, true),
+
+  listMentorNotes: () => request<JournalEntry[]>('/journals/mentor-notes', {}, true),
 };

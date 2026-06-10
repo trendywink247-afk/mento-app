@@ -11,11 +11,14 @@ import { Channel, Chat, MessageComposer, MessageList } from 'stream-chat-expo';
 // a stream-chat type), so derive the exact prop type from the component instead.
 type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
+import { IconBadge } from '@/components/IconBadge';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
+import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { api } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { getStreamClient } from '@/lib/streamClient';
 import { useTheme } from '@/theme/ThemeProvider';
-import { radius, space, type } from '@/theme/tokens';
+import { font, radius, space, type } from '@/theme/tokens';
 
 /**
  * Real-time 1:1 chat backed by a live Stream channel (stream-chat-expo).
@@ -52,8 +55,48 @@ export default function ChatScreen() {
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [privacyNote, setPrivacyNote] = useState(true);
   // Surface each crisis message once, so dismissing it isn't undone by later events.
   const shownRef = useRef<Set<string>>(new Set());
+
+  // The core talk→action loop (SCOPE §7): long-press a mentor message → message menu →
+  // "Save to Mentor Notes" persists it to the journal.
+  const customMessageActions = useCallback(
+    ({
+      copyMessage,
+      quotedReply,
+      isMyMessage,
+      message,
+      dismissOverlay,
+    }: {
+      copyMessage: { action: () => void; actionType: string; title: string; type: 'standard' | 'destructive' };
+      quotedReply: { action: () => void; actionType: string; title: string; type: 'standard' | 'destructive' };
+      isMyMessage: boolean;
+      message: { id: string; text?: string };
+      dismissOverlay: () => void;
+    }) => {
+      if (isMyMessage || !message.text) return [copyMessage, quotedReply];
+      return [
+        {
+          action: () => {
+            void api.saveMentorNote({
+              body: message.text ?? '',
+              conversation_id: conversationId ?? null,
+              listener_persona: listenerName,
+              stream_message_id: message.id,
+            });
+            dismissOverlay();
+          },
+          actionType: 'saveToMentorNotes',
+          title: 'Save to Mentor Notes',
+          type: 'standard' as const,
+        },
+        copyMessage,
+        quotedReply,
+      ];
+    },
+    [conversationId, listenerName],
+  );
 
   // Theme the Stream kit (v9 semantics tokens) to the mockup chat language: cream app
   // bg, white incoming bubbles, lavender-tint outgoing bubbles with ink text, and the
@@ -129,26 +172,32 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      <View style={[styles.header, { borderBottomColor: colors.border, backgroundColor: colors.surface }]}>
+      {/* Mentor header card (mockup #7) */}
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <Pressable
-          onPress={() => router.replace('/')}
+          onPress={() => router.replace('/chats')}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel="Leave conversation"
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
-        <View style={[styles.avatar, { backgroundColor: colors.brandTint }]}>
-          <Ionicons name="leaf-outline" size={20} color={colors.accent} />
-        </View>
+        <PersonaAvatar name={listenerName} size={52} online />
         <View style={{ flex: 1 }} accessible accessibilityRole="header">
-          <Text style={[type.label, { color: colors.ink }]} numberOfLines={1}>
+          <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
             {listenerName}
           </Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>Mentor</Text>
           <View style={styles.statusRow}>
-            <View style={[styles.dot, { backgroundColor: colors.success }]} />
-            <Text style={[type.caption, { color: colors.inkMuted }]}>Connected · Here to listen</Text>
+            <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
+            <Text style={[type.caption, { color: colors.inkMuted }]}>
+              Here to listen and support
+            </Text>
           </View>
+        </View>
+        <View style={[styles.connectedPill, { backgroundColor: colors.surfaceAlt }]}>
+          <Text style={[type.caption, { color: colors.ink }]}>Connected</Text>
+          <View style={[styles.dot, { backgroundColor: colors.success }]} />
         </View>
         <Pressable
           onPress={() => setOptionsOpen(true)}
@@ -161,12 +210,23 @@ export default function ChatScreen() {
         </Pressable>
       </View>
 
-      <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
-        <Ionicons name="lock-closed" size={13} color={colors.accent} />
-        <Text style={[type.caption, { color: colors.ink }]}>
-          This conversation is private. You're anonymous here.
-        </Text>
-      </View>
+      {/* Dismissible first-run privacy line (mockup #20 shows it collapsed) */}
+      {privacyNote ? (
+        <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
+          <Ionicons name="lock-closed" size={13} color={colors.accent} />
+          <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
+            This conversation is private. You're anonymous here.
+          </Text>
+          <Pressable
+            onPress={() => setPrivacyNote(false)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss privacy note"
+          >
+            <Ionicons name="close" size={16} color={colors.inkMuted} />
+          </Pressable>
+        </View>
+      ) : null}
 
       {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} colors={colors} /> : null}
 
@@ -177,7 +237,11 @@ export default function ChatScreen() {
       ) : channel ? (
         <View style={{ flex: 1 }} testID="chat-ready">
           <Chat client={getStreamClient()} style={streamTheme}>
-            <Channel channel={channel} doSendMessageRequest={doSendMessageRequest}>
+            <Channel
+              channel={channel}
+              doSendMessageRequest={doSendMessageRequest}
+              messageActions={customMessageActions}
+            >
               <MessageList />
               <MessageComposer />
             </Channel>
@@ -210,10 +274,8 @@ function CrisisCard({
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
   return (
-    <View
-      style={[styles.crisis, { backgroundColor: colors.brandTint, borderColor: colors.accent }]}
-      testID="crisis-card"
-    >
+    <View style={[styles.crisis, { backgroundColor: colors.brandTint }]} testID="crisis-card">
+      <Text style={[styles.crisisTitle, { color: colors.ink }]}>You matter. Support is here.</Text>
       <Text style={[type.body, { color: colors.ink }]}>{crisis.support}</Text>
       <View style={{ gap: space.sm }}>
         {crisis.helplines.map((h) => (
@@ -224,11 +286,12 @@ function CrisisCard({
             accessibilityRole="button"
             accessibilityLabel={`Call ${h.name} at ${h.number}, available ${h.hours}`}
           >
-            <Ionicons name="call-outline" size={18} color={colors.accent} />
-            <Text style={[type.label, { color: colors.ink }]}>
-              {h.name} · {h.number}
-            </Text>
-            <Text style={[type.caption, { color: colors.inkMuted, marginLeft: 'auto' }]}>{h.hours}</Text>
+            <IconBadge icon="call-outline" size={36} tone="green" />
+            <View style={{ flex: 1 }}>
+              <Text style={[type.label, { color: colors.ink }]}>{h.name}</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>{h.number}</Text>
+            </View>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{h.hours}</Text>
           </Pressable>
         ))}
       </View>
@@ -247,37 +310,40 @@ const styles = StyleSheet.create({
     gap: space.sm,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
-    borderBottomWidth: 1,
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  dot: { width: 7, height: 7, borderRadius: radius.pill },
+  connectedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    borderRadius: radius.pill,
+    paddingVertical: 4,
+    paddingHorizontal: space.sm,
+  },
+  dot: { width: 8, height: 8, borderRadius: radius.pill },
   privacy: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: space.xs,
     paddingVertical: space.xs,
+    paddingHorizontal: space.md,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   crisis: {
     margin: space.md,
     padding: space.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderRadius: radius.lg,
     gap: space.sm,
   },
+  crisisTitle: { fontFamily: font.serifBold, fontSize: 18, lineHeight: 24 },
   helpline: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
     padding: space.sm,
   },
   crisisDismiss: { alignSelf: 'flex-end' },
