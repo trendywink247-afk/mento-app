@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-06-11 (session 9) — Phase 0: mockup-fidelity foundation ✅
+
+**Goal:** the unlock layer for the mockup-fidelity overhaul (plan: `~/.claude/plans/parsed-orbiting-wadler.md`) — calibrated tokens, real typography, primitives, a vector art system, and the tab shell. All committed.
+
+**Done this session**
+- **Token calibration (committed):** sampled the mockup JPEG pixels (`scripts/sample_mockup_colors.py`) → warm-cream `bg #FDF8F5`, `bgLavender` ritual variant, purple `#5847D6` accent, `wash.*` pastel icon-circle group, calibrated `elevation` shadows. `type` ramp now two families.
+- **Typography (committed):** Lora (serif display — hub titles, persona names) + Nunito (rounded sans body) via `@expo-google-fonts` + `useFonts` in `_layout.tsx`; splash held until loaded. Family-per-weight convention (Android-safe).
+- **Primitives (committed):** `Card` (borderless, radius 22, soft shadow), `IconBadge` (pastel-circle icon, 5 washes), `PrimaryButton` gains `tone: ink` (navy onboarding CTAs), trailing →/›, leading icon, `link` variant.
+- **Vector art system (committed):** `components/art/` — `Logo` mark+lockup, `Panda` poses (wave/sleeping/excited/coffee/sad/broom/shield), `CompanionArt` ×6 animals, `Scenes` (mountains/connecting/chat-bubbles), `PersonaAvatar` (deterministic nature-gradient hashed from persona name — anonymity-safe stand-in for the mockups' photo landscapes).
+- **Native chat re-theme (committed):** the stale uncommitted re-skin targeted Stream Chat v5 theming (removed API, didn't compile) — redone via the v9 semantics. Logic untouched.
+- **Tab shell (committed, verified):** `app/(tabs)/` — **Chats / Journals / Mentors / Profile** (v1 tab set; Home/Mirror/Community variants deferred), custom bar per mockup #7 (white rounded-top, active icon in accentTint pill). Chat detail stays pushed above tabs. **`/` now routes returning users (stored session) → My Chats; fresh → landing** — Playwright-proven both ways at 390×844, 0 console errors. Journals/Mentors/Profile are designed empty states until Phase 5.
+
+**Next:** Phase 1 — onboarding pixel pass (landing/age/email/companion/connecting re-skins + new `ready.tsx` #59), one commit per screen, each screenshot-compared to its mockup.
+
+**Open decisions:** none new (tab-set + avatar-style decisions were logged in the plan).
+
+---
+
 ## 2026-06-09 (session 8) — Design system + onboarding re-skin (in progress) 🎨
 
 **Goal:** formalize the design system, then re-skin existing screens to the mockups and build the missing ones. Working flow-by-flow, committing + screenshotting each. Chat core untouched (no regression to crisis enforcement / blocked-listener guarantee).
