@@ -16,7 +16,15 @@
 - **Native chat re-theme (committed):** the stale uncommitted re-skin targeted Stream Chat v5 theming (removed API, didn't compile) — redone via the v9 semantics. Logic untouched.
 - **Tab shell (committed, verified):** `app/(tabs)/` — **Chats / Journals / Mentors / Profile** (v1 tab set; Home/Mirror/Community variants deferred), custom bar per mockup #7 (white rounded-top, active icon in accentTint pill). Chat detail stays pushed above tabs. **`/` now routes returning users (stored session) → My Chats; fresh → landing** — Playwright-proven both ways at 390×844, 0 console errors. Journals/Mentors/Profile are designed empty states until Phase 5.
 
-**Next:** Phase 1 — onboarding pixel pass (landing/age/email/companion/connecting re-skins + new `ready.tsx` #59), one commit per screen, each screenshot-compared to its mockup.
+**Phase 1 — onboarding pixel pass ✅ (one commit per screen, each Playwright-screenshotted at 390×844 against its mockup, tsc clean, 0 console errors)**
+- **Landing** (#2): centered LogoLockup, 3-line headline w/ soft-lavender "understands." (new `accentSoft` token, sampled), ink CTA w/ chat icon, full-bleed mountains.
+- **Age gate** (#3): 4-line "anonymous." headline, shield + lock reassurance, `DobPicker` → single tinted card (chevron/value/label columns; invisible accessible Picker overlay keeps web `<select>` + native wheel — proven interactable). D/M/Y semantics + server gate untouched. *(Mockup's wrong "Years/Months/Year" labels stay corrected.)*
+- **Email** (#4): centered, envelope IconBadge, icon-in-field, lock note, ink Continue →, "or" divider, Skip link. Honest recovery copy kept (not the mockup's marketing line).
+- **Companion** (#58): lavender ritual bg (`Screen bg=lavender` + white-circle back), animal/colour cards w/ check badges, numbered section headers, "Can't decide?" card w/ outlined **Surprise Me** (now selects visibly + re-accents live; user still confirms — polish call). Live re-accent proven (green walk-through).
+- **NEW `ready.tsx`** (#59): check badge, companion art in lavender arch, "You chose [Colour Animal]" serif, affirmations card, Enter My Space ›. **Flow rewired: companion → ready → connecting.**
+- **Connecting** (#5): two-windows scene, 5 guideline rows w/ pastel badges (mockup copy), lavender footer card; match logic + error/retry untouched.
+
+**Next:** Phase 2 — chat pixel pass + the save-to-Mentor-Notes loop (mentor header card, Today divider, accentTint sent bubbles + ✓✓, message actions, `POST /journals/mentor-notes`), then re-run the two-party web smoke.
 
 **Open decisions:** none new (tab-set + avatar-style decisions were logged in the plan).
 
