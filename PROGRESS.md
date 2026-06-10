@@ -30,7 +30,13 @@
 - **Native:** header/privacy parity; long-press message menu gains **"Save to Mentor Notes"** (`messageActions` on stream-chat-expo v9); crisis card restyled (serif title, IconBadge helpline rows). Device verification still the tracked Maestro item.
 - **Proven live (Expo web + uvicorn + real Stream):** onboard → match → user msg → **listener reply sent via the Stream server API delivered live** → save → **persisted + read back via the API**; crisis-payload message renders the helpline card (enforcement path itself untouched + previously proven). 0 console errors.
 
-**Next:** Phase 3 — conversation controls to spec (numbered options sheet incl. **Buy the Team a Coffee** entry, PIN keypad, Panda Mask presets, Pause, End-vs-Wipe, Report/Block reasons) + the coffee screen (#28).
+**Phase 3 — conversation controls to spec + coffee ✅**
+- **Sheet** rebuilt per mockup (6 numbered bordered cards w/ tinted badges, well-being footer, **item 6 = Buy the Mento Team a Coffee**). Sub-flows = styled full overlays (`components/chat/options/`), same proven endpoints: **PIN keypad** (dots, sad-panda wrong-PIN; biometric/email-reset deferred per DoD), **Panda Mask 6 presets** (replaces free-text client-side), **Panda Pause** toggle + confirm modal, **End-vs-Wipe two-step w/ honest copy** + "All clean!", **Report/Block 7-reason radios** (reason = moderation taxonomy).
+- **`/coffee`** (#28, `?energy=high` adds the #24 headline): amount chips + custom, methods **transparently disabled** ("coming very soon") until Razorpay creds land — no fake payment UI, supports the *team*, opt-in from the menu only. *(Open decision: contribution record + receipt land with the Razorpay unit — nothing to receipt while payments are off.)*
+- **Proven live:** lock→wrong-PIN rejected→unlock; mask applied; pause confirmed; wipe→All clean→My Chats; Report&Block "Asking for money" → **2 moderation events verified in Postgres** (warning + suspension/blocked).
+- **Inventory mis-mappings confirmed by pixel** (fix with Phase 5 docs pass): `10.31.13 AM.jpeg` = post-reflection coffee (#24), `(1)` = Panda Pause (#25), `(2)` = End/Wipe (#26), `(3)` = Report/Block (#27).
+
+**Next:** Phase 4 — end-of-conversation reflection (#23): energy slider screen after End, `POST /conversations/{id}/reflection` (no identity-content linkage, no points), high-energy → optional coffee.
 
 **Open decisions:** none new (tab-set + avatar-style decisions were logged in the plan).
 
