@@ -27,6 +27,10 @@ export const colors = {
   brandPress: '#4736B8',
   brandTint: '#ECE6F8', // sent-bubble tint (sampled #ECE6F5)
 
+  /** Soft brand lavender — headline accent words ("understands.", "anonymous.") and
+   * illustration washes. Fixed (not the companion accent); sampled #7E79AF–#827BCB. */
+  accentSoft: '#8177C9',
+
   // Semantic (fixed)
   accentWarm: '#F2A65A',
   success: '#3FB97A',
