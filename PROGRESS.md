@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-06-11 (session 10) — Phase 5 closed out: log recovery, Start fresh, inventory erratum ✅
+
+**Context:** session 9 hit a rate limit after the last Phase 5 commit but *before* logging it — this entry recovers that log, then closes the two leftover Phase 5 items.
+
+**Phase 5 — new surfaces (committed end of session 9, logged here)**
+- **My Chats** (#54/55, `889e12a`): list-conversations endpoint, previews, PIN gate on locked chats, New Chat.
+- **Mentors** (`2578151`): GET /listeners (availability-sorted, blocked excluded), Personal requests (intro ≤160, idempotent), **admin-token accept/decline as the mentor-inbox stand-in until Module B** — accept row-locks capacity and opens the conversation via the shared `open_conversation()`. Mobile: Mentors tab → profile → intro composer → request-sent. Proven live: browse → request → admin accept → conversation in My Chats. Suite 21 passed.
+- **Journals** (`4470f34`): generic POST/GET `/journals/entries` (mood|finance|gratitude) + `/journals/summary`; hub per mockup (AI-assistant card honestly "Coming soon" pending the LLM decision) + one parameterized `/journal/[channel]` surface. Proven live; suite 22 passed.
+- **Profile** (`3c8fb96`): persona identity, live colour switcher, support/about rows.
+
+**Done this session**
+- **App run for founder demo:** Docker (was down) → migrations → re-seed listeners (pytest truncation) → uvicorn :8000 + Expo web :8081; Playwright smoke clean. Crisis-webhook tunnel *not* configured this session (enforcement needs `cloudflared` + `configure_stream` per session-6 notes).
+- **"Start fresh" on Profile** (`1a7b415`): confirm modal (wave panda, honest no-way-back copy) → resets accent → `clearSession()` → landing. Fills the demo gap: there was no logout/reset. Playwright-proven: cancel keeps session; confirm leaves zero `mento.*` keys; reload stays on landing.
+- **MOCKUP_INVENTORY erratum** (`368e8f5`) — the deferred mis-mapping fix, done properly: re-verified **29/64 mockups by pixel** and found the catalog was mis-attributed in three runs (uncataloged Journals hub / Mentors directory / Assessment Complete screens + three duplicate-sighting entries). Every entry now names its pixel-verified file; checked bijective (64 headings ↔ 64 files). New entries #65–#67.
+
+**Next (the build-able backlog):**
+1. **AI Journal Assistant** (#29) — blocked on the LLM decision (model/provider/cost; recommend a founder call, then it's a contained unit: conversational logging into Mood/Finance).
+2. **Razorpay contribution wiring** — blocked on creds; coffee screen ships with methods transparently disabled.
+3. **Native device verification** (Maestro, iOS/Android) — stream-chat-expo UI, options sheet, haptics, keypad.
+4. **Stream secret rotation** (founder, dashboard) + a stable webhook URL for staging (replace per-session cloudflared).
+
+**Open decisions:** LLM for the Journal Assistant (provider, on-device vs API, cost ceiling).
+
+**How to resume:** backend `docker compose up -d` → `alembic upgrade head` → seed → uvicorn :8000; mobile `npx expo start --web --port 8081`; crisis-enforcement live-testing additionally needs the tunnel + `python -m scripts.configure_stream <url>`.
+
+---
+
 ## 2026-06-11 (session 9) — Phase 0: mockup-fidelity foundation ✅
 
 **Goal:** the unlock layer for the mockup-fidelity overhaul (plan: `~/.claude/plans/parsed-orbiting-wadler.md`) — calibrated tokens, real typography, primitives, a vector art system, and the tab shell. All committed.
