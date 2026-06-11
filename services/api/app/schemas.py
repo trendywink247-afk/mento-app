@@ -145,6 +145,12 @@ class MentorNoteIn(BaseModel):
     stream_message_id: str | None = None  # idempotency key for repeated saves
 
 
+class JournalEntryIn(BaseModel):
+    channel: str  # mood | finance | gratitude (mentor_notes has its own endpoint)
+    body: str = Field(min_length=1, max_length=4000)
+    meta: dict = {}
+
+
 class JournalEntryOut(BaseModel):
     id: str
     channel: str

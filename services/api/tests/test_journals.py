@@ -71,6 +71,49 @@ def test_saving_same_message_twice_is_idempotent(client, db_session):
 
 
 @requires_postgres
+def test_manual_entries_and_summary(client, db_session):
+    with TestSession() as s:
+        uid = _seed_user(s)
+        s.commit()
+
+    r = client.post(
+        "/api/v1/journals/entries",
+        json={"channel": "mood", "body": "Felt lighter after talking.", "meta": {"mood": "Calm"}},
+        headers=_auth(uid),
+    )
+    assert r.status_code == 200 and r.json()["channel"] == "mood"
+    client.post(
+        "/api/v1/journals/entries",
+        json={"channel": "finance", "body": "Chai", "meta": {"amount_paise": 2000, "direction": "expense"}},
+        headers=_auth(uid),
+    )
+
+    moods = client.get("/api/v1/journals/entries?channel=mood", headers=_auth(uid)).json()
+    assert [m["body"] for m in moods] == ["Felt lighter after talking."]
+
+    summary = client.get("/api/v1/journals/summary", headers=_auth(uid)).json()
+    assert summary == {"mood": 1, "finance": 1}
+
+    # Mentor notes keep their idempotent endpoint; unknown channels are rejected.
+    assert (
+        client.post(
+            "/api/v1/journals/entries",
+            json={"channel": "mentor_notes", "body": "nope"},
+            headers=_auth(uid),
+        ).status_code
+        == 400
+    )
+    assert (
+        client.post(
+            "/api/v1/journals/entries",
+            json={"channel": "bogus", "body": "nope"},
+            headers=_auth(uid),
+        ).status_code
+        == 422
+    )
+
+
+@requires_postgres
 def test_notes_are_scoped_to_the_owner(client, db_session):
     with TestSession() as s:
         uid_a = _seed_user(s)

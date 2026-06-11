@@ -173,4 +173,12 @@ export const api = {
   }) => request<JournalEntry>('/journals/mentor-notes', { method: 'POST', body: JSON.stringify(body) }, true),
 
   listMentorNotes: () => request<JournalEntry[]>('/journals/mentor-notes', {}, true),
+
+  journalSummary: () => request<Record<string, number>>('/journals/summary', {}, true),
+
+  createJournalEntry: (body: { channel: string; body: string; meta?: Record<string, unknown> }) =>
+    request<JournalEntry>('/journals/entries', { method: 'POST', body: JSON.stringify(body) }, true),
+
+  listJournalEntries: (channel: string) =>
+    request<JournalEntry[]>(`/journals/entries?channel=${encodeURIComponent(channel)}`, {}, true),
 };
