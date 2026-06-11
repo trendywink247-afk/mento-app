@@ -30,6 +30,17 @@ export type ScanResult = {
   message: string | null;
 };
 
+export type ConversationListItem = {
+  id: string;
+  status: 'active' | 'ended' | 'wiped';
+  listener_persona_name: string;
+  listener_persona_avatar: string;
+  stream_channel_id: string | null;
+  is_locked: boolean;
+  created_at: string;
+  ended_at: string | null;
+};
+
 export type ConversationState = {
   id: string;
   status: string;
@@ -92,6 +103,11 @@ export const api = {
 
   scan: (body: { text: string; conversation_id?: string | null }) =>
     request<ScanResult>('/safety/scan', { method: 'POST', body: JSON.stringify(body) }, true),
+
+  listConversations: () => request<ConversationListItem[]>('/conversations', {}, true),
+
+  verifyPin: (id: string, pin: string) =>
+    request<{ status: string }>(`/conversations/${id}/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }, true),
 
   endConversation: (id: string) =>
     request<{ status: string }>(`/conversations/${id}/end`, { method: 'POST' }, true),

@@ -20,6 +20,7 @@ from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.reflection import ConversationReflection
 from app.schemas import (
+    ConversationListItem,
     ConversationState,
     LockRequest,
     OkResult,
@@ -28,6 +29,7 @@ from app.schemas import (
     ReportRequest,
     StatusMaskRequest,
     UnlockRequest,
+    VerifyPinRequest,
 )
 from app.security import current_user_id, hash_pin, verify_pin
 from app.services import stream
@@ -56,6 +58,61 @@ def _state(convo: Conversation) -> ConversationState:
         is_paused=convo.is_paused,
         status_mask=convo.status_mask,
     )
+
+
+@router.get("", response_model=list[ConversationListItem])
+def list_conversations(
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> list[ConversationListItem]:
+    """The user's conversations, newest first — the My Chats surface (#54/55)."""
+    convos = db.scalars(
+        select(Conversation)
+        .where(Conversation.user_id == user_id)
+        .order_by(Conversation.created_at.desc())
+    ).all()
+    listeners = {
+        li.id: li
+        for li in db.scalars(
+            select(ListenerProfile).where(
+                ListenerProfile.id.in_({c.listener_id for c in convos})
+            )
+        ).all()
+    }
+    return [
+        ConversationListItem(
+            id=c.id,
+            status=c.status.value,
+            listener_persona_name=listeners[c.listener_id].persona_name
+            if c.listener_id in listeners
+            else "Listener",
+            listener_persona_avatar=listeners[c.listener_id].persona_avatar
+            if c.listener_id in listeners
+            else "",
+            stream_channel_id=c.stream_channel_id,
+            is_locked=c.is_locked,
+            created_at=c.created_at.isoformat(),
+            ended_at=c.ended_at.isoformat() if c.ended_at else None,
+        )
+        for c in convos
+    ]
+
+
+@router.post("/{convo_id}/verify-pin", response_model=OkResult)
+def verify_conversation_pin(
+    convo_id: str,
+    payload: VerifyPinRequest,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Open-gate for a locked chat: verifies the PIN WITHOUT unlocking, so the
+    conversation stays protected the next time it's opened."""
+    convo = _owned(db, convo_id, user_id)
+    if not convo.is_locked:
+        return OkResult(status="ok")
+    if not verify_pin(payload.pin, convo.id, convo.pin_hash):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "wrong PIN")
+    return OkResult(status="ok")
 
 
 # --- Options sheet: per-conversation controls ---

@@ -77,6 +77,22 @@ class ReportRequest(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
 
 
+class ConversationListItem(BaseModel):
+    """Row for My Chats (#54/55). Message previews come from Stream client-side."""
+    id: str
+    status: str
+    listener_persona_name: str
+    listener_persona_avatar: str
+    stream_channel_id: str | None
+    is_locked: bool
+    created_at: str
+    ended_at: str | None
+
+
+class VerifyPinRequest(BaseModel):
+    pin: str = Field(pattern=r"^\d{4}$")
+
+
 class ConversationState(BaseModel):
     """Echoed back so the client can reflect the options sheet without guessing."""
     id: str
