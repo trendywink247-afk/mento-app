@@ -30,6 +30,25 @@ export type ScanResult = {
   message: string | null;
 };
 
+export type Listener = {
+  id: string;
+  persona_name: string;
+  persona_avatar: string;
+  gender: string;
+  categories: string[];
+  status: 'online' | 'away' | 'offline';
+  available: boolean;
+};
+
+export type PersonalRequest = {
+  id: string;
+  status: 'pending' | 'matched' | 'declined' | 'expired';
+  target_listener_id: string | null;
+  intro_message: string | null;
+  conversation_id: string | null;
+  created_at: string;
+};
+
 export type ConversationListItem = {
   id: string;
   status: 'active' | 'ended' | 'wiped';
@@ -105,6 +124,14 @@ export const api = {
     request<ScanResult>('/safety/scan', { method: 'POST', body: JSON.stringify(body) }, true),
 
   listConversations: () => request<ConversationListItem[]>('/conversations', {}, true),
+
+  // --- Mentor discovery + personal requests ---
+  listListeners: () => request<Listener[]>('/listeners', {}, true),
+
+  requestListener: (id: string, intro_message: string, issue_category?: string | null) =>
+    request<PersonalRequest>(`/listeners/${id}/request`, { method: 'POST', body: JSON.stringify({ intro_message, issue_category }) }, true),
+
+  myRequests: () => request<PersonalRequest[]>('/listeners/requests/mine', {}, true),
 
   verifyPin: (id: string, pin: string) =>
     request<{ status: string }>(`/conversations/${id}/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }, true),

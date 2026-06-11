@@ -13,6 +13,7 @@ from app.routers import (
     conversation,
     health,
     journals,
+    listeners,
     match,
     moderation,
     onboarding,
@@ -54,3 +55,4 @@ app.include_router(conversation.router, prefix=API)
 app.include_router(stream_hooks.router, prefix=API)
 app.include_router(moderation.router, prefix=API)
 app.include_router(journals.router, prefix=API)
+app.include_router(listeners.router, prefix=API)

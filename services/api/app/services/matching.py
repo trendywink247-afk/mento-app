@@ -68,19 +68,16 @@ def _pick_available_listener(
     return candidates[0]
 
 
-def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
-    """Match the user to the next available listener and open a Stream channel."""
-    blocked_ids = _blocked_listener_ids(db, user.id)
-    listener = _pick_available_listener(db, category, blocked_ids)
-    if listener is None:
-        raise NoListenerAvailable()
-
+def open_conversation(db: Session, user_id: str, listener: ListenerProfile) -> Conversation:
+    """Open a conversation + Stream channel with a specific listener (capacity already
+    reserved by the caller under a row lock). Shared by general match and personal
+    request acceptance."""
     listener.active_conversations += 1
 
     convo = Conversation(
         type=ConversationType.anon,
         status=ConversationStatus.active,
-        user_id=user.id,
+        user_id=user_id,
         listener_id=listener.id,
     )
     db.add(convo)
@@ -88,10 +85,19 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
 
     channel_id = stream.create_dm_channel(
         channel_id=f"c-{uuid.uuid4().hex[:20]}",
-        user_id=user.id,
+        user_id=user_id,
         listener_id=listener.id,
     )
     convo.stream_channel_id = channel_id
     db.commit()
     db.refresh(convo)
     return convo
+
+
+def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
+    """Match the user to the next available listener and open a Stream channel."""
+    blocked_ids = _blocked_listener_ids(db, user.id)
+    listener = _pick_available_listener(db, category, blocked_ids)
+    if listener is None:
+        raise NoListenerAvailable()
+    return open_conversation(db, user.id, listener)

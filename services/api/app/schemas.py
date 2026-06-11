@@ -43,6 +43,32 @@ class MatchResult(BaseModel):
     listener_persona_avatar: str
 
 
+# --- Listener discovery + personal requests ---
+class ListenerOut(BaseModel):
+    """Anonymous persona card — no real names/photos/star ratings in v1 (T&S #7)."""
+    id: str
+    persona_name: str
+    persona_avatar: str
+    gender: str
+    categories: list[str]
+    status: str
+    available: bool
+
+
+class PersonalRequestIn(BaseModel):
+    intro_message: str = Field(min_length=1, max_length=160)
+    issue_category: str | None = None
+
+
+class RequestOut(BaseModel):
+    id: str
+    status: str
+    target_listener_id: str | None
+    intro_message: str | None
+    conversation_id: str | None
+    created_at: str
+
+
 # --- Safety ---
 class ScanRequest(BaseModel):
     text: str

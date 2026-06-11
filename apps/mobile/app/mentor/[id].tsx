@@ -1,0 +1,301 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+
+import { IconBadge } from '@/components/IconBadge';
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { Screen } from '@/components/Screen';
+import { Panda } from '@/components/art/Panda';
+import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { ApiError, api, type Listener } from '@/lib/api';
+import { useTheme } from '@/theme/ThemeProvider';
+import { font, radius, space, type } from '@/theme/tokens';
+
+// Topic chips lean life/emotional (SCOPE §4) — never UPSC-only.
+const TOPICS = ['Family', 'Relationships', 'Self-esteem', 'Loneliness', 'Focus'];
+
+/** Mentor profile (#50/51, anonymity-safe: persona avatar instead of photo covers,
+ * no star ratings) → intro composer (#52) → request sent (#53). */
+export default function MentorProfile() {
+  const router = useRouter();
+  const { colors, elevation } = useTheme();
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [listener, setListener] = useState<Listener | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState<'profile' | 'compose' | 'sent'>('profile');
+  const [intro, setIntro] = useState('');
+  const [topic, setTopic] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void api
+      .listListeners()
+      .then((all) => {
+        if (active) setListener(all.find((l) => l.id === id) ?? null);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const send = async () => {
+    if (!listener || !intro.trim() || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.requestListener(listener.id, intro.trim(), topic);
+      setStep('sent');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Screen onBack={() => router.back()}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.accent} />
+        </View>
+      </Screen>
+    );
+  }
+
+  if (!listener) {
+    return (
+      <Screen onBack={() => router.back()}>
+        <View style={styles.center}>
+          <IconBadge icon="cloud-offline-outline" tone="indigo" size={56} />
+          <Text style={[type.body, { color: colors.inkMuted }]}>
+            We couldn't find this mentor.
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (step === 'sent') {
+    return (
+      <Screen
+        bg="lavender"
+        footer={
+          <PrimaryButton label="Back to Mentors" onPress={() => router.back()} testID="back-to-mentors" />
+        }
+      >
+        <View style={styles.center}>
+          <PersonaAvatar name={listener.persona_name} size={88} />
+          <Text style={[styles.sentTitle, { color: colors.ink }]} testID="request-sent">
+            Request sent to {listener.persona_name}
+          </Text>
+          <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
+            Your intro message has been sent. The mentor will review it and get back to you soon
+            — you'll see the conversation appear in My Chats.
+          </Text>
+          <View style={[styles.patienceCard, { backgroundColor: colors.surface }, elevation.sm]}>
+            <Panda pose="shield" size={56} />
+            <View style={{ flex: 1 }}>
+              <Text style={[type.label, { color: colors.ink }]}>Please be patient</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>
+                Mentors receive many requests and may take some time to respond. Thank you for
+                your understanding.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Screen>
+    );
+  }
+
+  if (step === 'compose') {
+    return (
+      <Screen
+        bg="lavender"
+        onBack={() => setStep('profile')}
+        scroll
+        footer={
+          <>
+            {error ? (
+              <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
+            ) : null}
+            <PrimaryButton
+              label="Send Request"
+              onPress={() => void send()}
+              disabled={!intro.trim()}
+              loading={busy}
+              testID="send-request"
+            />
+            <PrimaryButton label="Cancel" variant="link" onPress={() => setStep('profile')} testID="cancel-request" />
+          </>
+        }
+      >
+        <View style={styles.composeHead}>
+          <PersonaAvatar name={listener.persona_name} size={72} online={listener.available} />
+          <Text style={[styles.name, { color: colors.ink }]}>{listener.persona_name}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>
+            Tell them a little about what's on your mind.
+          </Text>
+        </View>
+
+        <Text style={[styles.label, { color: colors.ink }]}>Intro Message</Text>
+        <TextInput
+          style={[styles.textarea, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.ink }]}
+          placeholder="What would you like to talk about?"
+          placeholderTextColor={colors.inkMuted}
+          value={intro}
+          onChangeText={(v) => setIntro(v.slice(0, 160))}
+          multiline
+          accessibilityLabel="Intro message"
+          testID="intro-input"
+        />
+        <Text style={[type.caption, styles.counter, { color: colors.inkMuted }]}>
+          {intro.length}/160
+        </Text>
+
+        <Text style={[styles.label, { color: colors.ink }]}>Topic (optional)</Text>
+        <View style={styles.chips}>
+          {TOPICS.map((t) => {
+            const selected = topic === t;
+            return (
+              <Pressable
+                key={t}
+                onPress={() => setTopic(selected ? null : t)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                testID={`topic-${t.toLowerCase()}`}
+                style={[
+                  styles.chip,
+                  selected
+                    ? { backgroundColor: colors.accent }
+                    : { borderWidth: 1, borderColor: colors.accentSoft },
+                ]}
+              >
+                <Text style={[styles.chipText, { color: selected ? colors.onAccent : colors.accent }]}>
+                  {t}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <View style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
+          <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
+          <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
+            Your message stays between you and this mentor. You're anonymous here.
+          </Text>
+        </View>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen
+      onBack={() => router.back()}
+      scroll
+      footer={
+        <PrimaryButton
+          label="Start Conversation"
+          trailing="chevron"
+          onPress={() => setStep('compose')}
+          testID="start-conversation"
+        />
+      }
+    >
+      <View style={styles.composeHead}>
+        <PersonaAvatar name={listener.persona_name} size={96} online={listener.available} />
+        <Text style={[styles.name, { color: colors.ink }]}>{listener.persona_name}</Text>
+        <Text style={[type.caption, { color: listener.available ? colors.success : colors.inkMuted }]}>
+          {listener.available ? '● Available now' : listener.status === 'online' ? 'At capacity' : 'Away'}
+        </Text>
+      </View>
+
+      <View style={[styles.aboutCard, { backgroundColor: colors.surface }, elevation.sm]}>
+        <Text style={[type.label, { color: colors.ink }]}>About</Text>
+        <Text style={[type.body, { color: colors.inkMuted }]}>
+          Here to listen and support, without judgment. A real person who volunteers their time
+          so no one has to carry a hard moment alone.
+        </Text>
+      </View>
+
+      {listener.categories.length ? (
+        <View style={[styles.aboutCard, { backgroundColor: colors.surface }, elevation.sm]}>
+          <Text style={[type.label, { color: colors.ink }]}>Can help with</Text>
+          <View style={styles.chips}>
+            {listener.categories.map((c) => (
+              <View key={c} style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}>
+                <Text style={[styles.chipText, { color: colors.accent }]}>{c}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      <View style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
+        <Ionicons name="heart-outline" size={15} color={colors.accentSoft} />
+        <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
+          No star ratings here — mentors are people, not products. Listeners are not therapists.
+        </Text>
+      </View>
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
+  centerText: { textAlign: 'center' },
+  composeHead: { alignItems: 'center', gap: space.xs, marginVertical: space.md },
+  name: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 33 },
+  sentTitle: {
+    fontFamily: font.serifBold,
+    fontSize: 24,
+    lineHeight: 31,
+    textAlign: 'center',
+    marginTop: space.sm,
+  },
+  patienceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderRadius: radius.lg,
+    padding: space.md,
+    marginTop: space.md,
+    alignSelf: 'stretch',
+  },
+  label: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 22, marginTop: space.md, marginBottom: space.xs },
+  textarea: {
+    minHeight: 110,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: space.md,
+    textAlignVertical: 'top',
+    ...type.body,
+  },
+  counter: { textAlign: 'right', marginTop: space.xs },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.xs },
+  chip: { borderRadius: radius.pill, paddingVertical: space.xs + 2, paddingHorizontal: space.sm + 4 },
+  chipText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
+  tag: { borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: space.sm },
+  aboutCard: { borderRadius: radius.lg, padding: space.md, gap: space.xs, marginBottom: space.sm },
+  privacy: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderRadius: radius.md,
+    padding: space.sm,
+    marginTop: space.xs,
+  },
+});

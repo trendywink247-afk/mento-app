@@ -26,11 +26,10 @@ def create_match(
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "unknown session")
 
     if payload.kind == RequestKind.personal:
-        # Directed requests land in a mentor's inbox (accept/decline) — Module B flow.
-        # Scaffolded here; full inbox ships with mentor onboarding.
+        # Directed requests live on the listeners router: POST /listeners/{id}/request.
         raise HTTPException(
-            status.HTTP_501_NOT_IMPLEMENTED,
-            "personal (directed) requests arrive with the mentor inbox module",
+            status.HTTP_400_BAD_REQUEST,
+            "personal requests go through POST /listeners/{listener_id}/request",
         )
 
     try:
