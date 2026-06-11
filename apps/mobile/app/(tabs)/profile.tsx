@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { Panda } from '@/components/art/Panda';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
-import { getPersona, type Persona } from '@/lib/session';
+import { clearSession, getPersona, type Persona } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
   COMPANION_COLOR_LABELS,
   COMPANION_COLORS,
+  DEFAULT_COMPANION_COLOR,
   type CompanionColor,
 } from '@/theme/companion';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -23,6 +26,17 @@ export default function ProfileTab() {
   const router = useRouter();
   const { colors, elevation, companionColor, setCompanionColor } = useTheme();
   const [persona, setPersona] = useState<Persona | null>(null);
+  const [confirmFresh, setConfirmFresh] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+
+  const startFresh = async () => {
+    if (leaving) return;
+    setLeaving(true);
+    setCompanionColor(DEFAULT_COMPANION_COLOR); // un-tint before the new onboarding picks its own
+    await clearSession();
+    setConfirmFresh(false);
+    router.replace('/');
+  };
 
   useEffect(() => {
     let active = true;
@@ -119,10 +133,55 @@ export default function ProfileTab() {
           </View>
         </View>
 
+        <Pressable
+          onPress={() => setConfirmFresh(true)}
+          accessibilityRole="button"
+          testID="profile-start-fresh"
+          style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+        >
+          <IconBadge icon="leaf-outline" tone="danger" size={44} />
+          <View style={{ flex: 1 }}>
+            <Text style={[type.label, { color: colors.danger }]}>Start fresh</Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>
+              Leave this persona behind and begin again as someone new.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+        </Pressable>
+
         <Text style={[type.caption, styles.version, { color: colors.inkMuted }]}>
           Mento · early access
         </Text>
       </ScrollView>
+
+      <Modal visible={confirmFresh} transparent animationType="fade" onRequestClose={() => setConfirmFresh(false)}>
+        <View style={[styles.modalBackdrop, { backgroundColor: colors.scrim }]}>
+          <View style={[styles.modalCard, { backgroundColor: colors.surface }, elevation.md]} testID="start-fresh-modal">
+            <Panda pose="wave" size={110} />
+            <Text style={[styles.modalTitle, { color: colors.ink }]}>Start fresh?</Text>
+            <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
+              You&apos;ll get a brand-new anonymous persona.{' '}
+              {persona?.persona_name ?? 'This persona'}&apos;s chats and journals stay behind —
+              there&apos;s no way back to them.
+            </Text>
+            <View style={styles.modalActions}>
+              <PrimaryButton
+                label="Yes, start fresh"
+                onPress={() => void startFresh()}
+                loading={leaving}
+                testID="start-fresh-confirm"
+              />
+              <PrimaryButton
+                label="Keep my space"
+                variant="link"
+                onPress={() => setConfirmFresh(false)}
+                disabled={leaving}
+                testID="start-fresh-cancel"
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }
@@ -157,4 +216,19 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
   },
   version: { textAlign: 'center', marginTop: space.md },
+  modalBackdrop: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: space.lg,
+  },
+  modalCard: {
+    alignSelf: 'stretch',
+    borderRadius: radius.lg,
+    padding: space.lg,
+    gap: space.sm,
+    alignItems: 'center',
+  },
+  modalTitle: { fontFamily: font.serifBold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
+  modalActions: { alignSelf: 'stretch', gap: space.xs, marginTop: space.sm },
 });
