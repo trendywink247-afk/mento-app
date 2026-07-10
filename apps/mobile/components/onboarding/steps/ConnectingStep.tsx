@@ -9,7 +9,7 @@ import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { ConnectingScene } from '@/components/art/Scenes';
 import { ApiError, api } from '@/lib/api';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
-import { saveSession } from '@/lib/session';
+import { saveCompanionAnimal, saveSession } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -59,6 +59,8 @@ export function ConnectingStep({
         companion_colour: draft.companionColour ?? null,
       });
       await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
+      // Persist the star (colour persists via ThemeProvider; the animal needs its own key).
+      if (draft.companionAnimal) await saveCompanionAnimal(draft.companionAnimal);
 
       const match = await api.match({ kind: 'general' });
       clearDraft();

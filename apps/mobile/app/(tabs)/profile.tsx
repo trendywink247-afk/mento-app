@@ -6,9 +6,10 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
 import { Panda } from '@/components/art/Panda';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
-import { clearSession, getPersona, type Persona } from '@/lib/session';
+import { clearSession, getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
   COMPANION_COLOR_LABELS,
@@ -26,6 +27,7 @@ export default function ProfileTab() {
   const router = useRouter();
   const { colors, elevation, companionColor, setCompanionColor } = useTheme();
   const [persona, setPersona] = useState<Persona | null>(null);
+  const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   const [confirmFresh, setConfirmFresh] = useState(false);
   const [leaving, setLeaving] = useState(false);
 
@@ -42,6 +44,9 @@ export default function ProfileTab() {
     let active = true;
     void getPersona().then((p) => {
       if (active) setPersona(p);
+    });
+    void getCompanionAnimal().then((a) => {
+      if (active) setAnimal((a as CompanionAnimal | null) ?? null);
     });
     return () => {
       active = false;
@@ -66,9 +71,19 @@ export default function ProfileTab() {
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]}>
-          <Text style={[styles.cardTitle, { color: colors.ink }]}>Your growth colour</Text>
+          <Text style={[styles.cardTitle, { color: colors.ink }]}>Your growth companion</Text>
+          {animal ? (
+            <View style={styles.companionRow}>
+              <View style={[styles.companionBubble, { backgroundColor: colors.accentTint }]}>
+                <CompanionArt animal={animal} size={44} />
+              </View>
+              <Text style={[type.bodySemi, { color: colors.ink }]}>
+                {COMPANION_COLOR_LABELS[companionColor]} {animal}
+              </Text>
+            </View>
+          ) : null}
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            Switching re-tints the whole app, instantly.
+            Switching colours re-tints the whole app, instantly.
           </Text>
           <View style={styles.swatches}>
             {COLOR_KEYS.map((key) => {
@@ -191,6 +206,20 @@ const styles = StyleSheet.create({
   name: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 33 },
   card: { borderRadius: radius.lg, padding: space.md, gap: space.xs },
   cardTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 23 },
+  companionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    marginTop: space.sm,
+    marginBottom: space.xs,
+  },
+  companionBubble: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
   swatchWrap: {
     width: 44,

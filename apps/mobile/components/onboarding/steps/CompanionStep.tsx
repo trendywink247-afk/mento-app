@@ -25,8 +25,15 @@ function pick<T>(arr: T[]): T {
 }
 
 /** Growth-companion picker per mockup #58 (body unchanged from the old route).
- * Picking a colour live re-accents the whole app — the signature moment. */
-export function CompanionStep({ onNext }: { onNext: () => void }) {
+ * Picking a colour live re-accents the whole app — the signature moment. Picking an
+ * animal makes it the star: the journey's stage swaps to it live (DECISIONS §I.5). */
+export function CompanionStep({
+  onNext,
+  onAnimalPicked,
+}: {
+  onNext: () => void;
+  onAnimalPicked?: (animal: CompanionAnimal) => void;
+}) {
   const { colors, companionColor, setCompanionColor } = useTheme();
   const draft = getDraft();
   const [animal, setAnimal] = useState<CompanionAnimal | null>(
@@ -43,6 +50,7 @@ export function CompanionStep({ onNext }: { onNext: () => void }) {
   const chooseAnimal = (a: CompanionAnimal) => {
     haptic.tick();
     setAnimal(a);
+    onAnimalPicked?.(a);
   };
 
   const onContinue = () => {
@@ -54,7 +62,9 @@ export function CompanionStep({ onNext }: { onNext: () => void }) {
   // Surprise picks a visible selection (and re-accents live) — the user still confirms
   // with Continue, so the choice never feels taken away.
   const surprise = () => {
-    setAnimal(pick(ANIMALS));
+    const a = pick(ANIMALS);
+    setAnimal(a);
+    onAnimalPicked?.(a);
     chooseColour(pick(COLOR_KEYS));
   };
 

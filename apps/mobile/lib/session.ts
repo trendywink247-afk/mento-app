@@ -7,6 +7,7 @@ const SESSION_KEY = 'mento.session_token';
 const STREAM_KEY = 'mento.stream_token';
 const PERSONA_KEY = 'mento.persona';
 const COMPANION_COLOR_KEY = 'mento.companion_colour';
+const COMPANION_ANIMAL_KEY = 'mento.companion_animal';
 
 type Store = {
   setItemAsync(key: string, value: string): Promise<void>;
@@ -60,11 +61,21 @@ export async function getCompanionColor(): Promise<string | null> {
   return store.getItemAsync(COMPANION_COLOR_KEY);
 }
 
+/** The chosen growth-companion animal — the star of the identity (DECISIONS §I.5). */
+export async function saveCompanionAnimal(animal: string): Promise<void> {
+  await store.setItemAsync(COMPANION_ANIMAL_KEY, animal);
+}
+
+export async function getCompanionAnimal(): Promise<string | null> {
+  return store.getItemAsync(COMPANION_ANIMAL_KEY);
+}
+
 export async function clearSession(): Promise<void> {
   await Promise.all([
     store.deleteItemAsync(SESSION_KEY),
     store.deleteItemAsync(STREAM_KEY),
     store.deleteItemAsync(PERSONA_KEY),
     store.deleteItemAsync(COMPANION_COLOR_KEY),
+    store.deleteItemAsync(COMPANION_ANIMAL_KEY),
   ]);
 }

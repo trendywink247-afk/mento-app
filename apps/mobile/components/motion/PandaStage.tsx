@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
   cancelAnimation,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -18,6 +19,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { AnimatedPanda } from '@/components/art/AnimatedPanda';
+import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing } from '@/theme/motion';
@@ -42,10 +44,14 @@ const GREETING_STEPS: StageStep[] = ['age', 'companion'];
 export function PandaStage({
   step,
   celebrate = 0,
+  animal = null,
 }: {
   step: StageStep;
   /** Bump to celebrate (match found): wave + a joyful double dip. */
   celebrate?: number;
+  /** The chosen companion — becomes the star from the moment of choice (DECISIONS
+   * §I.5). null = not chosen yet, the panda remains the brand guide. */
+  animal?: CompanionAnimal | null;
 }) {
   const reduced = useReducedMotion();
   const { companionColor } = useTheme();
@@ -60,6 +66,28 @@ export function PandaStage({
   const [waveTrigger, setWaveTrigger] = useState(0);
   const firstColour = useRef(true);
   const prevStep = useRef<StageStep | null>(null);
+
+  // The star swap: fade through when the chosen animal changes (never a hard cut).
+  const [shownAnimal, setShownAnimal] = useState<CompanionAnimal | null>(animal);
+  const swap = useSharedValue(1);
+
+  const finishSwap = (next: CompanionAnimal | null) => {
+    setShownAnimal(next);
+    swap.value = withTiming(1, { duration: 175, easing: easing.enter });
+  };
+
+  useEffect(() => {
+    if (animal === shownAnimal) return;
+    if (reduced) {
+      setShownAnimal(animal);
+      return;
+    }
+    swap.value = withTiming(0, { duration: 175, easing: easing.exit }, (done) => {
+      if (done) runOnJS(finishSwap)(animal);
+    });
+    // reason: shownAnimal/finishSwap are the swap's own state, not triggers
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animal, reduced]);
 
   // Glide between anchors on step change; wave on greeting steps.
   useEffect(() => {
@@ -123,7 +151,7 @@ export function PandaStage({
   }, [step, reduced, sway]);
 
   const stageStyle = useAnimatedStyle(() => ({
-    opacity: opacity.value,
+    opacity: opacity.value * swap.value,
     transform: [
       { translateX: x.value },
       { translateY: y.value + dip.value },
@@ -136,7 +164,11 @@ export function PandaStage({
     <View style={styles.host} pointerEvents="none">
       <Animated.View style={stageStyle}>
         <Animated.View style={breathing}>
-          <AnimatedPanda size={BASE_SIZE} waveTrigger={waveTrigger} />
+          {shownAnimal && shownAnimal !== 'Panda' ? (
+            <CompanionArt animal={shownAnimal} size={BASE_SIZE} />
+          ) : (
+            <AnimatedPanda size={BASE_SIZE} waveTrigger={waveTrigger} />
+          )}
         </Animated.View>
       </Animated.View>
     </View>

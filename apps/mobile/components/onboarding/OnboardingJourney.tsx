@@ -17,6 +17,7 @@ import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
 import { withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import type { CompanionAnimal } from '@/components/art/Companions';
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { ambientLift } from '@/components/motion/ambientLift';
 import { PandaStage } from '@/components/motion/PandaStage';
@@ -53,6 +54,10 @@ export function OnboardingJourney() {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const [celebrate, setCelebrate] = useState(0);
+  // The chosen animal — the star from the moment of choice (DECISIONS §I.5).
+  const [companionAnimal, setCompanionAnimal] = useState<CompanionAnimal | null>(
+    () => (getDraft().companionAnimal as CompanionAnimal | null) ?? null
+  );
 
   const [step, setStep] = useState<Step>(() => {
     const requested = params.step as Step | undefined;
@@ -134,7 +139,7 @@ export function OnboardingJourney() {
         case 'email':
           return <EmailStep onNext={goNext} />;
         case 'companion':
-          return <CompanionStep onNext={goNext} />;
+          return <CompanionStep onNext={goNext} onAnimalPicked={setCompanionAnimal} />;
         case 'ready':
           return <ReadyStep onNext={goNext} />;
         case 'connecting':
@@ -177,7 +182,7 @@ export function OnboardingJourney() {
           <StepTransition activeKey={step} render={renderStep} />
         </View>
         {/* The guide mascot — mounted once, glides between per-step anchors. */}
-        <PandaStage step={step} celebrate={celebrate} />
+        <PandaStage step={step} celebrate={celebrate} animal={companionAnimal} />
       </SafeAreaView>
     </View>
   );
