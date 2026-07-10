@@ -11,16 +11,26 @@ from app.models.enums import (
     ConversationStatus,
     ConversationType,
     ListenerStatus,
+    RequestStatus,
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
+from app.models.request import ConversationRequest
 from app.models.user import User
 from app.services import stream
 
 
 class NoListenerAvailable(Exception):
     """No approved, online listener has spare capacity right now."""
+
+
+class RequestNotPending(Exception):
+    """The request doesn't exist, isn't pending, or isn't addressed to the actor."""
+
+
+class ListenerAtCapacity(Exception):
+    """The target listener has no spare capacity right now."""
 
 
 def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
@@ -101,3 +111,47 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
     if listener is None:
         raise NoListenerAvailable()
     return open_conversation(db, user.id, listener)
+
+
+def _pending_request(
+    db: Session, request_id: str, acting_listener_id: str | None
+) -> ConversationRequest:
+    req = db.get(ConversationRequest, request_id)
+    if req is None or req.status != RequestStatus.pending:
+        raise RequestNotPending()
+    # A listener may only act on requests addressed to them; the admin path
+    # (acting_listener_id=None) may act on any. Not-mine is opaquely "not found".
+    if acting_listener_id is not None and req.target_listener_id != acting_listener_id:
+        raise RequestNotPending()
+    return req
+
+
+def accept_personal_request(
+    db: Session, request_id: str, *, acting_listener_id: str | None = None
+) -> ConversationRequest:
+    """Accept a Personal request under a row lock so capacity can't double-assign.
+    Shared by the admin stand-in and the listener console."""
+    req = _pending_request(db, request_id, acting_listener_id)
+
+    listener = db.execute(
+        select(ListenerProfile)
+        .where(ListenerProfile.id == req.target_listener_id)
+        .with_for_update()
+    ).scalar_one_or_none()
+    if listener is None or listener.active_conversations >= listener.max_concurrent:
+        raise ListenerAtCapacity()
+
+    convo = open_conversation(db, req.requester_id, listener)
+    req.status = RequestStatus.matched
+    req.conversation_id = convo.id
+    db.commit()
+    db.refresh(req)
+    return req
+
+
+def decline_personal_request(
+    db: Session, request_id: str, *, acting_listener_id: str | None = None
+) -> None:
+    req = _pending_request(db, request_id, acting_listener_id)
+    req.status = RequestStatus.declined
+    db.commit()

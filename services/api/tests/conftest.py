@@ -56,7 +56,8 @@ def db_session():
             conn.execute(
                 text(
                     "TRUNCATE conversations, listener_profiles, users, safety_flags, "
-                    "moderation_events, journal_entries, conversation_reflections "
+                    "moderation_events, journal_entries, conversation_reflections, "
+                    "conversation_requests "
                     "RESTART IDENTITY CASCADE"
                 )
             )

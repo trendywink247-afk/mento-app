@@ -19,7 +19,13 @@ from app.models.listener import ListenerProfile
 from app.models.request import ConversationRequest
 from app.schemas import ListenerOut, OkResult, PersonalRequestIn, RequestOut
 from app.security import current_user_id
-from app.services.matching import _blocked_listener_ids, open_conversation
+from app.services.matching import (
+    ListenerAtCapacity,
+    RequestNotPending,
+    _blocked_listener_ids,
+    accept_personal_request,
+    decline_personal_request,
+)
 
 router = APIRouter(prefix="/listeners", tags=["listeners"])
 
@@ -127,25 +133,16 @@ def my_requests(
     dependencies=[Depends(_require_admin)],
 )
 def accept_request(request_id: str, db: Session = Depends(get_db)) -> RequestOut:
-    """Mentor-inbox accept (admin-token stand-in until the Module B portal). Opens the
-    conversation under a row lock so capacity can't double-assign."""
-    req = db.get(ConversationRequest, request_id)
-    if req is None or req.status != RequestStatus.pending:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found")
-
-    listener = db.execute(
-        select(ListenerProfile)
-        .where(ListenerProfile.id == req.target_listener_id)
-        .with_for_update()
-    ).scalar_one_or_none()
-    if listener is None or listener.active_conversations >= listener.max_concurrent:
-        raise HTTPException(status.HTTP_409_CONFLICT, "listener has no capacity right now")
-
-    convo = open_conversation(db, req.requester_id, listener)
-    req.status = RequestStatus.matched
-    req.conversation_id = convo.id
-    db.commit()
-    db.refresh(req)
+    """Mentor-inbox accept (admin-token stand-in; the listener console is the real
+    surface). Row-locked capacity path shared via services.matching."""
+    try:
+        req = accept_personal_request(db, request_id)
+    except RequestNotPending:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found") from None
+    except ListenerAtCapacity:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "listener has no capacity right now"
+        ) from None
     return _request_out(req)
 
 
@@ -155,9 +152,8 @@ def accept_request(request_id: str, db: Session = Depends(get_db)) -> RequestOut
     dependencies=[Depends(_require_admin)],
 )
 def decline_request(request_id: str, db: Session = Depends(get_db)) -> OkResult:
-    req = db.get(ConversationRequest, request_id)
-    if req is None or req.status != RequestStatus.pending:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found")
-    req.status = RequestStatus.declined
-    db.commit()
+    try:
+        decline_personal_request(db, request_id)
+    except RequestNotPending:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found") from None
     return OkResult(status="declined")
