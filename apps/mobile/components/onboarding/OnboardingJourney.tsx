@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { StepTransition } from '@/components/motion/StepTransition';
 import { AgeStep } from '@/components/onboarding/steps/AgeStep';
 import { CompanionStep } from '@/components/onboarding/steps/CompanionStep';
@@ -34,8 +35,8 @@ const ORDER: Step[] = ['age', 'email', 'companion', 'ready', 'connecting'];
  * connecting had none — those are forward-only moments). */
 const BACKABLE: Step[] = ['age', 'email', 'companion'];
 
-/** The mockups' "ritual" lavender mood (companion + ready). Until the ambient canvas
- * lands, the journey keeps the mood as a per-step background colour. */
+/** The mockups' "ritual" steps (companion + ready) keep their white-circle chevron
+ * styling; the background mood itself is now carried by the ambient aurora. */
 const LAVENDER: Step[] = ['companion', 'ready'];
 
 export function OnboardingJourney() {
@@ -110,34 +111,36 @@ export function OnboardingJourney() {
   const backable = BACKABLE.includes(step);
 
   return (
-    <SafeAreaView
-      style={[styles.safe, { backgroundColor: lavender ? colors.bgLavender : colors.bg }]}
-      edges={['top', 'bottom']}
-    >
-      <View style={styles.header}>
-        {backable ? (
-          <Pressable
-            onPress={goBack}
-            hitSlop={12}
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-            testID="back"
-            // Ritual screens float the chevron in a white circle (mockup #58).
-            style={lavender && [styles.backCircle, { backgroundColor: colors.surface }]}
-          >
-            <Ionicons name="chevron-back" size={26} color={lavender ? colors.accent : colors.ink} />
-          </Pressable>
-        ) : null}
-      </View>
-      <View style={styles.stage}>
-        <StepTransition activeKey={step} render={renderStep} />
-      </View>
-    </SafeAreaView>
+    <View style={styles.root}>
+      {/* The persistent sky — never unmounts across steps. */}
+      <AmbientBackground />
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+        <View style={styles.header}>
+          {backable ? (
+            <Pressable
+              onPress={goBack}
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+              testID="back"
+              // Ritual screens float the chevron in a white circle (mockup #58).
+              style={lavender && [styles.backCircle, { backgroundColor: colors.surface }]}
+            >
+              <Ionicons name="chevron-back" size={26} color={lavender ? colors.accent : colors.ink} />
+            </Pressable>
+          ) : null}
+        </View>
+        <View style={styles.stage}>
+          <StepTransition activeKey={step} render={renderStep} />
+        </View>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
+  root: { flex: 1 },
+  safe: { flex: 1, backgroundColor: 'transparent' },
   header: {
     minHeight: 44 + space.sm + space.xs,
     paddingHorizontal: space.md,
