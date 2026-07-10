@@ -63,7 +63,7 @@ export default function Landing() {
             label="Start a Conversation"
             tone="ink"
             icon="chatbubble-outline"
-            onPress={() => router.push('/onboarding/age')}
+            onPress={() => router.push('/onboarding')}
             accessibilityHint="Begins anonymous onboarding"
             testID="start"
           />
