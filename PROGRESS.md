@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-07-11 (session 12) — Docs truth pass, companion-is-the-star, mascot memo, LISTENER CONSOLE ✅
+
+**Context (founder feedback + rulings, recorded in DECISIONS §I):** the coded SVG panda misses the mockups' bar → professional reactive assets, research-gated (§I.4); **the chosen animal must be the star everywhere** (§I.5); the mentor side didn't exist (listeners had no auth/list/reply — only the admin-token stand-in) → **minimal listener console ships in v1** (§I.6); core MD files were stale → full rewrite.
+
+**Done (11 commits, each proven):**
+- **Docs truth pass** (`3ee08d1`): README rewritten from scratch (true status, run book incl. crisis-webhook tunnel, env tables, CI); CLAUDE.md refreshed (Skia/motion stack, motion rules, SCOPE #13 console, both-sides anonymity T&S #7, motion restraint #11); DECISIONS gains **§I** (7 rulings); ALIGNMENT §6+§7 addendum. Zero stale-claim grep hits.
+- **Companion-is-the-star** (`dfa0f48`): PandaStage swaps (fade-through) to the chosen animal the moment it's tapped; animal persisted (`mento.companion_animal`, cleared by Start fresh); Profile card shows "[Colour] [Animal]". Proven: fox on the stage/connecting/profile.
+- **Mascot memo** (`f2bd299`, `docs/MASCOT_ASSETS.md`): verified — **no off-the-shelf 6-animal set exists** (best free: 5/6 faces-only Lottie pack); recommendation = free Lottie interim + **commission a reactive Rive set ($2.5–6k, 4–8 wks)**. ⏳ **Founder decision gate.**
+- **LISTENER CONSOLE** (`fd91c19`…`7c62f2a`, 6 commits): the mentor side is real —
+  - API: role-claimed listener JWT (30d; `current_user_id`/`current_listener_id` mutually reject; suspension revokes per-request), accept/decline extracted to `services.matching` (shared row-locked path; admin stand-in unchanged), `/listener/me` endpoints (profile+stream token, online/away status that gates matching, conversations w/ member personas, own pending requests, accept 404-not-mine/409-capacity), `scripts/issue_listener_token` prints a shareable link. Conftest TRUNCATE gains `conversation_requests`. **Suite 28 passed** incl. a racing-accepts concurrency test.
+  - Mobile (web-only; native = notice stub): `/listener?token=` console (token stripped from URL/history, localStorage session, distinct `mento.listener.*` keys, **dedicated Stream client instance** — the user singleton's `connectUser` conflict is the known trap), requests inbox w/ accept/decline, conversations list, availability pill; `/listener/chat/[id]` trimmed chat as the listener identity — member persona only, **CrisisCard extracted + rendered on BOTH sides**.
+  - **Proven (two Playwright contexts, real backend + Stream):** member onboards → messages → token link authenticates → listener sees the message → **replies delivered LIVE to the member** → personal request accepted from the console → away/online toggle → bad token = designed error state. 0 page errors.
+
+**Gotcha re-confirmed:** a stale uvicorn (started before new routers) 404s new endpoints — restart :8000 after adding routers. Expo route typegen needs a dev-server restart to pick up new `app/` dirs.
+
+**Open decisions:** mascot asset route (the MASCOT_ASSETS.md gate — Rive commission vs Lottie); LLM for the Journal Assistant (carried).
+
+**Next:** 1) founder picks the mascot route → integrate behind a `Companion` component; 2) carried backlog: release-build Android perf gate + Maestro (device needed), Stream secret rotation + stable webhook URL (founder), Razorpay creds. For a listener demo: `python -m scripts.issue_listener_token --name "<persona>"` → open the printed link.
+
+**How to resume:** backend `docker compose up -d` → alembic → seed → uvicorn :8000; mobile `npx expo start --web --port 8081`. Playwright scripts: `C:/tmp/playwright-test-{star,console}.js` + `/tmp/playwright-test-*.js` from session 11.
+
+---
+
 ## 2026-07-11 (session 11) — Cinematic onboarding: the "movie-like" motion phase, leg 1 ✅
 
 **Context (founder decisions this session):** exceed the mockups, not just match them — **cinematic motion everywhere, NO 3D engine** (the Calm/Headspace/Finch register; a full 3D app would break 60fps/<2s cold start/<40MB/the calm ethos); **onboarding journey first**; **visual + haptics, no audio**. Research verified: shared-element transitions are NOT production-viable on SDK 52 + expo-router → continuity comes from **one onboarding route** with a persistent ambient canvas + persistent mascot. Plan: `~/.claude/plans/in-which-folder-are-floofy-pony.md`.
