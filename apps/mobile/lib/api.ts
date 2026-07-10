@@ -86,13 +86,19 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
+/** Core request with a pluggable token source — the user client below binds it to
+ * the user session; lib/listenerApi.ts binds it to the listener-console token. */
+export async function apiRequest<T>(
+  path: string,
+  init: RequestInit = {},
+  getToken?: () => Promise<string | null>,
+): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(init.headers as Record<string, string>),
   };
-  if (auth) {
-    const token = await getSessionToken();
+  if (getToken) {
+    const token = await getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
@@ -107,6 +113,10 @@ async function request<T>(path: string, init: RequestInit = {}, auth = false): P
     throw new ApiError(res.status, detail);
   }
   return (await res.json()) as T;
+}
+
+async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
+  return apiRequest<T>(path, init, auth ? getSessionToken : undefined);
 }
 
 export const api = {
