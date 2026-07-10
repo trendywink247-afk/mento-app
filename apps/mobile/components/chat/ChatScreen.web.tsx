@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -16,6 +15,7 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 
 import { IconBadge } from '@/components/IconBadge';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
+import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ChatBubblesScene } from '@/components/art/Scenes';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { api } from '@/lib/api';
@@ -35,11 +35,6 @@ import { font, radius, space, type } from '@/theme/tokens';
  * connect/watch/send/crisis logic is unchanged.
  */
 
-type CrisisPayload = {
-  support: string;
-  signal: string;
-  helplines: { name: string; number: string; hours: string }[];
-};
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
 type Msg = { id: string; text: string; mine: boolean; at: string };
 
@@ -409,9 +404,7 @@ export default function ChatScreenWeb() {
               );
             }}
           />
-          {crisis ? (
-            <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} colors={colors} />
-          ) : null}
+          {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
 
           {/* Composer: pill with inset ＋ and a circular send FAB (mockup #8) */}
           <View style={styles.composer}>
@@ -450,44 +443,6 @@ export default function ChatScreenWeb() {
         listenerName={listenerName}
       />
     </SafeAreaView>
-  );
-}
-
-function CrisisCard({
-  crisis,
-  onDismiss,
-  colors,
-}: {
-  crisis: CrisisPayload;
-  onDismiss: () => void;
-  colors: ReturnType<typeof useTheme>['colors'];
-}) {
-  return (
-    <View style={[styles.crisis, { backgroundColor: colors.brandTint }]} testID="crisis-card">
-      <Text style={[styles.crisisTitle, { color: colors.ink }]}>You matter. Support is here.</Text>
-      <Text style={[type.body, { color: colors.ink }]}>{crisis.support}</Text>
-      <View style={{ gap: space.sm }}>
-        {crisis.helplines.map((h) => (
-          <Pressable
-            key={h.number}
-            style={[styles.helpline, { backgroundColor: colors.surface }]}
-            onPress={() => void Linking.openURL(`tel:${h.number}`)}
-            accessibilityRole="button"
-            accessibilityLabel={`Call ${h.name} at ${h.number}, available ${h.hours}`}
-          >
-            <IconBadge icon="call-outline" size={36} tone="green" />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>{h.name}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{h.number}</Text>
-            </View>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{h.hours}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <Pressable onPress={onDismiss} hitSlop={8} style={styles.crisisDismiss} accessibilityRole="button">
-        <Text style={[type.caption, { color: colors.accent }]}>Close</Text>
-      </Pressable>
-    </View>
   );
 }
 
@@ -588,19 +543,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  crisis: {
-    margin: space.md,
-    padding: space.md,
-    borderRadius: radius.lg,
-    gap: space.sm,
-  },
-  crisisTitle: { fontFamily: font.serifBold, fontSize: 18, lineHeight: 24 },
-  helpline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.md,
-    padding: space.sm,
-  },
-  crisisDismiss: { alignSelf: 'flex-end' },
 });
