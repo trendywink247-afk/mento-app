@@ -1,6 +1,6 @@
 # Mento — PRD ↔ Mockups Reconciliation & Decisions
 
-**Date:** 2026-06-08 · **Owner:** Arieddin Sheik · **Status:** Final (Option A)
+**Date:** 2026-06-08 · **Updated:** 2026-07-11 (§I — motion, mascot, listener console) · **Owner:** Arieddin Sheik · **Status:** Final (Option A)
 
 **Authority:** This document resolves every conflict between `Mento_PRD_v2.md` and the 64 UI mockups. **Where this doc disagrees with either the PRD or the mockups, this doc wins.** Claude Code must read `PRD_v2` *and* this file at the alignment step and resolve nothing by guessing.
 
@@ -89,3 +89,23 @@ The mockups contain two different bottom navs: (1) `Chats · Journals · Mentors
 **3. Auth / OTP.** **No phone in the user flow.** **Optional email only**, used for recovery. **MSG91 phone verification is reserved for mentors** in the deferred Module B. (Confirms A.2.)
 
 **Build directive:** after the PRD patch, proceed to the first build slice — **onboarding → anonymous match → live chat**, with the **crisis-scan stub wired in from day one.**
+
+---
+
+## I. Founder rulings — 2026-07-11 (motion phase, mascot, mentor side)
+
+Context: v1 Module A was fully built (see `PROGRESS.md` sessions 2–10); the founder then directed a "movie-like" UI/UX phase that must **exceed** the mockups, and surfaced two gaps — the mascot quality and the absence of any real mentor-side surface.
+
+**1. Cinematic motion, NO 3D engine.** The premium feel comes from motion, depth, light and a living character (the Calm/Headspace/Finch register) — **not** a 3D engine, which would break the <2s cold start, mid-Android 60fps, <40MB binary, and the calm support ethos. Onboarding first (it is the 30-second promise); the same motion language extends to other surfaces later.
+
+**2. Onboarding is ONE route.** Shared-element transitions are not production-viable on Expo SDK 52 + expo-router, so filmic continuity comes from a **single journey route** (`apps/mobile/components/onboarding/OnboardingJourney.tsx`) hosting an internal step machine over a persistent ambient background + persistent mascot. Deep links via `?step=`; old routes are redirect stubs. The onboarding/match **API flow is byte-identical** — this is presentation architecture only.
+
+**3. Ambient layer = Skia SkSL aurora.** `@shopify/react-native-skia` 1.5 (the SDK 52 pin, ~3–5MB native) renders one full-screen shader; a static SVG gradient always paints the first frame (cold-start guard and permanent fallback); web lazy-loads CanvasKit at idle and degrades to the gradient on failure. **Picking a companion colour washes the whole sky** — the signature moment. No Skia blur on Android.
+
+**4. Mascot: the hand-drawn SVG rig is INTERIM.** The coded panda (layered SVG + Reanimated blink/breathe/wave) does not meet the mockups' character bar. Professional **reactive** character assets will be sourced — research memo first (`docs/MASCOT_ASSETS.md`), **founder decides before any purchase or integration**. Rive (state-machine reactivity) is preferred if its missing react-native-web runtime is acceptable; Lottie (.lottie, playback-only) is the fallback. Hard requirement: **one consistent style across all six animals** (panda, elephant, fox, turtle, deer, owl).
+
+**5. The chosen animal is the star.** From the moment the user picks their growth companion, **their animal — not a fixed panda — carries the companion identity everywhere** (onboarding stage, ready celebration, matched moment, profile). The panda remains the *brand guide* only before the choice is made. This extends B.6: companion = personalization/theme, never the chat handle.
+
+**6. Minimal listener console ships in v1.** A real human must be able to answer chats before Module B. Scope: **web-only console, per-listener token-link auth (no password), see own conversations, reply in real time, accept/decline own Personal requests, toggle online/away.** Explicitly NOT: mentor profiles, payments, MSG91 verification, profile editing, push — those remain Module B. Anonymity holds on both sides (listeners see member *personas* only), and the crisis card renders listener-side so the listener knows what helplines the member was shown. The global-admin-token accept/decline stays for moderation/ops.
+
+**7. Sensory scope: visual + haptics, NO audio.** A designed haptic vocabulary (selection tick on choices, light impact on step advance, success on match — `apps/mobile/lib/haptics.ts`) and nothing audible: someone opening a support app in public must never fear sound. All motion respects reduce-motion (system setting on native, `prefers-reduced-motion` on web) — the flow must be fully usable with every animation stripped.

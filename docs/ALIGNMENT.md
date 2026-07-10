@@ -95,12 +95,32 @@ Legend — **Build now?**: ✅ v1 · 🟡 v1 but simplified/needs work · 🔜 d
 
 **Resolved by founder rulings 2026-06-08 (see `DECISIONS.md` §H):**
 1. ✅ **Payments:** drop ₹399/599/999 tiers; Razorpay = processor only; v1 = transparent coffee/tip (₹49–499 + open ceiling), never gated/in-conversation. Module B fees later.
-2. ✅ **Storage / "Panda Wipe":** keep Stream Chat; reword copy to honest deletion (device **and** servers); implement real server-side delete; never claim on-device-only.
+2. ✅ **Storage / "Panda Wipe":** keep Stream Chat; reword copy to honest deletion (device **and** servers); implement real server-side delete; never claim on-device-only. *(Implemented + proven.)*
 3. ✅ **Auth/OTP:** no phone in user flow; optional email for recovery; MSG91 reserved for mentor verification (Module B).
-4. ✅ **Realtime layer:** Stream Chat.
+4. ✅ **Realtime layer:** Stream Chat. *(Implemented; crisis scan enforced via its webhooks.)*
+
+**Resolved by founder rulings 2026-07-11 (see `DECISIONS.md` §I):**
+5. ✅ **Motion layer:** cinematic, no 3D engine; single-route onboarding journey; Skia SkSL aurora ambient; visual + haptics, no audio; reduce-motion honoured end-to-end.
+6. ✅ **Companion identity:** the chosen animal is the star — carries companion identity everywhere post-pick; panda = brand guide pre-pick only.
+7. ✅ **Mentor side:** minimal listener console ships in v1 (web-only, token-link auth, own conversations/requests, status toggle). Module B portal still deferred.
 
 **Still open (founder / CA):**
-5. Under-18: block entirely at MVP? (PRD recommends yes.)
-6. Final issue-category names (life/emotional-leaning).
-7. Crisis-helpline list: confirm current India numbers at build (Tele-MANAS / KIRAN).
-8. Listener training: minimum viable curriculum.
+8. Under-18: block entirely at MVP? (PRD recommends yes; 18 is enforced in the build today.)
+9. Final issue-category names (life/emotional-leaning).
+10. Crisis-helpline list: Tele-MANAS 14416 / KIRAN 1800-599-0019 are implemented — **re-verify before public launch.**
+11. Listener training: minimum viable curriculum.
+12. **Mascot asset choice** (buy pack / commission Rive / free Lottie) — decision gate on `docs/MASCOT_ASSETS.md` (§I.4).
+
+---
+
+## 7. Addendum 2026-07-11 — motion layer + listener console (not in PRD or mockups)
+
+| Item | In PRD | In mockups | Build now? | Ruling |
+|---|---|---|---|---|
+| Cinematic motion system (tokens, primitives, reduced-motion) | — | implied by 3D-styled art | ✅ built | DECISIONS §I.1; exceeds the mockups deliberately. |
+| Single-route onboarding journey (persistent stage) | — | — | ✅ built | §I.2; presentation only, API flow unchanged. |
+| Ambient aurora sky + colour-wash signature moment | — | flat lavender bgs | ✅ built | §I.3. |
+| Living mascot (SVG rig, interim) | — | 3D-styled panda | 🟡 interim | §I.4; professional reactive assets behind the founder gate. |
+| Chosen-animal-everywhere theming | — | 🟡 companion step only | ✅ | §I.5. |
+| Minimal listener console | 🟡 §7 implies mentor tooling | — | ✅ | §I.6 — v1 needs a real human on the mentor side; full portal stays Module B. |
+| Haptic vocabulary (no audio) | — | — | ✅ built | §I.7. |

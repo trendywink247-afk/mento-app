@@ -8,92 +8,125 @@
 
 ## Status
 
-Pre-build. Docs + alignment complete; app/backend not yet scaffolded. See `PROGRESS.md`.
+**v1 (Module A) is built and running locally.** The full anonymous-support loop works end-to-end and is verified continuously on Expo web (Playwright) + pytest:
+
+- Cinematic onboarding (single-route journey over an ambient shader sky, living mascot, haptics) → anonymous persona → **live 1:1 Stream chat** in ~5s.
+- **Server-side crisis enforcement** on the message path (Stream webhooks — un-bypassable from the client), verified India helplines.
+- Conversation controls (PIN lock, Panda Mask, Panda Pause, honest End/Wipe with real server-side deletion, Report/Block → moderation queue).
+- End-of-conversation reflection (private, no points), save-to-Mentor-Notes, Journals hub (Mood/Finance/Gratitude/Mentor Notes), My Chats, Mentor discovery + Personal requests, Profile with live theme switching + Start fresh.
+
+Not yet: Razorpay wiring (creds), AI Journal Assistant (LLM decision), native device verification (Maestro), Module B mentor portal. Exact current state: `PROGRESS.md`.
 
 ## Project layout
 
 ```
 mento/
-  apps/mobile/        Expo SDK 52 React Native app (iOS/Android/web)   ← not yet created
-  services/api/       FastAPI backend                                  ← not yet created
+  apps/mobile/          Expo SDK 52 React Native app (iOS/Android primary, web = dev/test surface)
+    app/                expo-router routes (onboarding journey, chat, (tabs): chats/journals/mentors/profile)
+    components/         UI + art/ (SVG mascot & scenes) + motion/ (ambient sky, primitives) + chat/ + onboarding/
+    theme/              tokens.ts (colour/type/space) · motion.ts (durations/easings) · companion accent system
+    lib/                typed API client, session store, haptics, reduced-motion
+  services/api/         FastAPI backend (Python 3.12, SQLAlchemy 2 + Alembic, Postgres + Redis via docker compose)
+    app/routers/        onboarding · match · conversation · stream_hooks (crisis) · moderation · journals · listeners
+    scripts/            seed_listeners · configure_stream (webhooks)
+    tests/              pytest (incl. matcher-concurrency + crisis-webhook proofs)
   docs/
-    PRD.md            Product requirements (v2.0)
-    DECISIONS.md      Authoritative reconciliation (source of truth)
-    ALIGNMENT.md      PRD × mockups × build-now table
-    MOCKUP_INVENTORY.md   Catalog of all 64 UI screens
-    Mockups/          64 source screens
+    PRD.md              Product requirements (v2.0)
+    DECISIONS.md        Authoritative reconciliation + founder rulings (source of truth)
+    ALIGNMENT.md        PRD × mockups × build-now table
+    MOCKUP_INVENTORY.md Pixel-verified catalog of all 64 UI screens
+    Mockups/            64 source screens
+  .github/workflows/    api-ci.yml — compose up → alembic upgrade + check → pytest on every services/api push
   CLAUDE.md  AGENTS.md  PROGRESS.md
 ```
 
 ## Stack
 
-Expo SDK 52 (RN, TS) · FastAPI (Python 3.12) · DigitalOcean Managed Postgres · Redis · Stream Chat · Razorpay · PostHog. (MSG91 reserved for mentor verification, a later module — **not** the v1 user path.) Full rationale and open questions in `CLAUDE.md`.
+| Layer | Choice |
+|---|---|
+| Mobile | Expo SDK 52 (React Native, TypeScript strict) + expo-router 4 |
+| Motion | react-native-reanimated 3.16 + **@shopify/react-native-skia 1.5** (ambient SkSL shader; lazy CanvasKit on web) + expo-haptics, all driven by `theme/motion.ts` tokens |
+| Backend | FastAPI (Python 3.12), Pydantic v2, SQLAlchemy 2.0 + Alembic |
+| Data | Postgres 16 + Redis 7 (docker compose locally; DigitalOcean managed in staging/prod) |
+| Messaging | Stream Chat (presence/typing/read-state; crisis scan enforced via its webhooks) |
+| Payments | Razorpay — contributions only, transparently disabled until creds land |
+| Analytics | PostHog (never message content / PII; crisis sessions excluded from retention) |
+
+MSG91 is reserved for mentor verification in the deferred Module B — **not** in the v1 user path. Full rationale in `CLAUDE.md`.
 
 ---
 
 ## Running locally
 
-> The app and backend aren't scaffolded yet. These are the intended commands; this section gets filled in as `apps/mobile` and `services/api` land (tracked in `PROGRESS.md`).
-
 ### Prerequisites
-- Node 20+ and `npm` (or `pnpm`)
-- Python 3.12+ and `uv` (or `venv` + `pip`)
-- Docker (for local Postgres + Redis), or managed instances
-- Expo Go on your phone, or an iOS/Android simulator
+- Node 20+ and npm · Python 3.12+ · Docker Desktop
+- A browser (web is the dev/test surface) — or Expo Go / a simulator for native
 
-### Backend — `services/api`
-```bash
+### 1. Backend — `services/api`
+```powershell
 cd services/api
-cp .env.example .env          # fill in secrets (see Env vars)
-uv sync                       # or: python -m venv .venv && pip install -r requirements.txt
-alembic upgrade head          # run migrations
-uvicorn app.main:app --reload # http://localhost:8000  (docs at /docs)
+# .env: copy .env.example, fill in at least JWT_SECRET; STREAM_* enables real chat (stub mode without)
+docker compose up -d --wait                    # Postgres 16 + Redis 7
+.\.venv\Scripts\python.exe -m alembic upgrade head
+.\.venv\Scripts\python.exe -m scripts.seed_listeners   # 3 approved listeners (+ Stream upsert)
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000   # docs at /docs
 ```
+(First time: `python -m venv .venv` + `pip install -r requirements-dev.txt`.)
 
-### Mobile — `apps/mobile`
-```bash
+⚠️ Running `pytest` truncates the dev DB's listeners (test fixtures) — re-run `scripts.seed_listeners` afterwards or matching returns 503.
+
+### 2. Mobile — `apps/mobile`
+```powershell
 cd apps/mobile
-cp .env.example .env          # point EXPO_PUBLIC_API_URL at your backend
+# .env: EXPO_PUBLIC_API_URL=http://localhost:8000  (+ EXPO_PUBLIC_STREAM_API_KEY for real chat)
 npm install
-npx expo start                # press i / a for simulator, or scan QR in Expo Go
+npx expo start --web --port 8081    # add -c after dependency changes
 ```
+Open http://localhost:8081. Returning sessions land on My Chats — use Profile → **Start fresh** (or incognito) to replay onboarding.
 
-### Local infra (optional)
-```bash
-docker compose up -d          # postgres + redis  (compose file added with the backend)
+### 3. Crisis-webhook enforcement (live-testing only)
+The crisis scan is enforced by Stream calling our API server-to-server, so live Stream needs a public URL:
+```powershell
+cloudflared tunnel --url http://localhost:8000          # copy the trycloudflare URL
+.\.venv\Scripts\python.exe -m scripts.configure_stream https://<tunnel-url>
 ```
+Per-session quick tunnels are a dev convenience; staging needs a stable URL (tracked in `PROGRESS.md`).
+
+### Verification conventions
+- Backend: `pytest` (hermetic Stream stubs; Postgres required — concurrency tests use row locks).
+- Mobile: `npx tsc --noEmit` + Playwright walkthroughs on Expo web at 390×844, asserting **0 console errors** (see PROGRESS for the established flows).
+- CI: `.github/workflows/api-ci.yml` runs compose → `alembic upgrade head` → `alembic check` → pytest on every `services/api` push.
 
 ---
 
 ## Env vars
 
-Never commit real secrets. Each package ships an `.env.example`; copy to `.env` and fill in.
+Never commit real secrets. `.env` files are gitignored; each package ships an `.env.example`.
 
 ### Backend (`services/api/.env`)
 | Var | Purpose |
 |---|---|
-| `DATABASE_URL` | DigitalOcean Managed Postgres connection string |
-| `REDIS_URL` | Redis (presence, matching queue, rate limits) |
-| `STREAM_API_KEY` / `STREAM_API_SECRET` | Stream Chat server credentials |
-| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Payments (contributions; later session fees) |
+| `DATABASE_URL` | Postgres (defaults to the compose instance `postgresql+psycopg://mento:mento@localhost:5432/mento`) |
+| `REDIS_URL` | Redis (presence/queues; defaults to compose) |
+| `JWT_SECRET` | Anonymous session tokens (HS256) |
+| `STREAM_API_KEY` / `STREAM_API_SECRET` | Stream Chat server credentials — absent = dev stub mode |
+| `ADMIN_TOKEN` | Guards the moderation queue + the Personal-request accept/decline stand-in; empty = disabled |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Payments (contributions) — not yet wired |
 | `POSTHOG_API_KEY` / `POSTHOG_HOST` | Analytics (no message content / PII) |
-| `JWT_SECRET` | Anonymous session tokens |
-| `MIN_AGE` | Age-gate threshold (see Trust & Safety) |
-| `CRISIS_HELPLINES_JSON` | Verified India helpline list (Tele-MANAS / KIRAN) |
 
 ### Mobile (`apps/mobile/.env`)
 | Var | Purpose |
 |---|---|
 | `EXPO_PUBLIC_API_URL` | Backend base URL |
-| `EXPO_PUBLIC_STREAM_API_KEY` | Stream Chat client key |
+| `EXPO_PUBLIC_STREAM_API_KEY` | Stream Chat client key (publishable) |
 | `EXPO_PUBLIC_POSTHOG_KEY` / `EXPO_PUBLIC_POSTHOG_HOST` | Analytics |
 
 ---
 
 ## Trust & Safety
 
-This is a mental-health-adjacent product. Crisis handling, honest payments, anonymity, age-gating, and "privacy policy matches reality" are **non-negotiable** and specified in `CLAUDE.md` → *Trust & Safety*. Read that before touching chat, payments, or onboarding.
+This is a mental-health-adjacent product. Crisis handling (server-side, fail-open-but-never-silent), honest payments, anonymity on **both** sides of the chat, age-gating, and "privacy policy matches reality" are **non-negotiable** and specified in `CLAUDE.md` → *Trust & Safety*. Read that before touching chat, payments, or onboarding.
 
 ## Contributing / working rhythm
 
-At the end of every meaningful unit of work: update `PROGRESS.md`, commit with a clear message, and note the exact resume command. `PROGRESS.md` is designed so anyone (including a fresh AI session) can pick up cold.
+Conventional commits; each unit proven (tests/Playwright) before the next. At the end of every meaningful unit: update `PROGRESS.md`, commit with a clear message, and note the exact resume command. `PROGRESS.md` is designed so anyone (including a fresh AI session) can pick up cold.
