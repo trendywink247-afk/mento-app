@@ -1,21 +1,38 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import Animated, {
+  cancelAnimation,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { LogoLockup } from '@/components/art/Logo';
 import { MountainsScene } from '@/components/art/Scenes';
+import { AmbientBackground } from '@/components/motion/AmbientBackground';
+import { Entrance } from '@/components/motion/Entrance';
+import { useBreathing } from '@/components/motion/useBreathing';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
+import { duration, easing } from '@/theme/motion';
 import { font, space, type } from '@/theme/tokens';
 
-/** Landing per mockup #2: centered logo lockup, big headline with the soft-lavender
- * "understands.", ink CTA pill, full-bleed mountain footer. */
+/** Landing per mockup #2, cinematic: the sky is the same ambient aurora the journey
+ * lives on (one continuous shot), the logo breathes, the headline lines rise in a
+ * stagger, the mountains drift almost imperceptibly, and the CTA exit is a designed
+ * fade into the journey's route crossfade. Returning-user redirect unchanged. */
 export default function Landing() {
   const router = useRouter();
   const { colors } = useTheme();
   const { width } = useWindowDimensions();
+  const reduced = useReducedMotion();
+  const breathing = useBreathing();
   // Returning users (existing anonymous session) skip onboarding and land on My Chats;
   // render nothing while the secure store resolves so the landing never flashes first.
   const [checked, setChecked] = useState(false);
@@ -32,53 +49,110 @@ export default function Landing() {
     };
   }, [router]);
 
+  // Mountains drift ±8px over ~40s. Drawn 24px wider than the screen so the drift
+  // never exposes an edge.
+  const drift = useSharedValue(0);
+  useEffect(() => {
+    if (!checked || reduced) {
+      cancelAnimation(drift);
+      drift.value = 0;
+      return;
+    }
+    drift.value = withRepeat(withTiming(8, { duration: 20000, easing: easing.breathe }), -1, true);
+    return () => cancelAnimation(drift);
+  }, [checked, reduced, drift]);
+  const driftStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: drift.value - 4 }],
+  }));
+
+  // Designed exit: the hero fades down briefly, then the route crossfade takes over.
+  const exit = useSharedValue(0);
+  const exitStyle = useAnimatedStyle(() => ({
+    opacity: 1 - exit.value,
+    transform: [{ translateY: exit.value * -10 }],
+  }));
+  const begin = () => {
+    const go = () => router.push('/onboarding');
+    if (reduced) {
+      go();
+      return;
+    }
+    exit.value = withTiming(1, { duration: duration.fast + 50, easing: easing.exit }, (done) => {
+      if (done) runOnJS(go)();
+    });
+  };
+
   if (!checked) return null;
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.bg }]}>
+    <View style={styles.root}>
+      <AmbientBackground />
       <View style={styles.mountains} pointerEvents="none">
-        <MountainsScene width={width} height={190} />
+        <Animated.View style={driftStyle}>
+          <MountainsScene width={width + 24} height={190} />
+        </Animated.View>
       </View>
 
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.logoZone}>
-          <LogoLockup markSize={64} />
-        </View>
+      <Animated.View style={[styles.fill, exitStyle]}>
+        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+          <View style={styles.logoZone}>
+            <Entrance index={0} from="none">
+              <Animated.View style={breathing}>
+                <LogoLockup markSize={64} />
+              </Animated.View>
+            </Entrance>
+          </View>
 
-        <View style={styles.hero}>
-          <Text
-            style={[styles.headline, { color: colors.ink }]}
-            accessibilityRole="header"
-          >
-            A place to talk{'\n'}with a peer who{'\n'}
-            <Text style={{ color: colors.accentSoft }}>understands.</Text>
-          </Text>
-          <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-            Anonymous. Judgment-free.{'\n'}Real conversations. When you need it most.
-          </Text>
-        </View>
+          <View style={styles.hero}>
+            <View
+              accessible
+              accessibilityRole="header"
+              accessibilityLabel="A place to talk with a peer who understands."
+              style={styles.headlineBlock}
+            >
+              <Entrance index={1}>
+                <Text style={[styles.headline, { color: colors.ink }]}>A place to talk</Text>
+              </Entrance>
+              <Entrance index={2}>
+                <Text style={[styles.headline, { color: colors.ink }]}>with a peer who</Text>
+              </Entrance>
+              <Entrance index={3}>
+                <Text style={[styles.headline, { color: colors.accentSoft }]}>understands.</Text>
+              </Entrance>
+            </View>
+            <Entrance index={5}>
+              <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
+                Anonymous. Judgment-free.{'\n'}Real conversations. When you need it most.
+              </Text>
+            </Entrance>
+          </View>
 
-        <View style={styles.ctaWrap}>
-          <PrimaryButton
-            label="Start a Conversation"
-            tone="ink"
-            icon="chatbubble-outline"
-            onPress={() => router.push('/onboarding')}
-            accessibilityHint="Begins anonymous onboarding"
-            testID="start"
-          />
-        </View>
-      </SafeAreaView>
+          <View style={styles.ctaWrap}>
+            <Entrance index={6}>
+              <PrimaryButton
+                label="Start a Conversation"
+                tone="ink"
+                icon="chatbubble-outline"
+                onPress={begin}
+                accessibilityHint="Begins anonymous onboarding"
+                testID="start"
+              />
+            </Entrance>
+          </View>
+        </SafeAreaView>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  fill: { flex: 1 },
   safe: { flex: 1, paddingHorizontal: space.lg },
-  mountains: { position: 'absolute', left: 0, right: 0, bottom: 0 },
+  mountains: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
   logoZone: { flex: 5, alignItems: 'center', justifyContent: 'flex-end' },
   hero: { flex: 6, alignItems: 'center', justifyContent: 'center', gap: space.md },
+  headlineBlock: { alignItems: 'center' },
   headline: {
     fontFamily: font.sansHeavy,
     fontSize: 32,
