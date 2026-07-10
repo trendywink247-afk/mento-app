@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -23,20 +22,26 @@ const GUIDELINES: { icon: keyof typeof Ionicons.glyphMap; title: string; body: s
   { icon: 'people-outline', title: 'Respect each other', body: "Let's create a kind and respectful space together." },
 ];
 
+export type MatchParams = { id: string; listener: string; channel: string };
+
 /** Matching step per mockup #5 (body unchanged from the old route). The onboarding +
  * match API flow is byte-identical; it fires when the step becomes ACTIVE — steps can
- * be mounted invisibly during transitions, so mount is not the trigger. */
+ * be mounted invisibly during transitions, so mount is not the trigger. Navigation
+ * now belongs to the journey (the matched-moment beat), not this step. */
 export function ConnectingStep({
   active,
   onInvalidDraft,
+  onMatched,
 }: {
   active: boolean;
   /** Draft lost its DOB (deep link / refresh) — the journey snaps back to the age step. */
   onInvalidDraft: () => void;
+  /** Match secured — the journey plays the found beat and navigates into the chat. */
+  onMatched: (params: MatchParams) => void;
 }) {
-  const router = useRouter();
   const { colors } = useTheme();
   const [error, setError] = useState<string | null>(null);
+  const [found, setFound] = useState(false);
   const startedRef = useRef(false);
 
   const connect = async () => {
@@ -57,13 +62,11 @@ export function ConnectingStep({
 
       const match = await api.match({ kind: 'general' });
       clearDraft();
-      router.replace({
-        pathname: '/chat/[id]',
-        params: {
-          id: match.conversation_id,
-          listener: match.listener_persona_name,
-          channel: match.stream_channel_id ?? '',
-        },
+      setFound(true);
+      onMatched({
+        id: match.conversation_id,
+        listener: match.listener_persona_name,
+        channel: match.stream_channel_id ?? '',
       });
     } catch (e) {
       const msg =
@@ -89,12 +92,20 @@ export function ConnectingStep({
       <Entrance index={0}>
         <View style={styles.head}>
           <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-            {error ? "We couldn't connect just yet" : 'Connecting you to an\navailable mentor…'}
+            {found
+              ? 'Found someone\nfor you 💜'
+              : error
+                ? "We couldn't connect just yet"
+                : 'Connecting you to an\navailable mentor…'}
           </Text>
           <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-            {error ?? "Hang tight! We're finding the right\nperson for you."}
+            {found
+              ? 'Taking you to your conversation…'
+              : (error ?? "Hang tight! We're finding the right\nperson for you.")}
           </Text>
-          {error ? (
+          {found ? (
+            <Ionicons name="heart" size={28} color={colors.accent} />
+          ) : error ? (
             <Ionicons name="cloud-offline-outline" size={40} color={colors.inkMuted} />
           ) : (
             <ActivityIndicator size="small" color={colors.accent} />

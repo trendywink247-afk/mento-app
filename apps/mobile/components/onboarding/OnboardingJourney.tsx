@@ -14,20 +14,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
+import { withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
+import { ambientLift } from '@/components/motion/ambientLift';
 import { PandaStage } from '@/components/motion/PandaStage';
 import { StepTransition } from '@/components/motion/StepTransition';
 import { AgeStep } from '@/components/onboarding/steps/AgeStep';
 import { CompanionStep } from '@/components/onboarding/steps/CompanionStep';
-import { ConnectingStep } from '@/components/onboarding/steps/ConnectingStep';
+import { ConnectingStep, type MatchParams } from '@/components/onboarding/steps/ConnectingStep';
 import { EmailStep } from '@/components/onboarding/steps/EmailStep';
 import { ReadyStep } from '@/components/onboarding/steps/ReadyStep';
 import { haptic } from '@/lib/haptics';
 import { getDraft } from '@/lib/onboardingDraft';
+import { useReducedMotion } from '@/lib/useReducedMotion';
+import { duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
+
+/** The hard cap on the "found someone" beat — theatre never spends the <30s promise. */
+const FOUND_BEAT_MS = 900;
 
 type Step = 'age' | 'email' | 'companion' | 'ready' | 'connecting';
 const ORDER: Step[] = ['age', 'email', 'companion', 'ready', 'connecting'];
@@ -44,6 +51,8 @@ export function OnboardingJourney() {
   const router = useRouter();
   const params = useLocalSearchParams<{ step?: string }>();
   const { colors } = useTheme();
+  const reduced = useReducedMotion();
+  const [celebrate, setCelebrate] = useState(0);
 
   const [step, setStep] = useState<Step>(() => {
     const requested = params.step as Step | undefined;
@@ -76,6 +85,35 @@ export function OnboardingJourney() {
     else setStep(ORDER[i - 1]);
   }, [step, router]);
 
+  // The matched moment: success haptic, panda celebrates, the sky lifts toward the
+  // accent for a hard-capped beat — then the route crossfade carries us into chat.
+  const onMatched = useCallback(
+    (match: MatchParams) => {
+      haptic.success();
+      const go = () =>
+        router.replace({
+          pathname: '/chat/[id]',
+          params: { id: match.id, listener: match.listener, channel: match.channel },
+        });
+      if (reduced) {
+        go();
+        return;
+      }
+      setCelebrate((n) => n + 1);
+      ambientLift.value = withTiming(0.3, { duration: duration.gentle, easing: easing.settle });
+      setTimeout(() => {
+        ambientLift.value = withTiming(0, { duration: duration.slow });
+        go();
+      }, FOUND_BEAT_MS);
+    },
+    [router, reduced]
+  );
+
+  // Never leave the sky lifted if the journey unmounts mid-beat.
+  useEffect(() => () => {
+    ambientLift.value = 0;
+  }, []);
+
   // Android hardware back steps backward through the journey (old behaviour: it
   // popped the previous route); on the first step it pops to the landing as usual.
   useEffect(() => {
@@ -101,11 +139,15 @@ export function OnboardingJourney() {
           return <ReadyStep onNext={goNext} />;
         case 'connecting':
           return (
-            <ConnectingStep active={key === step} onInvalidDraft={() => setStep('age')} />
+            <ConnectingStep
+              active={key === step}
+              onInvalidDraft={() => setStep('age')}
+              onMatched={onMatched}
+            />
           );
       }
     },
-    [goNext, step]
+    [goNext, step, onMatched]
   );
 
   const lavender = LAVENDER.includes(step);
@@ -135,7 +177,7 @@ export function OnboardingJourney() {
           <StepTransition activeKey={step} render={renderStep} />
         </View>
         {/* The guide mascot — mounted once, glides between per-step anchors. */}
-        <PandaStage step={step} />
+        <PandaStage step={step} celebrate={celebrate} />
       </SafeAreaView>
     </View>
   );

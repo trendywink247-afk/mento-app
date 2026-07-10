@@ -16,6 +16,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import { useDerivedValue, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { ambientLift } from '@/components/motion/ambientLift';
 import { hexToRgba01, mixHex01, mixRgba, type Rgba } from '@/components/motion/color';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
@@ -24,6 +25,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 const SKSL = `
 uniform float uTime;
 uniform float2 uSize;
+uniform float uLift;
 uniform half4 uBase;
 uniform half4 uA;
 uniform half4 uB;
@@ -47,6 +49,8 @@ half4 main(float2 pos) {
   col = mix(col, uA, w1 * 0.85);
   col = mix(col, uB, w2 * 0.60);
   col = mix(col, uC, w3 * 0.50);
+  // The "found someone" beat lifts the whole sky toward the accent wash.
+  col = mix(col, uB, uLift);
   return col;
 }
 `;
@@ -122,6 +126,7 @@ export function AuroraCanvas() {
     return {
       uTime: t,
       uSize: [width, height],
+      uLift: ambientLift.value,
       uBase: mix4(from.base, to.base),
       uA: mix4(from.a, to.a),
       uB: mix4(from.b, to.b),

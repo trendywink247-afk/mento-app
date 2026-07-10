@@ -39,7 +39,14 @@ const ANCHORS: Record<StageStep, { x: number; y: number; scale: number; opacity:
 /** Steps where arriving deserves a small wave. */
 const GREETING_STEPS: StageStep[] = ['age', 'companion'];
 
-export function PandaStage({ step }: { step: StageStep }) {
+export function PandaStage({
+  step,
+  celebrate = 0,
+}: {
+  step: StageStep;
+  /** Bump to celebrate (match found): wave + a joyful double dip. */
+  celebrate?: number;
+}) {
   const reduced = useReducedMotion();
   const { companionColor } = useTheme();
   const breathing = useBreathing();
@@ -87,6 +94,18 @@ export function PandaStage({ step }: { step: StageStep }) {
       withTiming(0, { duration: 340, easing: easing.settle })
     );
   }, [companionColor, reduced, dip]);
+
+  // Celebration (match found): wave + a joyful double dip.
+  useEffect(() => {
+    if (!celebrate || reduced) return;
+    setWaveTrigger((n) => n + 1);
+    dip.value = withSequence(
+      withTiming(7, { duration: 150, easing: easing.enter }),
+      withTiming(0, { duration: 200 }),
+      withTiming(5, { duration: 140 }),
+      withTiming(0, { duration: 300, easing: easing.settle })
+    );
+  }, [celebrate, reduced, dip]);
 
   // Gentle "waiting with you" sway on connecting.
   useEffect(() => {
