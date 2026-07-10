@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { haptic } from '@/lib/haptics';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -52,7 +52,7 @@ export function PrimaryButton({
 
   const handlePress = () => {
     if (inactive) return;
-    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
+    haptic.tick();
     onPress();
   };
 
