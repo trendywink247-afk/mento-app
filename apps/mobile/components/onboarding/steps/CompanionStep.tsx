@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
 import { haptic } from '@/lib/haptics';
@@ -83,16 +84,19 @@ export function CompanionStep({ onNext }: { onNext: () => void }) {
         </>
       }
     >
-      <View style={styles.head}>
-        <IconBadge icon="color-palette-outline" size={64} />
-        <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-          Your growth, your theme
-        </Text>
-        <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          Your emotional growth will be represented{'\n'}by an animal and a colour.
-        </Text>
-      </View>
+      <Entrance index={0}>
+        <View style={styles.head}>
+          <IconBadge icon="color-palette-outline" size={64} />
+          <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+            Your growth, your theme
+          </Text>
+          <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
+            Your emotional growth will be represented{'\n'}by an animal and a colour.
+          </Text>
+        </View>
+      </Entrance>
 
+      <Entrance index={1}>
       <View style={styles.section}>
         <IconBadge icon="paw-outline" size={52} />
         <View style={{ flex: 1 }}>
@@ -142,7 +146,9 @@ export function CompanionStep({ onNext }: { onNext: () => void }) {
           );
         })}
       </ScrollView>
+      </Entrance>
 
+      <Entrance index={2}>
       <View style={styles.section}>
         <IconBadge icon="water-outline" size={52} />
         <View style={{ flex: 1 }}>
@@ -193,7 +199,9 @@ export function CompanionStep({ onNext }: { onNext: () => void }) {
           );
         })}
       </ScrollView>
+      </Entrance>
 
+      <Entrance index={3}>
       <View style={[styles.decideCard, { backgroundColor: colors.surface }]}>
         <IconBadge icon="sparkles-outline" size={44} />
         <View style={{ flex: 1 }}>
@@ -213,6 +221,7 @@ export function CompanionStep({ onNext }: { onNext: () => void }) {
           <Text style={[type.label, { color: colors.accent }]}>Surprise Me</Text>
         </Pressable>
       </View>
+      </Entrance>
     </StepScaffold>
   );
 }

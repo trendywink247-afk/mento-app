@@ -4,6 +4,7 @@ import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { LogoLockup } from '@/components/art/Logo';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
@@ -47,22 +48,29 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
         </>
       }
     >
-      <View style={styles.logoZone}>
-        <LogoLockup markSize={40} />
-      </View>
+      <Entrance index={0}>
+        <View style={styles.logoZone}>
+          <LogoLockup markSize={40} />
+        </View>
+      </Entrance>
 
-      <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-        Optional, but helpful.
-      </Text>
-      <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-        Add an email only if you'd like a way to recover your space later. It's never required
-        and never shown to other users.
-      </Text>
+      <Entrance index={1}>
+        <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+          Optional, but helpful.
+        </Text>
+        <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
+          Add an email only if you'd like a way to recover your space later. It's never required
+          and never shown to other users.
+        </Text>
+      </Entrance>
 
-      <View style={styles.badgeZone}>
-        <IconBadge icon="mail-outline" size={64} />
-      </View>
+      <Entrance index={2}>
+        <View style={styles.badgeZone}>
+          <IconBadge icon="mail-outline" size={64} />
+        </View>
+      </Entrance>
 
+      <Entrance index={3}>
       <View
         style={[
           styles.field,
@@ -95,6 +103,7 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
           We respect your privacy. Your email will never be shared with other users.
         </Text>
       </View>
+      </Entrance>
     </StepScaffold>
   );
 }

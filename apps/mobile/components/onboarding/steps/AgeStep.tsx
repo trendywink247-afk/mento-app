@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { DobPicker, dobToISO, type Dob } from '@/components/DobPicker';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { LogoLockup } from '@/components/art/Logo';
 import { haptic } from '@/lib/haptics';
@@ -76,33 +77,40 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
         </>
       }
     >
-      <View style={styles.logoZone}>
-        <LogoLockup markSize={40} />
-      </View>
-
-      <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-        Your age helps us{'\n'}keep Mento safe,{'\n'}while keeping you{'\n'}
-        <Text style={{ color: colors.accentSoft }}>anonymous.</Text>
-      </Text>
-
-      <View style={styles.reassure}>
-        <Ionicons name="shield-checkmark-outline" size={34} color={colors.accentSoft} />
-        <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          We use your age to create appropriate conversations and maintain a safe space for
-          everyone.
-        </Text>
-        <View style={styles.lockRow}>
-          <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
-          <Text style={[type.caption, { color: colors.inkMuted }]}>
-            Your age is never shown to other users.
-          </Text>
+      <Entrance index={0}>
+        <View style={styles.logoZone}>
+          <LogoLockup markSize={40} />
         </View>
-      </View>
+      </Entrance>
 
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+      <Entrance index={1}>
+        <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+          Your age helps us{'\n'}keep Mento safe,{'\n'}while keeping you{'\n'}
+          <Text style={{ color: colors.accentSoft }}>anonymous.</Text>
+        </Text>
+      </Entrance>
 
-      <Text style={[styles.question, { color: colors.ink }]}>How old are you?</Text>
-      <DobPicker value={dob} onChange={changeDob} />
+      <Entrance index={2}>
+        <View style={styles.reassure}>
+          <Ionicons name="shield-checkmark-outline" size={34} color={colors.accentSoft} />
+          <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
+            We use your age to create appropriate conversations and maintain a safe space for
+            everyone.
+          </Text>
+          <View style={styles.lockRow}>
+            <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
+            <Text style={[type.caption, { color: colors.inkMuted }]}>
+              Your age is never shown to other users.
+            </Text>
+          </View>
+        </View>
+      </Entrance>
+
+      <Entrance index={3}>
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        <Text style={[styles.question, { color: colors.ink }]}>How old are you?</Text>
+        <DobPicker value={dob} onChange={changeDob} />
+      </Entrance>
     </StepScaffold>
   );
 }

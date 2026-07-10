@@ -5,6 +5,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { ConnectingScene } from '@/components/art/Scenes';
 import { ApiError, api } from '@/lib/api';
@@ -85,53 +86,62 @@ export function ConnectingStep({
     <StepScaffold
       footer={error ? <PrimaryButton label="Try again" onPress={() => void connect()} testID="retry" /> : undefined}
     >
-      <View style={styles.head}>
-        <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-          {error ? "We couldn't connect just yet" : 'Connecting you to an\navailable mentor…'}
-        </Text>
-        <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          {error ?? "Hang tight! We're finding the right\nperson for you."}
-        </Text>
-        {error ? (
-          <Ionicons name="cloud-offline-outline" size={40} color={colors.inkMuted} />
-        ) : (
-          <ActivityIndicator size="small" color={colors.accent} />
-        )}
-      </View>
+      <Entrance index={0}>
+        <View style={styles.head}>
+          <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+            {error ? "We couldn't connect just yet" : 'Connecting you to an\navailable mentor…'}
+          </Text>
+          <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
+            {error ?? "Hang tight! We're finding the right\nperson for you."}
+          </Text>
+          {error ? (
+            <Ionicons name="cloud-offline-outline" size={40} color={colors.inkMuted} />
+          ) : (
+            <ActivityIndicator size="small" color={colors.accent} />
+          )}
+        </View>
+      </Entrance>
 
       {!error ? (
         <>
-          <View style={styles.scene}>
-            <ConnectingScene width={340} height={170} />
-          </View>
+          <Entrance index={1}>
+            <View style={styles.scene}>
+              <ConnectingScene width={340} height={170} />
+            </View>
 
-          <Text style={[styles.waitTitle, { color: colors.ink }]}>
-            While you wait, here's what makes{'\n'}Mento a safe and supportive space.
-          </Text>
+            <Text style={[styles.waitTitle, { color: colors.ink }]}>
+              While you wait, here's what makes{'\n'}Mento a safe and supportive space.
+            </Text>
+          </Entrance>
 
           <View>
             {GUIDELINES.map((g, i) => (
               <Fragment key={g.title}>
-                {i > 0 ? <View style={[styles.divider, { backgroundColor: colors.border }]} /> : null}
-                <View style={styles.row}>
-                  <IconBadge icon={g.icon} size={48} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.rowTitle, { color: colors.ink }]}>{g.title}</Text>
-                    <Text style={[type.caption, { color: colors.inkMuted }]}>{g.body}</Text>
+                {/* Slow cascade — these rows are the wait entertainment. */}
+                <Entrance index={3 + i}>
+                  {i > 0 ? <View style={[styles.divider, { backgroundColor: colors.border }]} /> : null}
+                  <View style={styles.row}>
+                    <IconBadge icon={g.icon} size={48} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowTitle, { color: colors.ink }]}>{g.title}</Text>
+                      <Text style={[type.caption, { color: colors.inkMuted }]}>{g.body}</Text>
+                    </View>
                   </View>
-                </View>
+                </Entrance>
               </Fragment>
             ))}
           </View>
 
-          <View style={[styles.footerCard, { backgroundColor: colors.accentTint }]}>
-            <Ionicons name="sparkles-outline" size={18} color={colors.accentSoft} />
-            <Text style={[styles.footerTitle, { color: colors.ink }]}>
-              Let's begin a conversation{'\n'}
-              <Text style={{ color: colors.accent }}>that brings you peace of mind.</Text>
-            </Text>
-            <Text style={[type.body, { color: colors.accent }]}>💜</Text>
-          </View>
+          <Entrance index={8}>
+            <View style={[styles.footerCard, { backgroundColor: colors.accentTint }]}>
+              <Ionicons name="sparkles-outline" size={18} color={colors.accentSoft} />
+              <Text style={[styles.footerTitle, { color: colors.ink }]}>
+                Let's begin a conversation{'\n'}
+                <Text style={{ color: colors.accent }}>that brings you peace of mind.</Text>
+              </Text>
+              <Text style={[type.body, { color: colors.accent }]}>💜</Text>
+            </View>
+          </Entrance>
         </>
       ) : null}
     </StepScaffold>

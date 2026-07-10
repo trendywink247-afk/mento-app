@@ -17,6 +17,7 @@ import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
+import { PandaStage } from '@/components/motion/PandaStage';
 import { StepTransition } from '@/components/motion/StepTransition';
 import { AgeStep } from '@/components/onboarding/steps/AgeStep';
 import { CompanionStep } from '@/components/onboarding/steps/CompanionStep';
@@ -133,6 +134,8 @@ export function OnboardingJourney() {
         <View style={styles.stage}>
           <StepTransition activeKey={step} render={renderStep} />
         </View>
+        {/* The guide mascot — mounted once, glides between per-step anchors. */}
+        <PandaStage step={step} />
       </SafeAreaView>
     </View>
   );

@@ -1,10 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { Entrance } from '@/components/motion/Entrance';
+import { useBreathing } from '@/components/motion/useBreathing';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
+import { AnimatedPanda } from '@/components/art/AnimatedPanda';
 import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
 import { getDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -28,6 +32,8 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
   const animal = (draft.companionAnimal as CompanionAnimal | null) ?? 'Panda';
   const colourLabel =
     COMPANION_COLOR_LABELS[(draft.companionColour as CompanionColor | null) ?? companionColor];
+  // The chosen companion breathes in the arch; the panda choice gets the full rig.
+  const breathing = useBreathing();
 
   return (
     <StepScaffold
@@ -48,19 +54,28 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
         </>
       }
     >
-      <View style={styles.head}>
-        <IconBadge icon="checkmark" size={72} />
-        <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-          Mento space ready!
-        </Text>
-        <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          Your space is all set. Your journey{'\n'}begins now. 💜
-        </Text>
-      </View>
+      <Entrance index={0}>
+        <View style={styles.head}>
+          <IconBadge icon="checkmark" size={72} />
+          <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+            Mento space ready!
+          </Text>
+          <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
+            Your space is all set. Your journey{'\n'}begins now. 💜
+          </Text>
+        </View>
+      </Entrance>
 
+      <Entrance index={1}>
       <View style={styles.companionZone}>
         <View style={[styles.arch, { backgroundColor: colors.accentTint }]}>
-          <CompanionArt animal={animal} size={120} />
+          <Animated.View style={breathing}>
+            {animal === 'Panda' ? (
+              <AnimatedPanda size={120} />
+            ) : (
+              <CompanionArt animal={animal} size={120} />
+            )}
+          </Animated.View>
         </View>
         <Text style={[type.bodySemi, styles.center, { color: colors.ink }]}>You chose</Text>
         <Text style={[styles.companionName, { color: colors.ink }]}>
@@ -70,7 +85,9 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
           as your growth companion 💜
         </Text>
       </View>
+      </Entrance>
 
+      <Entrance index={2}>
       <View style={styles.sparkleRow}>
         <View style={[styles.hairline, { backgroundColor: colors.border }]} />
         <Ionicons name="sparkles-outline" size={16} color={colors.accentSoft} />
@@ -83,7 +100,9 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
       <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
         Here, you can reflect, learn and grow with{'\n'}kindness towards yourself.
       </Text>
+      </Entrance>
 
+      <Entrance index={3}>
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <View style={styles.cardHead}>
           <Text style={[type.label, { color: colors.accent, flex: 1 }]}>
@@ -101,6 +120,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
           </Fragment>
         ))}
       </View>
+      </Entrance>
     </StepScaffold>
   );
 }
