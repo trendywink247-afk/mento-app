@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -66,6 +67,44 @@ class RequestOut(BaseModel):
     target_listener_id: str | None
     intro_message: str | None
     conversation_id: str | None
+    created_at: str
+
+
+# --- Listener console (minimal, DECISIONS §I.6) ---
+class ListenerMeOut(BaseModel):
+    """The authenticated listener's own profile + a Stream token to join channels."""
+    id: str
+    persona_name: str
+    persona_avatar: str
+    status: str
+    categories: list[str]
+    active_conversations: int
+    max_concurrent: int
+    stream_token: str
+
+
+class ListenerStatusIn(BaseModel):
+    # offline stays a seed/admin state — the console only toggles presence.
+    status: Literal["online", "away"]
+
+
+class ListenerConversationItem(BaseModel):
+    """A conversation as the listener sees it: the MEMBER's persona, never their
+    identity — and none of the member's privacy controls (lock/mask are theirs)."""
+    id: str
+    status: str
+    user_persona_name: str
+    user_persona_avatar: str
+    stream_channel_id: str | None
+    created_at: str
+    ended_at: str | None
+
+
+class ListenerRequestItem(BaseModel):
+    id: str
+    intro_message: str | None
+    issue_category: str | None
+    requester_persona_name: str
     created_at: str
 
 
