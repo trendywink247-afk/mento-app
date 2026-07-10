@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-07-11 (session 11) — Cinematic onboarding: the "movie-like" motion phase, leg 1 ✅
+
+**Context (founder decisions this session):** exceed the mockups, not just match them — **cinematic motion everywhere, NO 3D engine** (the Calm/Headspace/Finch register; a full 3D app would break 60fps/<2s cold start/<40MB/the calm ethos); **onboarding journey first**; **visual + haptics, no audio**. Research verified: shared-element transitions are NOT production-viable on SDK 52 + expo-router → continuity comes from **one onboarding route** with a persistent ambient canvas + persistent mascot. Plan: `~/.claude/plans/in-which-folder-are-floofy-pony.md`.
+
+**Done (6 commits, each Playwright-proven at 390×844, tsc clean, 0 console errors):**
+- **Motion foundation** (`4ee6325`): `theme/motion.ts` tokens (calm durations/easings/spring/stagger/breathe), `components/motion/` primitives — `Entrance` (staggered fade+rise), `StepTransition` (crossfade), `useBreathing` — all **manual shared values** (`entering=` layout animations are flaky on RN-web), transform/opacity ONLY; `lib/haptics.ts` vocabulary (tick/advance/success, HIG-meaningful, web no-op); `lib/useReducedMotion(.web).ts` — every primitive degrades to ≤150ms opacity-only.
+- **One journey route** (`de72d31`): onboarding collapsed into `app/onboarding/index.tsx` → `OnboardingJourney` step machine (age→email→companion→ready→connecting) so background+mascot never unmount. `?step=` URL mirror (replace semantics, skipped on first render — navigating pre-root-layout throws), deep-link guard (no DOB in draft → snap to age), old routes = Redirect stubs, hardware-back/chevron step backward, fade seams for onboarding+chat in the root Stack. **API flow byte-identical**; ConnectingStep fires on `active`, not mount. Steps restore prior picks from the draft.
+- **Ambient aurora** (`f15379e`): `@shopify/react-native-skia` **1.5.0** (the SDK 52 pin, +~3-5MB native). One full-screen SkSL shader (3 blobs, ~45-90s orbits, smoothstep falloffs — **no Skia blur**), palette derived from companion accent; **picking a colour washes the whole sky over 900ms** (proven by pixel diff). Static SVG gradient paints the first frame (cold-start guard) and is the permanent fallback; web lazy-loads CanvasKit from CDN at idle (fails → gradient stays, warn not error). Reduced motion freezes the clock (proven frame-identical over 2s).
+- **Living panda** (`17f3e89`): `AnimatedPanda` — Panda.tsx re-layered into stacked SVGs (body+cape/arm/head/eyes) animated only via container transforms: randomized blink, ±2° head sway, wave on trigger. `PandaStage` mounted once at journey level: glides between per-step anchors, breathes, waves on greetings, happy-dips on colour pick, sways on connecting, hands off to the in-arch breathing companion on ready (panda choice gets the full rig; other animals get CompanionArt+breathing). Entrance cascades on all five steps; connecting guidelines cascade slowly (wait entertainment). Proven: panda frames differ over 3s, identical under reduced motion.
+- **Landing cinematic** (`1cbdd4f`): same ambient sky as the journey (one continuous shot across the route fade), breathing logo, headline rises line-by-line ("understands." last), mountains drift ±8px/~40s (drawn 24px wider — no exposed edge), CTA = 250ms hero fade then route fade. Returning-user redirect regression-proven.
+- **Matched moment** (`8e6f9fb`): match success → success haptic, panda celebration, sky lifts toward accent (`uLift` uniform via `makeMutable` singleton), "Found someone for you 💜" — **hard-capped 900ms**, then fade into `/chat/[id]`. Reduced motion navigates instantly. Proven incl. **error/retry** (first match call aborted → error state → retry → chat, 9.5s total; normal pass 5.3s — the <30s promise has huge headroom).
+
+**Descoped (logged, deliberate):** per-step shader mood, mountains parallax layer-split, ConnectingScene dashed-line pulse, email envelope tilt-settle micro-beat. Browser-back exits the journey to landing (web = best-effort, documented in code).
+
+**Open items:**
+1. **Release-build perf gate NOT yet run** (no Android device/emulator this session): `npx expo run:android --variant release` + `adb shell dumpsys gfxinfo` through a full onboarding pass, record numbers here; APK size check (<40MB incl. Skia). Contingency if the shader is hot on mid-Android: half-res canvas + scale(2) (documented in AuroraCanvas).
+2. **Maestro native verification** now covers the new motion too (transformOrigin behaviour, Skia on device, haptics vocabulary, keyboard-vs-transition).
+3. **Rive mascot** stays the logged future upgrade (needs dev build + a custom web adapter; the SVG rig is the v1 answer).
+4. Carried from session 10: AI Journal Assistant (LLM decision), Razorpay creds, Stream secret rotation + stable webhook URL.
+
+**How to resume:** backend `docker compose up -d` → `alembic upgrade head` → seed → uvicorn :8000; mobile `npx expo start --web --port 8081` (`-c` after dep changes). The journey is `components/onboarding/OnboardingJourney.tsx`; motion primitives in `components/motion/`; motion tokens in `theme/motion.ts`. Playwright scripts from this session: `/tmp/playwright-test-{journey,aurora,panda,landing2,matched}.js`.
+
+---
+
 ## 2026-06-11 (session 10) — Phase 5 closed out: log recovery, Start fresh, inventory erratum ✅
 
 **Context:** session 9 hit a rate limit after the last Phase 5 commit but *before* logging it — this entry recovers that log, then closes the two leftover Phase 5 items.
