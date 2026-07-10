@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     env: str = "dev"
     jwt_secret: str = "change-me-long-random"
     jwt_ttl_days: int = 90
+    # Listener-console token links are shareable strings — keep their life shorter
+    # than user sessions; regeneration is one script run (scripts/issue_listener_token).
+    listener_jwt_ttl_days: int = 30
     min_age: int = 18
 
     # Guards the moderation review queue. Empty = queue disabled (no console yet).

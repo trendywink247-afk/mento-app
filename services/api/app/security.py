@@ -39,15 +39,49 @@ def issue_session_token(user_id: str) -> str:
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_ALGO)
 
 
+def issue_listener_token(listener_id: str) -> str:
+    """Mint a listener-console JWT (role claim distinguishes it from user sessions;
+    revocation is the per-request vetting_status check, not the token itself)."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": listener_id,
+        "role": "listener",
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(days=_settings.listener_jwt_ttl_days)).timestamp()),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_ALGO)
+
+
+def _decode(creds: HTTPAuthorizationCredentials) -> dict:
+    try:
+        return jwt.decode(creds.credentials, _settings.jwt_secret, algorithms=[_ALGO])
+    except JWTError as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired session") from exc
+
+
 def current_user_id(
     creds: HTTPAuthorizationCredentials = Depends(_bearer),
 ) -> str:
-    """FastAPI dependency: resolve the anonymous user id from the bearer token."""
-    try:
-        payload = jwt.decode(creds.credentials, _settings.jwt_secret, algorithms=[_ALGO])
-    except JWTError as exc:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired session") from exc
+    """FastAPI dependency: resolve the anonymous user id from the bearer token.
+    Rejects listener tokens — the two roles must never cross endpoints. Legacy
+    role-less tokens remain valid user sessions."""
+    payload = _decode(creds)
+    if payload.get("role") == "listener":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not a user session")
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "malformed session")
     return user_id
+
+
+def current_listener_id(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> str:
+    """FastAPI dependency: resolve the listener id from a role-claimed bearer token."""
+    payload = _decode(creds)
+    if payload.get("role") != "listener":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not a listener session")
+    listener_id = payload.get("sub")
+    if not listener_id:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "malformed session")
+    return listener_id
