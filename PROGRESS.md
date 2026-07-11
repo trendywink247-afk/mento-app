@@ -19,7 +19,7 @@
 
 **Gotcha re-confirmed:** a stale uvicorn (started before new routers) 404s new endpoints — restart :8000 after adding routers. Expo route typegen needs a dev-server restart to pick up new `app/` dirs.
 
-**Open decisions:** mascot asset route (the MASCOT_ASSETS.md gate — Rive commission vs Lottie); LLM for the Journal Assistant (carried).
+**Open decisions:** ~~mascot asset route~~ → **RESOLVED (founder): staged Rive commission + free Lottie interim.** Commission brief ready to send (`docs/MASCOT_COMMISSION_BRIEF.md`); `Companion` abstraction + Lottie pipeline shipped (`841271d`, deps lottie-react-native 7.1.0 + @lottiefiles/dotlottie-react; pipeline Playwright-proven with a real Lottie, SVG fallback intact). **Founder to-do (10 min):** download the six free Lottie JSONs per `apps/mobile/assets/companions/README.md` (needs a free IconScout account) and flip the registry entries; **and send the commission brief** to a Rive specialist (RiveAnimator / Fiverr Pro links in MASCOT_ASSETS.md). LLM for the Journal Assistant still open (carried).
 
 **Next:** 1) founder picks the mascot route → integrate behind a `Companion` component; 2) carried backlog: release-build Android perf gate + Maestro (device needed), Stream secret rotation + stable webhook URL (founder), Razorpay creds. For a listener demo: `python -m scripts.issue_listener_token --name "<persona>"` → open the printed link.
 
