@@ -1,6 +1,6 @@
 # Mascot asset research — a reactive 6-animal companion set
 
-**Date:** 2026-07-11 · **Status:** ⏳ awaiting founder decision (DECISIONS §I.4 gate)
+**Date:** 2026-07-11 · **Status:** ✅ DECIDED (founder, 2026-07-11): **staged commission** — Rive set commissioned (brief: `MASCOT_COMMISSION_BRIEF.md`), free Lottie interim ships now behind the `Companion` component.
 **Need:** panda, elephant, fox, turtle, deer, owl in ONE consistent style, each with at least idle/breathe + greet + celebrate, ideally truly reactive (responds to taps/choices). Calm/Finch register, recolourable toward the companion palette. Replaces the interim coded SVG rig.
 
 ## Headline finding (verified hands-on, 2026-07)
