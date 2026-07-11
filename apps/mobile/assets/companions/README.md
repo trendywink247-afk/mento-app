@@ -1,8 +1,13 @@
-# Companion animations — interim Lottie set
+# Companion assets
 
-The founder decision (DECISIONS §I.4): commissioned **Rive** characters are coming;
-until they land, the app uses free Lottie loops from the sources below, falling back
-to the coded SVG art for any animal without a file.
+**Current default: Fluent Emoji Color art (`fluent/`, MIT — microsoft/fluentui-emoji).**
+All six animals in one consistent soft 3D-shaded style, animated by the
+ReactiveCompanion rig. Sourced via a verified GitHub sweep (2026-07-11); to refresh
+the art, re-run the download + `fluent/convert.js`.
+
+Optional per-animal override: a **Lottie loop** in `registry.ts` takes precedence
+over the Fluent art (pipeline proven; sources below). A commissioned **Rive** set
+remains the long-term upgrade path (brief: docs/MASCOT_COMMISSION_BRIEF.md).
 
 ## 10-minute download checklist (needs a free IconScout/LottieFiles account)
 

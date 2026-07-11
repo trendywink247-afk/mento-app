@@ -1,20 +1,21 @@
 /**
  * Companion — THE single entry point for rendering the growth companion anywhere
  * (onboarding stage, ready arch, profile). Asset strategy is hidden inside
- * (DECISIONS §I.4 amended): the in-house ReactiveCompanion rig is the v1 route;
- * a Lottie file from assets/companions/registry.ts takes over per-animal when
+ * (DECISIONS §I.4 amended): Fluent Emoji Color art (MIT, one consistent style
+ * across all six) on the in-house ReactiveCompanion rig is the v1 route; a
+ * Lottie file from assets/companions/registry.ts overrides per-animal when
  * dropped in; a commissioned Rive set can replace the internals later — call
  * sites never change.
  *
  * State vocabulary (all animals): idle micro-sway (+ host breathing), greet,
- * celebrate, comfort, tap-react (`interactive`). The panda's bespoke layered rig
- * (blink + waving arm) rides inside the same wrapper.
+ * celebrate, comfort, tap-react (`interactive`).
  */
 import LottieView from 'lottie-react-native';
+import { SvgXml } from 'react-native-svg';
 
+import { COMPANION_FLUENT } from '@/assets/companions/fluent';
 import { COMPANION_LOTTIE } from '@/assets/companions/registry';
-import { AnimatedPanda } from '@/components/art/AnimatedPanda';
-import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
+import { type CompanionAnimal } from '@/components/art/Companions';
 import { ReactiveCompanion, type CompanionTrigger } from '@/components/art/ReactiveCompanion';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 
@@ -42,6 +43,8 @@ export function Companion({
   const reduced = useReducedMotion();
   const resolved = animal ?? 'Panda';
   const source = COMPANION_LOTTIE[resolved];
+  const fluent = COMPANION_FLUENT[resolved];
+  void waveTrigger; // kept in the API for a future rig that waves (Rive)
 
   const art = source ? (
     <LottieView
@@ -50,10 +53,14 @@ export function Companion({
       loop={!reduced}
       style={{ width: size, height: size }}
     />
-  ) : resolved === 'Panda' ? (
-    <AnimatedPanda size={size} waveTrigger={waveTrigger} />
   ) : (
-    <CompanionArt animal={resolved} size={size} />
+    <SvgXml
+      xml={fluent.xml}
+      width={size * fluent.scale}
+      height={size * fluent.scale}
+      // Framing-normalised (face vs full-body emoji) — keep the visual centre.
+      style={{ margin: (size - size * fluent.scale) / 2 }}
+    />
   );
 
   return (

@@ -1,6 +1,6 @@
 # Mascot asset research — a reactive 6-animal companion set
 
-**Date:** 2026-07-11 · **Status:** ✅ DECIDED (founder, 2026-07-11): **staged commission** — Rive set commissioned (brief: `MASCOT_COMMISSION_BRIEF.md`), free Lottie interim ships now behind the `Companion` component.
+**Date:** 2026-07-11 · **Status:** ✅ SHIPPED (in-house route): a verified GitHub sweep found **Microsoft Fluent Emoji (MIT)** — the only set with all six animals in one consistent soft style. Its Color SVGs now render behind the `Companion` component on the ReactiveCompanion rig. The Rive commission brief (`MASCOT_COMMISSION_BRIEF.md`) stays on file as the long-term upgrade; the Lottie registry remains a per-animal override. Runner-up sources + licence red-flags below and in the sweep: Twemoji (CC-BY, flatter), Noto animated Lottie (CC-BY, only 4/6 animals — no elephant/deer), OpenMoji rejected (share-alike).
 **Need:** panda, elephant, fox, turtle, deer, owl in ONE consistent style, each with at least idle/breathe + greet + celebrate, ideally truly reactive (responds to taps/choices). Calm/Finch register, recolourable toward the companion palette. Replaces the interim coded SVG rig.
 
 ## Headline finding (verified hands-on, 2026-07)
