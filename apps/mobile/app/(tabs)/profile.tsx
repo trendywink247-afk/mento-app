@@ -6,7 +6,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
-import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
+import { Companion } from '@/components/art/Companion';
+import type { CompanionAnimal } from '@/components/art/Companions';
 import { Panda } from '@/components/art/Panda';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { clearSession, getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
@@ -75,7 +76,7 @@ export default function ProfileTab() {
           {animal ? (
             <View style={styles.companionRow}>
               <View style={[styles.companionBubble, { backgroundColor: colors.accentTint }]}>
-                <CompanionArt animal={animal} size={44} />
+                <Companion animal={animal} size={44} />
               </View>
               <Text style={[type.bodySemi, { color: colors.ink }]}>
                 {COMPANION_COLOR_LABELS[companionColor]} {animal}

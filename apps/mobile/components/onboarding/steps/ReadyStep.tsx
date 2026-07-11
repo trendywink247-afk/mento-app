@@ -8,8 +8,8 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
-import { AnimatedPanda } from '@/components/art/AnimatedPanda';
-import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
+import { Companion } from '@/components/art/Companion';
+import type { CompanionAnimal } from '@/components/art/Companions';
 import { getDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLOR_LABELS } from '@/theme/companion';
@@ -70,11 +70,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
       <View style={styles.companionZone}>
         <View style={[styles.arch, { backgroundColor: colors.accentTint }]}>
           <Animated.View style={breathing}>
-            {animal === 'Panda' ? (
-              <AnimatedPanda size={120} />
-            ) : (
-              <CompanionArt animal={animal} size={120} />
-            )}
+            <Companion animal={animal} size={120} />
           </Animated.View>
         </View>
         <Text style={[type.bodySemi, styles.center, { color: colors.ink }]}>You chose</Text>

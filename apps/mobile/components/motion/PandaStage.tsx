@@ -18,8 +18,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { AnimatedPanda } from '@/components/art/AnimatedPanda';
-import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
+import { Companion } from '@/components/art/Companion';
+import type { CompanionAnimal } from '@/components/art/Companions';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing } from '@/theme/motion';
@@ -164,11 +164,7 @@ export function PandaStage({
     <View style={styles.host} pointerEvents="none">
       <Animated.View style={stageStyle}>
         <Animated.View style={breathing}>
-          {shownAnimal && shownAnimal !== 'Panda' ? (
-            <CompanionArt animal={shownAnimal} size={BASE_SIZE} />
-          ) : (
-            <AnimatedPanda size={BASE_SIZE} waveTrigger={waveTrigger} />
-          )}
+          <Companion animal={shownAnimal} size={BASE_SIZE} waveTrigger={waveTrigger} />
         </Animated.View>
       </Animated.View>
     </View>
