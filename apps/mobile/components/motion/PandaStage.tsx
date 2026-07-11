@@ -18,7 +18,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Companion } from '@/components/art/Companion';
+import { Companion, type CompanionTrigger } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -64,6 +64,7 @@ export function PandaStage({
   const dip = useSharedValue(0);
   const sway = useSharedValue(0);
   const [waveTrigger, setWaveTrigger] = useState(0);
+  const [rigTrigger, setRigTrigger] = useState<CompanionTrigger>(null);
   const firstColour = useRef(true);
   const prevStep = useRef<StageStep | null>(null);
 
@@ -105,6 +106,7 @@ export function PandaStage({
       opacity.value = withTiming(a.opacity, { duration: duration.gentle });
       if (GREETING_STEPS.includes(step) && prevStep.current !== step) {
         setWaveTrigger((n) => n + 1);
+        setRigTrigger((t) => ({ kind: 'greet', n: (t?.n ?? 0) + 1 }));
       }
     }
     prevStep.current = step;
@@ -123,17 +125,12 @@ export function PandaStage({
     );
   }, [companionColor, reduced, dip]);
 
-  // Celebration (match found): wave + a joyful double dip.
+  // Celebration (match found): the rig's crouch-hop-squash + the panda's wave.
   useEffect(() => {
     if (!celebrate || reduced) return;
     setWaveTrigger((n) => n + 1);
-    dip.value = withSequence(
-      withTiming(7, { duration: 150, easing: easing.enter }),
-      withTiming(0, { duration: 200 }),
-      withTiming(5, { duration: 140 }),
-      withTiming(0, { duration: 300, easing: easing.settle })
-    );
-  }, [celebrate, reduced, dip]);
+    setRigTrigger((t) => ({ kind: 'celebrate', n: (t?.n ?? 0) + 1 }));
+  }, [celebrate, reduced]);
 
   // Gentle "waiting with you" sway on connecting.
   useEffect(() => {
@@ -164,7 +161,12 @@ export function PandaStage({
     <View style={styles.host} pointerEvents="none">
       <Animated.View style={stageStyle}>
         <Animated.View style={breathing}>
-          <Companion animal={shownAnimal} size={BASE_SIZE} waveTrigger={waveTrigger} />
+          <Companion
+            animal={shownAnimal}
+            size={BASE_SIZE}
+            waveTrigger={waveTrigger}
+            trigger={rigTrigger}
+          />
         </Animated.View>
       </Animated.View>
     </View>

@@ -6,7 +6,8 @@ import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
-import { CompanionArt, type CompanionAnimal } from '@/components/art/Companions';
+import { Companion, type CompanionTrigger } from '@/components/art/Companion';
+import { type CompanionAnimal } from '@/components/art/Companions';
 import { haptic } from '@/lib/haptics';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -40,6 +41,8 @@ export function CompanionStep({
     (draft.companionAnimal as CompanionAnimal | null) ?? null
   );
   const [colourPicked, setColourPicked] = useState(!!draft.companionColour);
+  // The picked animal greets — a tiny hello at the moment of choice.
+  const [greet, setGreet] = useState<CompanionTrigger>(null);
 
   const chooseColour = (c: CompanionColor) => {
     haptic.tick();
@@ -50,6 +53,7 @@ export function CompanionStep({
   const chooseAnimal = (a: CompanionAnimal) => {
     haptic.tick();
     setAnimal(a);
+    setGreet((t) => ({ kind: 'greet', n: (t?.n ?? 0) + 1 }));
     onAnimalPicked?.(a);
   };
 
@@ -140,7 +144,7 @@ export function CompanionStep({
                   selected && { borderWidth: 2, borderColor: colors.accent },
                 ]}
               >
-                <CompanionArt animal={a} size={76} />
+                <Companion animal={a} size={76} trigger={selected ? greet : null} />
                 {selected ? checkBadge : null}
               </View>
               <Text

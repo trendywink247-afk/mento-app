@@ -70,7 +70,8 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
       <View style={styles.companionZone}>
         <View style={[styles.arch, { backgroundColor: colors.accentTint }]}>
           <Animated.View style={breathing}>
-            <Companion animal={animal} size={120} />
+            {/* Tap your new companion — it acknowledges you. */}
+            <Companion animal={animal} size={120} interactive />
           </Animated.View>
         </View>
         <Text style={[type.bodySemi, styles.center, { color: colors.ink }]}>You chose</Text>

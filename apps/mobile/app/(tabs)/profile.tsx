@@ -76,7 +76,7 @@ export default function ProfileTab() {
           {animal ? (
             <View style={styles.companionRow}>
               <View style={[styles.companionBubble, { backgroundColor: colors.accentTint }]}>
-                <Companion animal={animal} size={44} />
+                <Companion animal={animal} size={44} interactive />
               </View>
               <Text style={[type.bodySemi, { color: colors.ink }]}>
                 {COMPANION_COLOR_LABELS[companionColor]} {animal}
