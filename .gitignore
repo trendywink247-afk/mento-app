@@ -44,3 +44,4 @@ htmlcov/
 *.sqlite3
 .playwright-mcp/
 mento-crisis-card.png
+.superpowers/
