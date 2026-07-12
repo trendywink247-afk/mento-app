@@ -15,13 +15,14 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { LogoLockup } from '@/components/art/Logo';
 import { MountainsScene } from '@/components/art/Scenes';
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
+import { SkyMotes } from '@/components/motion/SkyMotes';
 import { Entrance } from '@/components/motion/Entrance';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import { duration, easing } from '@/theme/motion';
-import { font, space, type } from '@/theme/tokens';
+import { font, radius, space, type } from '@/theme/tokens';
 
 /** Landing per mockup #2, cinematic: the sky is the same ambient aurora the journey
  * lives on (one continuous shot), the logo breathes, the headline lines rise in a
@@ -87,6 +88,7 @@ export default function Landing() {
   return (
     <View style={styles.root}>
       <AmbientBackground />
+      <SkyMotes />
       <View style={styles.mountains} pointerEvents="none">
         <Animated.View style={driftStyle}>
           <MountainsScene width={width + 24} height={190} />
@@ -98,7 +100,7 @@ export default function Landing() {
           <View style={styles.logoZone}>
             <Entrance index={0} from="none">
               <Animated.View style={breathing}>
-                <LogoLockup markSize={64} />
+                <LogoLockup markSize={72} />
               </Animated.View>
             </Entrance>
           </View>
@@ -129,14 +131,16 @@ export default function Landing() {
 
           <View style={styles.ctaWrap}>
             <Entrance index={6}>
-              <PrimaryButton
-                label="Start a Conversation"
-                tone="ink"
-                icon="chatbubble-outline"
-                onPress={begin}
-                accessibilityHint="Begins anonymous onboarding"
-                testID="start"
-              />
+              <View style={[styles.ctaGlow, { shadowColor: colors.accent }]}>
+                <PrimaryButton
+                  label="Start a Conversation"
+                  tone="ink"
+                  icon="chatbubble-outline"
+                  onPress={begin}
+                  accessibilityHint="Begins anonymous onboarding"
+                  testID="start"
+                />
+              </View>
             </Entrance>
           </View>
         </SafeAreaView>
@@ -154,11 +158,18 @@ const styles = StyleSheet.create({
   hero: { flex: 6, alignItems: 'center', justifyContent: 'center', gap: space.md },
   headlineBlock: { alignItems: 'center' },
   headline: {
-    fontFamily: font.sansHeavy,
-    fontSize: 32,
-    lineHeight: 42,
+    fontFamily: font.serifBold,
+    fontSize: 34,
+    lineHeight: 44,
     textAlign: 'center',
   },
   sub: { textAlign: 'center' },
   ctaWrap: { flex: 4, justifyContent: 'flex-start', paddingTop: space.sm },
+  ctaGlow: {
+    borderRadius: radius.pill,
+    shadowOpacity: 0.35,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+  },
 });
