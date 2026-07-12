@@ -21,6 +21,7 @@ import { SceneTile } from '@/components/art/SceneTile';
 import { api } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { getStreamClient } from '@/lib/streamClient';
+import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -251,6 +252,9 @@ const Composer = memo(function Composer({ onSend, onTyping }: ComposerProps) {
 
 export default function ChatScreenWeb() {
   const router = useRouter();
+  // If the session vanishes (Start-fresh elsewhere), every conversation option would
+  // 403 with only a small inline error — route back to landing instead.
+  useSessionGuard();
   const { colors, elevation } = useTheme();
   const { id: conversationId, listener, channel: channelId } = useLocalSearchParams<{
     id: string;

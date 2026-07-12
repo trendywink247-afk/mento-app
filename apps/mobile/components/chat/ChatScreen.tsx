@@ -17,6 +17,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { api } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { getStreamClient } from '@/lib/streamClient';
+import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -43,6 +44,9 @@ type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
 
 export default function ChatScreen() {
   const router = useRouter();
+  // If the session vanishes (Start-fresh elsewhere), every conversation option would
+  // 403 with only a small inline error — route back to landing instead.
+  useSessionGuard();
   const { colors } = useTheme();
   const { id: conversationId, listener, channel: channelId } = useLocalSearchParams<{
     id: string;

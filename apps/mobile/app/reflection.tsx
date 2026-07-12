@@ -8,6 +8,7 @@ import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
 import { api } from '@/lib/api';
+import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -18,6 +19,7 @@ import { font, radius, space, type } from '@/theme/tokens';
  */
 export default function ReflectionScreen() {
   const router = useRouter();
+  useSessionGuard();
   const { colors } = useTheme();
   const { conversation, listener } = useLocalSearchParams<{
     conversation?: string;

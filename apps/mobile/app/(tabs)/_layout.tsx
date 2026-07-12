@@ -1,11 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Tabs, useFocusEffect, useRouter } from 'expo-router';
-import { useCallback } from 'react';
+import { Tabs } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { getSessionToken } from '@/lib/session';
+import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space } from '@/theme/tokens';
 
@@ -86,21 +85,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
 }
 
 export default function TabsLayout() {
-  const router = useRouter();
-
-  // Session-loss guard: if the anonymous session is gone (e.g. Start-fresh in another
-  // tab), every tab call would 403 forever — send the user back to the landing flow.
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      void getSessionToken().then((token) => {
-        if (!cancelled && !token) router.replace('/');
-      });
-      return () => {
-        cancelled = true;
-      };
-    }, [router]),
-  );
+  useSessionGuard();
 
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
