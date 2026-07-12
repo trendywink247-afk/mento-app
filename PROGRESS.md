@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-07-13 (session 15) — Options bug closed, landing refreshed, admin dashboard designed ✅
+
+**Context:** founder reported "End conversation didn't work"; wanted the landing enhanced modestly (logo + polish, theme intact); and the admin dashboard scoped fully. Brainstormed both new features (visual companion used) → specs → landing implemented.
+
+**Done:**
+- **"End conversation" bug — root-caused & fixed.** End itself is healthy (verified click-through: API 200, DB `status=ended`, reflection opens). The real fault: with the session wiped in another tab, the chat screen stranded the user on raw 403s for *every* option. The tabs-only session guard is now a shared hook (`lib/useSessionGuard`) covering tabs + both ChatScreen variants + reflection. (`fix(mobile): session-loss guard covers chat + reflection`.)
+- **Landing refresh (spec + plan + shipped, 4 commits).** New **bubble-heart logo** (`components/art/Logo.tsx`, indigo→lavender gradient, serif wordmark; per-instance `useId` gradient id — duplicate ids broke `url(#)` on web, caught in visual check). Polish: serif display headline, larger balanced logo, static accent glow on the CTA, and **SkyMotes** (`components/motion/SkyMotes.tsx`) — three sequenced light motes, only one moving at a time to respect the ≤3-mover budget. Reduced-motion = motes absent, page byte-identical over 2s, CTA still navigates. Full journey-to-chat E2E green. Specs/plan in `docs/superpowers/`.
+- **Admin dashboard — designed & spec'd** (`docs/superpowers/specs/2026-07-13-admin-dashboard-design.md`), brainstorm-approved, NOT yet built. Seven sections (safety review with live read-only conversation view · moderation + one-click suspend · listener management replacing CLI scripts · cockpit overview · system health incl. silent-webhook-death detector · contributions stub · admins + full audit trail). Owner/helper token-link auth (listener-console pattern), `/admin` web-only in Expo. **Next build target.**
+
+**Open (founder):** approve admin spec to build; landing logo lives — veto reversible in one file. Carried backlog unchanged (Stream secret rotation, Razorpay, LLM decision, helpline re-verify, Higgsfield licence). New to-do surfaced by admin design: **privacy policy must disclose safety-staff conversation access** before launch.
+
+**How to resume:** `cd C:\Users\khana\mento` → `claude --continue`. Stack unchanged (see session 14). Landing spec/plan under `docs/superpowers/`; admin spec ready to hand to writing-plans.
+
+---
+
 ## 2026-07-13 (session 14) — Full audit sweep: security hardened, scaled for 500 concurrent, E2E-proven ✅
 
 **Context:** founder mandate — verify requirement alignment, find & fix security loopholes, refactor for 500 concurrent users (dev/UAT) without breaking function, test everything E2E with Playwright, UI/UX review against the international bar, refresh docs. Three parallel audit agents (security / performance / PRD-alignment) + fixes, each unit proven.
