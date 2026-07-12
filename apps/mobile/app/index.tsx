@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { LogoLockup } from '@/components/art/Logo';
-import { MountainsScene } from '@/components/art/Scenes';
+import { MountainsScene, TalkingAtTableScene } from '@/components/art/Scenes';
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { SkyMotes } from '@/components/motion/SkyMotes';
 import { Entrance } from '@/components/motion/Entrance';
@@ -100,8 +100,14 @@ export default function Landing() {
           <View style={styles.logoZone}>
             <Entrance index={0} from="none">
               <Animated.View style={breathing}>
-                <LogoLockup markSize={72} />
+                <LogoLockup markSize={56} />
               </Animated.View>
+            </Entrance>
+          </View>
+
+          <View style={styles.sceneZone}>
+            <Entrance index={1} from="none">
+              <TalkingAtTableScene width={300} height={200} />
             </Entrance>
           </View>
 
@@ -154,8 +160,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   safe: { flex: 1, paddingHorizontal: space.lg },
   mountains: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
-  logoZone: { flex: 5, alignItems: 'center', justifyContent: 'flex-end' },
-  hero: { flex: 6, alignItems: 'center', justifyContent: 'center', gap: space.md },
+  logoZone: { flex: 3, alignItems: 'center', justifyContent: 'flex-end' },
+  sceneZone: { flex: 5, alignItems: 'center', justifyContent: 'center' },
+  hero: { flex: 5, alignItems: 'center', justifyContent: 'center', gap: space.md },
   headlineBlock: { alignItems: 'center' },
   headline: {
     fontFamily: font.serifBold,

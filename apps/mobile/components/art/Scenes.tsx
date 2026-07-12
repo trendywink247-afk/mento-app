@@ -101,6 +101,71 @@ export function ConnectingScene({ width = 340, height = 170 }: { width?: number;
   );
 }
 
+/** Landing hero: a man and another person talking warmly across a small cafe table,
+ * mugs between them and a soft chat-heart above — the "I just need to talk" promise
+ * as one calm scene. Same flat-vector lavender style as the rest of the art. */
+export function TalkingAtTableScene({ width = 300, height = 200 }: { width?: number; height?: number }) {
+  const SWEATER_L = PURPLE;
+  const SWEATER_R = LAV_3;
+  return (
+    <Svg width={width} height={height} viewBox="0 0 300 200" accessibilityLabel="Two people talking at a table">
+      {/* soft ground shadow */}
+      <Ellipse cx="150" cy="188" rx="110" ry="10" fill={LAV_2} opacity={0.6} />
+
+      {/* --- Left person: a man, facing right, leaning in --- */}
+      {/* torso / sweater */}
+      <Path d="M52 176 v-38 q0 -30 34 -30 q34 0 34 30 v38 Z" fill={SWEATER_L} />
+      {/* leaning-in arm resting on the table */}
+      <Path d="M104 150 q22 -2 34 8 l-2 12 q-18 -8 -34 -6 Z" fill={SWEATER_L} />
+      {/* neck + head */}
+      <Rect x="78" y="92" width="16" height="18" rx="7" fill={SKIN} />
+      <Circle cx="86" cy="80" r="20" fill={SKIN} />
+      {/* short hair */}
+      <Path d="M66 78 q-4 -26 20 -26 q24 0 20 26 q-3 -12 -20 -12 q-17 0 -20 12 Z" fill={INK} />
+      {/* ear */}
+      <Circle cx="67" cy="82" r="3.5" fill={SKIN} />
+      {/* subtle smile */}
+      <Path d="M82 86 q5 4 10 0" stroke={INK} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+
+      {/* --- Right person: facing left --- */}
+      <Path d="M180 176 v-38 q0 -30 34 -30 q34 0 34 30 v38 Z" fill={SWEATER_R} />
+      {/* arm holding a mug */}
+      <Path d="M180 150 q-22 -2 -34 8 l2 12 q18 -8 34 -6 Z" fill={SWEATER_R} />
+      <Rect x="206" y="92" width="16" height="18" rx="7" fill={SKIN} />
+      <Circle cx="214" cy="80" r="19" fill={SKIN} />
+      {/* longer hair (bob) */}
+      <Path d="M194 92 q-8 -40 20 -40 q28 0 20 40 q-4 -8 -6 -20 q-8 10 -26 8 q-2 8 -8 12 Z" fill={INK} />
+      <Path d="M80 86 q5 4 10 0" stroke={INK} strokeWidth="0" fill="none" />
+      <Path d="M210 86 q5 4 10 0" stroke={INK} strokeWidth="1.8" fill="none" strokeLinecap="round" />
+
+      {/* --- Table (drawn over the laps so they sit behind it) --- */}
+      <Rect x="146" y="158" width="8" height="26" rx="3" fill={LAV_3} />
+      <Ellipse cx="150" cy="186" rx="22" ry="5" fill={LAV_1} />
+      <Ellipse cx="150" cy="156" rx="66" ry="13" fill={LAV_2} />
+      <Path d="M84 156 a66 13 0 0 0 132 0 v4 a66 13 0 0 1 -132 0 Z" fill={LAV_1} />
+
+      {/* two mugs on the table */}
+      <Rect x="120" y="142" width="17" height="15" rx="4" fill={INK} />
+      <Path d="M137 145 q7 1 7 6 q0 5 -7 5" stroke={INK} strokeWidth="2.5" fill="none" />
+      <Rect x="164" y="143" width="16" height="14" rx="4" fill="#FFFFFF" />
+      <Path d="M180 146 q6 1 6 5 q0 4 -6 4" stroke="#FFFFFF" strokeWidth="2.5" fill="none" />
+      {/* mug steam */}
+      <Path d="M128 138 q-3 -5 0 -9" stroke={LAV_3} strokeWidth="1.6" fill="none" strokeLinecap="round" opacity={0.8} />
+      <Path d="M172 139 q3 -5 0 -9" stroke={LAV_3} strokeWidth="1.6" fill="none" strokeLinecap="round" opacity={0.8} />
+
+      {/* --- Chat-heart between them (the "talking" beat) --- */}
+      <Path d="M138 44 h24 a15 15 0 0 1 15 15 v6 a15 15 0 0 1 -15 15 h-9 l-8 8 1 -8 h-8 a15 15 0 0 1 -15 -15 v-6 a15 15 0 0 1 15 -15 Z" fill="#FFFFFF" />
+      <Path d="M150 56 q-6 -6 -12 -1 q-4 4 0 9 q3 5 12 11 q9 -6 12 -11 q4 -5 0 -9 q-6 -5 -12 1 Z" fill={PURPLE} />
+
+      <Sparkle x={196} y={40} s={5} />
+      <Sparkle x={104} y={54} s={4} fill={LAV_2} />
+      <Sparkle x={214} y={120} s={3} />
+      <Sprig x={22} y={182} />
+      <Sprig x={278} y={182} flip />
+    </Svg>
+  );
+}
+
 /** Chat empty state: two overlapping chat bubbles + sprig + sparkles. */
 export function ChatBubblesScene({ size = 150 }: { size?: number }) {
   return (
