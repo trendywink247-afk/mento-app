@@ -1,13 +1,16 @@
 # Companion assets
 
-**Current default: Fluent Emoji Color art (`fluent/`, MIT — microsoft/fluentui-emoji).**
-All six animals in one consistent soft 3D-shaded style, animated by the
-ReactiveCompanion rig. Sourced via a verified GitHub sweep (2026-07-11); to refresh
-the art, re-run the download + `fluent/convert.js`.
+**Current default: the founder-approved generated set (`generated/`, 2026-07-12).**
+All six animals in one consistent soft-shaded style (Higgsfield / Nano Banana 2,
+panda as style lock), background-removed, trimmed, packed as ~26KB 512px WebP
+cutouts (~162KB total), animated by the ReactiveCompanion rig. Full-res originals
++ regeneration job IDs: `docs/mascot-candidates/`.
 
-Optional per-animal override: a **Lottie loop** in `registry.ts` takes precedence
-over the Fluent art (pipeline proven; sources below). A commissioned **Rive** set
-remains the long-term upgrade path (brief: docs/MASCOT_COMMISSION_BRIEF.md).
+Priority chain in `components/art/Companion.tsx`: **Lottie override
+(`registry.ts`) → generated cutout (`generated/`) → Fluent Emoji SVG (`fluent/`,
+MIT — kept as the fallback for any animal without a generated entry).**
+A commissioned **Rive** set remains the long-term upgrade path (brief:
+docs/MASCOT_COMMISSION_BRIEF.md) — these cutouts are its style lock.
 
 ## 10-minute download checklist (needs a free IconScout/LottieFiles account)
 
