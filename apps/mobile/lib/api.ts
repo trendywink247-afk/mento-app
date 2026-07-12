@@ -86,6 +86,16 @@ export class ApiError extends Error {
   }
 }
 
+const REQUEST_TIMEOUT_MS = 10_000;
+
+/** AbortSignal.timeout isn't guaranteed on RN's fetch polyfill (Hermes), so build the
+ * equivalent from AbortController + setTimeout. */
+function timeoutSignal(ms: number): { signal: AbortSignal; cancel: () => void } {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), ms);
+  return { signal: controller.signal, cancel: () => clearTimeout(id) };
+}
+
 /** Core request with a pluggable token source — the user client below binds it to
  * the user session; lib/listenerApi.ts binds it to the listener-console token. */
 export async function apiRequest<T>(
@@ -102,7 +112,19 @@ export async function apiRequest<T>(
     if (token) headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+  const { signal, cancel } = timeoutSignal(REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, { ...init, headers, signal });
+  } catch (e) {
+    // Map an abort to the ApiError shape screens already handle (status 0 = network).
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new ApiError(0, 'The request timed out. Please check your connection and try again.');
+    }
+    throw e;
+  } finally {
+    cancel();
+  }
   if (!res.ok) {
     let detail = res.statusText;
     try {

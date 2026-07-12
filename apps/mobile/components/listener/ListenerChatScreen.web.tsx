@@ -60,6 +60,7 @@ export default function ListenerChatScreenWeb() {
   const [ready, setReady] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState('');
+  const [typing, setTyping] = useState<string | null>(null); // member's persona name
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [readTick, setReadTick] = useState(0);
@@ -119,6 +120,12 @@ export default function ListenerChatScreenWeb() {
           }
         });
         ch.on('message.read', () => setReadTick((t) => t + 1));
+        ch.on('typing.start', (e: Event) => {
+          if (e.user && e.user.id !== client.userID) setTyping(e.user.name ?? memberName);
+        });
+        ch.on('typing.stop', (e: Event) => {
+          if (e.user && e.user.id !== client.userID) setTyping(null);
+        });
         setReady(true);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Could not open the chat.');
@@ -129,7 +136,17 @@ export default function ListenerChatScreenWeb() {
     return () => {
       cancelled = true;
     };
-  }, [channelId, appendMessage, surfaceCrisis]);
+  }, [channelId, appendMessage, surfaceCrisis, memberName]);
+
+  const onTyping = useCallback(() => {
+    // stream-chat throttles keystroke() internally; guard anyway — typing signals
+    // are best-effort and must never surface an error in the composer.
+    try {
+      void channelRef.current?.keystroke().catch(() => {});
+    } catch {
+      /* best-effort typing signal */
+    }
+  }, []);
 
   const send = async () => {
     const body = draft.trim();
@@ -261,6 +278,16 @@ export default function ListenerChatScreenWeb() {
           />
           {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
 
+          {/* Presence-only typing line — calm register, no animation needed. */}
+          {typing ? (
+            <Text
+              style={[type.caption, styles.typingLine, { color: colors.inkMuted }]}
+              testID="listener-typing-indicator"
+            >
+              {typing} is typing…
+            </Text>
+          ) : null}
+
           <View style={styles.composer}>
             <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
               <TextInput
@@ -268,7 +295,10 @@ export default function ListenerChatScreenWeb() {
                 placeholder="Write a kind reply…"
                 placeholderTextColor={colors.inkMuted}
                 value={draft}
-                onChangeText={setDraft}
+                onChangeText={(text) => {
+                  setDraft(text);
+                  onTyping();
+                }}
                 onSubmitEditing={() => void send()}
                 testID="listener-composer-input"
                 accessibilityLabel="Reply"
@@ -328,6 +358,7 @@ const styles = StyleSheet.create({
   theirsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },
   theirs: { borderBottomLeftRadius: radius.sm },
   theirsTime: { marginLeft: 34 + space.sm + space.xs, marginTop: 3 },
+  typingLine: { paddingHorizontal: space.md, paddingTop: space.xs },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, padding: space.md },
   inputPill: {
     flex: 1,

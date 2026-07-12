@@ -20,6 +20,8 @@ export type ListenerConversation = {
   user_persona_name: string;
   user_persona_avatar: string;
   stream_channel_id: string | null;
+  /** True while the member has a Panda Mask set — shown as "Away right now". */
+  member_masked: boolean;
   created_at: string;
   ended_at: string | null;
 };

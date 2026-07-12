@@ -11,6 +11,7 @@
  * On web this component must only render AFTER LoadSkiaWeb() resolves — it is
  * lazy-imported by AmbientBackground.web.tsx for that reason.
  */
+import { useIsFocused } from '@react-navigation/native';
 import { Canvas, Fill, Shader, Skia, useClock } from '@shopify/react-native-skia';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
@@ -85,6 +86,23 @@ export function AuroraCanvas() {
   const { width, height } = useWindowDimensions();
   const clock = useClock();
 
+  // Focus pause: expo-router keeps the previous screen mounted underneath the next
+  // one, so two shader canvases would animate at once. Reuse the frozen-clock
+  // mechanism — while unfocused the shader time holds still, and the blurred span
+  // is subtracted on refocus so the sky resumes exactly where it paused (no jump).
+  const isFocused = useIsFocused();
+  const pausedAt = useSharedValue(-1); // clock ms when the screen blurred; -1 = running
+  const skipped = useSharedValue(0); // total ms spent blurred, excluded from shader time
+
+  useEffect(() => {
+    if (!isFocused) {
+      if (pausedAt.value < 0) pausedAt.value = clock.value;
+    } else if (pausedAt.value >= 0) {
+      skipped.value += clock.value - pausedAt.value;
+      pausedAt.value = -1;
+    }
+  }, [isFocused, clock, pausedAt, skipped]);
+
   const effect = useMemo(() => {
     const e = Skia.RuntimeEffect.Make(SKSL);
     if (!e) throw new Error('Aurora shader failed to compile');
@@ -115,7 +133,8 @@ export function AuroraCanvas() {
 
   const { from, to } = palettes;
   const uniforms = useDerivedValue(() => {
-    const t = reduced ? FROZEN_T : clock.value / 1000;
+    const clockMs = pausedAt.value >= 0 ? pausedAt.value : clock.value;
+    const t = reduced ? FROZEN_T : (clockMs - skipped.value) / 1000;
     const k = progress.value;
     const mix4 = (a: Rgba, b: Rgba) => [
       a[0] + (b[0] - a[0]) * k,

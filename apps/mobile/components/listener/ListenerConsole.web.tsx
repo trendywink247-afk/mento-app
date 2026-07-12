@@ -58,7 +58,18 @@ export default function ListenerConsoleWeb() {
 
   useEffect(() => {
     const boot = async () => {
-      if (params.token) {
+      // Prefer the #token= fragment — fragments never reach servers, proxies, or
+      // access logs. ?token= stays supported as a fallback for older links.
+      const hashMatch = window.location.hash.match(/[#&]token=([^&]+)/);
+      const hashToken = hashMatch?.[1] ? decodeURIComponent(hashMatch[1]) : null;
+      if (hashToken) {
+        await saveListenerToken(hashToken);
+        // Clear the fragment from the URL/history immediately — BOTH in the browser
+        // and in expo-router's own state (which would otherwise re-sync the old URL
+        // with the fragment back into the address bar).
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        router.replace('/listener');
+      } else if (params.token) {
         await saveListenerToken(params.token);
         // Strip the token from the URL/history immediately.
         router.replace('/listener');
@@ -66,7 +77,7 @@ export default function ListenerConsoleWeb() {
       await refresh();
     };
     void boot();
-    // reason: boot runs once; the token param is consumed and stripped on first render
+    // reason: boot runs once; the token param/fragment is consumed and stripped on first render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -240,7 +251,9 @@ export default function ListenerConsoleWeb() {
                   <Text style={[type.bodySemi, { color: colors.ink }]}>{c.user_persona_name}</Text>
                   <Text style={[type.caption, { color: colors.inkMuted }]}>
                     {c.status === 'active'
-                      ? 'Active — tap to open'
+                      ? c.member_masked
+                        ? 'Away right now'
+                        : 'Active — tap to open'
                       : c.status === 'wiped'
                         ? 'Wiped by the member'
                         : 'Ended'}

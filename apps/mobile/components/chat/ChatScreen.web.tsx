@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -55,6 +55,200 @@ function dayLabel(iso: string): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
+type MessageRowProps = {
+  item: Msg;
+  /** Day-pill text when this row starts a new day, else null. */
+  dayText: string | null;
+  read: boolean;
+  actionsOpen: boolean;
+  isHelpful: boolean;
+  isSaved: boolean;
+  listenerName: string;
+  onToggleActions: (id: string) => void;
+  onToggleHelpful: (id: string) => void;
+  onSave: (m: Msg) => void;
+  onCopy: (text: string) => void;
+};
+
+/** One transcript row, memoized so composer keystrokes and typing events never
+ * re-render the whole message list. Display state arrives as primitives so
+ * React.memo's shallow compare stays cheap and correct. */
+const MessageRow = memo(function MessageRow({
+  item,
+  dayText,
+  read,
+  actionsOpen,
+  isHelpful,
+  isSaved,
+  listenerName,
+  onToggleActions,
+  onToggleHelpful,
+  onSave,
+  onCopy,
+}: MessageRowProps) {
+  const { colors, elevation } = useTheme();
+  return (
+    <View>
+      {dayText ? (
+        <View style={styles.dayRow}>
+          <View style={[styles.hairline, { backgroundColor: colors.border }]} />
+          <View style={[styles.dayPill, { backgroundColor: colors.surfaceAlt }]}>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{dayText}</Text>
+          </View>
+          <View style={[styles.hairline, { backgroundColor: colors.border }]} />
+        </View>
+      ) : null}
+
+      {item.mine ? (
+        <View style={styles.mineWrap}>
+          <View style={[styles.bubble, styles.mine, { backgroundColor: colors.accentTint }]}>
+            <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{timeLabel(item.at)}</Text>
+            <Ionicons
+              name="checkmark-done"
+              size={15}
+              color={read ? colors.accent : colors.inkMuted}
+            />
+          </View>
+        </View>
+      ) : (
+        <View style={styles.theirsWrap}>
+          <View style={styles.theirsRow}>
+            <PersonaAvatar name={listenerName} size={34} />
+            <Pressable
+              onPress={() => onToggleActions(item.id)}
+              accessibilityRole="button"
+              accessibilityHint="Shows message actions like save to Mentor Notes"
+              testID={`msg-${item.id}`}
+              style={[styles.bubble, styles.theirs, { backgroundColor: colors.surface }, elevation.sm]}
+            >
+              <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
+            </Pressable>
+          </View>
+          <Text style={[type.caption, styles.theirsTime, { color: colors.inkMuted }]}>
+            {timeLabel(item.at)}
+          </Text>
+
+          {actionsOpen ? (
+            <View style={styles.actionsZone}>
+              <View style={[styles.actionsRow, { backgroundColor: colors.surface }, elevation.sm]}>
+                <Text style={[type.caption, { color: colors.inkMuted }]}>Was this helpful?</Text>
+                <Pressable
+                  onPress={() => onToggleHelpful(item.id)}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel="Mark as helpful"
+                  style={[styles.heartWrap, { backgroundColor: colors.brandTint }]}
+                >
+                  <Ionicons
+                    name={isHelpful ? 'heart' : 'heart-outline'}
+                    size={16}
+                    color={colors.accent}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => onSave(item)}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save to Mentor Notes"
+                  testID={`save-${item.id}`}
+                >
+                  <Ionicons
+                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                    size={18}
+                    color={isSaved ? colors.accent : colors.inkMuted}
+                  />
+                </Pressable>
+                <Pressable
+                  onPress={() => onCopy(item.text)}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityLabel="Copy message"
+                >
+                  <Ionicons name="copy-outline" size={17} color={colors.inkMuted} />
+                </Pressable>
+              </View>
+
+              <Pressable
+                onPress={() => onSave(item)}
+                accessibilityRole="button"
+                accessibilityLabel={isSaved ? 'Saved to Mentor Notes' : 'Save to Mentor Notes'}
+                testID={`save-card-${item.id}`}
+                style={[styles.saveCard, { backgroundColor: colors.surfaceAlt }]}
+              >
+                <IconBadge icon="book-outline" size={40} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[type.label, { color: colors.ink }]}>
+                    {isSaved ? 'Saved to Mentor Notes ✓' : 'Save to Mentor Notes'}
+                  </Text>
+                  <Text style={[type.caption, { color: colors.inkMuted }]}>
+                    {isSaved
+                      ? 'Find it in Journals → Mentor Notes.'
+                      : 'Add this to your journal under "Mentor Notes"'}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+              </Pressable>
+            </View>
+          ) : null}
+        </View>
+      )}
+    </View>
+  );
+});
+
+type ComposerProps = {
+  onSend: (body: string) => void;
+  onTyping: () => void;
+};
+
+/** Composer pill + send FAB (mockup #8). Owns the draft locally so every keystroke
+ * re-renders only this leaf — never the transcript above it. */
+const Composer = memo(function Composer({ onSend, onTyping }: ComposerProps) {
+  const { colors, elevation } = useTheme();
+  const [draft, setDraft] = useState('');
+
+  const submit = () => {
+    const body = draft.trim();
+    if (!body) return;
+    setDraft('');
+    onSend(body);
+  };
+
+  return (
+    <View style={styles.composer}>
+      <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
+        <Ionicons name="add-circle-outline" size={24} color={colors.inkMuted} />
+        <TextInput
+          style={[styles.input, { color: colors.ink }]}
+          placeholder="Type a message…"
+          placeholderTextColor={colors.inkMuted}
+          value={draft}
+          onChangeText={(text) => {
+            setDraft(text);
+            onTyping();
+          }}
+          onSubmitEditing={submit}
+          testID="composer-input"
+          accessibilityLabel="Message"
+          multiline
+        />
+      </View>
+      <Pressable
+        style={[styles.sendBtn, { backgroundColor: colors.accent }, elevation.sm]}
+        onPress={submit}
+        testID="composer-send"
+        accessibilityRole="button"
+        accessibilityLabel="Send message"
+      >
+        <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
+      </Pressable>
+    </View>
+  );
+});
+
 export default function ChatScreenWeb() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
@@ -68,7 +262,7 @@ export default function ChatScreenWeb() {
 
   const [ready, setReady] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
-  const [draft, setDraft] = useState('');
+  const [typing, setTyping] = useState<string | null>(null); // other side's persona name
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [privacyNote, setPrivacyNote] = useState(true);
@@ -134,6 +328,12 @@ export default function ChatScreenWeb() {
           }
         });
         ch.on('message.read', () => setReadTick((t) => t + 1));
+        ch.on('typing.start', (e: Event) => {
+          if (e.user && e.user.id !== client.userID) setTyping(e.user.name ?? listenerName);
+        });
+        ch.on('typing.stop', (e: Event) => {
+          if (e.user && e.user.id !== client.userID) setTyping(null);
+        });
         setReady(true);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Could not open the chat.');
@@ -144,18 +344,29 @@ export default function ChatScreenWeb() {
     return () => {
       cancelled = true;
     };
-  }, [channelId, appendMessage, surfaceCrisis]);
+  }, [channelId, appendMessage, surfaceCrisis, listenerName]);
 
-  const send = async () => {
-    const body = draft.trim();
-    if (!body || !channelRef.current) return;
-    setDraft('');
-    // Server scans this in the before-send webhook and augments crisis messages; the
-    // augmented message comes back on the response (no message.new fires for our own).
-    const resp = await channelRef.current.sendMessage({ text: body });
-    appendMessage(resp.message as RawMsg);
-    surfaceCrisis(resp.message as CrisisCarrier);
-  };
+  const send = useCallback(
+    async (body: string) => {
+      if (!channelRef.current) return;
+      // Server scans this in the before-send webhook and augments crisis messages; the
+      // augmented message comes back on the response (no message.new fires for our own).
+      const resp = await channelRef.current.sendMessage({ text: body });
+      appendMessage(resp.message as RawMsg);
+      surfaceCrisis(resp.message as CrisisCarrier);
+    },
+    [appendMessage, surfaceCrisis],
+  );
+
+  const onTyping = useCallback(() => {
+    // stream-chat throttles keystroke() internally; guard anyway — typing signals
+    // are best-effort and must never surface an error in the composer.
+    try {
+      void channelRef.current?.keystroke().catch(() => {});
+    } catch {
+      /* best-effort typing signal */
+    }
+  }, []);
 
   /** ✓✓ when any other member's last_read is at/after this message. */
   const isRead = useCallback(
@@ -171,31 +382,44 @@ export default function ChatScreenWeb() {
     [readTick],
   );
 
-  const saveToNotes = async (m: Msg) => {
-    try {
-      await api.saveMentorNote({
-        body: m.text,
-        conversation_id: conversationId ?? null,
-        listener_persona: listenerName,
-        stream_message_id: m.id,
-      });
-      setSaved((prev) => new Set(prev).add(m.id));
-    } catch {
-      // Soft-fail: keep the tooltip open so the user can retry.
-    }
-  };
+  const saveToNotes = useCallback(
+    (m: Msg) => {
+      void (async () => {
+        try {
+          await api.saveMentorNote({
+            body: m.text,
+            conversation_id: conversationId ?? null,
+            listener_persona: listenerName,
+            stream_message_id: m.id,
+          });
+          setSaved((prev) => new Set(prev).add(m.id));
+        } catch {
+          // Soft-fail: keep the tooltip open so the user can retry.
+        }
+      })();
+    },
+    [conversationId, listenerName],
+  );
 
-  const toggleHelpful = (id: string) =>
-    setHelpful((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const toggleActions = useCallback(
+    (id: string) => setActionsFor((cur) => (cur === id ? null : id)),
+    [],
+  );
 
-  const copyText = (text: string) => {
+  const toggleHelpful = useCallback(
+    (id: string) =>
+      setHelpful((prev) => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+        return next;
+      }),
+    [],
+  );
+
+  const copyText = useCallback((text: string) => {
     void globalThis.navigator?.clipboard?.writeText(text);
-  };
+  }, []);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
@@ -283,155 +507,36 @@ export default function ChatScreenWeb() {
             renderItem={({ item, index }) => {
               const prev = index > 0 ? messages[index - 1] : null;
               const showDay = !prev || dayLabel(prev.at) !== dayLabel(item.at);
-              const actionsOpen = actionsFor === item.id;
               return (
-                <View>
-                  {showDay ? (
-                    <View style={styles.dayRow}>
-                      <View style={[styles.hairline, { backgroundColor: colors.border }]} />
-                      <View style={[styles.dayPill, { backgroundColor: colors.surfaceAlt }]}>
-                        <Text style={[type.caption, { color: colors.inkMuted }]}>
-                          {dayLabel(item.at)}
-                        </Text>
-                      </View>
-                      <View style={[styles.hairline, { backgroundColor: colors.border }]} />
-                    </View>
-                  ) : null}
-
-                  {item.mine ? (
-                    <View style={styles.mineWrap}>
-                      <View style={[styles.bubble, styles.mine, { backgroundColor: colors.accentTint }]}>
-                        <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
-                      </View>
-                      <View style={styles.metaRow}>
-                        <Text style={[type.caption, { color: colors.inkMuted }]}>
-                          {timeLabel(item.at)}
-                        </Text>
-                        <Ionicons
-                          name="checkmark-done"
-                          size={15}
-                          color={isRead(item) ? colors.accent : colors.inkMuted}
-                        />
-                      </View>
-                    </View>
-                  ) : (
-                    <View style={styles.theirsWrap}>
-                      <View style={styles.theirsRow}>
-                        <PersonaAvatar name={listenerName} size={34} />
-                        <Pressable
-                          onPress={() => setActionsFor(actionsOpen ? null : item.id)}
-                          accessibilityRole="button"
-                          accessibilityHint="Shows message actions like save to Mentor Notes"
-                          testID={`msg-${item.id}`}
-                          style={[styles.bubble, styles.theirs, { backgroundColor: colors.surface }, elevation.sm]}
-                        >
-                          <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
-                        </Pressable>
-                      </View>
-                      <Text style={[type.caption, styles.theirsTime, { color: colors.inkMuted }]}>
-                        {timeLabel(item.at)}
-                      </Text>
-
-                      {actionsOpen ? (
-                        <View style={styles.actionsZone}>
-                          <View style={[styles.actionsRow, { backgroundColor: colors.surface }, elevation.sm]}>
-                            <Text style={[type.caption, { color: colors.inkMuted }]}>
-                              Was this helpful?
-                            </Text>
-                            <Pressable
-                              onPress={() => toggleHelpful(item.id)}
-                              hitSlop={6}
-                              accessibilityRole="button"
-                              accessibilityLabel="Mark as helpful"
-                              style={[styles.heartWrap, { backgroundColor: colors.brandTint }]}
-                            >
-                              <Ionicons
-                                name={helpful.has(item.id) ? 'heart' : 'heart-outline'}
-                                size={16}
-                                color={colors.accent}
-                              />
-                            </Pressable>
-                            <Pressable
-                              onPress={() => void saveToNotes(item)}
-                              hitSlop={6}
-                              accessibilityRole="button"
-                              accessibilityLabel="Save to Mentor Notes"
-                              testID={`save-${item.id}`}
-                            >
-                              <Ionicons
-                                name={saved.has(item.id) ? 'bookmark' : 'bookmark-outline'}
-                                size={18}
-                                color={saved.has(item.id) ? colors.accent : colors.inkMuted}
-                              />
-                            </Pressable>
-                            <Pressable
-                              onPress={() => copyText(item.text)}
-                              hitSlop={6}
-                              accessibilityRole="button"
-                              accessibilityLabel="Copy message"
-                            >
-                              <Ionicons name="copy-outline" size={17} color={colors.inkMuted} />
-                            </Pressable>
-                          </View>
-
-                          <Pressable
-                            onPress={() => void saveToNotes(item)}
-                            accessibilityRole="button"
-                            accessibilityLabel={
-                              saved.has(item.id) ? 'Saved to Mentor Notes' : 'Save to Mentor Notes'
-                            }
-                            testID={`save-card-${item.id}`}
-                            style={[styles.saveCard, { backgroundColor: colors.surfaceAlt }]}
-                          >
-                            <IconBadge icon="book-outline" size={40} />
-                            <View style={{ flex: 1 }}>
-                              <Text style={[type.label, { color: colors.ink }]}>
-                                {saved.has(item.id) ? 'Saved to Mentor Notes ✓' : 'Save to Mentor Notes'}
-                              </Text>
-                              <Text style={[type.caption, { color: colors.inkMuted }]}>
-                                {saved.has(item.id)
-                                  ? 'Find it in Journals → Mentor Notes.'
-                                  : 'Add this to your journal under "Mentor Notes"'}
-                              </Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-                          </Pressable>
-                        </View>
-                      ) : null}
-                    </View>
-                  )}
-                </View>
+                <MessageRow
+                  item={item}
+                  dayText={showDay ? dayLabel(item.at) : null}
+                  read={item.mine ? isRead(item) : false}
+                  actionsOpen={actionsFor === item.id}
+                  isHelpful={helpful.has(item.id)}
+                  isSaved={saved.has(item.id)}
+                  listenerName={listenerName}
+                  onToggleActions={toggleActions}
+                  onToggleHelpful={toggleHelpful}
+                  onSave={saveToNotes}
+                  onCopy={copyText}
+                />
               );
             }}
           />
           {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
 
-          {/* Composer: pill with inset ＋ and a circular send FAB (mockup #8) */}
-          <View style={styles.composer}>
-            <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
-              <Ionicons name="add-circle-outline" size={24} color={colors.inkMuted} />
-              <TextInput
-                style={[styles.input, { color: colors.ink }]}
-                placeholder="Type a message…"
-                placeholderTextColor={colors.inkMuted}
-                value={draft}
-                onChangeText={setDraft}
-                onSubmitEditing={() => void send()}
-                testID="composer-input"
-                accessibilityLabel="Message"
-                multiline
-              />
-            </View>
-            <Pressable
-              style={[styles.sendBtn, { backgroundColor: colors.accent }, elevation.sm]}
-              onPress={() => void send()}
-              testID="composer-send"
-              accessibilityRole="button"
-              accessibilityLabel="Send message"
+          {/* Presence-only typing line — calm register, no animation needed. */}
+          {typing ? (
+            <Text
+              style={[type.caption, styles.typingLine, { color: colors.inkMuted }]}
+              testID="typing-indicator"
             >
-              <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
-            </Pressable>
-          </View>
+              {typing} is typing…
+            </Text>
+          ) : null}
+
+          <Composer onSend={send} onTyping={onTyping} />
         </View>
       )}
 
@@ -520,6 +625,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: space.sm,
   },
+  typingLine: { paddingHorizontal: space.md, paddingTop: space.xs },
   composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',

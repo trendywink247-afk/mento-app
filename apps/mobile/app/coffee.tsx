@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -18,15 +18,14 @@ const METHODS: { key: string; icon: keyof typeof Ionicons.glyphMap; title: strin
 ];
 
 /**
- * Buy the Mento Team a Coffee (mockup #28; #24 adds the post-reflection headline via
- * ?energy=high). Honest-money rules (T&S #4): opt-in, supports the TEAM, never inside
- * a live conversation, never framed as membership. Payments go live with Razorpay;
- * until then methods are visible but transparently disabled.
+ * Buy the Mento Team a Coffee (mockup #28). Honest-money rules (T&S #4): opt-in,
+ * supports the TEAM, never inside a live conversation, never framed as membership,
+ * and never a "reward" for reflection outcomes (DECISIONS §A.3). Payments go live
+ * with Razorpay; until then methods are visible but transparently disabled.
  */
 export default function CoffeeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { energy } = useLocalSearchParams<{ energy?: string }>();
   const [amount, setAmount] = useState<number>(49);
   const [custom, setCustom] = useState('');
   const [customOpen, setCustomOpen] = useState(false);
@@ -45,15 +44,6 @@ export default function CoffeeScreen() {
     <Screen bg="lavender" onBack={() => router.back()} scroll>
       <View style={styles.hero}>
         <Panda pose="coffee" size={130} />
-        {energy === 'high' ? (
-          <Text style={[styles.heroTitle, { color: colors.ink }]}>
-            Wow! You left feeling{'\n'}
-            <Text style={{ color: colors.accentSoft }}>high energy! ⚡</Text>
-          </Text>
-        ) : null}
-        {energy === 'high' ? (
-          <Text style={[type.body, { color: colors.inkMuted }]}>That's amazing to hear! ✨</Text>
-        ) : null}
       </View>
 
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -179,12 +169,6 @@ export default function CoffeeScreen() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: space.xs, marginBottom: space.md },
-  heroTitle: {
-    fontFamily: font.sansHeavy,
-    fontSize: 26,
-    lineHeight: 34,
-    textAlign: 'center',
-  },
   card: { borderRadius: radius.lg, padding: space.md, marginBottom: space.sm },
   askRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   heroAmount: {

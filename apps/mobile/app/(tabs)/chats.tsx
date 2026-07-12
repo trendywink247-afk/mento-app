@@ -64,7 +64,12 @@ export default function ChatsTab() {
 
       // Last message + unread per channel, straight from Stream client-side.
       const [persona, token] = await Promise.all([getPersona(), getStreamToken()]);
-      const channelIds = list.map((c) => c.stream_channel_id).filter(Boolean) as string[];
+      // Stream caps $in filters at 30 ids; the API list is newest-first, so keep the
+      // 30 most recent — older rows just fall back to their backend-only preview.
+      const channelIds = (list.map((c) => c.stream_channel_id).filter(Boolean) as string[]).slice(
+        0,
+        30,
+      );
       if (persona && token && channelIds.length) {
         const client = getStreamClient();
         if (client.userID !== persona.id) {

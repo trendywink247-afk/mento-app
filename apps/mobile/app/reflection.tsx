@@ -13,8 +13,8 @@ import { font, radius, space, type } from '@/theme/tokens';
 
 /**
  * End-of-conversation reflection (mockup #23, SCOPE §8): a private 5-node
- * drained↔energized slider. No points, no XP, skippable via X. High energy may
- * offer the coffee screen AFTER finish (post-conversation = allowed, opt-in).
+ * drained↔energized slider. No points, no XP, skippable via X. Fully decoupled
+ * from money (DECISIONS §A.3): every energy level exits back to Chats.
  */
 export default function ReflectionScreen() {
   const router = useRouter();
@@ -36,8 +36,7 @@ export default function ReflectionScreen() {
     } catch {
       // The reflection is private and optional — never block leaving on it.
     }
-    if (energy >= 4) router.replace({ pathname: '/coffee', params: { energy: 'high' } });
-    else leave();
+    leave();
   };
 
   return (
