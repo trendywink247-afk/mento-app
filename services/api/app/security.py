@@ -52,6 +52,18 @@ def issue_listener_token(listener_id: str) -> str:
     return jwt.encode(payload, _settings.jwt_secret, algorithm=_ALGO)
 
 
+def issue_admin_token(admin_id: str) -> str:
+    """Mint an admin-console JWT (role claim; revocation = per-request status check)."""
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": admin_id,
+        "role": "admin",
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(days=_settings.listener_jwt_ttl_days)).timestamp()),
+    }
+    return jwt.encode(payload, _settings.jwt_secret, algorithm=_ALGO)
+
+
 def _decode(creds: HTTPAuthorizationCredentials) -> dict:
     try:
         return jwt.decode(creds.credentials, _settings.jwt_secret, algorithms=[_ALGO])
@@ -66,7 +78,7 @@ def current_user_id(
     Rejects listener tokens — the two roles must never cross endpoints. Legacy
     role-less tokens remain valid user sessions."""
     payload = _decode(creds)
-    if payload.get("role") == "listener":
+    if payload.get("role") in ("listener", "admin"):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not a user session")
     user_id = payload.get("sub")
     if not user_id:
@@ -85,3 +97,16 @@ def current_listener_id(
     if not listener_id:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "malformed session")
     return listener_id
+
+
+def current_admin_id(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> str:
+    """Resolve the admin id from a role-claimed bearer token."""
+    payload = _decode(creds)
+    if payload.get("role") != "admin":
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not an admin session")
+    admin_id = payload.get("sub")
+    if not admin_id:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "malformed session")
+    return admin_id

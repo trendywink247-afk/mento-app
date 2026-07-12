@@ -71,6 +71,27 @@ def wipe_channel(channel_id: str) -> None:
     client.delete_channels([f"messaging:{channel_id}"], hard_delete=True)
 
 
+def fetch_channel_messages(channel_id: str) -> list[dict]:
+    """Read-only crisis-review fetch — messages live in Stream, never stored here.
+    Returns persona-tagged rows; empty in stub mode."""
+    client = _client()
+    if client is None or not channel_id:
+        return []
+    channel = client.channel("messaging", channel_id)
+    state = channel.query(messages={"limit": 100})
+    out = []
+    for m in state.get("messages", []):
+        out.append(
+            {
+                "id": m.get("id") or "",
+                "text": m.get("text") or "",
+                "user_persona": (m.get("user") or {}).get("name") or "Member",
+                "at": str(m.get("created_at") or ""),
+            }
+        )
+    return out
+
+
 def is_configured() -> bool:
     """True when real Stream credentials are present (not stub mode)."""
     return _client() is not None

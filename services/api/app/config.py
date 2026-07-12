@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # SDK's ~6s default.
     stream_timeout_seconds: float = 3.0
 
+    # Base URL the admin dashboard prints into copyable console links.
+    console_base_url: str = "http://localhost:8081"
+
     stream_api_key: str = ""
     stream_api_secret: str = ""
 

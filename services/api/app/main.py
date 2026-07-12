@@ -11,6 +11,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.config import get_settings
 from app.db import init_db
 from app.routers import (
+    admin_console,
     conversation,
     health,
     journals,
@@ -86,3 +87,4 @@ app.include_router(moderation.router, prefix=API)
 app.include_router(journals.router, prefix=API)
 app.include_router(listeners.router, prefix=API)
 app.include_router(listener_console.router, prefix=API)
+app.include_router(admin_console.router, prefix=API)

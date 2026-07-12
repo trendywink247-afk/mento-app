@@ -1,0 +1,511 @@
+"""Admin dashboard API (spec 2026-07-13). Web-only console; token-link auth with
+per-request revocation; every mutation + conversation view is audit-logged.
+Anonymity holds: personas only, message bodies never stored."""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from app.config import get_settings
+from app.db import get_db
+from app.models.admin import AdminAccount, AdminAuditLog
+from app.models.conversation import Conversation
+from app.models.enums import (
+    AdminRole,
+    AdminStatus,
+    ConversationStatus,
+    ListenerStatus,
+    SafetySignal,
+    VettingStatus,
+)
+from app.models.listener import ListenerProfile
+from app.models.moderation import ModerationEvent
+from app.models.safety import SafetyFlag
+from app.models.user import User
+from app.schemas import (
+    AdminAccountItem,
+    AdminAuditItem,
+    AdminConsoleLinkOut,
+    AdminContributionItem,
+    AdminCreatedOut,
+    AdminCreateIn,
+    AdminFlagItem,
+    AdminFlagReviewIn,
+    AdminHealthOut,
+    AdminListenerCreateIn,
+    AdminListenerItem,
+    AdminListenerPatchIn,
+    AdminMeOut,
+    AdminMessageItem,
+    AdminOverviewOut,
+    AttentionItem,
+    ModerationItem,
+    OkResult,
+)
+from app.security import current_admin_id, issue_admin_token, issue_listener_token
+from app.services import audit, stream
+from app.services.persona import generate_persona
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def current_admin(
+    admin_id: str = Depends(current_admin_id),
+    db: Session = Depends(get_db),
+) -> AdminAccount:
+    """Load the admin; status is checked every request so revoke is instant."""
+    admin = db.get(AdminAccount, admin_id)
+    if admin is None or admin.status != AdminStatus.active:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "admin access revoked")
+    return admin
+
+
+def require_owner(admin: AdminAccount = Depends(current_admin)) -> AdminAccount:
+    if admin.role != AdminRole.owner:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "owner only")
+    return admin
+
+
+@router.get("/me", response_model=AdminMeOut)
+def me(admin: AdminAccount = Depends(current_admin)) -> AdminMeOut:
+    return AdminMeOut(id=admin.id, name=admin.name, role=admin.role.value)
+
+
+# --- Overview (cockpit) -------------------------------------------------------
+
+
+@router.get("/overview", response_model=AdminOverviewOut)
+def overview(
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminOverviewOut:
+    start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def count(stmt) -> int:
+        return db.execute(stmt).scalar_one()
+
+    members_today = count(select(func.count()).select_from(User).where(User.created_at >= start))
+    matches_today = count(
+        select(func.count()).select_from(Conversation).where(Conversation.created_at >= start)
+    )
+    active = count(
+        select(func.count()).select_from(Conversation).where(
+            Conversation.status == ConversationStatus.active
+        )
+    )
+    online = count(
+        select(func.count()).select_from(ListenerProfile).where(
+            ListenerProfile.status == ListenerStatus.online,
+            ListenerProfile.vetting_status == VettingStatus.approved,
+        )
+    )
+    flags = count(
+        select(func.count()).select_from(SafetyFlag).where(
+            SafetyFlag.reviewed.is_(False), SafetyFlag.signal != SafetySignal.none
+        )
+    )
+    reports = count(
+        select(func.count()).select_from(ModerationEvent).where(
+            ModerationEvent.reviewed.is_(False)
+        )
+    )
+
+    attention: list[AttentionItem] = []
+    if flags:
+        attention.append(
+            AttentionItem(kind="safety", text=f"{flags} crisis flag(s) to review", href="safety")
+        )
+    if reports:
+        attention.append(
+            AttentionItem(
+                kind="moderation", text=f"{reports} report(s) to review", href="moderation"
+            )
+        )
+    return AdminOverviewOut(
+        members_today=members_today,
+        matches_today=matches_today,
+        active_conversations=active,
+        listeners_online=online,
+        flags_unreviewed=flags,
+        reports_unreviewed=reports,
+        attention=attention,
+    )
+
+
+# --- Safety review ------------------------------------------------------------
+
+
+@router.get("/safety/flags", response_model=list[AdminFlagItem])
+def safety_flags(
+    reviewed: bool = False,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminFlagItem]:
+    rows = db.execute(
+        select(SafetyFlag)
+        .where(SafetyFlag.reviewed.is_(reviewed), SafetyFlag.signal != SafetySignal.none)
+        .order_by(SafetyFlag.created_at.desc())
+        .limit(200)
+    ).scalars().all()
+    out = []
+    for f in rows:
+        member = listener = None
+        if f.conversation_id:
+            convo = db.get(Conversation, f.conversation_id)
+            if convo:
+                u = db.get(User, convo.user_id)
+                li = db.get(ListenerProfile, convo.listener_id)
+                member = u.persona_name if u else None
+                listener = li.persona_name if li else None
+        out.append(
+            AdminFlagItem(
+                id=f.id,
+                signal=f.signal.value,
+                conversation_id=f.conversation_id,
+                member_persona=member,
+                listener_persona=listener,
+                reviewed=f.reviewed,
+                created_at=f.created_at.isoformat(),
+            )
+        )
+    return out
+
+
+@router.post("/safety/flags/{flag_id}/review", response_model=OkResult)
+def review_flag(
+    flag_id: str,
+    payload: AdminFlagReviewIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    flag = db.get(SafetyFlag, flag_id)
+    if flag is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "flag not found")
+    flag.reviewed = True
+    flag.reviewed_by = admin.name
+    flag.action = payload.action
+    audit.record(
+        db, admin, "flag.reviewed", subject_type="safety_flag", subject_id=flag_id,
+        meta={"action": payload.action},
+    )
+    db.commit()
+    return OkResult(status="reviewed")
+
+
+@router.get("/conversations/{convo_id}/messages", response_model=list[AdminMessageItem])
+def conversation_messages(
+    convo_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminMessageItem]:
+    """Read-only live view for crisis review. Fetched from Stream, never stored.
+    The VIEW itself is audit-logged (reads are accountable)."""
+    convo = db.get(Conversation, convo_id)
+    if convo is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+    audit.record(
+        db, admin, "conversation.viewed", subject_type="conversation", subject_id=convo_id
+    )
+    db.commit()
+    msgs = stream.fetch_channel_messages(convo.stream_channel_id or "")
+    return [AdminMessageItem(**m) for m in msgs]
+
+
+# --- Moderation ---------------------------------------------------------------
+
+
+@router.get("/moderation/queue", response_model=list[ModerationItem])
+def moderation_queue(
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> list[ModerationItem]:
+    events = db.execute(
+        select(ModerationEvent)
+        .where(ModerationEvent.reviewed.is_(False))
+        .order_by(ModerationEvent.created_at.desc())
+        .limit(200)
+    ).scalars().all()
+    return [
+        ModerationItem(
+            id=e.id,
+            reporter_id=e.reporter_id,
+            subject_id=e.subject_id,
+            conversation_id=e.conversation_id,
+            level=int(e.level.value),
+            reason=e.reason,
+            blocked=e.blocked,
+            reviewed=e.reviewed,
+            created_at=e.created_at.isoformat(),
+        )
+        for e in events
+    ]
+
+
+@router.post("/moderation/{event_id}/resolve", response_model=OkResult)
+def resolve_event(
+    event_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    event = db.get(ModerationEvent, event_id)
+    if event is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "event not found")
+    event.reviewed = True
+    event.reviewed_by = admin.name
+    audit.record(
+        db, admin, "moderation.resolved", subject_type="moderation_event", subject_id=event_id
+    )
+    db.commit()
+    return OkResult(status="resolved")
+
+
+@router.post("/listeners/{listener_id}/suspend", response_model=OkResult)
+def suspend_listener(
+    listener_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    li = db.get(ListenerProfile, listener_id)
+    if li is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
+    li.vetting_status = VettingStatus.suspended
+    audit.record(db, admin, "listener.suspended", subject_type="listener", subject_id=listener_id)
+    db.commit()
+    return OkResult(status="suspended")
+
+
+@router.post("/listeners/{listener_id}/reinstate", response_model=OkResult)
+def reinstate_listener(
+    listener_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    li = db.get(ListenerProfile, listener_id)
+    if li is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
+    li.vetting_status = VettingStatus.approved
+    audit.record(db, admin, "listener.reinstated", subject_type="listener", subject_id=listener_id)
+    db.commit()
+    return OkResult(status="reinstated")
+
+
+# --- Listener management ------------------------------------------------------
+
+
+def _listener_item(li: ListenerProfile) -> AdminListenerItem:
+    return AdminListenerItem(
+        id=li.id,
+        persona_name=li.persona_name,
+        persona_avatar=li.persona_avatar,
+        vetting_status=li.vetting_status.value,
+        status=li.status.value,
+        categories=li.categories or [],
+        active_conversations=li.active_conversations,
+        max_concurrent=li.max_concurrent,
+        rank=li.rank,
+    )
+
+
+@router.get("/listeners", response_model=list[AdminListenerItem])
+def admin_listeners(
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminListenerItem]:
+    rows = db.execute(
+        select(ListenerProfile).order_by(ListenerProfile.persona_name.asc())
+    ).scalars().all()
+    return [_listener_item(li) for li in rows]
+
+
+@router.post("/listeners", response_model=AdminListenerItem)
+def create_listener(
+    payload: AdminListenerCreateIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminListenerItem:
+    persona = generate_persona()
+    li = ListenerProfile(
+        persona_name=persona.name,
+        persona_avatar=persona.avatar,
+        categories=payload.categories,
+        status=ListenerStatus.offline,
+        vetting_status=VettingStatus.approved,
+        rank=0,
+        active_conversations=0,
+        max_concurrent=payload.max_concurrent,
+    )
+    db.add(li)
+    db.flush()
+    audit.record(db, admin, "listener.created", subject_type="listener", subject_id=li.id)
+    db.commit()
+    db.refresh(li)
+    return _listener_item(li)
+
+
+@router.patch("/listeners/{listener_id}", response_model=AdminListenerItem)
+def patch_listener(
+    listener_id: str,
+    payload: AdminListenerPatchIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminListenerItem:
+    li = db.get(ListenerProfile, listener_id)
+    if li is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
+    if payload.categories is not None:
+        li.categories = payload.categories
+    if payload.max_concurrent is not None:
+        li.max_concurrent = payload.max_concurrent
+    if payload.rank is not None:
+        li.rank = payload.rank
+    audit.record(db, admin, "listener.updated", subject_type="listener", subject_id=listener_id)
+    db.commit()
+    db.refresh(li)
+    return _listener_item(li)
+
+
+@router.post("/listeners/{listener_id}/console-link", response_model=AdminConsoleLinkOut)
+def listener_console_link(
+    listener_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminConsoleLinkOut:
+    li = db.get(ListenerProfile, listener_id)
+    if li is None or li.vetting_status != VettingStatus.approved:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "approved listener not found")
+    token = issue_listener_token(li.id)
+    base = get_settings().console_base_url
+    audit.record(db, admin, "listener.link_issued", subject_type="listener", subject_id=listener_id)
+    db.commit()
+    return AdminConsoleLinkOut(url=f"{base}/listener#token={token}")
+
+
+# --- Health + contributions ---------------------------------------------------
+
+
+@router.get("/health/deep", response_model=AdminHealthOut)
+def health_deep(
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminHealthOut:
+    db_ok = True
+    try:
+        db.execute(select(func.count()).select_from(AdminAccount))
+    except Exception:
+        db_ok = False
+    redis_ok = True
+    last_webhook = None
+    try:
+        from app import ratelimit
+
+        r = ratelimit._redis()
+        r.ping()
+        last_webhook = r.get("mento:last_webhook_at")
+    except Exception:
+        redis_ok = False
+    return AdminHealthOut(
+        db_ok=db_ok,
+        redis_ok=redis_ok,
+        stream_configured=stream.is_configured(),
+        last_webhook_at=last_webhook,
+        rate_limiter_ok=redis_ok,
+    )
+
+
+@router.get("/contributions", response_model=list[AdminContributionItem])
+def admin_contributions(
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminContributionItem]:
+    # Razorpay not wired yet — the table schema is ready; ships empty until then.
+    from app.models.contribution import Contribution
+
+    rows = db.execute(
+        select(Contribution).order_by(Contribution.created_at.desc()).limit(200)
+    ).scalars().all()
+    return [
+        AdminContributionItem(
+            id=c.id,
+            amount_paise=c.amount_paise,
+            status=c.status,
+            created_at=c.created_at.isoformat(),
+        )
+        for c in rows
+    ]
+
+
+# --- Admins management (owner-only) + audit -----------------------------------
+
+
+@router.get("/admins", response_model=list[AdminAccountItem], dependencies=[Depends(require_owner)])
+def list_admins(db: Session = Depends(get_db)) -> list[AdminAccountItem]:
+    rows = db.execute(
+        select(AdminAccount).order_by(AdminAccount.created_at.asc())
+    ).scalars().all()
+    return [
+        AdminAccountItem(
+            id=a.id,
+            name=a.name,
+            role=a.role.value,
+            status=a.status.value,
+            created_at=a.created_at.isoformat(),
+        )
+        for a in rows
+    ]
+
+
+@router.post("/admins", response_model=AdminCreatedOut)
+def create_admin(
+    payload: AdminCreateIn,
+    owner: AdminAccount = Depends(require_owner),
+    db: Session = Depends(get_db),
+) -> AdminCreatedOut:
+    a = AdminAccount(name=payload.name, role=AdminRole.helper, created_by=owner.id)
+    db.add(a)
+    db.flush()
+    audit.record(db, owner, "admin.created", subject_type="admin", subject_id=a.id)
+    db.commit()
+    db.refresh(a)
+    token = issue_admin_token(a.id)
+    return AdminCreatedOut(id=a.id, url=f"{get_settings().console_base_url}/admin#token={token}")
+
+
+@router.post("/admins/{admin_id}/revoke", response_model=OkResult)
+def revoke_admin(
+    admin_id: str,
+    owner: AdminAccount = Depends(require_owner),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    a = db.get(AdminAccount, admin_id)
+    if a is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "admin not found")
+    if a.id == owner.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "cannot revoke yourself")
+    a.status = AdminStatus.revoked
+    audit.record(db, owner, "admin.revoked", subject_type="admin", subject_id=admin_id)
+    db.commit()
+    return OkResult(status="revoked")
+
+
+@router.get("/audit", response_model=list[AdminAuditItem])
+def audit_log(
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminAuditItem]:
+    rows = db.execute(
+        select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(200)
+    ).scalars().all()
+    return [
+        AdminAuditItem(
+            id=a.id,
+            admin_name=a.admin_name,
+            action=a.action,
+            subject_type=a.subject_type,
+            subject_id=a.subject_id,
+            created_at=a.created_at.isoformat(),
+        )
+        for a in rows
+    ]

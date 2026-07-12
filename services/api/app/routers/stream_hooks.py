@@ -23,6 +23,7 @@ from __future__ import annotations
 import gzip
 import json
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import select
@@ -70,6 +71,16 @@ def _scan_event(
     lookup and the flag write. Runs in the threadpool: these handlers are async (the
     body read must be awaited), and sync DB calls on the event loop would stall every
     other request while Stream waits on the hot per-message path."""
+    # Stamp last-webhook time so the admin Health tab can detect a silently-dead
+    # crisis webhook. Best-effort — a Redis outage must never break the scan path.
+    try:
+        from app import ratelimit
+
+        ratelimit._redis().set(
+            "mento:last_webhook_at", datetime.now(timezone.utc).isoformat()
+        )
+    except Exception:
+        pass
     with SessionLocal() as db:
         conversation_id = None
         if channel_id:
