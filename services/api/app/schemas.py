@@ -84,6 +84,19 @@ class ListenerMeOut(BaseModel):
     stream_token: str
 
 
+class DevListenerItem(BaseModel):
+    """Dev-only roster row for the /listener no-token picker (never served in prod)."""
+    id: str
+    persona_name: str
+    persona_avatar: str
+    status: str
+
+
+class DevTokenOut(BaseModel):
+    """Dev-only: a freshly minted console token for a picked listener."""
+    token: str
+
+
 class ListenerStatusIn(BaseModel):
     # offline stays a seed/admin state — the console only toggles presence.
     status: Literal["online", "away"]

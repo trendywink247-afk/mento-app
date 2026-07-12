@@ -9,6 +9,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { ApiError } from '@/lib/api';
 import {
   listenerApi,
+  type DevListenerItem,
   type ListenerConversation,
   type ListenerMe,
   type ListenerRequest,
@@ -33,11 +34,23 @@ export default function ListenerConsoleWeb() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Dev-only picker: seeded listeners to click when /listener has no token.
+  const [devRoster, setDevRoster] = useState<DevListenerItem[] | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       const token = await getListenerToken();
       if (!token) {
+        // In dev, offer a click-to-enter picker instead of the dead-end error.
+        // (The dev endpoints 404 in prod, so this silently no-ops there.)
+        if (__DEV__) {
+          try {
+            setDevRoster(await listenerApi.devRoster());
+            return;
+          } catch {
+            /* not dev / endpoint absent — fall through to the normal message */
+          }
+        }
         setError('No listener session. Open your console link again.');
         return;
       }
@@ -47,6 +60,7 @@ export default function ListenerConsoleWeb() {
       setRequests(reqs);
       setConvos(cons);
       setError(null);
+      setDevRoster(null);
     } catch (e) {
       setError(
         e instanceof ApiError && (e.status === 401 || e.status === 403)
@@ -55,6 +69,24 @@ export default function ListenerConsoleWeb() {
       );
     }
   }, []);
+
+  /** Dev picker: mint a token for the chosen listener, store it, enter the console. */
+  const enterAsDev = useCallback(
+    async (id: string) => {
+      setBusy(id);
+      try {
+        const { token } = await listenerApi.devToken(id);
+        await saveListenerToken(token);
+        setDevRoster(null);
+        await refresh();
+      } catch {
+        setToast("Couldn't open that console. Try again.");
+      } finally {
+        setBusy(null);
+      }
+    },
+    [refresh],
+  );
 
   const boot = useCallback(async () => {
     // Prefer the #token= fragment — fragments never reach servers, proxies, or
@@ -124,7 +156,44 @@ export default function ListenerConsoleWeb() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      {error ? (
+      {devRoster && !me ? (
+        <ScrollView contentContainerStyle={styles.body} testID="console-dev-picker">
+          <View style={[styles.header, { backgroundColor: colors.surface }, elevation.sm]}>
+            <IconBadge icon="construct-outline" size={44} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.name, { color: colors.ink }]}>Pick a listener</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>
+                Dev shortcut · real listeners use their private link
+              </Text>
+            </View>
+          </View>
+          {devRoster.map((li) => (
+            <Pressable
+              key={li.id}
+              onPress={() => void enterAsDev(li.id)}
+              accessibilityRole="button"
+              accessibilityLabel={`Enter console as ${li.persona_name}`}
+              testID={`dev-listener-${li.id}`}
+              disabled={busy !== null}
+              style={[styles.pickerRow, { backgroundColor: colors.surface }, elevation.sm]}
+            >
+              <PersonaAvatar name={li.persona_name} size={44} online={li.status === 'online'} />
+              <View style={{ flex: 1 }}>
+                <Text style={[type.label, { color: colors.ink }]}>{li.persona_name}</Text>
+                <Text style={[type.caption, { color: colors.inkMuted }]}>{li.status}</Text>
+              </View>
+              {busy === li.id ? (
+                <ActivityIndicator color={colors.accent} />
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+              )}
+            </Pressable>
+          ))}
+          {toast ? (
+            <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{toast}</Text>
+          ) : null}
+        </ScrollView>
+      ) : error ? (
         <View style={styles.center} testID="console-error">
           <Ionicons name="key-outline" size={36} color={colors.inkMuted} />
           <Text style={[type.body, { color: colors.ink, textAlign: 'center' }]}>{error}</Text>
@@ -321,6 +390,13 @@ const styles = StyleSheet.create({
     marginBottom: space.xs,
   },
   card: { borderRadius: radius.lg, padding: space.md, gap: space.sm },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderRadius: radius.lg,
+    padding: space.md,
+  },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   chip: {
     alignSelf: 'flex-start',

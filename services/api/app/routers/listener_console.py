@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import get_db
 from app.models.conversation import Conversation
 from app.models.enums import ConversationStatus, ListenerStatus, RequestStatus, VettingStatus
@@ -21,6 +22,8 @@ from app.models.listener import ListenerProfile
 from app.models.request import ConversationRequest
 from app.models.user import User
 from app.schemas import (
+    DevListenerItem,
+    DevTokenOut,
     ListenerConversationItem,
     ListenerMeOut,
     ListenerRequestItem,
@@ -28,7 +31,7 @@ from app.schemas import (
     OkResult,
     RequestOut,
 )
-from app.security import current_listener_id
+from app.security import current_listener_id, issue_listener_token
 from app.services import stream
 from app.services.matching import (
     ListenerAtCapacity,
@@ -63,6 +66,52 @@ def _me_out(li: ListenerProfile) -> ListenerMeOut:
         max_concurrent=li.max_concurrent,
         stream_token=stream.user_token(li.id),
     )
+
+
+# --- Dev-only convenience: pick a listener without a token link ---------------
+# The console is token-link-authed by design (no login, for anonymity — DECISIONS
+# §I.6). That's correct for production but a chore while testing. These two routes
+# let a developer open /listener and click a seeded listener to enter. They 404
+# outside dev (settings.env != "dev"), so the production auth story is untouched.
+
+
+def _require_dev() -> None:
+    if not get_settings().is_dev:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+
+
+@router.get(
+    "/dev/roster",
+    response_model=list[DevListenerItem],
+    dependencies=[Depends(_require_dev)],
+)
+def dev_roster(db: Session = Depends(get_db)) -> list[DevListenerItem]:
+    rows = db.execute(
+        select(ListenerProfile)
+        .where(ListenerProfile.vetting_status == VettingStatus.approved)
+        .order_by(ListenerProfile.persona_name.asc())
+    ).scalars().all()
+    return [
+        DevListenerItem(
+            id=li.id,
+            persona_name=li.persona_name,
+            persona_avatar=li.persona_avatar,
+            status=li.status.value,
+        )
+        for li in rows
+    ]
+
+
+@router.post(
+    "/dev/token/{listener_id}",
+    response_model=DevTokenOut,
+    dependencies=[Depends(_require_dev)],
+)
+def dev_token(listener_id: str, db: Session = Depends(get_db)) -> DevTokenOut:
+    listener = db.get(ListenerProfile, listener_id)
+    if listener is None or listener.vetting_status != VettingStatus.approved:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
+    return DevTokenOut(token=issue_listener_token(listener.id))
 
 
 @router.get("/me", response_model=ListenerMeOut)

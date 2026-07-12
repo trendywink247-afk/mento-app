@@ -34,6 +34,14 @@ export type ListenerRequest = {
   created_at: string;
 };
 
+/** Dev-only picker row (the /listener/dev/* endpoints 404 in production). */
+export type DevListenerItem = {
+  id: string;
+  persona_name: string;
+  persona_avatar: string;
+  status: 'online' | 'away' | 'offline';
+};
+
 function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   return apiRequest<T>(path, init, getListenerToken);
 }
@@ -56,4 +64,11 @@ export const listenerApi = {
 
   decline: (id: string) =>
     req<{ status: string }>(`/listener/me/requests/${id}/decline`, { method: 'POST' }),
+
+  // Dev-only convenience (no token needed; endpoints 404 in prod). Used by the
+  // /listener picker so testing the listener side needs no script or pasted link.
+  devRoster: () => apiRequest<DevListenerItem[]>('/listener/dev/roster'),
+
+  devToken: (id: string) =>
+    apiRequest<{ token: string }>(`/listener/dev/token/${id}`, { method: 'POST' }),
 };

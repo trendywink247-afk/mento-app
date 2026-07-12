@@ -54,6 +54,42 @@ def _seed_listener(s, *, name="Open River", vetting=VettingStatus.approved, cap=
     return li.id
 
 
+@requires_postgres
+def test_dev_picker_lists_and_mints_a_working_token(client, db_session, monkeypatch):
+    """The dev shortcut: roster lists approved listeners, and dev/token mints a token
+    that actually opens the console — so testing needs no script or pasted link."""
+    monkeypatch.setattr(stream, "user_token", lambda uid: f"stub::{uid}")
+    lid = _seed_listener(db_session, name="Serene Mountain")
+    _seed_listener(db_session, name="Pending One", vetting=VettingStatus.pending)
+    db_session.commit()
+
+    roster = client.get("/api/v1/listener/dev/roster")
+    assert roster.status_code == 200
+    names = {r["persona_name"] for r in roster.json()}
+    assert "Serene Mountain" in names
+    assert "Pending One" not in names  # only approved listeners are pickable
+
+    minted = client.post(f"/api/v1/listener/dev/token/{lid}")
+    assert minted.status_code == 200
+    token = minted.json()["token"]
+    me = client.get("/api/v1/listener/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200 and me.json()["persona_name"] == "Serene Mountain"
+
+
+@requires_postgres
+def test_dev_picker_is_404_outside_dev(client, db_session, monkeypatch):
+    """Production must never expose the no-auth picker — the endpoints vanish."""
+    from app.config import get_settings
+
+    settings = get_settings()
+    monkeypatch.setattr(type(settings), "is_dev", property(lambda self: False))
+    lid = _seed_listener(db_session)
+    db_session.commit()
+
+    assert client.get("/api/v1/listener/dev/roster").status_code == 404
+    assert client.post(f"/api/v1/listener/dev/token/{lid}").status_code == 404
+
+
 def _user_auth(user_id: str) -> dict:
     return {"Authorization": f"Bearer {issue_session_token(user_id)}"}
 
