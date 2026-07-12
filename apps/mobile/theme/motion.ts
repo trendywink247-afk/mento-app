@@ -49,6 +49,13 @@ export const breathe = {
   scale: 0.015,
 } as const;
 
+export const drift = {
+  /** Sky-mote drift: one full three-mote rotation (ms). Each mote owns period/3,
+   * so only ONE mote is ever moving — the landing's motion budget (≤3 simultaneous
+   * movers: breathing logo + mountain drift + one mote). */
+  period: 36000,
+} as const;
+
 /**
  * Character-state timing for the reactive companions (DECISIONS §I.4 amended —
  * in-house rig). Calm register: squash/stretch stays subtle (≤8%), anticipation
