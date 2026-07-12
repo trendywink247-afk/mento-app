@@ -1,5 +1,7 @@
+import { Image } from 'react-native';
 import Svg, { Circle, Ellipse, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 
+import { PANDA_POSES } from '@/assets/companions/generated/panda-poses';
 import { useTheme } from '@/theme/ThemeProvider';
 
 /**
@@ -24,6 +26,20 @@ const BLUSH = '#F3C5C5';
 export function Panda({ pose = 'wave', size = 160 }: { pose?: PandaPose; size?: number }) {
   const { colors } = useTheme();
   const accent = colors.accent;
+
+  // Generated pose art (style-matched to the shipped companion set) wins;
+  // the coded SVG below stays as the fallback for any pose without an asset.
+  const generated = PANDA_POSES[pose];
+  if (generated) {
+    return (
+      <Image
+        source={generated}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+        style={{ width: size, height: size }}
+      />
+    );
+  }
 
   if (pose === 'sleep') return <SleepingPanda size={size} accent={accent} />;
 
