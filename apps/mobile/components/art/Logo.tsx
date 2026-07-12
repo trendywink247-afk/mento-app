@@ -1,39 +1,40 @@
+import { useId } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Line, Path, Rect } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import { font } from '@/theme/tokens';
 
 /**
- * Mento logo: two people talking over a table (vector re-creation of the mockup mark —
- * one ink figure, one lavender figure, cups between them) + lowercase wordmark.
+ * Mento logo: a chat bubble holding a heart — "talking that cares" in one glyph.
+ * Indigo→lavender gradient (brand tokens by VALUE — SVG gradients can't consume
+ * useTheme, and the mark must not re-tint with the user accent; it's the brand).
+ * Chosen 2026-07-13 (founder-approved "enhance modestly"; concept B of four —
+ * see docs/superpowers/specs/2026-07-13-landing-enhance-design.md).
  */
 export function LogoMark({ size = 72 }: { size?: number }) {
-  const ink = '#1D2142';
-  const lavender = '#9D94DD';
+  // Unique per instance: multiple lockups can be in the DOM at once (the journey
+  // keeps prior screens mounted), and duplicate SVG gradient ids break url(#…)
+  // resolution on web. Colons from useId are invalid inside url() refs.
+  const gradientId = `mento-mark-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   return (
-    <Svg width={size * 1.45} height={size} viewBox="0 0 116 80" accessibilityLabel="Mento — two people talking">
-      {/* table */}
-      <Line x1="38" y1="46" x2="78" y2="46" stroke={ink} strokeWidth="3" strokeLinecap="round" />
-      <Line x1="58" y1="46" x2="58" y2="70" stroke={ink} strokeWidth="3" strokeLinecap="round" />
-      <Line x1="50" y1="70" x2="66" y2="70" stroke={ink} strokeWidth="3" strokeLinecap="round" />
-      {/* cups */}
-      <Rect x="46" y="40" width="7" height="6" rx="1.5" fill={ink} />
-      <Rect x="63" y="40" width="7" height="6" rx="1.5" fill={lavender} />
-      {/* left figure (ink) — head, body leaning in, gesturing arm */}
-      <Circle cx="24" cy="16" r="7.5" fill={ink} />
-      <Path d="M14 64 V44 q0 -14 11 -17 q8 -2 12 6 l5 8 -3.5 2.5 -6 -8 q-2 14 -2 28 Z" fill={ink} />
-      {/* left chair */}
-      <Line x1="10" y1="44" x2="10" y2="72" stroke={ink} strokeWidth="3" strokeLinecap="round" />
-      <Line x1="10" y1="58" x2="26" y2="58" stroke={ink} strokeWidth="3" strokeLinecap="round" />
-      <Line x1="24" y1="58" x2="24" y2="72" stroke={ink} strokeWidth="3" strokeLinecap="round" />
-      {/* right figure (lavender) — thoughtful, hand to chin */}
-      <Circle cx="92" cy="18" r="7.5" fill={lavender} />
-      <Path d="M102 64 V44 q0 -14 -11 -16 q-8 -1.5 -11 6 l-2.5 7 3.5 1.5 4 -7 q1.5 14 1.5 28 Z" fill={lavender} />
-      {/* right chair */}
-      <Line x1="106" y1="44" x2="106" y2="72" stroke={lavender} strokeWidth="3" strokeLinecap="round" />
-      <Line x1="90" y1="58" x2="106" y2="58" stroke={lavender} strokeWidth="3" strokeLinecap="round" />
-      <Line x1="92" y1="58" x2="92" y2="72" stroke={lavender} strokeWidth="3" strokeLinecap="round" />
+    <Svg width={size} height={size} viewBox="0 0 48 56" accessibilityLabel="Mento">
+      <Defs>
+        <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#5847D6" />
+          <Stop offset="1" stopColor="#8177C9" />
+        </LinearGradient>
+      </Defs>
+      {/* bubble with a soft tail, bottom-left */}
+      <Path
+        d="M24 2 C10.7 2 0 11.8 0 24 C0 36.2 10.7 46 24 46 L27 46 L23 54 L34 47 C44.5 43.9 48 34.7 48 24 C48 11.8 37.3 2 24 2 Z"
+        fill={`url(#${gradientId})`}
+      />
+      {/* heart, slightly above optical center */}
+      <Path
+        d="M24 33 C22 31 14 26.5 14 20.7 C14 17 17 14.4 20.2 14.4 C22 14.4 23.3 15.3 24 16.4 C24.7 15.3 26 14.4 27.8 14.4 C31 14.4 34 17 34 20.7 C34 26.5 26 31 24 33 Z"
+        fill="#FFFFFF"
+      />
     </Svg>
   );
 }
@@ -44,12 +45,12 @@ export function LogoLockup({ markSize = 44 }: { markSize?: number }) {
   return (
     <View style={styles.row}>
       <LogoMark size={markSize} />
-      <Text style={[styles.wordmark, { color: colors.ink, fontSize: markSize * 0.82 }]}>mento</Text>
+      <Text style={[styles.wordmark, { color: colors.ink, fontSize: markSize * 0.78 }]}>mento</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  wordmark: { fontFamily: font.sansSemi, letterSpacing: 0.5 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  wordmark: { fontFamily: font.serifBold, letterSpacing: 0.25 },
 });
