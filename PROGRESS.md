@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-07-13 (session 14) — Full audit sweep: security hardened, scaled for 500 concurrent, E2E-proven ✅
+
+**Context:** founder mandate — verify requirement alignment, find & fix security loopholes, refactor for 500 concurrent users (dev/UAT) without breaking function, test everything E2E with Playwright, UI/UX review against the international bar, refresh docs. Three parallel audit agents (security / performance / PRD-alignment) + fixes, each unit proven.
+
+**Done (4 commits):**
+- **Security** (`feat(api)` commit): startup invariants (no boot in non-dev with default JWT secret or missing Stream creds); **rate limiting is now real** (`app/ratelimit.py`, Redis fixed-window, fail-open-never-silent: onboarding 10/h per IP, match 10/10min per user, PIN 5/15min); `/safety/scan` ownership check (no flag planting); SafetyFlags store the **signal only**, never message fragments (T&S #6 now true in code); constant-time admin-token compare; UTC age gate; input caps; **listener console links use `#token=` fragments** (never in server logs).
+- **Performance** (same commit): webhook hot path off the event loop (`run_in_threadpool`, one session/event); matcher restructured — unlocked preview, lock ONLY the chosen row, **Stream call moved outside the transaction** (with atomic compensation) so row locks last µs and concurrent matchers can't 503 spuriously; cached Stream client + 3s timeout; env-tunable DB pool (20+20, 5s fail-fast); migration `c7a91f4d2b58` (unique `conversations.stream_channel_id` — the per-message webhook lookup was a seq scan; unique `safety_flags.stream_message_id`; composite block-list index); SQL-side mentor-note dedupe; pagination; gzip.
+- **Frontend batch** (`fix(mobile)` commits): **reflection fully decoupled from payments** (the `energy≥4 → /coffee` auto-route violated DECISIONS §A.3 — the clearest spec violation found); session-loss guard (tabs → landing instead of endless 403s — witnessed live); api timeout (10s); chats Stream query capped at 30; web chat memoized (keystrokes no longer re-render the transcript) + **typing indicators both directions** incl. the listener console; aurora pauses when unfocused (two shaders were painting simultaneously); **Panda Mask surfaced** (masked member shows "Away right now" listener-side); topic chips humanized (`self_esteem` → "Self-esteem"); console consumes re-pasted `#token=` links (hashchange + Retry).
+- **Proven:** pytest **35 passed** (7 new security tests: age gate ×3, wipe ownership+hard-delete, scan ownership, signal-only flags, PIN lockout); `alembic check` clean; tsc clean; **full member+listener+personal-request E2E green** (`C:/tmp/playwright-test-console.js` — onboard→match→chat→console token link→live reply→request accept→away toggle→bad token, 0 page errors) — run before AND after every change wave.
+- **UI/UX review** (`docs/UX_REVIEW_2026-07-13.md`): verdict — core loop meets the international bar; 8 founder-review recommendations (top: chat-header persona truncation; reflection copy says "rate this conversation" which contradicts the no-ratings promise; gender filter PRD gap = product call). Screenshots in session scratchpad.
+
+**Open decisions (founder):** the 8 UX recommendations above; gender filter in/out of v1; carried — Higgsfield licence check, LLM for Journal Assistant, Razorpay creds, **Stream secret rotation** + stable webhook URL, Rive commission, re-verify helplines. Engineering watchlist: prod deploy runbook (multi-worker + proxy gzip), PostHog wiring, crisis-flag review surface, journals offline cache, Android release perf gate + Maestro.
+
+**How to resume:** `cd C:\Users\khana\mento` then `claude --continue` (or `claude -r` to pick a session). Stack: Docker Desktop → `services/api`: `docker compose up -d` → `.venv\Scripts\python.exe -m alembic upgrade head` → `-m scripts.seed_listeners` → `-m uvicorn app.main:app --port 8000`; `apps/mobile`: `npx expo start --web --port 8081`. E2E: `NODE_PATH=<playwright-skill node_modules> node C:/tmp/playwright-test-console.js`. **Trap reminder:** pytest truncates dev listeners (re-seed after) and old listener tokens die with re-seeded listener ids (issue a fresh one).
+
+---
+
 ## 2026-07-12 (session 13) — AI-generated companion set shipped as the default art ✅
 
 **Context:** founder added Higgsfield credits (free plan, 40) and approved generating companion art with them, then ruled: put the generated set in the app. The in-house rig stays the animation layer; only the art inside it changed.

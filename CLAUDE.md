@@ -23,7 +23,7 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 | Motion | **Reanimated 3.16** + **@shopify/react-native-skia 1.5** + expo-haptics | Skia 1.5 is the SDK 52 pin (v2 needs SDK 53+). Ambient SkSL aurora + motion tokens (`theme/motion.ts`). Web lazy-loads CanvasKit, falls back to a static gradient. |
 | Backend | **FastAPI** (Python 3.12) | async; Pydantic v2. |
 | DB | **Postgres 16** (compose locally → DigitalOcean managed) | SQLAlchemy 2.0 + Alembic migrations; matcher relies on row locks (`FOR UPDATE SKIP LOCKED`). |
-| Cache/realtime-support | **Redis** | presence, matching queue, rate limits, pub/sub. |
+| Cache/realtime-support | **Redis** | **rate limiting is live** (`app/ratelimit.py`: onboarding per-IP, match per-user, PIN attempt caps — fail-open, never silent). Presence/matching state lives in Postgres row locks, not Redis. |
 | Messaging | **Stream Chat** (getstream.io) | presence/typing/read-state; **crisis scan enforced via its webhooks** (see T&S #1). Storage promise resolved — see T&S #8. |
 | Payments | **Razorpay** | processor for **contributions** + later Module B session fees. **Not** membership tiers (DECISIONS §H.1). Awaiting creds — coffee screen ships transparently disabled. |
 | OTP | **MSG91** | **NOT in the v1 user path**. Reserved for mentor verification (deferred Module B). |
@@ -50,9 +50,10 @@ mento/
   services/api/
     app/                    routers/ (onboarding, match, conversation, stream_hooks, moderation,
                             journals, listeners, safety, health) · services/ (matching, stream, safety)
-                            · models/ · security.py · config.py
+                            · models/ · security.py · ratelimit.py · config.py
     scripts/                seed_listeners · configure_stream · sample_mockup_colors
-    tests/                  pytest — 22+ suites incl. matcher concurrency + crisis webhook proofs
+    tests/                  pytest — 10 files / 35 tests incl. matcher concurrency, crisis webhook
+                            proofs, and security hardening (age gate, wipe, PIN lockout, scan ownership)
     docker-compose.yml      Postgres 16 + Redis 7
   docs/                     PRD.md · DECISIONS.md (WINS) · ALIGNMENT.md · MOCKUP_INVENTORY.md · Mockups/
   .github/workflows/        api-ci.yml (compose → alembic upgrade+check → pytest)
@@ -129,7 +130,8 @@ mento/
 
 1. **Crisis architecture (PRD §10).** Signal scan on inbound messages → India resources (**Tele-MANAS 14416 / KIRAN 1800-599-0019 — re-verify before launch**) → support-and-refer tone → human-review flag. A user in genuine crisis is helped *out*, not retained.
    - **Enforcement is server-side, on the message path.** The scan runs in the Stream **before-message-send webhook** (`services/api` `routers/stream_hooks.py`), called server-to-server for *every* message regardless of sender — the client cannot route around it. Flag = `SafetyFlag` (signal only, never the body); the message is augmented with a `crisis` payload the client renders. *(Proven: a message sent straight through the Stream API still flags + augments.)*
-   - **Fail-mode (deliberate): fail-open, never silent.** If our API is unreachable the message is delivered unscanned (never hard-block a support conversation); the retried async `message.new` webhook re-scans anything missed. Both hooks dedupe by Stream message id.
+   - **Fail-mode (deliberate): fail-open, never silent.** If our API is unreachable the message is delivered unscanned (never hard-block a support conversation); the retried async `message.new` webhook re-scans anything missed. Both hooks dedupe by Stream message id (unique index — race-proof).
+   - **Startup invariants (app/main.py):** outside dev the API refuses to boot with the default `JWT_SECRET` or without Stream creds — either state silently disables a security guarantee (forgeable tokens / unscanned messages).
 2. **Listeners are not therapists.** Stated in onboarding + UI. No diagnosis, no clinical claims in any copy.
 3. **Age gate.** DOB enforces minimum age (18) server-side. Under-18 exclusion at MVP — confirm with CA.
 4. **Honest money.** Contribution is opt-in, never gated, never inside a live conversation, never framed as membership. Copy says it supports the *team/platform*.

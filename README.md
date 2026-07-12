@@ -107,9 +107,12 @@ Never commit real secrets. `.env` files are gitignored; each package ships an `.
 | Var | Purpose |
 |---|---|
 | `DATABASE_URL` | Postgres (defaults to the compose instance `postgresql+psycopg://mento:mento@localhost:5432/mento`) |
-| `REDIS_URL` | Redis (presence/queues; defaults to compose) |
-| `JWT_SECRET` | Anonymous session tokens (HS256) |
-| `STREAM_API_KEY` / `STREAM_API_SECRET` | Stream Chat server credentials — absent = dev stub mode |
+| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` / `DB_POOL_TIMEOUT` / `DB_POOL_RECYCLE` | Connection pool tuning (defaults 20/20/5s/1800s; per-process — keep workers × (size+overflow) under Postgres `max_connections`) |
+| `REDIS_URL` | Redis — backs the rate limiter (`app/ratelimit.py`); defaults to compose |
+| `RATE_LIMIT_ENABLED` | Default `true`; limiter fails open (with a warning) if Redis is down |
+| `JWT_SECRET` | Anonymous session + listener tokens (HS256). **Outside dev the API refuses to boot with the default value.** |
+| `STREAM_API_KEY` / `STREAM_API_SECRET` | Stream Chat server credentials — absent = dev stub mode. **Outside dev the API refuses to boot without them** (the crisis scan would be silently off). |
+| `STREAM_TIMEOUT_SECONDS` | Outbound Stream API budget (default 3s) |
 | `ADMIN_TOKEN` | Guards the moderation queue + the Personal-request accept/decline stand-in; empty = disabled |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Payments (contributions) — not yet wired |
 | `POSTHOG_API_KEY` / `POSTHOG_HOST` | Analytics (no message content / PII) |
