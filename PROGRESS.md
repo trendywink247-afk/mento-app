@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-07-12 (session 13) — AI-generated companion set shipped as the default art ✅
+
+**Context:** founder added Higgsfield credits (free plan, 40) and approved generating companion art with them, then ruled: put the generated set in the app. The in-house rig stays the animation layer; only the art inside it changed.
+
+**Done:**
+- **Candidate set generated** (12 credits, Google Nano Banana 2 via Higgsfield MCP): panda first as the style lock (prompt from `docs/MASCOT_COMMISSION_BRIEF.md`), then the other five with the panda as image reference → one consistent soft-shaded, cute-but-dignified style (indigo scarf accent, natural animal colours). Owl took 3 attempts (wide eyes = alert, half-lidded = bored; v3 = "eyes like the panda's + gentle smile"). Full-res originals + job IDs: `docs/mascot-candidates/` (README documents licence caveat + regeneration).
+- **Shipped into the app**: background-removed via Higgsfield (6 credits), trimmed + resized to 512px lossy WebP with sharp → `apps/mobile/assets/companions/generated/` (~26KB each, ~162KB total — lighter than the Fluent SVGs). `Companion.tsx` priority chain is now **Lottie override → generated cutout → Fluent fallback**; rendered with RN `Image` (webp in Metro's default assetExts; `expo-env.d.ts` types the require). All ReactiveCompanion states/reduced-motion behaviour untouched (art swap only — no new animation).
+- **Proven (Playwright, Expo web 390×844, 0 console errors):** landing → age → skip email → companion picker shows the generated art on all six cards; picking fox swaps the PandaStage companion + teal accent washes the sky (companion-is-the-star intact); ready arch renders the fox at 120px; turtle/deer/owl each verified on card + stage. `tsc --noEmit` clean. Deep-link guard re-confirmed (fresh load + `?step=companion` snaps to age).
+- **Higgsfield facts for future sessions:** Recraft V4.1 is plan-gated (`job_minimum_basic_plan_required` even with credits); unfiltered `models_explore action:list` 500s — query per `type`. ~22 credits remain.
+
+**Open decisions:** verify Higgsfield's commercial-use terms for the free plan before store submission (noted in `docs/mascot-candidates/README.md`). Rive commission unchanged — these cutouts are the style-lock package to send with the brief. LLM for the Journal Assistant still open (carried).
+
+**Next:** carried backlog unchanged — release-build Android perf gate + Maestro (device), Stream secret rotation + stable webhook URL (founder), Razorpay creds, AI Journal Assistant (LLM decision).
+
+**How to resume:** mobile `npx expo start --web --port 8081` (running at end of session); backend not needed for the art path. Verification screenshots in the session scratchpad.
+
+---
+
 ## 2026-07-11 (session 12) — Docs truth pass, companion-is-the-star, mascot memo, LISTENER CONSOLE ✅
 
 **Context (founder feedback + rulings, recorded in DECISIONS §I):** the coded SVG panda misses the mockups' bar → professional reactive assets, research-gated (§I.4); **the chosen animal must be the star everywhere** (§I.5); the mentor side didn't exist (listeners had no auth/list/reply — only the admin-token stand-in) → **minimal listener console ships in v1** (§I.6); core MD files were stale → full rewrite.
