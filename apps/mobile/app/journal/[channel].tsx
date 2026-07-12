@@ -14,6 +14,7 @@ import {
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { SceneTile } from '@/components/art/SceneTile';
 import { api, type JournalEntry } from '@/lib/api';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, type Wash } from '@/theme/tokens';
@@ -326,7 +327,7 @@ export default function JournalScreen() {
           contentContainerStyle={{ gap: space.sm, paddingVertical: space.sm, flexGrow: 1 }}
           ListEmptyComponent={
             <View style={styles.center}>
-              <IconBadge icon={cfg.icon} tone={cfg.tone} size={56} />
+              <SceneTile name="journalEmpty" size={120} />
               <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>{cfg.empty}</Text>
             </View>
           }

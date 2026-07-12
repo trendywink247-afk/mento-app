@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
-import { ChatBubblesScene } from '@/components/art/Scenes';
+import { SceneTile } from '@/components/art/SceneTile';
 import { api } from '@/lib/api';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, type Wash } from '@/theme/tokens';
@@ -101,7 +101,7 @@ export default function JournalsTab() {
             </View>
           </View>
           <View style={styles.aiArt}>
-            <ChatBubblesScene size={84} />
+            <SceneTile name="journalsAi" size={84} />
           </View>
         </View>
 

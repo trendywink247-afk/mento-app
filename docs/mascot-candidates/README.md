@@ -16,6 +16,10 @@ Style register: soft rounded shapes, flat with gentle shading (no hard 3D), cute
 
 Higgsfield job IDs (for re-download/upscale/background-removal): panda `8928da8c`, elephant `70eb8342`, fox `467aa9e1`, turtle `c7038ac3`, deer `e26d4668`, owl `2d8dd1ad`.
 
+## Empty-state scenes (`scenes/`, added same day)
+
+Four spot illustrations in the same register (no character — theme-invariant), shipped as `apps/mobile/assets/scenes/` (~23KB total) and rendered as rounded tiles by `components/art/SceneTile.tsx`: chat-connected `72884ea6` (chat "You're connected!"), chats-empty `31e7d78f` (My Chats "No conversations yet"), journals-ai `7bffdbcf` (AI-assistant card), journal-empty `ac062a77` (all four journal channels). Scenes keep their warm-cream background — they blend into cream screens and read as deliberate tiles on tinted cards.
+
 ## Panda poses (`poses/`, added same day)
 
 Six pose variants of the same panda (style-locked on `panda.png` as image reference), shipped as `apps/mobile/assets/companions/generated/panda-poses/` and rendered by `components/art/Panda.tsx` (coded SVG stays as fallback). Job IDs: wave `cf1e6f57`, sleep `6e1921fc`, excited `691103bf`, coffee `b277ce4a`, sad `5ee6fc1a`, shield `bbc5651a`. Note: the raster poses wear the fixed indigo scarf; the retired SVG poses re-tinted their cape to the user accent — trade-off accepted to match the companion set.

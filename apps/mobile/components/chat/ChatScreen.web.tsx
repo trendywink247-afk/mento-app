@@ -16,8 +16,8 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { IconBadge } from '@/components/IconBadge';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
-import { ChatBubblesScene } from '@/components/art/Scenes';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { SceneTile } from '@/components/art/SceneTile';
 import { api } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { getStreamClient } from '@/lib/streamClient';
@@ -273,7 +273,7 @@ export default function ChatScreenWeb() {
             contentContainerStyle={[styles.list, messages.length === 0 && styles.listEmpty]}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
-                <ChatBubblesScene size={140} />
+                <SceneTile name="chatConnected" size={140} />
                 <Text style={[styles.emptyTitle, { color: colors.ink }]}>You're connected!</Text>
                 <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
                   This is a safe space to share, reflect and grow. Take your time.
