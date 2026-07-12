@@ -1,11 +1,12 @@
 """Anonymous onboarding + server-side age gate (Trust & Safety #3)."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app import ratelimit
 from app.config import get_settings
 from app.db import get_db
 from app.models.user import User
@@ -21,10 +22,25 @@ def _age_on(dob: date, today: date) -> int:
     return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
 
 
-@router.post("/start", response_model=OnboardingResult, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/start",
+    response_model=OnboardingResult,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[
+        # Unauthenticated + each call inserts a user and hits Stream: the app's
+        # cheapest flooding target. Generous for humans, ruinous for loops.
+        Depends(
+            ratelimit.by_ip(
+                "onboarding", 10, 3600, detail="Too many new sessions — please wait a bit."
+            )
+        )
+    ],
+)
 def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> OnboardingResult:
     settings = get_settings()
-    today = date.today()
+    # UTC, not server-local: a user a day either side of the min-age boundary must
+    # not be admitted/denied by the server's timezone.
+    today = datetime.now(timezone.utc).date()
 
     if payload.dob > today:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "date of birth is in the future")

@@ -7,6 +7,7 @@ local stub so the onboarding/match slice runs without external credentials.
 from __future__ import annotations
 
 import logging
+from functools import lru_cache
 
 from app.config import get_settings
 
@@ -19,10 +20,18 @@ except Exception:  # pragma: no cover
     StreamChat = None  # type: ignore
 
 
+@lru_cache
 def _client():
+    """One shared client (one requests.Session → connection reuse instead of a new
+    TLS handshake per call). Explicit timeout: a slow Stream call must not pin a
+    worker thread — or, via the matcher, listener row locks — for the SDK default."""
     if not (_settings.stream_api_key and _settings.stream_api_secret) or StreamChat is None:
         return None
-    return StreamChat(api_key=_settings.stream_api_key, api_secret=_settings.stream_api_secret)
+    return StreamChat(
+        api_key=_settings.stream_api_key,
+        api_secret=_settings.stream_api_secret,
+        timeout=_settings.stream_timeout_seconds,
+    )
 
 
 def upsert_user(user_id: str, persona_name: str, avatar: str) -> None:

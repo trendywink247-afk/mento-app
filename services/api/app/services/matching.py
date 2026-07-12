@@ -2,8 +2,9 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Callable
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models.conversation import Conversation
@@ -47,15 +48,18 @@ def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
 def _pick_available_listener(
     db: Session, category: str | None, blocked_ids: set[str]
 ) -> ListenerProfile | None:
-    """Lowest current load, then highest rank. Row-locked to avoid double-assignment.
+    """Lowest current load, then highest rank; category preferred (in Python — portable
+    across JSON/JSONB); blocked listeners excluded.
 
-    Pulls a small locked candidate set and prefers a category match in Python (portable
-    across JSON/JSONB); falls back to the best available listener if none matches.
-    Listeners the user has blocked are excluded.
+    Two-step locking so concurrent matchers never contend on the whole candidate set:
+    an UNLOCKED preview ranks up to 10 candidates, then we lock ONLY the one we take
+    (`FOR UPDATE SKIP LOCKED`, availability re-checked under the lock — the preview may
+    be stale). Locking all 10 made competitors skip every locked candidate and 503
+    spuriously, and (worse) the lock used to be held across the Stream HTTP call.
     """
-    candidates = (
+    preview = (
         db.execute(
-            select(ListenerProfile)
+            select(ListenerProfile.id, ListenerProfile.categories)
             .where(
                 ListenerProfile.vetting_status == VettingStatus.approved,
                 ListenerProfile.status == ListenerStatus.online,
@@ -63,27 +67,52 @@ def _pick_available_listener(
             )
             .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
             .limit(10)
-            .with_for_update(skip_locked=True)
         )
-        .scalars()
         .all()
     )
-    candidates = [c for c in candidates if c.id not in blocked_ids]
-    if not candidates:
-        return None
+    ranked = [(lid, cats) for lid, cats in preview if lid not in blocked_ids]
     if category:
-        for listener in candidates:
-            if category in (listener.categories or []):
-                return listener
-    return candidates[0]
+        preferred = [lid for lid, cats in ranked if category in (cats or [])]
+        rest = [lid for lid, cats in ranked if category not in (cats or [])]
+        ordered = preferred + rest
+    else:
+        ordered = [lid for lid, _ in ranked]
+
+    for listener_id in ordered:
+        locked = db.execute(
+            select(ListenerProfile)
+            .where(
+                ListenerProfile.id == listener_id,
+                ListenerProfile.vetting_status == VettingStatus.approved,
+                ListenerProfile.status == ListenerStatus.online,
+                ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
+            )
+            .with_for_update(skip_locked=True)
+        ).scalar_one_or_none()
+        if locked is not None:
+            return locked
+    return None
 
 
-def open_conversation(db: Session, user_id: str, listener: ListenerProfile) -> Conversation:
-    """Open a conversation + Stream channel with a specific listener (capacity already
-    reserved by the caller under a row lock). Shared by general match and personal
-    request acceptance."""
+def open_conversation(
+    db: Session,
+    user_id: str,
+    listener: ListenerProfile,
+    *,
+    before_commit: Callable[[Conversation], None] | None = None,
+    on_stream_failure: Callable[[], None] | None = None,
+) -> Conversation:
+    """Open a conversation with a listener whose row the CALLER holds locked.
+
+    Three short phases so the row lock never spans an HTTP call:
+      1. Reserve capacity + insert the Conversation (+ caller state via
+         `before_commit`) and COMMIT — the lock is released in microseconds and the
+         reservation is durable, so concurrent matchers can't double-assign.
+      2. Create the Stream channel OUTSIDE any transaction.
+      3. Persist the channel id — or, on Stream failure, compensate (release the
+         reserved slot atomically, drop the conversation, run `on_stream_failure`).
+    """
     listener.active_conversations += 1
-
     convo = Conversation(
         type=ConversationType.anon,
         status=ConversationStatus.active,
@@ -92,12 +121,28 @@ def open_conversation(db: Session, user_id: str, listener: ListenerProfile) -> C
     )
     db.add(convo)
     db.flush()  # assign convo.id
+    if before_commit is not None:
+        before_commit(convo)
+    db.commit()
 
-    channel_id = stream.create_dm_channel(
-        channel_id=f"c-{uuid.uuid4().hex[:20]}",
-        user_id=user_id,
-        listener_id=listener.id,
-    )
+    try:
+        channel_id = stream.create_dm_channel(
+            channel_id=f"c-{uuid.uuid4().hex[:20]}",
+            user_id=user_id,
+            listener_id=listener.id,
+        )
+    except Exception:
+        db.execute(
+            update(ListenerProfile)
+            .where(ListenerProfile.id == listener.id, ListenerProfile.active_conversations > 0)
+            .values(active_conversations=ListenerProfile.active_conversations - 1)
+        )
+        db.delete(convo)
+        if on_stream_failure is not None:
+            on_stream_failure()
+        db.commit()
+        raise
+
     convo.stream_channel_id = channel_id
     db.commit()
     db.refresh(convo)
@@ -141,10 +186,23 @@ def accept_personal_request(
     if listener is None or listener.active_conversations >= listener.max_concurrent:
         raise ListenerAtCapacity()
 
-    convo = open_conversation(db, req.requester_id, listener)
-    req.status = RequestStatus.matched
-    req.conversation_id = convo.id
-    db.commit()
+    def _mark_matched(convo: Conversation) -> None:
+        # Same transaction as the capacity reservation — request state and slot
+        # can never disagree.
+        req.status = RequestStatus.matched
+        req.conversation_id = convo.id
+
+    def _revert_request() -> None:
+        req.status = RequestStatus.pending
+        req.conversation_id = None
+
+    open_conversation(
+        db,
+        req.requester_id,
+        listener,
+        before_commit=_mark_matched,
+        on_stream_failure=_revert_request,
+    )
     db.refresh(req)
     return req
 

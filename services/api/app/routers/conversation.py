@@ -9,10 +9,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import ratelimit
 from app.db import get_db
 from app.models.conversation import Conversation
 from app.models.enums import ConversationStatus, ModerationLevel
@@ -50,6 +51,17 @@ def _release_listener(db: Session, convo: Conversation) -> None:
         listener.active_conversations -= 1
 
 
+def _pin_attempt_guard(convo_id: str, user_id: str) -> None:
+    """A 4-digit PIN is 10⁴ guesses — without an attempt cap it's enumerable in
+    minutes. 5 tries per 15 minutes per conversation+caller."""
+    ratelimit.enforce(
+        f"pin:{convo_id}:{user_id}",
+        5,
+        900,
+        detail="Too many PIN attempts — try again in a few minutes.",
+    )
+
+
 def _state(convo: Conversation) -> ConversationState:
     return ConversationState(
         id=convo.id,
@@ -64,12 +76,16 @@ def _state(convo: Conversation) -> ConversationState:
 def list_conversations(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ) -> list[ConversationListItem]:
     """The user's conversations, newest first — the My Chats surface (#54/55)."""
     convos = db.scalars(
         select(Conversation)
         .where(Conversation.user_id == user_id)
         .order_by(Conversation.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     ).all()
     listeners = {
         li.id: li
@@ -110,6 +126,7 @@ def verify_conversation_pin(
     convo = _owned(db, convo_id, user_id)
     if not convo.is_locked:
         return OkResult(status="ok")
+    _pin_attempt_guard(convo.id, user_id)
     if not verify_pin(payload.pin, convo.id, convo.pin_hash):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "wrong PIN")
     return OkResult(status="ok")
@@ -140,6 +157,7 @@ def unlock_conversation(
     db: Session = Depends(get_db),
 ) -> ConversationState:
     convo = _owned(db, convo_id, user_id)
+    _pin_attempt_guard(convo.id, user_id)
     if not verify_pin(payload.pin, convo.id, convo.pin_hash):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "incorrect PIN")
     convo.is_locked = False

@@ -7,7 +7,7 @@ dedupe — never analytics.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -40,15 +40,20 @@ def save_mentor_note(
     """Save a mentor message to the user's Mentor Notes. Saving the same Stream
     message twice returns the existing note (idempotent long-press)."""
     if payload.stream_message_id:
+        # Dedupe in SQL — loading every note into Python scaled with the user's
+        # whole archive on each save of the core talk→action loop.
         existing = db.scalars(
-            select(JournalEntry).where(
+            select(JournalEntry)
+            .where(
                 JournalEntry.user_id == user_id,
                 JournalEntry.channel == JournalChannel.mentor_notes,
+                JournalEntry.meta["stream_message_id"].as_string()
+                == payload.stream_message_id,
             )
-        ).all()
-        for e in existing:
-            if (e.meta or {}).get("stream_message_id") == payload.stream_message_id:
-                return _out(e)
+            .limit(1)
+        ).first()
+        if existing is not None:
+            return _out(existing)
 
     entry = JournalEntry(
         user_id=user_id,
@@ -114,6 +119,8 @@ def list_entries(
     channel: str,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ) -> list[JournalEntryOut]:
     try:
         ch = JournalChannel(channel)
@@ -123,6 +130,8 @@ def list_entries(
         select(JournalEntry)
         .where(JournalEntry.user_id == user_id, JournalEntry.channel == ch)
         .order_by(JournalEntry.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     ).all()
     return [_out(e) for e in entries]
 
@@ -131,6 +140,8 @@ def list_entries(
 def list_mentor_notes(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ) -> list[JournalEntryOut]:
     """Newest-first Mentor Notes for the journals surface."""
     entries = db.scalars(
@@ -140,5 +151,7 @@ def list_mentor_notes(
             JournalEntry.channel == JournalChannel.mentor_notes,
         )
         .order_by(JournalEntry.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     ).all()
     return [_out(e) for e in entries]

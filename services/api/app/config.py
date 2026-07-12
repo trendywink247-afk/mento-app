@@ -23,7 +23,22 @@ class Settings(BaseSettings):
     admin_token: str = ""
 
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"
+    # Sized for a single process: workers × (pool_size + max_overflow) must stay
+    # under Postgres max_connections (default 100). pool_timeout fails fast — a
+    # 5s 500 beats a 30s hang on a support app.
+    db_pool_size: int = 20
+    db_max_overflow: int = 20
+    db_pool_timeout: int = 5
+    db_pool_recycle: int = 1800
+
     redis_url: str = "redis://localhost:6379/0"
+    # Redis-backed rate limiting (see app/ratelimit.py). Fail-open when Redis is
+    # unreachable — never hard-block a support conversation on infra hiccups.
+    rate_limit_enabled: bool = True
+
+    # Outbound Stream API budget; a slow Stream call must not pin threads for the
+    # SDK's ~6s default.
+    stream_timeout_seconds: float = 3.0
 
     stream_api_key: str = ""
     stream_api_secret: str = ""

@@ -6,6 +6,8 @@ queue is disabled — reports are still filed, just not exposed over HTTP.
 """
 from __future__ import annotations
 
+import hmac
+
 from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,7 +22,7 @@ router = APIRouter(prefix="/moderation", tags=["moderation"])
 
 def _require_admin(x_admin_token: str | None = Header(default=None)) -> None:
     token = get_settings().admin_token
-    if not token or x_admin_token != token:
+    if not token or not hmac.compare_digest(x_admin_token or "", token):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "admin token required")
 
 

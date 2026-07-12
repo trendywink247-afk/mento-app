@@ -4,6 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app import ratelimit
 from app.db import get_db
 from app.models.enums import RequestKind
 from app.models.listener import ListenerProfile
@@ -21,6 +22,11 @@ def create_match(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> MatchResult:
+    # Each success consumes a human listener's capacity slot — a spam loop is a
+    # denial of service against the actual people. Per-user, not per-IP.
+    ratelimit.enforce(
+        f"match:{user_id}", 10, 600, detail="Too many match attempts — please wait a moment."
+    )
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "unknown session")

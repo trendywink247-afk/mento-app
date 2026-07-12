@@ -37,6 +37,19 @@ test_engine = create_engine(
 TestSession = sessionmaker(bind=test_engine, autoflush=False, autocommit=False, future=True)
 
 
+@pytest.fixture(autouse=True)
+def _rate_limits_off():
+    """Rate limits are off by default in tests (fixed windows would couple suites
+    run-to-run through Redis). The rate-limit tests flip the module switch back on
+    around per-test-unique keys."""
+    from app import ratelimit
+
+    previous = ratelimit.ENABLED
+    ratelimit.ENABLED = False
+    yield
+    ratelimit.ENABLED = previous
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _schema():
     """Build the schema from the Alembic migration (not metadata.create_all), so

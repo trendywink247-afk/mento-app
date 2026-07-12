@@ -26,10 +26,12 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import select
+from starlette.concurrency import run_in_threadpool
 
 from app.db import SessionLocal
 from app.models.conversation import Conversation
 from app.services import safety, stream
+from app.services.crisis import CrisisResult
 
 logger = logging.getLogger("mento.stream_hooks")
 router = APIRouter(prefix="/stream", tags=["stream"])
@@ -61,13 +63,26 @@ async def _verified_event(request: Request) -> dict:
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid webhook signature")
 
 
-def _conversation_id_for(channel_id: str | None) -> str | None:
-    if not channel_id:
-        return None
+def _scan_event(
+    *, text: str, user_id: str, channel_id: str | None, message_id: str | None
+) -> CrisisResult:
+    """The blocking DB work for one webhook event — ONE session for both the channel
+    lookup and the flag write. Runs in the threadpool: these handlers are async (the
+    body read must be awaited), and sync DB calls on the event loop would stall every
+    other request while Stream waits on the hot per-message path."""
     with SessionLocal() as db:
-        return db.execute(
-            select(Conversation.id).where(Conversation.stream_channel_id == channel_id)
-        ).scalar_one_or_none()
+        conversation_id = None
+        if channel_id:
+            conversation_id = db.execute(
+                select(Conversation.id).where(Conversation.stream_channel_id == channel_id)
+            ).scalar_one_or_none()
+        return safety.scan_and_flag(
+            db,
+            text=text,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            stream_message_id=message_id,
+        )
 
 
 @router.post("/before-message-send")
@@ -80,14 +95,9 @@ async def before_message_send(request: Request) -> dict:
     user_id = (event.get("user") or message.get("user") or {}).get("id") or "unknown"
     channel_id = (event.get("channel") or {}).get("id")
 
-    with SessionLocal() as db:
-        result = safety.scan_and_flag(
-            db,
-            text=text,
-            user_id=user_id,
-            conversation_id=_conversation_id_for(channel_id),
-            stream_message_id=message_id,
-        )
+    result = await run_in_threadpool(
+        _scan_event, text=text, user_id=user_id, channel_id=channel_id, message_id=message_id
+    )
 
     if result.triggered:
         # Augment the message with a crisis payload the client renders as the helpline
@@ -113,12 +123,11 @@ async def push_webhook(request: Request) -> Response:
     if event.get("type") == "message.new":
         message = event.get("message") or {}
         channel_id = (event.get("channel") or {}).get("id") or event.get("channel_id")
-        with SessionLocal() as db:
-            safety.scan_and_flag(
-                db,
-                text=message.get("text") or "",
-                user_id=(message.get("user") or {}).get("id") or "unknown",
-                conversation_id=_conversation_id_for(channel_id),
-                stream_message_id=message.get("id"),
-            )
+        await run_in_threadpool(
+            _scan_event,
+            text=message.get("text") or "",
+            user_id=(message.get("user") or {}).get("id") or "unknown",
+            channel_id=channel_id,
+            message_id=message.get("id"),
+        )
     return Response(status_code=status.HTTP_200_OK)

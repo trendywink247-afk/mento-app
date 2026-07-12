@@ -7,10 +7,11 @@ non-Stream callers and tests; it shares the same scan_and_flag code path.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.db import get_db
+from app.models.conversation import Conversation
 from app.schemas import ScanRequest, ScanResult
 from app.security import current_user_id
 from app.services import safety
@@ -24,6 +25,12 @@ def scan_message(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> ScanResult:
+    # A caller may only tag their OWN conversation — otherwise crisis flags could
+    # be planted against arbitrary conversations, poisoning the review queue.
+    if payload.conversation_id is not None:
+        convo = db.get(Conversation, payload.conversation_id)
+        if convo is None or convo.user_id != user_id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
     result = safety.scan_and_flag(
         db, text=payload.text, user_id=user_id, conversation_id=payload.conversation_id
     )

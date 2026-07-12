@@ -1,10 +1,11 @@
 """Request/response models (Pydantic v2)."""
 from __future__ import annotations
 
+import json
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.models.enums import RequestKind, SafetySignal
 
@@ -13,8 +14,8 @@ from app.models.enums import RequestKind, SafetySignal
 class OnboardingStart(BaseModel):
     dob: date
     email: EmailStr | None = None  # optional, recovery only
-    companion_animal: str | None = None
-    companion_colour: str | None = None
+    companion_animal: str | None = Field(default=None, max_length=32)
+    companion_colour: str | None = Field(default=None, max_length=32)
 
 
 class PersonaOut(BaseModel):
@@ -90,12 +91,15 @@ class ListenerStatusIn(BaseModel):
 
 class ListenerConversationItem(BaseModel):
     """A conversation as the listener sees it: the MEMBER's persona, never their
-    identity — and none of the member's privacy controls (lock/mask are theirs)."""
+    identity — and none of the member's privacy controls (lock/PIN are theirs).
+    ``member_masked`` surfaces only THAT the member set a Panda Mask (so the
+    listener sees "away" instead of silence), never the mask text itself."""
     id: str
     status: str
     user_persona_name: str
     user_persona_avatar: str
     stream_channel_id: str | None
+    member_masked: bool
     created_at: str
     ended_at: str | None
 
@@ -110,8 +114,10 @@ class ListenerRequestItem(BaseModel):
 
 # --- Safety ---
 class ScanRequest(BaseModel):
-    text: str
-    conversation_id: str | None = None
+    # Stream's max message length is 5000 — nothing legitimate is longer, and an
+    # uncapped body would run arbitrarily large text through the crisis regexes.
+    text: str = Field(max_length=5000)
+    conversation_id: str | None = Field(default=None, max_length=36)
 
 
 class ScanResult(BaseModel):
@@ -188,6 +194,14 @@ class JournalEntryIn(BaseModel):
     channel: str  # mood | finance | gratitude (mentor_notes has its own endpoint)
     body: str = Field(min_length=1, max_length=4000)
     meta: dict = {}
+
+    @field_validator("meta")
+    @classmethod
+    def _meta_size(cls, v: dict) -> dict:
+        # meta is client-shaped (mood value, amounts, tags) — small by design.
+        if len(json.dumps(v)) > 2048:
+            raise ValueError("meta too large")
+        return v
 
 
 class JournalEntryOut(BaseModel):

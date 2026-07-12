@@ -22,8 +22,11 @@ class Conversation(UUIDMixin, TimestampMixin, Base):
     user_id: Mapped[str] = mapped_column(String(36), index=True)
     listener_id: Mapped[str] = mapped_column(String(36), index=True)
 
-    # Stream Chat channel id (cid). Source of truth for messages.
-    stream_channel_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    # Stream Chat channel id (cid). Source of truth for messages. Unique-indexed:
+    # the crisis webhook resolves channel → conversation on every inbound message.
+    stream_channel_id: Mapped[str | None] = mapped_column(
+        String(128), nullable=True, unique=True, index=True
+    )
 
     # Per-conversation controls (simplified for v1; behind the options menu).
     is_locked: Mapped[bool] = mapped_column(Boolean, default=False)

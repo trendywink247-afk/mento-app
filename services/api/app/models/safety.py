@@ -20,8 +20,11 @@ class SafetyFlag(UUIDMixin, TimestampMixin, Base):
     matched_terms: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Stream message id the flag came from (when raised via the Stream webhook).
-    # Lets the sync before-send hook and the async message.new safety-net dedupe.
-    stream_message_id: Mapped[str | None] = mapped_column(String(64), index=True, nullable=True)
+    # UNIQUE so the sync before-send hook and the async message.new safety-net
+    # dedupe even when they race (scan_and_flag treats the violation as a dupe).
+    stream_message_id: Mapped[str | None] = mapped_column(
+        String(64), unique=True, index=True, nullable=True
+    )
 
     reviewed: Mapped[bool] = mapped_column(Boolean, default=False)
     reviewed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)

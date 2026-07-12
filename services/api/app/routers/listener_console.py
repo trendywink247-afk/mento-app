@@ -101,6 +101,7 @@ def my_conversations(
             user_persona_name=user.persona_name,
             user_persona_avatar=user.persona_avatar,
             stream_channel_id=convo.stream_channel_id,
+            member_masked=convo.status_mask is not None,
             created_at=convo.created_at.isoformat(),
             ended_at=convo.ended_at.isoformat() if convo.ended_at else None,
         )

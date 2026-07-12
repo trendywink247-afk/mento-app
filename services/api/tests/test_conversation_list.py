@@ -1,6 +1,7 @@
 """My Chats backing endpoints: owner-scoped list + the verify-pin open gate."""
 from __future__ import annotations
 
+import uuid
 from datetime import date
 
 import pytest
@@ -45,7 +46,15 @@ def _seed_listener(s) -> str:
 
 
 def _seed_convo(s, uid, lid, status=ConversationStatus.active) -> str:
-    c = Conversation(type="anon", status=status, user_id=uid, listener_id=lid, stream_channel_id="ch-1")
+    # Channel ids are unique in production (uuid-minted) and unique-indexed since
+    # migration c7a91f4d2b58 — seed them unique too.
+    c = Conversation(
+        type="anon",
+        status=status,
+        user_id=uid,
+        listener_id=lid,
+        stream_channel_id=f"ch-{uuid.uuid4().hex[:8]}",
+    )
     s.add(c)
     s.flush()
     return c.id
