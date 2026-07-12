@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-07-13 (session 16) — Admin dashboard built end-to-end + dev listener picker ✅
+
+**Context:** founder: "go" on the admin dashboard (designed session 15). Also, before that, killed the listener-console token-link hassle for dev.
+
+**Done:**
+- **Dev listener picker** (`feat: dev-only listener picker`): opening `/listener` with no token in DEV now shows a click-to-enter roster (`/listener/dev/roster` + `/dev/token/{id}`, both 404 in prod — proven); session persists on refresh. Real token-link auth untouched. pytest +2.
+- **Admin dashboard — SHIPPED** (spec→plan→build, `docs/superpowers/plans/2026-07-13-admin-dashboard.md`). Backend (`routers/admin_console.py`, `models/admin.py`, `services/audit.py`, migration `911d842dce97`): admin JWT + `current_admin` (per-request revocation), audit writer, and all 7 sections — overview cockpit counts (crisis excluded), safety flags + **audited read-only live conversation view** (`stream.fetch_channel_messages`, never stored), moderation queue + resolve + one-click listener suspend/reinstate, listener CRUD + console-link issuing, health deep-check + **last-webhook stamp** (silent-death detector), contributions stub, owner-only admin create/revoke + audit log. Bootstrap `scripts/issue_admin_token.py`. **48 pytest passed** (13 new admin). Frontend (`app/admin/`, `components/admin/AdminConsole.web.tsx` + `panels/` ×7, `lib/adminApi.ts` + `adminSession.ts`): web-only cockpit, token-link auth mirroring the listener console, top tabs + unreviewed badges, Admins tab owner-only. tsc clean; **owner E2E walk green** (`C:/tmp/playwright-admin.js`), 0 page errors; verified in-browser (cockpit counts, live safety flag, working audit log).
+
+**Open (founder) — carried + NEW:** **privacy policy must disclose that trained safety staff can view conversations for crisis review** (hard launch gate — the admin live-view makes this real). Retire legacy static `x-admin-token` moderation/listeners endpoints eventually (left in place — DECISIONS §I.6 sanctioned them for ops, still tested, frontend doesn't use them). Rest of backlog unchanged (Stream secret rotation, Razorpay, LLM decision, helpline re-verify, Higgsfield licence, Rive commission, Android perf gate).
+
+**How to resume:** `cd C:\Users\khana\mento` → `claude --continue`. Admin bootstrap: `cd services/api && .venv\Scripts\python.exe -m scripts.issue_admin_token --owner --name "Founder"` → open the printed `/admin#token=` link. Dev listener console: just open `/listener` and pick. Stack start unchanged (session 14).
+
+---
+
 ## 2026-07-13 (session 15) — Options bug closed, landing refreshed, admin dashboard designed ✅
 
 **Context:** founder reported "End conversation didn't work"; wanted the landing enhanced modestly (logo + polish, theme intact); and the admin dashboard scoped fully. Brainstormed both new features (visual companion used) → specs → landing implemented.

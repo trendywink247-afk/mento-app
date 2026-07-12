@@ -49,8 +49,9 @@ mento/
     lib/                    api.ts (typed client) · session.ts · haptics.ts · useReducedMotion(.web).ts · onboardingDraft.ts
   services/api/
     app/                    routers/ (onboarding, match, conversation, stream_hooks, moderation,
-                            journals, listeners, safety, health) · services/ (matching, stream, safety)
-                            · models/ · security.py · ratelimit.py · config.py
+                            journals, listeners, listener_console, admin_console, safety, health)
+                            · services/ (matching, stream, safety, audit) · models/ (incl. admin)
+                            · security.py · ratelimit.py · config.py
     scripts/                seed_listeners · configure_stream · sample_mockup_colors
     tests/                  pytest — 10 files / 35 tests incl. matcher concurrency, crisis webhook
                             proofs, and security hardening (age gate, wipe, PIN lockout, scan ownership)
@@ -99,6 +100,7 @@ mento/
 11. **Contribution ("coffee")** — transparent, opt-in, from the menu; never inside a live conversation; supports the *team*.
 12. **Design system** — light-mode indigo/lavender + the motion token system; **companion-is-the-star** theming (accent + animal follow the user's choice everywhere).
 13. **Minimal listener console (DECISIONS §I.6)** — web-only, per-listener token-link auth: own conversations, real-time reply, accept/decline own Personal requests, online/away toggle. Nothing more.
+14. **Admin dashboard** — web-only `/admin` (spec `docs/superpowers/specs/2026-07-13-admin-dashboard-design.md`), owner/helper token-link auth (per-request revocation), full audit trail. Seven tabs: Overview cockpit · Safety review (audited read-only live conversation view — bodies never stored) · Moderation (+ one-click suspend) · Listener management (replaces the CLI scripts) · Contributions stub · Health (incl. silent-webhook-death detector) · Admins + audit. Bootstrap: `python -m scripts.issue_admin_token --owner --name "<n>"`. **Privacy policy must disclose safety-staff conversation access before launch.**
 
 ### v2 — deferred (spec separately, don't build by default)
 - **Module B**: mentor real profiles, paid 1:1 sessions (+~10% platform fee), full mentor portal, MSG91 verification.
