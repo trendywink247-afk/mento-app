@@ -66,3 +66,13 @@ class ModerationLevel(int, enum.Enum):
     warning = 2
     suspension = 3
     ban = 4
+
+
+class AdminRole(str, enum.Enum):
+    owner = "owner"
+    helper = "helper"
+
+
+class AdminStatus(str, enum.Enum):
+    active = "active"
+    revoked = "revoked"
