@@ -56,30 +56,37 @@ export default function ListenerConsoleWeb() {
     }
   }, []);
 
-  useEffect(() => {
-    const boot = async () => {
-      // Prefer the #token= fragment — fragments never reach servers, proxies, or
-      // access logs. ?token= stays supported as a fallback for older links.
-      const hashMatch = window.location.hash.match(/[#&]token=([^&]+)/);
-      const hashToken = hashMatch?.[1] ? decodeURIComponent(hashMatch[1]) : null;
-      if (hashToken) {
-        await saveListenerToken(hashToken);
-        // Clear the fragment from the URL/history immediately — BOTH in the browser
-        // and in expo-router's own state (which would otherwise re-sync the old URL
-        // with the fragment back into the address bar).
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        router.replace('/listener');
-      } else if (params.token) {
-        await saveListenerToken(params.token);
-        // Strip the token from the URL/history immediately.
-        router.replace('/listener');
-      }
-      await refresh();
-    };
-    void boot();
-    // reason: boot runs once; the token param/fragment is consumed and stripped on first render
+  const boot = useCallback(async () => {
+    // Prefer the #token= fragment — fragments never reach servers, proxies, or
+    // access logs. ?token= stays supported as a fallback for older links.
+    const hashMatch = window.location.hash.match(/[#&]token=([^&]+)/);
+    const hashToken = hashMatch?.[1] ? decodeURIComponent(hashMatch[1]) : null;
+    if (hashToken) {
+      await saveListenerToken(hashToken);
+      // Clear the fragment from the URL/history immediately — BOTH in the browser
+      // and in expo-router's own state (which would otherwise re-sync the old URL
+      // with the fragment back into the address bar).
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      router.replace('/listener');
+    } else if (params.token) {
+      await saveListenerToken(params.token);
+      // Strip the token from the URL/history immediately.
+      router.replace('/listener');
+    }
+    await refresh();
+    // reason: params.token is consumed once and stripped; re-running on param
+    // change would loop through router.replace
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refresh]);
+
+  useEffect(() => {
+    void boot();
+    // Opening a NEW console link while this page is already mounted is a hash-only
+    // change (no remount) — consume the fresh token instead of ignoring it.
+    const onHash = () => void boot();
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, [boot]);
 
   const toggleStatus = async () => {
     if (!me) return;
@@ -121,7 +128,8 @@ export default function ListenerConsoleWeb() {
         <View style={styles.center} testID="console-error">
           <Ionicons name="key-outline" size={36} color={colors.inkMuted} />
           <Text style={[type.body, { color: colors.ink, textAlign: 'center' }]}>{error}</Text>
-          <Pressable onPress={() => void refresh()} accessibilityRole="button" testID="console-retry">
+          {/* boot, not refresh: a freshly pasted #token= link must be consumed. */}
+          <Pressable onPress={() => void boot()} accessibilityRole="button" testID="console-retry">
             <Text style={[type.label, { color: colors.accent }]}>Retry</Text>
           </Pressable>
         </View>

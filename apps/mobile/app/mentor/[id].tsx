@@ -16,6 +16,7 @@ import { Screen } from '@/components/Screen';
 import { Panda } from '@/components/art/Panda';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { ApiError, api, type Listener } from '@/lib/api';
+import { formatTopic } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -237,7 +238,7 @@ export default function MentorProfile() {
           <View style={styles.chips}>
             {listener.categories.map((c) => (
               <View key={c} style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}>
-                <Text style={[styles.chipText, { color: colors.accent }]}>{c}</Text>
+                <Text style={[styles.chipText, { color: colors.accent }]}>{formatTopic(c)}</Text>
               </View>
             ))}
           </View>
