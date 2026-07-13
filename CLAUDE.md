@@ -244,6 +244,23 @@ Mood/finance charts may use a multi-hue categorical scale — define as a separa
 
 ---
 
+## Working standards — the ritual skills (`.claude/skills/`)
+
+Six project skills encode the workflows this repo repeats every session. **Invoke them instead of improvising**; if reality diverges from a skill, fix the skill in the same commit (same rule as this file).
+
+| Moment | Skill |
+|---|---|
+| Session start / servers down / 404s / 503s / stuck ports | **mento-stack** |
+| Before claiming ANYTHING done, fixed, or passing; before any commit | **mento-verify** |
+| Proving a flow in the browser; e2e authoring; e2e 429/503/flake | **mento-e2e** |
+| Session wrap-up; logging shipped work; "update progress" | **mento-session-end** |
+| Adding/theming animated art assets | **mento-lottie** |
+| Live-testing crisis enforcement / Stream webhooks | **mento-crisis-webhook** |
+
+Standing rules the skills assume: the founder's product calls get implemented then logged in `PROGRESS.md → Open decisions` (never silently decided, never blocked on); gotchas that cost >15 min get written into the relevant skill or this file the same session; commit counts, test counts, and layout claims in docs are treated as hints — the repo is the truth.
+
+---
+
 ## Docs drift to reconcile (as of 2026-07-14)
 
 - `DECISIONS.md` needs **§J**: communities-as-lens + the Chats · Path · Journals · Profile tab swap (session 17 shipped ahead of the docs on founder instruction).
