@@ -17,6 +17,7 @@ import { MountainsScene, TalkingAtTableScene } from '@/components/art/Scenes';
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { SkyMotes } from '@/components/motion/SkyMotes';
 import { Entrance } from '@/components/motion/Entrance';
+import { Tilt3D } from '@/components/motion/Tilt3D';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getSessionToken } from '@/lib/session';
@@ -99,15 +100,21 @@ export default function Landing() {
         <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
           <View style={styles.logoZone}>
             <Entrance index={0} from="none">
-              <Animated.View style={breathing}>
-                <LogoLockup markSize={56} />
-              </Animated.View>
+              <Tilt3D maxTilt={5}>
+                <Animated.View style={breathing}>
+                  <LogoLockup markSize={56} />
+                </Animated.View>
+              </Tilt3D>
             </Entrance>
           </View>
 
           <View style={styles.sceneZone}>
             <Entrance index={1} from="none">
-              <TalkingAtTableScene width={300} height={200} />
+              {/* The hero scene sits in space — slightly deeper tilt than the logo,
+                * so the two planes separate and the landing reads with depth. */}
+              <Tilt3D maxTilt={3}>
+                <TalkingAtTableScene width={300} height={200} />
+              </Tilt3D>
             </Entrance>
           </View>
 

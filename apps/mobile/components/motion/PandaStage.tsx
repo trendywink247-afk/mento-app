@@ -20,6 +20,7 @@ import Animated, {
 
 import { Companion, type CompanionTrigger } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
+import { Tilt3D } from '@/components/motion/Tilt3D';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing } from '@/theme/motion';
@@ -160,14 +161,18 @@ export function PandaStage({
   return (
     <View style={styles.host} pointerEvents="none">
       <Animated.View style={stageStyle}>
-        <Animated.View style={breathing}>
-          <Companion
-            animal={shownAnimal}
-            size={BASE_SIZE}
-            waveTrigger={waveTrigger}
-            trigger={rigTrigger}
-          />
-        </Animated.View>
+        {/* Dimensional presence: the companion is an object in space — it faces the
+          * pointer on web and drifts on two desynced periods on native. */}
+        <Tilt3D maxTilt={6}>
+          <Animated.View style={breathing}>
+            <Companion
+              animal={shownAnimal}
+              size={BASE_SIZE}
+              waveTrigger={waveTrigger}
+              trigger={rigTrigger}
+            />
+          </Animated.View>
+        </Tilt3D>
       </Animated.View>
     </View>
   );

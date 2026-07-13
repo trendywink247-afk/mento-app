@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
 import { Entrance } from '@/components/motion/Entrance';
+import { Tilt3D } from '@/components/motion/Tilt3D';
 import { ApiError, api, type PathNode, type PathState, type PathTree } from '@/lib/api';
 import { getCompanionAnimal } from '@/lib/session';
 import type { CompanionAnimal } from '@/components/art/Companions';
@@ -120,7 +121,9 @@ export default function PathTab() {
       <Screen scroll>
         <Entrance index={0}>
           <View style={styles.hero}>
-            <Companion animal={animal} size={72} />
+            <Tilt3D maxTilt={6}>
+              <Companion animal={animal} size={72} />
+            </Tilt3D>
             <Text style={[styles.heroTitle, { color: colors.ink }]} accessibilityRole="header">
               {node.question}
             </Text>
@@ -160,7 +163,9 @@ export default function PathTab() {
         <View style={styles.center}>
           <Entrance index={0}>
             <View style={styles.hero}>
-              <Companion animal={animal} size={96} />
+              <Tilt3D maxTilt={6}>
+                <Companion animal={animal} size={96} />
+              </Tilt3D>
               <Text style={[styles.heroTitle, { color: colors.ink }]} accessibilityRole="header">
                 Every road feels lighter{'\n'}with company
               </Text>
