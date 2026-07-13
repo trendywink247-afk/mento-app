@@ -10,10 +10,11 @@ from app.models.listener import ListenerProfile
 from app.services import stream
 from app.services.persona import generate_persona
 
+# (gender, categories, community_slug) — community None = serves every path.
 SEED = [
-    (Gender.female, ["loneliness", "self_esteem", "relationships"]),
-    (Gender.male, ["focus", "studying", "family"]),
-    (Gender.undisclosed, ["loneliness", "anxiety", "studying"]),
+    (Gender.female, ["loneliness", "self_esteem", "relationships"], None),
+    (Gender.male, ["focus", "studying", "family"], "upsc"),
+    (Gender.undisclosed, ["loneliness", "anxiety", "studying"], "neet"),
 ]
 
 
@@ -21,7 +22,7 @@ def main() -> None:
     init_db()
     db = SessionLocal()
     try:
-        for gender, categories in SEED:
+        for gender, categories, community in SEED:
             persona = generate_persona()
             db.add(
                 ListenerProfile(
@@ -29,6 +30,7 @@ def main() -> None:
                     persona_avatar=persona.avatar,
                     gender=gender,
                     categories=categories,
+                    community_slug=community,
                     status=ListenerStatus.online,
                     vetting_status=VettingStatus.approved,
                     rank=10,

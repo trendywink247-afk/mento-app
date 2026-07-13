@@ -46,10 +46,15 @@ def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
 
 
 def _pick_available_listener(
-    db: Session, category: str | None, blocked_ids: set[str]
+    db: Session,
+    category: str | None,
+    blocked_ids: set[str],
+    community: str | None = None,
 ) -> ListenerProfile | None:
-    """Lowest current load, then highest rank; category preferred (in Python — portable
-    across JSON/JSONB); blocked listeners excluded.
+    """Lowest current load, then highest rank; community + category preferred (in
+    Python — portable across JSON/JSONB); blocked listeners excluded. Community is a
+    SOFT preference (community+category > community > category > rest) — the pool is
+    small, never strand a user for want of a same-road listener.
 
     Two-step locking so concurrent matchers never contend on the whole candidate set:
     an UNLOCKED preview ranks up to 10 candidates, then we lock ONLY the one we take
@@ -59,7 +64,7 @@ def _pick_available_listener(
     """
     preview = (
         db.execute(
-            select(ListenerProfile.id, ListenerProfile.categories)
+            select(ListenerProfile.id, ListenerProfile.categories, ListenerProfile.community_slug)
             .where(
                 ListenerProfile.vetting_status == VettingStatus.approved,
                 ListenerProfile.status == ListenerStatus.online,
@@ -70,13 +75,21 @@ def _pick_available_listener(
         )
         .all()
     )
-    ranked = [(lid, cats) for lid, cats in preview if lid not in blocked_ids]
-    if category:
-        preferred = [lid for lid, cats in ranked if category in (cats or [])]
-        rest = [lid for lid, cats in ranked if category not in (cats or [])]
-        ordered = preferred + rest
-    else:
-        ordered = [lid for lid, _ in ranked]
+    ranked = [(lid, cats, comm) for lid, cats, comm in preview if lid not in blocked_ids]
+
+    def _tier(cats: list[str] | None, comm: str | None) -> int:
+        community_hit = bool(community) and comm == community
+        category_hit = bool(category) and category in (cats or [])
+        if community_hit and category_hit:
+            return 0
+        if community_hit:
+            return 1
+        if category_hit:
+            return 2
+        return 3
+
+    # Stable sort preserves the load/rank ordering inside each tier.
+    ordered = [lid for lid, _, _ in sorted(ranked, key=lambda r: _tier(r[1], r[2]))]
 
     for listener_id in ordered:
         locked = db.execute(
@@ -152,7 +165,7 @@ def open_conversation(
 def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
     """Match the user to the next available listener and open a Stream channel."""
     blocked_ids = _blocked_listener_ids(db, user.id)
-    listener = _pick_available_listener(db, category, blocked_ids)
+    listener = _pick_available_listener(db, category, blocked_ids, community=user.community_slug)
     if listener is None:
         raise NoListenerAvailable()
     return open_conversation(db, user.id, listener)

@@ -27,3 +27,7 @@ class User(UUIDMixin, TimestampMixin, Base):
     # Growth companion (personalization/theme; NEVER the chat handle).
     companion_animal: Mapped[str | None] = mapped_column(String(32), nullable=True)
     companion_colour: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+    # Path (Communities): coarse, self-declared, clearable — a matching lens, not PII.
+    community_slug: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    journey_stage: Mapped[str | None] = mapped_column(String(48), nullable=True)

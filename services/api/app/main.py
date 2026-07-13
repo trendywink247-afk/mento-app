@@ -20,6 +20,7 @@ from app.routers import (
     match,
     moderation,
     onboarding,
+    paths,
     safety,
     stream_hooks,
 )
@@ -80,6 +81,7 @@ API = "/api/v1"
 app.include_router(health.router, prefix=API)
 app.include_router(onboarding.router, prefix=API)
 app.include_router(match.router, prefix=API)
+app.include_router(paths.router, prefix=API)
 app.include_router(safety.router, prefix=API)
 app.include_router(conversation.router, prefix=API)
 app.include_router(stream_hooks.router, prefix=API)

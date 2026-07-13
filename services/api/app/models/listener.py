@@ -18,6 +18,9 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     gender: Mapped[Gender] = mapped_column(default=Gender.undisclosed)
     # Issue categories this listener accepts (life/emotional-leaning in v1).
     categories: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Path (Communities): the road this listener has walked (upsc/neet/…).
+    # Null = serves every community. Soft matching preference, never a hard filter.
+    community_slug: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
 
     status: Mapped[ListenerStatus] = mapped_column(default=ListenerStatus.offline, index=True)
     vetting_status: Mapped[VettingStatus] = mapped_column(default=VettingStatus.pending, index=True)
