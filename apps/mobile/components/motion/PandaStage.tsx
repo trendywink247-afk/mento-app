@@ -108,6 +108,9 @@ export function PandaStage({
       if (GREETING_STEPS.includes(step) && prevStep.current !== step) {
         setWaveTrigger((n) => n + 1);
         setRigTrigger((t) => ({ kind: 'greet', n: (t?.n ?? 0) + 1 }));
+      } else if (step === 'email' && prevStep.current !== step) {
+        // "Optional, but helpful" — the companion tilts in, curious about you.
+        setRigTrigger((t) => ({ kind: 'curious', n: (t?.n ?? 0) + 1 }));
       }
     }
     prevStep.current = step;

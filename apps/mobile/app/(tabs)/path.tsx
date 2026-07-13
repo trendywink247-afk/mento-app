@@ -10,6 +10,7 @@ import { Tilt3D } from '@/components/motion/Tilt3D';
 import { ApiError, api, type PathNode, type PathState, type PathTree } from '@/lib/api';
 import { getCompanionAnimal } from '@/lib/session';
 import type { CompanionAnimal } from '@/components/art/Companions';
+import type { CompanionTrigger } from '@/components/art/Companion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -27,6 +28,7 @@ export default function PathTab() {
   const [tree, setTree] = useState<PathTree | null>(null);
   const [nodeId, setNodeId] = useState<string | null>(null); // non-null = pathfinder running
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
+  const [joy, setJoy] = useState<CompanionTrigger>(null);
   const [note, setNote] = useState<string | null>(null);
   const [matching, setMatching] = useState(false);
 
@@ -73,6 +75,8 @@ export default function PathTab() {
       const s = await api.choosePath(opt.community, opt.stage);
       setState(s);
       setNodeId(null);
+      // A path chosen is a small win — the companion wiggles, doesn't hop.
+      setJoy((t) => ({ kind: 'joy', n: (t?.n ?? 0) + 1 }));
     } catch {
       setNote('We had trouble saving your path. Please try again.');
     }
@@ -204,7 +208,7 @@ export default function PathTab() {
             </Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>{stage.blurb}</Text>
           </View>
-          <Companion animal={animal} size={56} />
+          <Companion animal={animal} size={56} trigger={joy} />
         </View>
       </Entrance>
 

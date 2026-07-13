@@ -75,6 +75,14 @@ export const character = {
   comfort: { lean: 6, sink: 2, duration: 2600 },
   /** Tap-react: response starts <100ms (perceived-instant), calm 220ms settle. */
   tap: { squish: 0.96, inMs: 100, outMs: 220 },
+  /** Curious: head-tilt + tiny rise — "what's this?" (email step, new questions). */
+  curious: { tilt: 7, rise: 3, duration: 1600 },
+  /** Joy: light wiggle for small wins (path chosen, journal saved) — a smile,
+   * not the celebrate hop; joy stays lighter than a match. */
+  joy: { wiggle: 4, cycles: 3, duration: 700 },
+  /** Sleepy idle (22:00–06:00 local): slower/softer sway + a gentle droop — the
+   * companion keeps you company at 2am, it doesn't perform. */
+  sleepy: { startHour: 22, endHour: 6, droop: 2.5, swayScale: 0.6 },
   /** Volume-preservation factor: scaleX = 1 + (1 − scaleY) × k. Full mirroring
    * (k=1) reads rubbery; k≈0.6 reads plush — the cute register. */
   squashK: 0.6,

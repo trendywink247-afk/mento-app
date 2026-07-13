@@ -4,10 +4,13 @@
  * in code — transforms/opacity only, calm register.
  *
  * States:
- *  - idle      breathing (host adds via useBreathing where it fits) + micro-sway here
+ *  - idle      breathing (host adds via useBreathing where it fits) + micro-sway here;
+ *              22:00–06:00 local the idle turns sleepy (slower, softer, gentle droop)
  *  - greet     soft double nod           trigger={kind:'greet', n}
  *  - celebrate crouch → gentle hop → landing squash → settle
  *  - comfort   slow caring lean, held, released slower (for heavy moments)
+ *  - curious   head-tilt + tiny rise — "what's this?"
+ *  - joy       light wiggle for small wins — a smile, not the celebrate hop
  *  - tap-react instant squish acknowledgement (interactive prop)
  *
  * The panda additionally keeps its bespoke layered rig (blink + waving arm) inside
@@ -29,7 +32,17 @@ import { haptic } from '@/lib/haptics';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { character, easing } from '@/theme/motion';
 
-export type CompanionTrigger = { kind: 'greet' | 'celebrate' | 'comfort'; n: number } | null;
+export type CompanionTrigger = {
+  kind: 'greet' | 'celebrate' | 'comfort' | 'curious' | 'joy';
+  n: number;
+} | null;
+
+/** Sleepy window check — local device time, wraps midnight. */
+function isSleepyHour(): boolean {
+  const h = new Date().getHours();
+  const { startHour, endHour } = character.sleepy;
+  return h >= startHour || h < endHour;
+}
 
 export function ReactiveCompanion({
   children,
@@ -54,6 +67,8 @@ export function ReactiveCompanion({
   const scaleX = useSharedValue(1);
   const scaleY = useSharedValue(1);
   const lean = useSharedValue(0);
+  const droop = useSharedValue(0); // sleepy baseline — separate from lean so state
+  // sequences (which end at 0) never erase the night posture.
 
   // Idle micro-sway, phase-offset from the breathing the host applies — two
   // incommensurate periods keep the idle from ever reading as a mechanical loop.
@@ -61,18 +76,25 @@ export function ReactiveCompanion({
     if (reduced) {
       cancelAnimation(sway);
       sway.value = withTiming(0, { duration: 150 });
+      droop.value = 0;
       return;
     }
+    const sleepy = isSleepyHour();
+    // Sleepy idle: softer amplitude on a slower period + a held droop. Checked once
+    // per mount — a screen alive across the 22:00 boundary just stays awake.
+    const amplitude = character.sway.degrees * (sleepy ? character.sleepy.swayScale : 1);
+    const period = character.sway.period * (sleepy ? 1.5 : 1);
+    droop.value = withTiming(sleepy ? character.sleepy.droop : 0, {
+      duration: character.comfort.duration * 0.3,
+      easing: easing.settle,
+    });
     sway.value = withRepeat(
-      withTiming(character.sway.degrees, {
-        duration: character.sway.period / 2,
-        easing: easing.breathe,
-      }),
+      withTiming(amplitude, { duration: period / 2, easing: easing.breathe }),
       -1,
       true
     );
     return () => cancelAnimation(sway);
-  }, [reduced, sway]);
+  }, [reduced, sway, droop]);
 
   // Triggered states.
   useEffect(() => {
@@ -119,6 +141,32 @@ export function ReactiveCompanion({
         );
         break;
       }
+      case 'curious': {
+        const q = character.curious;
+        // Tilt toward the thing, rise a touch, hold the look, settle back.
+        lean.value = withSequence(
+          withTiming(q.tilt, { duration: q.duration * 0.25, easing: easing.enter }),
+          withDelay(q.duration * 0.35, withTiming(0, { duration: q.duration * 0.4, easing: easing.settle }))
+        );
+        y.value = withSequence(
+          withTiming(-q.rise, { duration: q.duration * 0.25, easing: easing.enter }),
+          withDelay(q.duration * 0.35, withTiming(0, { duration: q.duration * 0.4, easing: easing.settle }))
+        );
+        break;
+      }
+      case 'joy': {
+        const j = character.joy;
+        const beat = j.duration / (j.cycles * 2 + 1);
+        // Alternating light wiggles, decaying to rest — warmth without spectacle.
+        lean.value = withSequence(
+          withTiming(j.wiggle, { duration: beat, easing: easing.enter }),
+          withTiming(-j.wiggle * 0.8, { duration: beat }),
+          withTiming(j.wiggle * 0.5, { duration: beat }),
+          withTiming(-j.wiggle * 0.3, { duration: beat }),
+          withTiming(0, { duration: beat * 3, easing: easing.settle })
+        );
+        break;
+      }
       case 'comfort':
         // Slow lean-in, held, released even slower — caring, never cheerful.
         lean.value = withSequence(
@@ -159,8 +207,12 @@ export function ReactiveCompanion({
 
   const style = useAnimatedStyle(() => ({
     transform: [
-      { translateY: y.value + nod.value * 0.4 },
-      { rotate: `${sway.value - character.sway.degrees / 2 + nod.value * 0.3 + lean.value}deg` },
+      { translateY: y.value + nod.value * 0.4 + droop.value * 0.6 },
+      {
+        rotate: `${
+          sway.value - character.sway.degrees / 2 + nod.value * 0.3 + lean.value + droop.value
+        }deg`,
+      },
       { scaleX: scaleX.value },
       { scaleY: scaleY.value },
     ],
