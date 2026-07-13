@@ -14,6 +14,7 @@ import {
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
 import { PinPad } from '@/components/chat/options/bits';
 import { ApiError, api, type ConversationListItem } from '@/lib/api';
@@ -244,7 +245,7 @@ export default function ChatsTab() {
         </View>
       ) : rows.length === 0 ? (
         <View style={styles.center}>
-          <SceneTile name="chatsEmpty" size={140} />
+          <LottieTile name="chatDots" fallback="chatsEmpty" size={140} />
           <Text style={[styles.emptyTitle, { color: colors.ink }]}>No conversations yet</Text>
           <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
             When you start talking with a mentor, your conversations will live here — anonymous,

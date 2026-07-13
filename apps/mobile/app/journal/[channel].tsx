@@ -14,6 +14,7 @@ import {
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
 import { api, type JournalEntry } from '@/lib/api';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -327,7 +328,12 @@ export default function JournalScreen() {
           contentContainerStyle={{ gap: space.sm, paddingVertical: space.sm, flexGrow: 1 }}
           ListEmptyComponent={
             <View style={styles.center}>
-              <SceneTile name="journalEmpty" size={120} />
+              {cfg.channel === 'finance' ? (
+                // The finance journal earns its own scene: coins into the piggy.
+                <LottieTile name="piggyBank" fallback="journalEmpty" size={120} />
+              ) : (
+                <SceneTile name="journalEmpty" size={120} />
+              )}
               <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>{cfg.empty}</Text>
             </View>
           }

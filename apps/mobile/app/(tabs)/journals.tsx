@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
+import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
 import { api } from '@/lib/api';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -101,7 +102,7 @@ export default function JournalsTab() {
             </View>
           </View>
           <View style={styles.aiArt}>
-            <SceneTile name="journalsAi" size={84} />
+            <LottieTile name="notebook" fallback="journalsAi" size={84} />
           </View>
         </View>
 
