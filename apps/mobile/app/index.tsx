@@ -11,6 +11,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import LottieView from 'lottie-react-native';
+
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { LogoLockup } from '@/components/art/Logo';
 import { MountainsScene, TalkingAtTableScene } from '@/components/art/Scenes';
@@ -38,6 +40,9 @@ export default function Landing() {
   // Returning users (existing anonymous session) skip onboarding and land on My Chats;
   // render nothing while the secure store resolves so the landing never flashes first.
   const [checked, setChecked] = useState(false);
+  // Web DotLottie throws (ImageData width 0) if its canvas is alive during route
+  // teardown — swap to the still scene the moment the exit starts.
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -75,6 +80,7 @@ export default function Landing() {
   }));
   const begin = () => {
     const go = () => router.push('/onboarding');
+    setLeaving(true);
     if (reduced) {
       go();
       return;
@@ -130,7 +136,24 @@ export default function Landing() {
           <View style={styles.sceneZone}>
             <Entrance index={1} from="none">
               <Tilt3D maxTilt={4} depth={0.55}>
-                <TalkingAtTableScene width={300} height={200} />
+                {reduced || leaving ? (
+                  // Reduced motion (no looping art) or exiting (see `leaving`).
+                  <TalkingAtTableScene width={300} height={200} />
+                ) : (
+                  // Theme-remapped free Lottie (assets/lottie/README.md) — two people
+                  // in conversation, alive, in Mento's own palette.
+                  <View style={styles.lottieScene}>
+                    <LottieView
+                      source={require('@/assets/lottie/study-discussion.json')}
+                      autoPlay
+                      loop
+                      style={styles.lottieFill}
+                      // reason: on web LottieView ignores `style` and sizes from
+                      // webStyle (DotLottieReact) — both are needed for one layout.
+                      webStyle={{ width: '100%', height: '100%' }}
+                    />
+                  </View>
+                )}
                 {/* Grounding shadow — the scene stands ON something, it isn't a decal. */}
                 <View style={[styles.groundShadow, { backgroundColor: colors.ink }]} />
               </Tilt3D>
@@ -195,6 +218,8 @@ const styles = StyleSheet.create({
   orbA: { width: 180, height: 180, top: '12%', left: -60 },
   orbB: { width: 110, height: 110, top: '30%', right: -30 },
   orbC: { width: 64, height: 64, top: '58%', left: 24, opacity: 0.4 },
+  lottieScene: { width: 270, height: 270, marginVertical: -24, alignSelf: 'center' },
+  lottieFill: { width: '100%', height: '100%' },
   groundShadow: {
     alignSelf: 'center',
     width: 190,
