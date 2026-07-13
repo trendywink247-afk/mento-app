@@ -9,9 +9,10 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space } from '@/theme/tokens';
 
 /**
- * v1 tab set per DECISIONS: Chats / Journals / Mentors / Profile (the chat-flow
- * mockups' bar; Home/Mirror/Community variants are deferred modules). Chat detail
- * (app/chat/[id]) is pushed on the root stack, above this bar.
+ * Tab set (founder ruling 2026-07-13, spec 2026-07-13-path-communities.md):
+ * Chats / Path / Journals / Profile. Path absorbs Mentors — listeners now live
+ * inside the user's path; the mentors screen stays routable (hidden from the bar)
+ * for Browse + deep links. Chat detail (app/chat/[id]) is pushed on the root stack.
  */
 const TABS: {
   name: string;
@@ -20,8 +21,8 @@ const TABS: {
   idle: keyof typeof Ionicons.glyphMap;
 }[] = [
   { name: 'chats', label: 'Chats', active: 'chatbubble-ellipses', idle: 'chatbubble-ellipses-outline' },
+  { name: 'path', label: 'Path', active: 'trail-sign', idle: 'trail-sign-outline' },
   { name: 'journals', label: 'Journals', active: 'book', idle: 'book-outline' },
-  { name: 'mentors', label: 'Mentors', active: 'people', idle: 'people-outline' },
   { name: 'profile', label: 'Profile', active: 'person', idle: 'person-outline' },
 ];
 
@@ -39,9 +40,13 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
         { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, space.sm) },
       ]}
     >
-      {TABS.map((tab, index) => {
-        const focused = state.index === index;
-        const route = state.routes[index];
+      {TABS.map((tab) => {
+        // Name-based lookup: hidden routes (mentors) share this navigator, so the
+        // bar's order no longer mirrors the route array's indexes.
+        const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
+        const focused = state.index === routeIndex;
+        const route = state.routes[routeIndex];
+        if (!route) return null;
         return (
           <Pressable
             key={tab.name}
@@ -92,6 +97,8 @@ export default function TabsLayout() {
       {TABS.map((tab) => (
         <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.label }} />
       ))}
+      {/* Routable but off the bar — reached via Path → Browse and existing deep links. */}
+      <Tabs.Screen name="mentors" options={{ title: 'Mentors', href: null }} />
     </Tabs>
   );
 }

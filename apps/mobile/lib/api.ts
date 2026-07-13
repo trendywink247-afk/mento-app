@@ -134,8 +134,27 @@ export async function apiRequest<T>(
     }
     throw new ApiError(res.status, detail);
   }
+  if (res.status === 204) return undefined as T; // bodyless success (e.g. leave path)
   return (await res.json()) as T;
 }
+
+// --- Paths (Communities) ---
+export type PathOption = {
+  label: string;
+  icon?: string;
+  next?: string;
+  community?: string;
+  stage?: string;
+};
+export type PathNode = { question: string; options: PathOption[] };
+export type PathTree = { root: string; nodes: Record<string, PathNode> };
+export type PathState = {
+  community: { slug: string; name: string; tagline: string } | null;
+  stage: { id: string; title: string; blurb: string } | null;
+  prompts: string[];
+  seasonal: { title: string; body: string } | null;
+  listeners_online: number;
+};
 
 async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
   return apiRequest<T>(path, init, auth ? getSessionToken : undefined);
@@ -156,6 +175,13 @@ export const api = {
     request<ScanResult>('/safety/scan', { method: 'POST', body: JSON.stringify(body) }, true),
 
   listConversations: () => request<ConversationListItem[]>('/conversations', {}, true),
+
+  // --- Paths (Communities) ---
+  pathTree: () => request<PathTree>('/paths/tree'),
+  myPath: () => request<PathState>('/paths/me', {}, true),
+  choosePath: (community: string, stage: string) =>
+    request<PathState>('/paths/me', { method: 'PUT', body: JSON.stringify({ community, stage }) }, true),
+  leavePath: () => request<void>('/paths/me', { method: 'DELETE' }, true),
 
   // --- Mentor discovery + personal requests ---
   listListeners: () => request<Listener[]>('/listeners', {}, true),

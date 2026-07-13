@@ -5,7 +5,7 @@ import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps } from 'react';
 import type { Channel as ChannelType, Event } from 'stream-chat';
-import { Channel, Chat, MessageComposer, MessageList } from 'stream-chat-expo';
+import { Channel, Chat, MessageComposer, MessageList, useMessageComposer } from 'stream-chat-expo';
 
 // stream-chat-expo's star re-exports collide on the name `Theme` (the kit's UI theme vs
 // a stream-chat type), so derive the exact prop type from the component instead.
@@ -42,16 +42,31 @@ type CrisisPayload = {
 /** Any Stream message shape can carry the server-injected `crisis` field. */
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
 
+/** Seeds a Path warm-up prompt into the composer — ready to edit/send, never
+ * auto-sent (the user must own the first message). Runs once per mount. */
+function StarterSeed({ text }: { text?: string }) {
+  const composer = useMessageComposer();
+  const seeded = useRef(false);
+  useEffect(() => {
+    if (text && !seeded.current) {
+      seeded.current = true;
+      composer.textComposer.setText(text);
+    }
+  }, [text, composer]);
+  return null;
+}
+
 export default function ChatScreen() {
   const router = useRouter();
   // If the session vanishes (Start-fresh elsewhere), every conversation option would
   // 403 with only a small inline error — route back to landing instead.
   useSessionGuard();
   const { colors } = useTheme();
-  const { id: conversationId, listener, channel: channelId } = useLocalSearchParams<{
+  const { id: conversationId, listener, channel: channelId, starter } = useLocalSearchParams<{
     id: string;
     listener?: string;
     channel?: string;
+    starter?: string;
   }>();
   const listenerName = listener ?? 'Your listener';
 
@@ -246,6 +261,7 @@ export default function ChatScreen() {
               doSendMessageRequest={doSendMessageRequest}
               messageActions={customMessageActions}
             >
+              <StarterSeed text={starter} />
               <MessageList />
               <MessageComposer />
             </Channel>

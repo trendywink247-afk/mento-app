@@ -201,15 +201,17 @@ const MessageRow = memo(function MessageRow({
 });
 
 type ComposerProps = {
+  /** Path warm-up prompt — lands in the input ready to edit/send, never auto-sent. */
+  initialDraft?: string;
   onSend: (body: string) => void;
   onTyping: () => void;
 };
 
 /** Composer pill + send FAB (mockup #8). Owns the draft locally so every keystroke
  * re-renders only this leaf — never the transcript above it. */
-const Composer = memo(function Composer({ onSend, onTyping }: ComposerProps) {
+const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
   const { colors, elevation } = useTheme();
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(initialDraft ?? '');
 
   const submit = () => {
     const body = draft.trim();
@@ -256,10 +258,11 @@ export default function ChatScreenWeb() {
   // 403 with only a small inline error — route back to landing instead.
   useSessionGuard();
   const { colors, elevation } = useTheme();
-  const { id: conversationId, listener, channel: channelId } = useLocalSearchParams<{
+  const { id: conversationId, listener, channel: channelId, starter } = useLocalSearchParams<{
     id: string;
     listener?: string;
     channel?: string;
+    starter?: string;
   }>();
   const listenerName = listener ?? 'Your listener';
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -540,7 +543,7 @@ export default function ChatScreenWeb() {
             </Text>
           ) : null}
 
-          <Composer onSend={send} onTyping={onTyping} />
+          <Composer onSend={send} onTyping={onTyping} initialDraft={starter} />
         </View>
       )}
 
