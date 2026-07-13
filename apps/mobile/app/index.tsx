@@ -90,17 +90,36 @@ export default function Landing() {
     <View style={styles.root}>
       <AmbientBackground />
       <SkyMotes />
+      {/* Depth stack, back to front: mountains sink AGAINST the pointer (background
+        * plane), ambient orbs float at mid depths, content planes ride closest.
+        * Every layer is transform-only; reduced motion collapses all of it flat. */}
       <View style={styles.mountains} pointerEvents="none">
-        <Animated.View style={driftStyle}>
-          <MountainsScene width={width + 24} height={190} />
-        </Animated.View>
+        <Tilt3D depth={-0.5} maxTilt={0} drift={false}>
+          <Animated.View style={driftStyle}>
+            <MountainsScene width={width + 24} height={190} />
+          </Animated.View>
+        </Tilt3D>
+      </View>
+
+      {/* Floating ambient orbs — volume between the sky and the content. */}
+      <View style={styles.orbs} pointerEvents="none">
+        <Tilt3D depth={-0.25} maxTilt={0} drift={false}>
+          <View style={[styles.orb, styles.orbA, { backgroundColor: colors.accentTint }]} />
+        </Tilt3D>
+        <Tilt3D depth={0.35} maxTilt={0} drift={false}>
+          <View style={[styles.orb, styles.orbB, { backgroundColor: colors.accentTint }]} />
+        </Tilt3D>
+        <Tilt3D depth={0.7} maxTilt={0} drift={false}>
+          <View style={[styles.orb, styles.orbC, { backgroundColor: colors.accentTint }]} />
+        </Tilt3D>
       </View>
 
       <Animated.View style={[styles.fill, exitStyle]}>
         <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
           <View style={styles.logoZone}>
             <Entrance index={0} from="none">
-              <Tilt3D maxTilt={5}>
+              {/* Closest plane — the logo rides the pointer the most. */}
+              <Tilt3D maxTilt={5} depth={0.9}>
                 <Animated.View style={breathing}>
                   <LogoLockup markSize={56} />
                 </Animated.View>
@@ -110,10 +129,10 @@ export default function Landing() {
 
           <View style={styles.sceneZone}>
             <Entrance index={1} from="none">
-              {/* The hero scene sits in space — slightly deeper tilt than the logo,
-                * so the two planes separate and the landing reads with depth. */}
-              <Tilt3D maxTilt={3}>
+              <Tilt3D maxTilt={4} depth={0.55}>
                 <TalkingAtTableScene width={300} height={200} />
+                {/* Grounding shadow — the scene stands ON something, it isn't a decal. */}
+                <View style={[styles.groundShadow, { backgroundColor: colors.ink }]} />
               </Tilt3D>
             </Entrance>
           </View>
@@ -136,15 +155,18 @@ export default function Landing() {
               </Entrance>
             </View>
             <Entrance index={5}>
-              <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-                Anonymous. Judgment-free.{'\n'}Real conversations. When you need it most.
-              </Text>
+              <Tilt3D maxTilt={0} depth={0.2} drift={false}>
+                <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
+                  Anonymous. Judgment-free.{'\n'}Real conversations. When you need it most.
+                </Text>
+              </Tilt3D>
             </Entrance>
           </View>
 
           <View style={styles.ctaWrap}>
             <Entrance index={6}>
-              <View style={[styles.ctaGlow, { shadowColor: colors.accent }]}>
+              <Tilt3D maxTilt={2} depth={0.45} drift={false}>
+                <View style={[styles.ctaGlow, { shadowColor: colors.accent }]}>
                 <PrimaryButton
                   label="Start a Conversation"
                   tone="ink"
@@ -153,7 +175,8 @@ export default function Landing() {
                   accessibilityHint="Begins anonymous onboarding"
                   testID="start"
                 />
-              </View>
+                </View>
+              </Tilt3D>
             </Entrance>
           </View>
         </SafeAreaView>
@@ -167,6 +190,20 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   safe: { flex: 1, paddingHorizontal: space.lg },
   mountains: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
+  orbs: { ...StyleSheet.absoluteFillObject },
+  orb: { position: 'absolute', borderRadius: 999, opacity: 0.55 },
+  orbA: { width: 180, height: 180, top: '12%', left: -60 },
+  orbB: { width: 110, height: 110, top: '30%', right: -30 },
+  orbC: { width: 64, height: 64, top: '58%', left: 24, opacity: 0.4 },
+  groundShadow: {
+    alignSelf: 'center',
+    width: 190,
+    height: 14,
+    borderRadius: 999,
+    marginTop: -6,
+    opacity: 0.07,
+    transform: [{ scaleY: 0.5 }],
+  },
   logoZone: { flex: 3, alignItems: 'center', justifyContent: 'flex-end' },
   sceneZone: { flex: 5, alignItems: 'center', justifyContent: 'center' },
   hero: { flex: 5, alignItems: 'center', justifyContent: 'center', gap: space.md },

@@ -7,6 +7,7 @@ import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
 import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
+import { TiltCard } from '@/components/motion/TiltCard';
 import { ApiError, api, type PathNode, type PathState, type PathTree } from '@/lib/api';
 import { getCompanionAnimal } from '@/lib/session';
 import type { CompanionAnimal } from '@/components/art/Companions';
@@ -138,10 +139,9 @@ export default function PathTab() {
         </Entrance>
         {node.options.map((opt, i) => (
           <Entrance key={opt.label} index={1 + i}>
-            <Pressable
+            <TiltCard
               style={[styles.optionCard, elevation.sm, { backgroundColor: colors.surface }]}
               onPress={() => void pick(opt)}
-              accessibilityRole="button"
               testID={`path-option-${i}`}
             >
               {opt.icon ? (
@@ -152,7 +152,7 @@ export default function PathTab() {
               )}
               <Text style={[styles.optionLabel, { color: colors.ink }]}>{opt.label}</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.inkMuted} />
-            </Pressable>
+            </TiltCard>
           </Entrance>
         ))}
         {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}
@@ -230,17 +230,16 @@ export default function PathTab() {
           Tap one — it starts a conversation for you.
         </Text>
         {state.prompts.map((p, i) => (
-          <Pressable
+          <TiltCard
             key={p}
             style={[styles.promptCard, elevation.sm, { backgroundColor: colors.surface }]}
             onPress={() => void talk(p)}
             disabled={matching}
-            accessibilityRole="button"
             testID={`path-prompt-${i}`}
           >
             <Text style={[styles.promptText, { color: colors.ink }]}>"{p}"</Text>
             <Ionicons name="arrow-forward-circle" size={22} color={colors.accent} />
-          </Pressable>
+          </TiltCard>
         ))}
       </Entrance>
 
