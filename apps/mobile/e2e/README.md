@@ -6,3 +6,5 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
 
 - path-communities.e2e.js — Pathfinder walk → UPSC placement → Path home →
   prompt pre-fills chat composer (never auto-sent) → re-path → reduced-motion run.
+- connecting-experience.e2e.js — searching story (staged copy + card carousel) →
+  found crescendo (persona card) → chat. 0 page errors.
