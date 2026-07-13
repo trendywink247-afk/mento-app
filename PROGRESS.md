@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-07-13 (session 17) — PATH (COMMUNITIES) SHIPPED: Pathfinder → community lens end-to-end ✅
+
+**Context:** founder ruling — Mento is the safe-place ENGINE; UPSC is the first *community*, NEET/JEE/exams/life next. Ship a Path tab where companion-led questions (the Pathfinder) place the user on a path that tunes matching, prompts, and seasonal support. A community is a LENS, never a feed (anonymity rails untouched). Tab option B: Path absorbs Mentors. Also this session: full Wispr Flow transcript archive exported + distilled (`C:\Users\khana\mento-transcripts\`, PRIVATE, outside git — 05-EXPERIENCE-BLUEPRINT.md maps every founder idea → product) — the Pathfinder/warm-up-prompt features come straight from it.
+
+**Done (2 commits, spec `docs/superpowers/specs/2026-07-13-path-communities.md`):**
+- **Backend** (`feat(api)`): `paths_data.py` — 5 communities (upsc/neet/jee/exams/life) with gently-named journey stages, warm-up prompts (founder May ruling: "they won't know how to ask — give them sample questions"), and emotional-calendar seasonal cards (month-day ranges). `GET /paths/tree`, `GET/PUT/DELETE /paths/me`. `users.community_slug+journey_stage`, `listener_profiles.community_slug` (migration `823180809488`). Matcher: community = strongest SOFT preference (community+category > community > category > rest) — never strands a user. Seeds: one upsc, one neet, one all-paths listener. **pytest 54 passed** (6 new: tree integrity, choose/clear, validation, matcher preference + never-strand). Gotcha logged: with `from __future__ import annotations`, FastAPI 0.115 stringifies `-> None` and trips the 204-bodyless assert — drop the return annotation on 204 routes.
+- **Frontend** (`feat(mobile)`): Path tab (Chats · Path · Journals · Profile; mentors hidden-but-routable via Browse; tab bar focus lookup now name-based). Pathfinder walks the server tree blindly (adding a community = config). Path home: stage card + seasonal card + tappable prompts + listeners-online + Talk now/Browse + change-path. Prompt tap seeds the chat composer via `?starter=` — **never auto-sent** (web `initialDraft`; native `useMessageComposer().textComposer.setText`). tsc clean.
+- **Proven:** `apps/mobile/e2e/path-communities.e2e.js` (**E2E scripts now live IN the repo** — new `e2e/` convention): onboard → pathfinder → UPSC/prelims_wait home → prompt pre-fills composer unsent → re-path to Life → reduced-motion walk. **0 page errors.**
+
+**Open (founder):** Path tab icon/name (trail-sign / "Path" — 1-line veto); DECISIONS needs a §J entry for communities-as-lens + tab swap (docs deliberately not updated this session per founder "don't follow the docs" — reconcile before it drifts); privacy policy gains nothing (community+stage are coarse, self-declared, clearable). Carried backlog unchanged.
+
+**Next (agreed horizons):** H1 remainder — living connecting experience (companion searching + breathe-with-me + match crescendo, spec'd in session), PostHog funnel, deploy/Sentry, Hindi core loop. Then H2 Module B in the post-mains window.
+
+**How to resume:** stack per session 14; API restarted this session (remember: re-seed after pytest truncates). E2E: `NODE_PATH=<playwright-skill node_modules> node apps/mobile/e2e/path-communities.e2e.js`.
+
+---
+
 ## 2026-07-13 (session 16) — Admin dashboard built end-to-end + dev listener picker ✅
 
 **Context:** founder: "go" on the admin dashboard (designed session 15). Also, before that, killed the listener-console token-link hassle for dev.
