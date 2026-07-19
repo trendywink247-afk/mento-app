@@ -1,5 +1,6 @@
 """Security-hardening proofs: the server-side age gate, Panda-Wipe ownership +
-hard-delete call, /safety/scan conversation ownership, and the PIN attempt cap.
+hard-delete call, /safety/scan conversation ownership, the PIN attempt cap, and
+JWT role/secret hygiene.
 """
 from __future__ import annotations
 
@@ -7,17 +8,21 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 
 import pytest
+from fastapi import HTTPException
+from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
+from jose import JWTError, jwt
 from sqlalchemy import select
 
-from app import ratelimit
+from app import ratelimit, security
+from app.config import get_settings
 from app.main import app
 from app.models.conversation import Conversation
 from app.models.enums import ConversationStatus, ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.safety import SafetyFlag
 from app.models.user import User
-from app.security import issue_session_token
+from app.security import issue_admin_token, issue_listener_token, issue_session_token
 from app.services import stream
 
 from .conftest import TestSession, requires_postgres
@@ -216,3 +221,69 @@ def test_pin_attempts_are_rate_limited(client, db_session):
         assert blocked.status_code == 429
     finally:
         ratelimit.ENABLED = False
+
+
+# --- JWT role + secret hygiene ---
+
+def _creds(token: str) -> HTTPAuthorizationCredentials:
+    return HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+
+
+def _raw_token(payload: dict, secret: str) -> str:
+    now = datetime.now(timezone.utc)
+    base = {"iat": int(now.timestamp()), "exp": int((now + timedelta(days=1)).timestamp())}
+    return jwt.encode({**base, **payload}, secret, algorithm="HS256")
+
+
+def test_user_token_carries_explicit_role_and_resolves():
+    token = issue_session_token("u-role")
+    assert jwt.get_unverified_claims(token)["role"] == "user"
+    assert security.current_user_id(_creds(token)) == "u-role"
+
+
+def test_legacy_roleless_token_remains_valid_user_session():
+    # Deployed clients hold 90-day role-less tokens (pre 2026-07-19); they must
+    # keep working until one TTL cycle passes (see current_user_id).
+    token = _raw_token({"sub": "u-legacy"}, get_settings().jwt_secret)
+    assert security.current_user_id(_creds(token)) == "u-legacy"
+
+
+def test_listener_and_admin_tokens_rejected_as_user_session():
+    for token in (issue_listener_token("l-cross"), issue_admin_token("a-cross")):
+        with pytest.raises(HTTPException) as exc:
+            security.current_user_id(_creds(token))
+        assert exc.value.status_code == 401
+
+
+def test_admin_token_uses_dedicated_secret_when_configured(monkeypatch):
+    monkeypatch.setattr(get_settings(), "admin_jwt_secret", "admin-only-secret")
+    token = issue_admin_token("a-sec")
+    # Signed with the dedicated secret, NOT the shared one.
+    assert jwt.decode(token, "admin-only-secret", algorithms=["HS256"])["sub"] == "a-sec"
+    with pytest.raises(JWTError):
+        jwt.decode(token, get_settings().jwt_secret, algorithms=["HS256"])
+    assert security.current_admin_id(_creds(token)) == "a-sec"
+    # A shared-secret forgery must not open admin (blast-radius reduction).
+    forged = _raw_token({"sub": "a-forged", "role": "admin"}, get_settings().jwt_secret)
+    with pytest.raises(HTTPException) as exc:
+        security.current_admin_id(_creds(forged))
+    assert exc.value.status_code == 401
+
+
+def test_admin_token_falls_back_to_shared_secret_when_unset(monkeypatch):
+    monkeypatch.setattr(get_settings(), "admin_jwt_secret", "")
+    token = issue_admin_token("a-fallback")
+    assert jwt.decode(token, get_settings().jwt_secret, algorithms=["HS256"])["role"] == "admin"
+    assert security.current_admin_id(_creds(token)) == "a-fallback"
+
+
+@requires_postgres
+def test_role_isolation_on_user_endpoint(client, db_session):
+    user_id = _seed_user(db_session)
+    db_session.commit()
+    assert client.get("/api/v1/journals/summary", headers=_auth(user_id)).status_code == 200
+    for token in (issue_listener_token("l1"), issue_admin_token("a1")):
+        resp = client.get(
+            "/api/v1/journals/summary", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 401

@@ -11,9 +11,18 @@ from jose import JWTError, jwt
 
 from app.config import get_settings
 
-_settings = get_settings()
 _ALGO = "HS256"
 _bearer = HTTPBearer(auto_error=True)
+
+
+def _signing_secret(role: str) -> str:
+    """Pick the signing secret for a role. Admin tokens use the dedicated
+    admin_jwt_secret when configured (smaller blast radius if the shared secret
+    leaks); everything else — and admin when unset — uses jwt_secret."""
+    settings = get_settings()
+    if role == "admin" and settings.admin_jwt_secret:
+        return settings.admin_jwt_secret
+    return settings.jwt_secret
 
 
 def hash_pin(pin: str, salt: str) -> str:
@@ -29,14 +38,16 @@ def verify_pin(pin: str, salt: str, pin_hash: str | None) -> bool:
 
 
 def issue_session_token(user_id: str) -> str:
-    """Mint an anonymous session JWT carrying only the opaque user id."""
+    """Mint an anonymous session JWT carrying the opaque user id and an explicit
+    user role claim."""
     now = datetime.now(timezone.utc)
     payload = {
         "sub": user_id,
+        "role": "user",
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(days=_settings.jwt_ttl_days)).timestamp()),
+        "exp": int((now + timedelta(days=get_settings().jwt_ttl_days)).timestamp()),
     }
-    return jwt.encode(payload, _settings.jwt_secret, algorithm=_ALGO)
+    return jwt.encode(payload, _signing_secret("user"), algorithm=_ALGO)
 
 
 def issue_listener_token(listener_id: str) -> str:
@@ -47,9 +58,9 @@ def issue_listener_token(listener_id: str) -> str:
         "sub": listener_id,
         "role": "listener",
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(days=_settings.listener_jwt_ttl_days)).timestamp()),
+        "exp": int((now + timedelta(days=get_settings().listener_jwt_ttl_days)).timestamp()),
     }
-    return jwt.encode(payload, _settings.jwt_secret, algorithm=_ALGO)
+    return jwt.encode(payload, _signing_secret("listener"), algorithm=_ALGO)
 
 
 def issue_admin_token(admin_id: str) -> str:
@@ -59,14 +70,14 @@ def issue_admin_token(admin_id: str) -> str:
         "sub": admin_id,
         "role": "admin",
         "iat": int(now.timestamp()),
-        "exp": int((now + timedelta(days=_settings.listener_jwt_ttl_days)).timestamp()),
+        "exp": int((now + timedelta(days=get_settings().admin_jwt_ttl_days)).timestamp()),
     }
-    return jwt.encode(payload, _settings.jwt_secret, algorithm=_ALGO)
+    return jwt.encode(payload, _signing_secret("admin"), algorithm=_ALGO)
 
 
-def _decode(creds: HTTPAuthorizationCredentials) -> dict:
+def _decode(creds: HTTPAuthorizationCredentials, role: str) -> dict:
     try:
-        return jwt.decode(creds.credentials, _settings.jwt_secret, algorithms=[_ALGO])
+        return jwt.decode(creds.credentials, _signing_secret(role), algorithms=[_ALGO])
     except JWTError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired session") from exc
 
@@ -75,10 +86,13 @@ def current_user_id(
     creds: HTTPAuthorizationCredentials = Depends(_bearer),
 ) -> str:
     """FastAPI dependency: resolve the anonymous user id from the bearer token.
-    Rejects listener tokens — the two roles must never cross endpoints. Legacy
-    role-less tokens remain valid user sessions."""
-    payload = _decode(creds)
-    if payload.get("role") in ("listener", "admin"):
+    Rejects listener/admin tokens — roles must never cross endpoints.
+
+    Legacy acceptance: tokens minted before 2026-07-19 carry no role claim.
+    Deployed clients hold 90-day tokens, so role-less tokens stay valid until one
+    TTL cycle has passed — the `None` branch can be dropped after 2026-10-17."""
+    payload = _decode(creds, "user")
+    if payload.get("role") not in ("user", None):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not a user session")
     user_id = payload.get("sub")
     if not user_id:
@@ -90,7 +104,7 @@ def current_listener_id(
     creds: HTTPAuthorizationCredentials = Depends(_bearer),
 ) -> str:
     """FastAPI dependency: resolve the listener id from a role-claimed bearer token."""
-    payload = _decode(creds)
+    payload = _decode(creds, "listener")
     if payload.get("role") != "listener":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not a listener session")
     listener_id = payload.get("sub")
@@ -103,7 +117,7 @@ def current_admin_id(
     creds: HTTPAuthorizationCredentials = Depends(_bearer),
 ) -> str:
     """Resolve the admin id from a role-claimed bearer token."""
-    payload = _decode(creds)
+    payload = _decode(creds, "admin")
     if payload.get("role") != "admin":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not an admin session")
     admin_id = payload.get("sub")
