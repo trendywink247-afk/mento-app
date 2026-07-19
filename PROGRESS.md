@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-07-19 (session 18) — Agent system rebuilt: truthful CLAUDE.md, six ritual skills, permission cleanup — live-drilled green ✅
+
+**Context:** founder mandate — turn the repeated hand-work into a system a cheaper model can run: audit CLAUDE.md against reality, encode the session rituals as skills, clean the permission/plugin surface, then prove it end-to-end.
+
+**Done:**
+- **CLAUDE.md truth rewrite** (`01e1c81`, 2026-07-14): audited by 3 parallel explorers; caught session-17 drift (Path/Communities, tabs, Lottie system, permanent mascot ruling, 12/54 test count, layout gaps); added runnable Commands section, universal DoD checklist, gotchas, env vars, "Docs drift to reconcile" section.
+- **Six ritual skills** (`2401fdd`, `.claude/skills/`): mento-stack · mento-verify · mento-e2e · mento-session-end · mento-lottie · mento-crisis-webhook, + a CLAUDE.md "Working standards" routing table. GREEN-tested: a zero-context agent given only the skill files produced the correct done-gate sequence, 429 diagnosis, and post-pytest-503 fix.
+- **Permission/plugin cleanup** (`f55326c` + local): committed `.claude/settings.json` with 21 read-only allowlist entries (transcript-scan derived); `settings.local.json` pruned 84→16 intentional entries (arbitrary-exec grants removed on founder order); plugins uninstalled: coderabbit, firecrawl, atomic-agents (~21 fewer skills loading per session); playwright-skill SKILL.md fixed (headless default, project-conventions-win).
+- **Live drill (this date):** full ritual run by the skills alone — stack up with two repairs (stale :8000 uvicorn AND stale :8081 expo, both predicted by the repair table); **pytest 54 passed**; `alembic check` clean; re-seeded; **tsc clean**; env reset before EACH suite; **both e2e suites green, 0 page errors** (path-communities incl. reduced-motion walk; connecting-experience crescendo → chat). Only mutating commands prompted — the read-only path ran promptless.
+
+**Open (founder) — carried + new:** DECISIONS.md still needs **§J** (communities-as-lens + tab swap); privacy policy launch gate (safety-staff access + community/stage note); helpline re-verify. New from the audit: ruff/black claimed in conventions but not configured/enforced — add to CI or drop the claim; Lottie art not following companion accent needs a ratified yes/no. Backlog unchanged (Stream secret rotation, Razorpay creds, LLM decision, Android perf gate).
+
+**Next:** unchanged H1 horizon — living connecting polish, PostHog funnel, deploy/Sentry, Hindi core loop.
+
+**How to resume:** `claude --continue`; stack is RUNNING (API :8000, Expo web :8081, containers healthy, listeners seeded). The ritual skills route everything — see CLAUDE.md "Working standards"; start any session by invoking **mento-stack**, end it with **mento-session-end**.
+
+---
+
 ## 2026-07-13 (session 17) — PATH (COMMUNITIES) SHIPPED: Pathfinder → community lens end-to-end ✅
 
 **Context:** founder ruling — Mento is the safe-place ENGINE; UPSC is the first *community*, NEET/JEE/exams/life next. Ship a Path tab where companion-led questions (the Pathfinder) place the user on a path that tunes matching, prompts, and seasonal support. A community is a LENS, never a feed (anonymity rails untouched). Tab option B: Path absorbs Mentors. Also this session: full Wispr Flow transcript archive exported + distilled (`C:\Users\khana\mento-transcripts\`, PRIVATE, outside git — 05-EXPERIENCE-BLUEPRINT.md maps every founder idea → product) — the Pathfinder/warm-up-prompt features come straight from it.
