@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-07-19 (session 19) — Architecture-audit fixes: capacity accounting, JWT hygiene, prod CORS, Hindi crisis lexicon, crisis alerting ✅
+
+**Context:** external architecture review found 7 problems; founder said fix. Executed as 4 commits (parallel agent lanes + coordinator), each proven by the failing-then-passing test loop. **pytest 54 → 104**, `alembic check` clean, listeners re-seeded.
+
+**Done:**
+- **Capacity accounting** (`66dbf49`): `_release_listener` was a Python read-modify-write (lost decrements under concurrency) — now an atomic guarded UPDATE; end/wipe only release the slot on the active→ended/wiped transition (double-end/wipe-after-end no longer double-decrement). New `reconcile_listener_capacity()` ends conversations active past `CONVERSATION_MAX_AGE_HOURS` (default 24) and recomputes every counter from real active rows; exposed as audited **POST /admin/listeners/reconcile**. Tests: `test_capacity_accounting.py` ×3.
+- **JWT hygiene** (`daa028e`): admin tokens get their own TTL (`ADMIN_JWT_TTL_DAYS`=14, was silently reusing the listener 30d) and an optional dedicated secret (`ADMIN_JWT_SECRET` — set it in prod so a leaked shared secret can't forge admin). User tokens now carry `role:"user"`; role-less legacy tokens stay valid until 2026-10-17 (drop the `None` branch then). Legacy static-header `/moderation` router **deleted** (superseded by the audited `/admin/moderation` queue).
+- **Prod CORS** (`09598c9`): `allow_origins` was `[]` outside dev — the web-only listener/admin consoles could never have worked in prod. Now `CORS_ORIGINS` (comma-separated) with a `console_base_url`-origin fallback + boot invariant (empty list = refuse to boot). `.env.example` documents it.
+- **Crisis scan, India-first** (`d6c057d`): all three signals now carry romanized Hinglish + Devanagari patterns ("marna chahta hun", "मरना चाहता हूं", "khudkushi", "mujhe maarte hai"…), pinned by 26 tests incl. false-positive guards ("main **mar**ket ja raha hun" must not trigger). Still the lexical stub by design — contract unchanged for the future model swap.
+- **Crisis alerting** (`d6c057d`): new **GET /health/crisis** — 503 when Stream is configured but no webhook stamped in 30 min (or Redis down). The fail-open scan's silent-death detector was pull-only (admin Health tab); point any uptime monitor at this URL and it pages. **Launch gate: wire a monitor.**
+
+**Open (founder) — new:**
+- Reflections are **pseudonymous, not anonymous** (`conversation_id` → `users.user_id` is one join). Honest docstring landed; ratify either "acceptable for v1" or drop the conversation key (kills idempotency). Never claim unlinkable in user-facing copy meanwhile.
+- Reconcile sweeps stale chats DB-side only — no Stream notification to participants; also admin-triggered only (cron/scheduler later?).
+- `routers/listeners.py` still uses the static `X-Admin-Token` pattern for listener CRUD bootstrap — migrate to the admin console auth or delete.
+- Set `ADMIN_JWT_SECRET` + explicit `CORS_ORIGINS` in prod env. Add `/health/crisis` monitor to PRELAUNCH_CHECKLIST.
+
+**Next:** unchanged H1 horizon — living connecting polish, PostHog funnel, deploy/Sentry, Hindi core loop (crisis lexicon above is the first Hindi piece).
+
+**How to resume:** stack per session 14; pytest truncates listeners — re-seeded already this session. Verify loop: `pytest` (104) + `alembic check` + `tsc --noEmit` (mobile untouched this session).
+
+---
+
 ## 2026-07-19 (session 18) — Agent system rebuilt: truthful CLAUDE.md, six ritual skills, permission cleanup — live-drilled green ✅
 
 **Context:** founder mandate — turn the repeated hand-work into a system a cheaper model can run: audit CLAUDE.md against reality, encode the session rituals as skills, clean the permission/plugin surface, then prove it end-to-end.
