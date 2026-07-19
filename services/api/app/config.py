@@ -3,9 +3,18 @@ from __future__ import annotations
 
 import json
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def origin_of(url: str) -> str:
+    """The origin (scheme://host[:port]) of a URL, or "" if it has none."""
+    parts = urlsplit(url)
+    if not (parts.scheme and parts.netloc):
+        return ""
+    return f"{parts.scheme}://{parts.netloc}"
 
 
 class Settings(BaseSettings):
@@ -17,9 +26,16 @@ class Settings(BaseSettings):
     # Listener-console token links are shareable strings — keep their life shorter
     # than user sessions; regeneration is one script run (scripts/issue_listener_token).
     listener_jwt_ttl_days: int = 30
+    # Admin-console tokens are the highest-privilege credential — shortest life.
+    admin_jwt_ttl_days: int = 14
+    # Optional dedicated signing secret for admin tokens. When set, admin JWTs
+    # sign/verify with it (a leaked user/listener secret can't forge admin access).
+    # Empty = fall back to jwt_secret (backward compatible).
+    admin_jwt_secret: str = ""
     min_age: int = 18
 
-    # Guards the moderation review queue. Empty = queue disabled (no console yet).
+    # Guards the static-header admin endpoints in routers/listeners.py (listener
+    # CRUD bootstrap). Empty = those endpoints disabled.
     admin_token: str = ""
 
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"
@@ -40,8 +56,17 @@ class Settings(BaseSettings):
     # SDK's ~6s default.
     stream_timeout_seconds: float = 3.0
 
+    # Conversations active longer than this are considered abandoned; the admin
+    # reconcile action ends them and frees the listener's slot.
+    conversation_max_age_hours: int = 24
+
     # Base URL the admin dashboard prints into copyable console links.
     console_base_url: str = "http://localhost:8081"
+
+    # Comma-separated browser origins allowed by CORS outside dev (the listener
+    # console and admin dashboard are web-only and call this API cross-origin).
+    # Empty = fall back to console_base_url's origin so consoles work out of the box.
+    cors_origins: str = ""
 
     stream_api_key: str = ""
     stream_api_secret: str = ""
@@ -61,6 +86,26 @@ class Settings(BaseSettings):
     @property
     def is_dev(self) -> bool:
         return self.env == "dev"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def resolved_cors_origins(self) -> list[str]:
+        """Origins the CORS middleware should allow.
+
+        Dev: wildcard (auth is bearer-token, credentials off, so "*" is valid).
+        Otherwise: the configured CORS_ORIGINS list; if empty, derive the origin
+        of console_base_url so the web consoles work without extra config.
+        """
+        if self.is_dev:
+            return ["*"]
+        configured = self.cors_origin_list
+        if configured:
+            return configured
+        fallback = origin_of(self.console_base_url)
+        return [fallback] if fallback else []
 
     @property
     def helplines(self) -> list[dict]:

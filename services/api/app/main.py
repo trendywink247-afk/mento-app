@@ -18,7 +18,6 @@ from app.routers import (
     listener_console,
     listeners,
     match,
-    moderation,
     onboarding,
     paths,
     safety,
@@ -37,6 +36,8 @@ def _enforce_prod_invariants() -> None:
     - Missing Stream creds make verify_webhook reject every webhook, which — with
       Stream's fail-open delivery — disables the crisis scan entirely and SILENTLY
       (Trust & Safety #1 must never be off without anyone noticing).
+    - An empty CORS allowlist silently bricks the web-only listener/admin consoles
+      (they call this API cross-origin from console_base_url).
     """
     problems = []
     if settings.jwt_secret == "change-me-long-random":
@@ -45,6 +46,11 @@ def _enforce_prod_invariants() -> None:
         problems.append(
             "STREAM_API_KEY/SECRET missing — the crisis-scan webhook would reject "
             "everything and messages would flow unscanned"
+        )
+    if not settings.resolved_cors_origins:
+        problems.append(
+            "CORS origin list is empty — set CORS_ORIGINS (comma-separated) or a "
+            "valid CONSOLE_BASE_URL so the web consoles can reach the API"
         )
     if problems:
         raise RuntimeError(f"unsafe {settings.env} configuration: " + "; ".join(problems))
@@ -66,12 +72,20 @@ app = FastAPI(title="Mento API", version="0.1.0", lifespan=lifespan)
 # mobile networks. Small floor so tiny JSON bodies skip the overhead.
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
-# Mobile app + Expo web. Tighten origins per environment before prod.
+# Mobile app + Expo web. Dev = wildcard; otherwise CORS_ORIGINS, falling back to
+# console_base_url's origin (the web-only consoles must reach this API cross-origin).
 # Auth is Bearer-token based (no cookies), so credentials are off — this keeps the
 # wildcard origin valid per the CORS spec (allow_credentials + "*" is rejected by browsers).
+if not settings.is_dev and not settings.cors_origin_list:
+    logging.getLogger(__name__).warning(
+        "CORS_ORIGINS not set — falling back to console_base_url origin %s; "
+        "set CORS_ORIGINS explicitly for %s",
+        settings.resolved_cors_origins,
+        settings.env,
+    )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.is_dev else [],
+    allow_origins=settings.resolved_cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -85,7 +99,6 @@ app.include_router(paths.router, prefix=API)
 app.include_router(safety.router, prefix=API)
 app.include_router(conversation.router, prefix=API)
 app.include_router(stream_hooks.router, prefix=API)
-app.include_router(moderation.router, prefix=API)
 app.include_router(journals.router, prefix=API)
 app.include_router(listeners.router, prefix=API)
 app.include_router(listener_console.router, prefix=API)
