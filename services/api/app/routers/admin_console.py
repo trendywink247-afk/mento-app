@@ -41,12 +41,14 @@ from app.schemas import (
     AdminMeOut,
     AdminMessageItem,
     AdminOverviewOut,
+    AdminReconcileOut,
     AttentionItem,
     ModerationItem,
     OkResult,
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
 from app.services import audit, stream
+from app.services.matching import reconcile_listener_capacity
 from app.services.persona import generate_persona
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -293,6 +295,19 @@ def reinstate_listener(
 
 
 # --- Listener management ------------------------------------------------------
+
+
+@router.post("/listeners/reconcile", response_model=AdminReconcileOut)
+def reconcile_listeners(
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminReconcileOut:
+    """Heal capacity drift: end stale conversations and recompute every listener's
+    active_conversations from real active rows. Safe to run any time."""
+    result = reconcile_listener_capacity(db)
+    audit.record(db, admin, "listener.capacity_reconciled", subject_type="listener", meta=result)
+    db.commit()
+    return AdminReconcileOut(**result)
 
 
 def _listener_item(li: ListenerProfile) -> AdminListenerItem:

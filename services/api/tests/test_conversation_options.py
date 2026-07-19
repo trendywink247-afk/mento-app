@@ -9,14 +9,14 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
-from app.config import get_settings
 from app.main import app
+from app.models.admin import AdminAccount
 from app.models.conversation import Conversation
 from app.models.enums import ConversationStatus, ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.user import User
-from app.security import issue_session_token
+from app.security import issue_admin_token, issue_session_token
 from app.services import stream
 from app.services.matching import NoListenerAvailable, match_general
 
@@ -111,7 +111,7 @@ def test_status_mask_and_pause(client, db_session):
 
 
 @requires_postgres
-def test_report_ends_chat_and_lands_in_review_queue(client, db_session, monkeypatch):
+def test_report_ends_chat_and_lands_in_review_queue(client, db_session):
     with TestSession() as s:
         uid = _seed_user(s)
         lid = _seed_listener(s)
@@ -128,13 +128,20 @@ def test_report_ends_chat_and_lands_in_review_queue(client, db_session, monkeypa
         ev = s.execute(select(ModerationEvent).where(ModerationEvent.conversation_id == cid)).scalar_one()
         assert ev.reviewed is False and ev.subject_id == lid and ev.reason == "made me uncomfortable"
 
-    # It appears in the admin review queue.
-    monkeypatch.setattr(get_settings(), "admin_token", "test-admin")
-    q = client.get("/api/v1/moderation/queue", headers={"X-Admin-Token": "test-admin"})
+    # It appears in the admin console review queue (JWT-authed, audit-logged).
+    with TestSession() as s:
+        admin = AdminAccount(name="Reviewer")
+        s.add(admin)
+        s.commit()
+        admin_token = issue_admin_token(admin.id)
+    q = client.get(
+        "/api/v1/admin/moderation/queue",
+        headers={"Authorization": f"Bearer {admin_token}"},
+    )
     assert q.status_code == 200
     assert any(item["conversation_id"] == cid and item["reviewed"] is False for item in q.json())
     # Queue is guarded.
-    assert client.get("/api/v1/moderation/queue").status_code == 403
+    assert client.get("/api/v1/admin/moderation/queue").status_code in (401, 403)
 
 
 @requires_postgres

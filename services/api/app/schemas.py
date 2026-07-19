@@ -155,6 +155,12 @@ class AdminConsoleLinkOut(BaseModel):
     url: str
 
 
+class AdminReconcileOut(BaseModel):
+    """Result of the capacity reconcile action: stale chats ended + counters fixed."""
+    stale_ended: int
+    listeners_corrected: int
+
+
 class AdminHealthOut(BaseModel):
     db_ok: bool
     redis_ok: bool

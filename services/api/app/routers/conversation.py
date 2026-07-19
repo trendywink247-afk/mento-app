@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -46,9 +46,18 @@ def _owned(db: Session, convo_id: str, user_id: str) -> Conversation:
 
 
 def _release_listener(db: Session, convo: Conversation) -> None:
-    listener = db.get(ListenerProfile, convo.listener_id)
-    if listener and listener.active_conversations > 0:
-        listener.active_conversations -= 1
+    """Free the listener's slot with an atomic UPDATE (same pattern as matching.py's
+    compensation path) — a Python read-modify-write here would lose decrements under
+    concurrent end/wipe/report/block. Callers must only invoke this on the
+    active → ended/wiped transition, so a slot is never released twice."""
+    db.execute(
+        update(ListenerProfile)
+        .where(
+            ListenerProfile.id == convo.listener_id,
+            ListenerProfile.active_conversations > 0,
+        )
+        .values(active_conversations=ListenerProfile.active_conversations - 1)
+    )
 
 
 def _pin_attempt_guard(convo_id: str, user_id: str) -> None:
@@ -202,11 +211,13 @@ def end_conversation(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> OkResult:
-    """End the chat. Messages are NOT deleted (this matches the in-app copy)."""
+    """End the chat. Messages are NOT deleted (this matches the in-app copy).
+    Idempotent: ending an already-ended chat never double-releases the slot."""
     convo = _owned(db, convo_id, user_id)
-    convo.status = ConversationStatus.ended
-    convo.ended_at = datetime.now(timezone.utc)
-    _release_listener(db, convo)
+    if convo.status == ConversationStatus.active:
+        convo.status = ConversationStatus.ended
+        convo.ended_at = datetime.now(timezone.utc)
+        _release_listener(db, convo)
     db.commit()
     return OkResult(status="ended")
 
@@ -217,13 +228,18 @@ def wipe_conversation(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Panda Wipe: delete messages from BOTH sides — device AND our servers (Stream)."""
+    """Panda Wipe: delete messages from BOTH sides — device AND our servers (Stream).
+    Wiping an already-ended chat still wipes, but only an ACTIVE chat releases the
+    listener's slot (it was already released when the chat ended)."""
     convo = _owned(db, convo_id, user_id)
+    was_active = convo.status == ConversationStatus.active
     if convo.stream_channel_id:
         stream.wipe_channel(convo.stream_channel_id)
     convo.status = ConversationStatus.wiped
-    convo.ended_at = datetime.now(timezone.utc)
-    _release_listener(db, convo)
+    if convo.ended_at is None:
+        convo.ended_at = datetime.now(timezone.utc)
+    if was_active:
+        _release_listener(db, convo)
     db.commit()
     return {"status": "wiped", "deleted_from": ["device", "servers"]}
 

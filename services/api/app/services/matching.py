@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.models.conversation import Conversation
 from app.models.enums import (
     ConversationStatus,
@@ -226,3 +228,47 @@ def decline_personal_request(
     req = _pending_request(db, request_id, acting_listener_id)
     req.status = RequestStatus.declined
     db.commit()
+
+
+def reconcile_listener_capacity(db: Session) -> dict[str, int]:
+    """Heal capacity drift and slot leaks in one pass. The CALLER commits, so an
+    admin audit record can land in the same transaction.
+
+    1. Sweep stale conversations: anything active longer than
+       `conversation_max_age_hours` (abandoned chats, crashes between
+       open_conversation's phases) is marked ended.
+    2. Recompute every listener's `active_conversations` from the actual count of
+       active Conversation rows — one atomic UPDATE with a correlated subquery, so
+       a hand-drifted counter can't survive.
+
+    Returns counts for the admin console: {"stale_ended": n, "listeners_corrected": n}.
+    """
+    max_age = timedelta(hours=get_settings().conversation_max_age_hours)
+    cutoff = datetime.now(timezone.utc) - max_age
+    stale = db.execute(
+        update(Conversation)
+        .where(
+            Conversation.status == ConversationStatus.active,
+            Conversation.created_at < cutoff,
+        )
+        .values(status=ConversationStatus.ended, ended_at=datetime.now(timezone.utc))
+    )
+
+    # True per-listener load, computed in SQL. COUNT over zero rows is 0, so
+    # listeners with no active conversations reset cleanly.
+    active_count = (
+        select(func.count())
+        .select_from(Conversation)
+        .where(
+            Conversation.listener_id == ListenerProfile.id,
+            Conversation.status == ConversationStatus.active,
+        )
+        .correlate(ListenerProfile)
+        .scalar_subquery()
+    )
+    corrected = db.execute(
+        update(ListenerProfile)
+        .where(ListenerProfile.active_conversations != active_count)
+        .values(active_conversations=active_count)
+    )
+    return {"stale_ended": stale.rowcount, "listeners_corrected": corrected.rowcount}
