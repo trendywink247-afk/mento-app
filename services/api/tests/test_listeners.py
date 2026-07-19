@@ -6,22 +6,19 @@ from datetime import date
 import pytest
 from fastapi.testclient import TestClient
 
-from app.config import get_settings
 from app.main import app
-from app.models.enums import ListenerStatus, VettingStatus
+from app.models.admin import AdminAccount
+from app.models.enums import AdminRole, ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.user import User
-from app.security import issue_session_token
+from app.security import issue_admin_token, issue_session_token
 from app.services import stream
 
 from .conftest import TestSession, requires_postgres
 
-ADMIN = {"X-Admin-Token": "test-admin"}
-
 
 @pytest.fixture(autouse=True)
-def _admin_and_stream(monkeypatch):
-    monkeypatch.setattr(get_settings(), "admin_token", "test-admin")
+def _stream_stub(monkeypatch):
     monkeypatch.setattr(
         stream, "create_dm_channel", lambda channel_id, user_id, listener_id: channel_id
     )
@@ -37,6 +34,17 @@ def _seed_user(s) -> str:
     s.add(u)
     s.flush()
     return u.id
+
+
+def _seed_admin(s) -> str:
+    a = AdminAccount(name="Founder", role=AdminRole.owner)
+    s.add(a)
+    s.flush()
+    return a.id
+
+
+def _admin_auth(admin_id: str) -> dict:
+    return {"Authorization": f"Bearer {issue_admin_token(admin_id)}"}
 
 
 def _seed_listener(s, *, name="Open River", vetting=VettingStatus.approved, online=True) -> str:
@@ -78,6 +86,7 @@ def test_personal_request_lifecycle_accept(client, db_session):
     with TestSession() as s:
         uid = _seed_user(s)
         lid = _seed_listener(s)
+        aid = _seed_admin(s)
         s.commit()
 
     r = client.post(
@@ -96,7 +105,9 @@ def test_personal_request_lifecycle_accept(client, db_session):
     )
     assert again.json()["id"] == req_id
 
-    accepted = client.post(f"/api/v1/listeners/requests/{req_id}/accept", headers=ADMIN)
+    accepted = client.post(
+        f"/api/v1/listeners/requests/{req_id}/accept", headers=_admin_auth(aid)
+    )
     assert accepted.status_code == 200
     assert accepted.json()["status"] == "matched"
     assert accepted.json()["conversation_id"]
@@ -113,6 +124,7 @@ def test_personal_request_decline_and_admin_guard(client, db_session):
     with TestSession() as s:
         uid = _seed_user(s)
         lid = _seed_listener(s)
+        aid = _seed_admin(s)
         s.commit()
 
     req = client.post(
@@ -121,10 +133,18 @@ def test_personal_request_decline_and_admin_guard(client, db_session):
         headers=_auth(uid),
     ).json()
 
-    # No admin token → forbidden.
-    assert client.post(f"/api/v1/listeners/requests/{req['id']}/accept").status_code == 403
+    # No admin session → unauthorized; a user token must not cross roles.
+    assert client.post(f"/api/v1/listeners/requests/{req['id']}/accept").status_code in (401, 403)
+    assert (
+        client.post(
+            f"/api/v1/listeners/requests/{req['id']}/accept", headers=_auth(uid)
+        ).status_code
+        == 401
+    )
 
-    declined = client.post(f"/api/v1/listeners/requests/{req['id']}/decline", headers=ADMIN)
+    declined = client.post(
+        f"/api/v1/listeners/requests/{req['id']}/decline", headers=_admin_auth(aid)
+    )
     assert declined.status_code == 200
     mine = client.get("/api/v1/listeners/requests/mine", headers=_auth(uid)).json()
     assert mine[0]["status"] == "declined"

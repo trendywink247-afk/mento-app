@@ -2,25 +2,25 @@
 
 v1 listeners are anonymous personas — no real names, photos, or star ratings (T&S #7,
 PRD: no star ratings). A Personal request carries an intro message into the mentor's
-inbox; accept/decline is exposed behind the admin token as the stand-in for the
-deferred Module B mentor portal, so the full request lifecycle is real and testable
-today without a mentor app.
+inbox; accept/decline is exposed behind the audited admin-console auth as the
+stand-in for the deferred Module B mentor portal, so the full request lifecycle is
+real and testable today without a mentor app.
 """
 from __future__ import annotations
 
-import hmac
-
-from fastapi import APIRouter, Depends, Header, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
 from app.db import get_db
+from app.models.admin import AdminAccount
 from app.models.enums import ListenerStatus, RequestKind, RequestStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.request import ConversationRequest
+from app.routers.admin_console import current_admin
 from app.schemas import ListenerOut, OkResult, PersonalRequestIn, RequestOut
 from app.security import current_user_id
+from app.services import audit
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -30,12 +30,6 @@ from app.services.matching import (
 )
 
 router = APIRouter(prefix="/listeners", tags=["listeners"])
-
-
-def _require_admin(x_admin_token: str | None = Header(default=None)) -> None:
-    token = get_settings().admin_token
-    if not token or not hmac.compare_digest(x_admin_token or "", token):
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "admin token required")
 
 
 def _listener_out(li: ListenerProfile) -> ListenerOut:
@@ -129,13 +123,13 @@ def my_requests(
     return [_request_out(r) for r in reqs]
 
 
-@router.post(
-    "/requests/{request_id}/accept",
-    response_model=RequestOut,
-    dependencies=[Depends(_require_admin)],
-)
-def accept_request(request_id: str, db: Session = Depends(get_db)) -> RequestOut:
-    """Mentor-inbox accept (admin-token stand-in; the listener console is the real
+@router.post("/requests/{request_id}/accept", response_model=RequestOut)
+def accept_request(
+    request_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> RequestOut:
+    """Mentor-inbox accept (admin-console stand-in; the listener console is the real
     surface). Row-locked capacity path shared via services.matching."""
     try:
         req = accept_personal_request(db, request_id)
@@ -145,17 +139,21 @@ def accept_request(request_id: str, db: Session = Depends(get_db)) -> RequestOut
         raise HTTPException(
             status.HTTP_409_CONFLICT, "listener has no capacity right now"
         ) from None
+    audit.record(db, admin, "personal_request.accept", subject_type="request", subject_id=request_id)
+    db.commit()
     return _request_out(req)
 
 
-@router.post(
-    "/requests/{request_id}/decline",
-    response_model=OkResult,
-    dependencies=[Depends(_require_admin)],
-)
-def decline_request(request_id: str, db: Session = Depends(get_db)) -> OkResult:
+@router.post("/requests/{request_id}/decline", response_model=OkResult)
+def decline_request(
+    request_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> OkResult:
     try:
         decline_personal_request(db, request_id)
     except RequestNotPending:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found") from None
+    audit.record(db, admin, "personal_request.decline", subject_type="request", subject_id=request_id)
+    db.commit()
     return OkResult(status="declined")

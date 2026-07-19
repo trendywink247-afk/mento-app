@@ -18,7 +18,7 @@
 **Open (founder) — new:**
 - Reflections are **pseudonymous, not anonymous** (`conversation_id` → `users.user_id` is one join). Honest docstring landed; ratify either "acceptable for v1" or drop the conversation key (kills idempotency). Never claim unlinkable in user-facing copy meanwhile.
 - Reconcile sweeps stale chats DB-side only — no Stream notification to participants; also admin-triggered only (cron/scheduler later?).
-- `routers/listeners.py` still uses the static `X-Admin-Token` pattern for listener CRUD bootstrap — migrate to the admin console auth or delete.
+- ~~`routers/listeners.py` static `X-Admin-Token`~~ — **closed same session**: accept/decline now use the audited admin-console JWT auth (+ audit log entries); `admin_token` setting deleted. Static-token auth is fully gone from the API.
 - Set `ADMIN_JWT_SECRET` + explicit `CORS_ORIGINS` in prod env. Add `/health/crisis` monitor to PRELAUNCH_CHECKLIST.
 
 **Next:** unchanged H1 horizon — living connecting polish, PostHog funnel, deploy/Sentry, Hindi core loop (crisis lexicon above is the first Hindi piece).

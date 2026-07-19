@@ -34,10 +34,6 @@ class Settings(BaseSettings):
     admin_jwt_secret: str = ""
     min_age: int = 18
 
-    # Guards the static-header admin endpoints in routers/listeners.py (listener
-    # CRUD bootstrap). Empty = those endpoints disabled.
-    admin_token: str = ""
-
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"
     # Sized for a single process: workers × (pool_size + max_overflow) must stay
     # under Postgres max_connections (default 100). pool_timeout fails fast — a
