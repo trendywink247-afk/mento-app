@@ -16,21 +16,54 @@ from app.config import get_settings
 from app.models.enums import SafetySignal
 
 # Ordered by severity (most severe first). Word-boundary, case-insensitive.
+#
+# India-first product: English alone misses most real messages. Each signal also
+# carries Hindi (Devanagari) and romanized Hinglish patterns — the register users
+# actually type in ("marna chahta hun", "मरना चाहता हूं"). Romanized spelling varies
+# wildly, so patterns allow the common vowel alternations (hu/hun/hoon, chahta/chahti).
 _PATTERNS: list[tuple[SafetySignal, list[str]]] = [
     (
         SafetySignal.suicidal,
         [
+            # English
             r"kill myself", r"end my life", r"want to die", r"suicid", r"better off dead",
             r"no reason to live", r"take my (own )?life", r"don'?t want to (be here|live)",
+            # Hinglish (romanized Hindi)
+            r"\bmar+na (?:chah?t[ai]|hai|h[ai])\b",          # marna chahta/chahti, marna hai
+            r"\bmar (?:jaana|jana|jau[n]?|jaun)\b",          # mar jaana / mar jau
+            r"\bjeena nahi\b", r"\bjina nahi\b",             # jeena nahi (chahta)
+            r"\bzindagi (?:khatam|se (?:thak|pareshan))\b",  # zindagi khatam / se thak gaya
+            r"\bkhud ?kushi\b", r"\bkhudkhushi\b",           # khudkushi (suicide)
+            r"\baatma ?hatya\b",                             # aatmahatya (suicide)
+            r"\bjaan de (?:du|dena|dunga|dungi)\b",          # jaan de du / dena
+            r"\bmar jaana chahta\b",
+            # Hindi (Devanagari)
+            r"मरना चाहत[ाी]", r"मर जाना", r"जीना नहीं", r"ख़?ुदकुशी", r"आत्म ?हत्या",
+            r"जान दे द[ूें]", r"ज़िंदगी ख़?त्म",
         ],
     ),
     (
         SafetySignal.self_harm,
-        [r"hurt myself", r"harm myself", r"cut myself", r"self[- ]?harm", r"cutting"],
+        [
+            # English
+            r"hurt myself", r"harm myself", r"cut myself", r"self[- ]?harm", r"cutting",
+            # Hinglish
+            r"\bkhud ko (?:chot|nuksaan|nukasan|maar)", r"\bhaath kaat", r"\bkalai kaat",
+            # Hindi (Devanagari)
+            r"खुद को (?:चोट|नुकसान)", r"हाथ काट", r"कलाई काट",
+        ],
     ),
     (
         SafetySignal.abuse,
-        [r"being abused", r"he hits me", r"she hits me", r"they hurt me", r"assault", r"raped"],
+        [
+            # English
+            r"being abused", r"he hits me", r"she hits me", r"they hurt me", r"assault", r"raped",
+            # Hinglish
+            r"\b(?:mujhe|muje) (?:maart[ae]|pit+t[ae]) h[ai]", r"\bghar (?:pe|par) maar",
+            r"\bbalatkar\b", r"\bzabardasti\b",
+            # Hindi (Devanagari)
+            r"मुझे (?:मारत[ाे]|पीटत[ाे])", r"बलात्कार", r"ज़बरदस्ती",
+        ],
     ),
 ]
 
