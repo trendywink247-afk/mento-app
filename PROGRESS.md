@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-07-20 (session 20) — Second architecture-audit round: crisis-scan isolation, atomic rate limits, Stream client lifecycle, prod Dockerfile ✅
+
+**Context:** deep audit (session mouse, 2026-07-19 night) found 18 more findings across backend safety, mobile, and ops. Run as a 3-lane swarm (panda/peacock/penguin under coordinator horse); a jcode reload crashed the coordinator mid-campaign — this session took over, respawned the dead ops lane (parrot), unblocked lane C's missing dependency, and drove all gates green. **pytest 104 → 119.**
+
+**Done:**
+- **Lane A backend safety** (`fde10e8`, worker panda): crisis scan now runs under a dedicated `CapacityLimiter` (`CRISIS_SCAN_THREADS`=8) so sync Stream SDK calls can't starve the before-send hook's 5s budget; onboarding commits before the Stream upsert (no DB session held across HTTP); rate limiter is one atomic pipeline INCR+EXPIRE(nx) and self-heals immortal keys; XFF ignored unless `TRUSTED_PROXY_HOPS`>0; PIN guard fails **closed** (503 on Redis outage); webhook replay safety proven via the `stream_message_id` dedupe index (chosen over timestamp rejection — Stream retries can be legitimately old); prod boot refuses empty or reused `ADMIN_JWT_SECRET`; `/health/crisis` hardened (narrow Redis catch, malformed stamp → 503 not 500). 15 new tests (`test_architecture_hardening.py` ×13 + 2).
+- **Lane C mobile** (`9f11d26`, worker peacock): promise-deduped `ensureConnected()`/`ensureListenerConnected()` — the 4 racy `client.userID !== id` call sites are gone; web composers clear the draft only after send resolves, failure keeps the draft + calm inline retry line; native crisis-surface failure can't reject an already-sent message; user-realm 401 clears session and routes home behind a one-shot latch; ConnectingStep onboards exactly once (retry re-runs only match); consoles accept `#token=` only (query-string token acceptance removed).
+- **ConsolePressable rescue** (`4a7777c`, this session): peacock's commit imported `components/console/ConsolePressable` which was **untracked from an earlier styling session** — HEAD didn't build from a fresh clone. Committed it with the rest of that styling pass (hover/press affordances, `type.titleSmSerif` + `type.stat` tokens, `lib/format.ts` helpers). tsc clean.
+- **Lane D ops** (`08ceee6`, worker parrot, respawned from penguin's brief): production `services/api/Dockerfile` (3.12-slim, non-root, HEALTHCHECK, `UVICORN_WORKERS`=2) + `docker-entrypoint.sh` running `alembic upgrade head` before uvicorn (migrations-on-deploy) + `.dockerignore`; conservative `DB_POOL_SIZE=5`/`DB_MAX_OVERFLOW=5` with the max_connections formula documented in `.env.example`; `docs/DEPLOYMENT.md` (build/run, env vars, `/health/crisis` monitor gate, DO PITR backup note, Sentry documented as a known gap). Build proven: image `c9ea53e99844`.
+- **Housekeeping** (`34babd8`, `6401e93`): external design/animation skills committed with a CLAUDE.md guardrail (**Mento tokens/motion/Calm register always win over skill defaults; GSAP is DOM-only, never for app screens**); hero image prompts + refs; the H1-remainder executor PRD (`docs/superpowers/plans/2026-07-20-h1-remainder-prd.md`). Also reverted an accidental working-tree wipe of `docs/DECISIONS.md` + PRD updates (restored from HEAD — nothing was lost).
+
+**Verified (this session, on merged HEAD):** pytest **119 passed** · `alembic check` clean · listeners re-seeded · `tsc --noEmit` clean · both e2e suites green, **0 page errors** (path-communities incl. reduced-motion walk; connecting-experience crescendo → chat), env reset before each per mento-e2e · post-suite reset done.
+
+**Open (founder) — new:**
+- **Prod upgrade gate:** deployments must set a distinct `ADMIN_JWT_SECRET` before this release boots (new invariant refuses reuse of `JWT_SECRET`).
+- Sentry wiring is still a documented gap (DEPLOYMENT.md) — it's Milestone B of the H1-remainder PRD, ready to execute.
+- Carried: reflections pseudonymity ratification, reconcile-sweep Stream notification, `/health/crisis` monitor wiring, DECISIONS §J.
+
+**Next:** execute `docs/superpowers/plans/2026-07-20-h1-remainder-prd.md` top-to-bottom — PostHog funnel (dark), Sentry + DO deploy artifacts (Dockerfile from this session feeds it), Hindi core loop + tabs.
+
+**How to resume:** stack RUNNING (API :8000, Expo web :8081, containers healthy, listeners seeded, env reset). Gotcha for the registry: this Windows bash mangles quoted `-m`/`-c` arguments — write commit messages and psql/PowerShell one-liners to temp files (`git commit -F`, `powershell -File`) instead of inline quoting.
+
+---
+
 ## 2026-07-19 (session 19) — Architecture-audit fixes: capacity accounting, JWT hygiene, prod CORS, Hindi crisis lexicon, crisis alerting ✅
 
 **Context:** external architecture review found 7 problems; founder said fix. Executed as 4 commits (parallel agent lanes + coordinator), each proven by the failing-then-passing test loop. **pytest 54 → 104**, `alembic check` clean, listeners re-seeded.
