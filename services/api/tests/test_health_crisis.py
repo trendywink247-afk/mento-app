@@ -69,7 +69,17 @@ def test_never_seen_webhook_is_503(client, monkeypatch):
 
 
 def test_redis_down_is_503_unknown(client, monkeypatch):
-    _patch(monkeypatch, configured=True, last=RuntimeError("redis down"))
+    import redis as redis_lib
+
+    _patch(monkeypatch, configured=True, last=redis_lib.ConnectionError("redis down"))
     r = client.get("/api/v1/health/crisis")
     assert r.status_code == 503
     assert r.json()["status"] == "unknown"
+
+
+def test_malformed_stamp_is_degraded_not_500(client, monkeypatch):
+    # A7: a corrupted Redis value must degrade the probe, never 500 it.
+    _patch(monkeypatch, configured=True, last="not-a-timestamp")
+    r = client.get("/api/v1/health/crisis")
+    assert r.status_code == 503
+    assert r.json()["status"] == "degraded"

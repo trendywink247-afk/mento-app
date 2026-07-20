@@ -11,12 +11,15 @@
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta, timezone
 
+import redis
 from fastapi import APIRouter, Response, status
 
 from app.services import stream
 
+logger = logging.getLogger("mento.health")
 router = APIRouter(tags=["meta"])
 
 # How long without any Stream webhook before we consider the scan pipeline dead.
@@ -46,9 +49,10 @@ def crisis_webhook_health(response: Response) -> dict:
         from app import ratelimit
 
         last_raw = ratelimit._redis().get("mento:last_webhook_at")
-    except Exception:
+    except redis.RedisError as exc:
         # Redis down: we can't prove the webhook is alive. Surface it — the
         # monitor should page, because the silent-death detector itself is blind.
+        logger.warning("crisis-health: redis unreachable (%s)", exc)
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "unknown", "detail": "redis unreachable — webhook liveness unknowable"}
 
@@ -56,7 +60,20 @@ def crisis_webhook_health(response: Response) -> dict:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {"status": "stale", "detail": "no Stream webhook ever recorded", "last_webhook_at": None}
 
-    last = datetime.fromisoformat(last_raw)
+    try:
+        last = datetime.fromisoformat(last_raw)
+    except (ValueError, TypeError) as exc:
+        # A corrupted stamp must degrade the probe, never 500 it — the monitor
+        # should still see a definitive "something is wrong" signal.
+        logger.warning("crisis-health: malformed webhook stamp %r (%s)", last_raw, exc)
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return {
+            "status": "degraded",
+            "detail": "malformed webhook liveness stamp — treating as unknown",
+            "last_webhook_at": last_raw,
+        }
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
     age = datetime.now(timezone.utc) - last
     if age > STALE_AFTER:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE

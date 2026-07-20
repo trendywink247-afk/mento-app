@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     # Redis-backed rate limiting (see app/ratelimit.py). Fail-open when Redis is
     # unreachable — never hard-block a support conversation on infra hiccups.
     rate_limit_enabled: bool = True
+    # Number of trusted reverse-proxy hops in front of the API. 0 (default) =
+    # no trusted proxy: X-Forwarded-For is ignored for rate-limit identity (it
+    # is attacker-writable). Set to the number of proxies YOUR infra appends
+    # (e.g. 1 behind a single load balancer) to use the right-most untrusted hop.
+    trusted_proxy_hops: int = 0
+
+    # Dedicated thread budget for the crisis-scan webhooks — isolated from the
+    # shared anyio threadpool so slow sync handlers can't starve the safety scan.
+    crisis_scan_threads: int = 8
 
     # Outbound Stream API budget; a slow Stream call must not pin threads for the
     # SDK's ~6s default.

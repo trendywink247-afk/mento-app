@@ -38,6 +38,8 @@ def _enforce_prod_invariants() -> None:
       (Trust & Safety #1 must never be off without anyone noticing).
     - An empty CORS allowlist silently bricks the web-only listener/admin consoles
       (they call this API cross-origin from console_base_url).
+    - An empty or shared ADMIN_JWT_SECRET means a leaked user/listener secret can
+      forge admin tokens — the highest-privilege credential must have its own key.
     """
     problems = []
     if settings.jwt_secret == "change-me-long-random":
@@ -51,6 +53,11 @@ def _enforce_prod_invariants() -> None:
         problems.append(
             "CORS origin list is empty — set CORS_ORIGINS (comma-separated) or a "
             "valid CONSOLE_BASE_URL so the web consoles can reach the API"
+        )
+    if not settings.admin_jwt_secret or settings.admin_jwt_secret == settings.jwt_secret:
+        problems.append(
+            "ADMIN_JWT_SECRET is empty or equal to JWT_SECRET — set a distinct "
+            "long random value so admin tokens can't be forged with the shared secret"
         )
     if problems:
         raise RuntimeError(f"unsafe {settings.env} configuration: " + "; ".join(problems))

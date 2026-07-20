@@ -66,6 +66,10 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
     db.add(user)
     db.commit()
     db.refresh(user)
+    # refresh() opened a fresh transaction; end it BEFORE the outbound Stream
+    # calls so no DB transaction/connection spans slow network I/O (A1: the same
+    # phasing discipline as services/matching.py).
+    db.commit()
 
     stream.upsert_user(user.id, user.persona_name, user.persona_avatar)
 

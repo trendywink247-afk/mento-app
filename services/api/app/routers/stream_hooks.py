@@ -17,6 +17,14 @@ Fail-mode (documented in CLAUDE.md): if this service is down/slow, Stream fails 
 (delivers the message) — we never permanently hard-block a support conversation. The
 async message.new retry guarantees the scan still runs on recovery, so no message
 escapes scanning permanently.
+
+Replay protection (A5, deliberate design): there is NO timestamp-window rejection on
+/webhook. Stream legitimately retries old events after an outage — rejecting "stale"
+events would break the fail-open safety net. Instead, replays are made harmless by
+dedupe: safety.scan_and_flag skips (and a unique index on
+safety_flags.stream_message_id race-proofs) any message id already flagged, so a
+replayed identical webhook can never double-flag. Proven by
+tests/test_stream_webhook.py::test_replayed_webhook_does_not_double_flag.
 """
 from __future__ import annotations
 
@@ -27,8 +35,10 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from sqlalchemy import select
-from starlette.concurrency import run_in_threadpool
 
+import anyio.to_thread
+
+from app.config import get_settings
 from app.db import SessionLocal
 from app.models.conversation import Conversation
 from app.services import safety, stream
@@ -36,6 +46,28 @@ from app.services.crisis import CrisisResult
 
 logger = logging.getLogger("mento.stream_hooks")
 router = APIRouter(prefix="/stream", tags=["stream"])
+
+# Dedicated thread budget for the crisis scan. run_in_threadpool would share the
+# default ~40-thread anyio pool with EVERY other sync handler in the app — a burst
+# of slow sync endpoints could starve the safety scan (the flagship guarantee).
+# A private CapacityLimiter isolates it: crisis scans queue only behind other
+# crisis scans, never behind unrelated traffic. Created lazily — CapacityLimiter
+# needs a running event loop on some anyio versions.
+_crisis_limiter: anyio.CapacityLimiter | None = None
+
+
+def _get_crisis_limiter() -> anyio.CapacityLimiter:
+    global _crisis_limiter
+    if _crisis_limiter is None:
+        _crisis_limiter = anyio.CapacityLimiter(get_settings().crisis_scan_threads)
+    return _crisis_limiter
+
+
+async def _run_scan(**kwargs) -> CrisisResult:
+    """Run _scan_event on a worker thread under the dedicated crisis limiter."""
+    return await anyio.to_thread.run_sync(
+        lambda: _scan_event(**kwargs), limiter=_get_crisis_limiter()
+    )
 
 
 async def _verified_event(request: Request) -> dict:
@@ -106,8 +138,8 @@ async def before_message_send(request: Request) -> dict:
     user_id = (event.get("user") or message.get("user") or {}).get("id") or "unknown"
     channel_id = (event.get("channel") or {}).get("id")
 
-    result = await run_in_threadpool(
-        _scan_event, text=text, user_id=user_id, channel_id=channel_id, message_id=message_id
+    result = await _run_scan(
+        text=text, user_id=user_id, channel_id=channel_id, message_id=message_id
     )
 
     if result.triggered:
@@ -134,8 +166,7 @@ async def push_webhook(request: Request) -> Response:
     if event.get("type") == "message.new":
         message = event.get("message") or {}
         channel_id = (event.get("channel") or {}).get("id") or event.get("channel_id")
-        await run_in_threadpool(
-            _scan_event,
+        await _run_scan(
             text=message.get("text") or "",
             user_id=(message.get("user") or {}).get("id") or "unknown",
             channel_id=channel_id,

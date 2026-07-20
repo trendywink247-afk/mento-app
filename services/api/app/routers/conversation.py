@@ -62,12 +62,21 @@ def _release_listener(db: Session, convo: Conversation) -> None:
 
 def _pin_attempt_guard(convo_id: str, user_id: str) -> None:
     """A 4-digit PIN is 10⁴ guesses — without an attempt cap it's enumerable in
-    minutes. 5 tries per 15 minutes per conversation+caller."""
+    minutes. 5 tries per 15 minutes per conversation+caller.
+
+    fail_closed=True (design choice, A4): the general rate limiter fails OPEN on
+    Redis outage, which for a PIN would mean unlimited guesses exactly when the
+    guard is down. Here a Redis outage returns 503 ("try again shortly") instead.
+    Chosen over a DB-backed attempt counter because it is drastically simpler,
+    needs no migration, and the failure mode (retry later on a lock screen) is
+    acceptable UX — unlike unlimited enumeration, which breaks the lock promise.
+    """
     ratelimit.enforce(
         f"pin:{convo_id}:{user_id}",
         5,
         900,
         detail="Too many PIN attempts — try again in a few minutes.",
+        fail_closed=True,
     )
 
 

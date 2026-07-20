@@ -91,3 +91,20 @@ def test_same_message_is_not_double_flagged(client, db_session, monkeypatch):
     push = {"type": "message.new", "message": {"id": "m4", "text": "I want to die", "user": {"id": "u-9"}}}
     assert client.post(PUSH, json=push).status_code == 200
     assert _flag_count("m4") == 1
+
+
+@requires_postgres
+def test_replayed_webhook_does_not_double_flag(client, db_session, monkeypatch):
+    # A5 replay-protection proof: an attacker (or a Stream retry after outage)
+    # replaying the SAME signed webhook any number of times is harmless — the
+    # stream_message_id dedupe (unique index) makes the flag write idempotent.
+    # This is why /webhook deliberately has no timestamp-window rejection:
+    # legitimately-old retries must be re-scanned, and replays can't double-flag.
+    monkeypatch.setattr(stream, "verify_webhook", lambda body, sig: True)
+    push = {
+        "type": "message.new",
+        "message": {"id": "m-replay", "text": "I want to die", "user": {"id": "u-r"}},
+    }
+    for _ in range(3):
+        assert client.post(PUSH, json=push).status_code == 200
+    assert _flag_count("m-replay") == 1
