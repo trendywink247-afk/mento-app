@@ -45,7 +45,10 @@ export function Companion({
   onPress?: () => void;
 }) {
   const reduced = useReducedMotion();
-  const resolved = animal ?? 'Panda';
+  // Unknown strings (corrupted/legacy stored value, e.g. lowercase 'panda') must
+  // degrade to the brand guide, not crash the screen with fluent === undefined.
+  const requested = animal ?? 'Panda';
+  const resolved: CompanionAnimal = requested in COMPANION_FLUENT ? requested : 'Panda';
   const source = COMPANION_LOTTIE[resolved];
   const generated = COMPANION_GENERATED[resolved];
   const fluent = COMPANION_FLUENT[resolved];
