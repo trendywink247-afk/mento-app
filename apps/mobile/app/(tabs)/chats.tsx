@@ -19,7 +19,7 @@ import { SceneTile } from '@/components/art/SceneTile';
 import { PinPad } from '@/components/chat/options/bits';
 import { ApiError, api, type ConversationListItem } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
-import { getStreamClient } from '@/lib/streamClient';
+import { ensureConnected } from '@/lib/streamClient';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -51,6 +51,7 @@ export default function ChatsTab() {
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [note, setNote] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [matching, setMatching] = useState(false);
   // Locked-chat gate: which row is awaiting a PIN.
   const [gate, setGate] = useState<ConversationListItem | null>(null);
@@ -62,40 +63,48 @@ export default function ChatsTab() {
     try {
       const list = await api.listConversations();
       setRows(list);
+      setLoadError(null);
 
       // Last message + unread per channel, straight from Stream client-side.
-      const [persona, token] = await Promise.all([getPersona(), getStreamToken()]);
-      // Stream caps $in filters at 30 ids; the API list is newest-first, so keep the
-      // 30 most recent — older rows just fall back to their backend-only preview.
-      const channelIds = (list.map((c) => c.stream_channel_id).filter(Boolean) as string[]).slice(
-        0,
-        30,
-      );
-      if (persona && token && channelIds.length) {
-        const client = getStreamClient();
-        if (client.userID !== persona.id) {
-          await client.connectUser({ id: persona.id, name: persona.persona_name }, token);
-        }
-        const channels = await client.queryChannels(
-          { type: 'messaging', id: { $in: channelIds } },
-          { last_message_at: -1 },
-          { watch: false, state: true },
+      // Previews are best-effort: their failure never blocks the list.
+      try {
+        const [persona, token] = await Promise.all([getPersona(), getStreamToken()]);
+        // Stream caps $in filters at 30 ids; the API list is newest-first, so keep the
+        // 30 most recent — older rows just fall back to their backend-only preview.
+        const channelIds = (list.map((c) => c.stream_channel_id).filter(Boolean) as string[]).slice(
+          0,
+          30,
         );
-        const map: Record<string, Preview> = {};
-        for (const ch of channels) {
-          const last = ch.state.messages[ch.state.messages.length - 1];
-          if (ch.id) {
-            map[ch.id] = {
-              text: last?.text ?? '',
-              at: last?.created_at ? new Date(last.created_at) : null,
-              unread: ch.countUnread(),
-            };
+        if (persona && token && channelIds.length) {
+          const client = await ensureConnected(
+            { id: persona.id, name: persona.persona_name },
+            token,
+          );
+          const channels = await client.queryChannels(
+            { type: 'messaging', id: { $in: channelIds } },
+            { last_message_at: -1 },
+            { watch: false, state: true },
+          );
+          const map: Record<string, Preview> = {};
+          for (const ch of channels) {
+            const last = ch.state.messages[ch.state.messages.length - 1];
+            if (ch.id) {
+              map[ch.id] = {
+                text: last?.text ?? '',
+                at: last?.created_at ? new Date(last.created_at) : null,
+                unread: ch.countUnread(),
+              };
+            }
           }
+          setPreviews(map);
         }
-        setPreviews(map);
+      } catch {
+        // Best-effort previews — the list stays usable from backend data alone.
       }
     } catch {
-      // List view stays usable from backend data alone; previews are best-effort.
+      // The conversation list itself failed — show an honest note instead of
+      // silently rendering an empty screen.
+      setLoadError("We couldn't load your conversations. Please check your connection.");
     } finally {
       setLoading(false);
     }
@@ -236,6 +245,25 @@ export default function ChatsTab() {
       {note ? (
         <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]} testID="chats-note">
           <Text style={[type.caption, { color: colors.ink }]}>{note}</Text>
+        </View>
+      ) : null}
+
+      {loadError ? (
+        <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]} testID="chats-load-error">
+          <Text style={[type.caption, { color: colors.ink }]}>{loadError}</Text>
+          <Pressable
+            onPress={() => {
+              setLoadError(null);
+              setLoading(true);
+              void load();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading conversations"
+            testID="chats-load-retry"
+            hitSlop={8}
+          >
+            <Text style={[type.label, { color: colors.accent }]}>Retry</Text>
+          </Pressable>
         </View>
       ) : null}
 

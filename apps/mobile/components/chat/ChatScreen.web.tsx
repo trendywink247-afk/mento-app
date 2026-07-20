@@ -20,7 +20,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { SceneTile } from '@/components/art/SceneTile';
 import { api } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
-import { getStreamClient } from '@/lib/streamClient';
+import { ensureConnected, getStreamClient } from '@/lib/streamClient';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -203,51 +203,75 @@ const MessageRow = memo(function MessageRow({
 type ComposerProps = {
   /** Path warm-up prompt — lands in the input ready to edit/send, never auto-sent. */
   initialDraft?: string;
-  onSend: (body: string) => void;
+  /** Resolves when the message is accepted by the server; rejects on failure. */
+  onSend: (body: string) => Promise<void>;
   onTyping: () => void;
 };
 
 /** Composer pill + send FAB (mockup #8). Owns the draft locally so every keystroke
- * re-renders only this leaf — never the transcript above it. */
+ * re-renders only this leaf — never the transcript above it. The draft is cleared
+ * only AFTER the send resolves; on failure it stays put with an honest retry line. */
 const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
   const { colors, elevation } = useTheme();
   const [draft, setDraft] = useState(initialDraft ?? '');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(false);
 
-  const submit = () => {
+  const submit = async () => {
     const body = draft.trim();
-    if (!body) return;
-    setDraft('');
-    onSend(body);
+    if (!body || sending) return;
+    setSending(true);
+    try {
+      await onSend(body);
+      setDraft('');
+      setSendError(false);
+    } catch {
+      // Keep their words — the draft stays; one calm line invites a retry.
+      setSendError(true);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
-    <View style={styles.composer}>
-      <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
-        <Ionicons name="add-circle-outline" size={24} color={colors.inkMuted} />
-        <TextInput
-          style={[styles.input, { color: colors.ink }]}
-          placeholder="Type a message…"
-          placeholderTextColor={colors.inkMuted}
-          value={draft}
-          onChangeText={(text) => {
-            setDraft(text);
-            onTyping();
-          }}
-          onSubmitEditing={submit}
-          testID="composer-input"
-          accessibilityLabel="Message"
-          multiline
-        />
+    <View>
+      {sendError ? (
+        <Text
+          style={[type.caption, styles.sendErrorLine, { color: colors.danger }]}
+          testID="composer-send-error"
+        >
+          Not sent — check your connection and tap send to retry.
+        </Text>
+      ) : null}
+      <View style={styles.composer}>
+        <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
+          <Ionicons name="add-circle-outline" size={24} color={colors.inkMuted} />
+          <TextInput
+            style={[styles.input, { color: colors.ink }]}
+            placeholder="Type a message…"
+            placeholderTextColor={colors.inkMuted}
+            value={draft}
+            onChangeText={(text) => {
+              setDraft(text);
+              onTyping();
+            }}
+            onSubmitEditing={() => void submit()}
+            testID="composer-input"
+            accessibilityLabel="Message"
+            multiline
+          />
+        </View>
+        <Pressable
+          style={[styles.sendBtn, { backgroundColor: colors.accent }, elevation.sm]}
+          onPress={() => void submit()}
+          disabled={sending}
+          testID="composer-send"
+          accessibilityRole="button"
+          accessibilityLabel="Send message"
+        >
+          <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
+        </Pressable>
       </View>
-      <Pressable
-        style={[styles.sendBtn, { backgroundColor: colors.accent }, elevation.sm]}
-        onPress={submit}
-        testID="composer-send"
-        accessibilityRole="button"
-        accessibilityLabel="Send message"
-      >
-        <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
-      </Pressable>
     </View>
   );
 });
@@ -308,7 +332,6 @@ export default function ChatScreenWeb() {
 
   useEffect(() => {
     let cancelled = false;
-    const client = getStreamClient();
 
     const setup = async () => {
       try {
@@ -316,9 +339,10 @@ export default function ChatScreenWeb() {
         if (!persona || !token) throw new Error('Missing session — please start again.');
         if (!channelId) throw new Error('Missing channel.');
 
-        if (client.userID !== persona.id) {
-          await client.connectUser({ id: persona.id, name: persona.persona_name }, token);
-        }
+        const client = await ensureConnected(
+          { id: persona.id, name: persona.persona_name },
+          token,
+        );
         const ch = client.channel('messaging', channelId);
         await ch.watch();
         if (cancelled) return;
@@ -633,6 +657,7 @@ const styles = StyleSheet.create({
     padding: space.sm,
   },
   typingLine: { paddingHorizontal: space.md, paddingTop: space.xs },
+  sendErrorLine: { paddingHorizontal: space.md, paddingTop: space.xs },
   composer: {
     flexDirection: 'row',
     alignItems: 'flex-end',

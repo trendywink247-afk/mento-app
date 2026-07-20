@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -14,11 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
+import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { listenerApi } from '@/lib/listenerApi';
-import { getListenerStreamClient } from '@/lib/listenerStreamClient';
+import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 
 /**
  * Listener-side chat (web-only console). A trimmed sibling of ChatScreen.web: same
@@ -60,9 +60,12 @@ export default function ListenerChatScreenWeb() {
   const [ready, setReady] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(false);
   const [typing, setTyping] = useState<string | null>(null); // member's persona name
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [readTick, setReadTick] = useState(0);
   const channelRef = useRef<ChannelType | null>(null);
   const shownRef = useRef<Set<string>>(new Set());
@@ -94,16 +97,16 @@ export default function ListenerChatScreenWeb() {
 
   useEffect(() => {
     let cancelled = false;
-    const client = getListenerStreamClient();
 
     const setup = async () => {
       try {
         if (!channelId) throw new Error('Missing channel.');
         // /listener/me returns a fresh Stream token for this listener identity.
         const me = await listenerApi.me();
-        if (client.userID !== me.id) {
-          await client.connectUser({ id: me.id, name: me.persona_name }, me.stream_token);
-        }
+        const client = await ensureListenerConnected(
+          { id: me.id, name: me.persona_name },
+          me.stream_token,
+        );
         const ch = client.channel('messaging', channelId);
         await ch.watch();
         if (cancelled) return;
@@ -127,8 +130,9 @@ export default function ListenerChatScreenWeb() {
           if (e.user && e.user.id !== client.userID) setTyping(null);
         });
         setReady(true);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not open the chat.');
+      } catch {
+        // Never surface raw error internals to the listener — one calm, actionable line.
+        if (!cancelled) setError('This conversation couldn’t be opened. Retry, or go back to the console.');
       }
     };
 
@@ -136,7 +140,7 @@ export default function ListenerChatScreenWeb() {
     return () => {
       cancelled = true;
     };
-  }, [channelId, appendMessage, surfaceCrisis, memberName]);
+  }, [channelId, appendMessage, surfaceCrisis, memberName, attempt]);
 
   const onTyping = useCallback(() => {
     // stream-chat throttles keystroke() internally; guard anyway — typing signals
@@ -150,12 +154,21 @@ export default function ListenerChatScreenWeb() {
 
   const send = async () => {
     const body = draft.trim();
-    if (!body || !channelRef.current) return;
-    setDraft('');
-    // Listener messages pass through the same server-side crisis scan (sender-agnostic).
-    const resp = await channelRef.current.sendMessage({ text: body });
-    appendMessage(resp.message as RawMsg);
-    surfaceCrisis(resp.message as CrisisCarrier);
+    if (!body || !channelRef.current || sending) return;
+    setSending(true);
+    try {
+      // Listener messages pass through the same server-side crisis scan (sender-agnostic).
+      const resp = await channelRef.current.sendMessage({ text: body });
+      appendMessage(resp.message as RawMsg);
+      surfaceCrisis(resp.message as CrisisCarrier);
+      // Clear only after the server accepted it — a failed send keeps their words.
+      setDraft('');
+      setSendError(false);
+    } catch {
+      setSendError(true);
+    } finally {
+      setSending(false);
+    }
   };
 
   const isRead = useCallback(
@@ -175,7 +188,7 @@ export default function ListenerChatScreenWeb() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       {/* Member header — persona only, anonymity holds both ways. */}
       <View style={[styles.header, { backgroundColor: colors.surface }, elevation.sm]}>
-        <Pressable
+        <ConsolePressable
           // Pop back to the (still-mounted) console; replace would stack a duplicate.
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/listener'))}
           hitSlop={12}
@@ -184,7 +197,7 @@ export default function ListenerChatScreenWeb() {
           testID="back-to-console"
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
-        </Pressable>
+        </ConsolePressable>
         <PersonaAvatar name={memberName} size={52} online />
         <View style={{ flex: 1 }} accessible accessibilityRole="header">
           <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
@@ -205,6 +218,18 @@ export default function ListenerChatScreenWeb() {
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={36} color={colors.inkMuted} />
           <Text style={[type.body, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
+          <ConsolePressable
+            onPress={() => {
+              setError(null);
+              setAttempt((a) => a + 1);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Retry opening the conversation"
+            testID="chat-retry"
+            style={styles.retryBtn}
+          >
+            <Text style={[type.label, { color: colors.accent }]}>Retry</Text>
+          </ConsolePressable>
         </View>
       ) : !ready ? (
         <View style={styles.center}>
@@ -217,6 +242,14 @@ export default function ListenerChatScreenWeb() {
             data={messages}
             keyExtractor={(m) => m.id}
             contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <View style={styles.emptyChat}>
+                <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.inkMuted} />
+                <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
+                  No messages yet — say hello.
+                </Text>
+              </View>
+            }
             renderItem={({ item, index }) => {
               const prev = index > 0 ? messages[index - 1] : null;
               const showDay = !prev || dayLabel(prev.at) !== dayLabel(item.at);
@@ -242,7 +275,7 @@ export default function ListenerChatScreenWeb() {
                         <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
                       </View>
                       <View style={styles.metaRow}>
-                        <Text style={[type.caption, { color: colors.inkMuted }]}>
+                        <Text style={[type.caption, styles.tnum, { color: colors.inkMuted }]}>
                           {timeLabel(item.at)}
                         </Text>
                         <Ionicons
@@ -267,7 +300,9 @@ export default function ListenerChatScreenWeb() {
                           <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
                         </View>
                       </View>
-                      <Text style={[type.caption, styles.theirsTime, { color: colors.inkMuted }]}>
+                      <Text
+                        style={[type.caption, styles.theirsTime, styles.tnum, { color: colors.inkMuted }]}
+                      >
                         {timeLabel(item.at)}
                       </Text>
                     </View>
@@ -289,7 +324,16 @@ export default function ListenerChatScreenWeb() {
           ) : null}
 
           <View style={styles.composer}>
-            <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
+            <View style={{ flex: 1 }}>
+              {sendError ? (
+                <Text
+                  style={[type.caption, styles.sendErrorLine, { color: colors.danger }]}
+                  testID="listener-send-error"
+                >
+                  Not sent — check your connection and tap send to retry.
+                </Text>
+              ) : null}
+              <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
               <TextInput
                 style={[styles.input, { color: colors.ink }]}
                 placeholder="Write a kind reply…"
@@ -304,16 +348,18 @@ export default function ListenerChatScreenWeb() {
                 accessibilityLabel="Reply"
                 multiline
               />
+              </View>
             </View>
-            <Pressable
+            <ConsolePressable
               style={[styles.sendBtn, { backgroundColor: colors.accent }, elevation.sm]}
               onPress={() => void send()}
+              disabled={!draft.trim() || sending}
               testID="listener-composer-send"
               accessibilityRole="button"
               accessibilityLabel="Send reply"
             >
               <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
-            </Pressable>
+            </ConsolePressable>
           </View>
         </View>
       )}
@@ -332,7 +378,15 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius.lg,
     borderBottomRightRadius: radius.lg,
   },
-  personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
+  personaName: { ...type.titleSmSerif },
+  tnum: { fontVariant: ['tabular-nums'] },
+  retryBtn: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: space.md,
+  },
+  emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm, padding: space.xl },
   privacy: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -359,6 +413,7 @@ const styles = StyleSheet.create({
   theirs: { borderBottomLeftRadius: radius.sm },
   theirsTime: { marginLeft: 34 + space.sm + space.xs, marginTop: 3 },
   typingLine: { paddingHorizontal: space.md, paddingTop: space.xs },
+  sendErrorLine: { paddingBottom: space.xs },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, padding: space.md },
   inputPill: {
     flex: 1,

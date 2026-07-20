@@ -16,7 +16,7 @@ import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { api } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
-import { getStreamClient } from '@/lib/streamClient';
+import { ensureConnected, getStreamClient } from '@/lib/streamClient';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -151,7 +151,13 @@ export default function ChatScreen() {
   const doSendMessageRequest = useCallback(
     async (_channelId: string, messageData: Parameters<ChannelType['sendMessage']>[0]) => {
       const resp = await channel!.sendMessage(messageData);
-      surfaceCrisis(resp.message as CrisisCarrier);
+      try {
+        surfaceCrisis(resp.message as CrisisCarrier);
+      } catch (err) {
+        // A crisis-surface rendering failure must never reject an already-sent
+        // message — log it and still return the send result to the kit.
+        console.error('crisis surface failed', err);
+      }
       return resp;
     },
     [channel, surfaceCrisis],
@@ -159,7 +165,6 @@ export default function ChatScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    const client = getStreamClient();
 
     const setup = async () => {
       try {
@@ -167,9 +172,10 @@ export default function ChatScreen() {
         if (!persona || !token) throw new Error('Missing session — please start again.');
         if (!channelId) throw new Error('Missing channel.');
 
-        if (client.userID !== persona.id) {
-          await client.connectUser({ id: persona.id, name: persona.persona_name }, token);
-        }
+        const client = await ensureConnected(
+          { id: persona.id, name: persona.persona_name },
+          token,
+        );
 
         const ch = client.channel('messaging', channelId);
         await ch.watch();

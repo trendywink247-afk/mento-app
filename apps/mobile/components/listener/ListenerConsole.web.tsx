@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconBadge } from '@/components/IconBadge';
+import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { ApiError } from '@/lib/api';
 import {
@@ -16,7 +17,7 @@ import {
 } from '@/lib/listenerApi';
 import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 
 /**
  * The minimal listener console (DECISIONS §I.6) — web-only. A listener opens their
@@ -26,7 +27,6 @@ import { font, radius, space, type } from '@/theme/tokens';
 export default function ListenerConsoleWeb() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
-  const params = useLocalSearchParams<{ token?: string }>();
 
   const [me, setMe] = useState<ListenerMe | null>(null);
   const [requests, setRequests] = useState<ListenerRequest[]>([]);
@@ -89,8 +89,8 @@ export default function ListenerConsoleWeb() {
   );
 
   const boot = useCallback(async () => {
-    // Prefer the #token= fragment — fragments never reach servers, proxies, or
-    // access logs. ?token= stays supported as a fallback for older links.
+    // #token= fragment ONLY — fragments never reach servers, proxies, or access
+    // logs. Query-param tokens are not accepted.
     const hashMatch = window.location.hash.match(/[#&]token=([^&]+)/);
     const hashToken = hashMatch?.[1] ? decodeURIComponent(hashMatch[1]) : null;
     if (hashToken) {
@@ -100,13 +100,9 @@ export default function ListenerConsoleWeb() {
       // with the fragment back into the address bar).
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
       router.replace('/listener');
-    } else if (params.token) {
-      await saveListenerToken(params.token);
-      // Strip the token from the URL/history immediately.
-      router.replace('/listener');
     }
     await refresh();
-    // reason: params.token is consumed once and stripped; re-running on param
+    // reason: the token is consumed once and stripped; re-running on route-param
     // change would loop through router.replace
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
@@ -137,7 +133,7 @@ export default function ListenerConsoleWeb() {
       setToast(
         e instanceof ApiError && e.status === 409
           ? "You're at capacity — end a conversation before accepting another."
-          : 'That didn’t work. Try again.',
+          : 'Couldn’t update that request. Try again.',
       );
     } finally {
       setBusy(null);
@@ -168,7 +164,7 @@ export default function ListenerConsoleWeb() {
             </View>
           </View>
           {devRoster.map((li) => (
-            <Pressable
+            <ConsolePressable
               key={li.id}
               onPress={() => void enterAsDev(li.id)}
               accessibilityRole="button"
@@ -176,6 +172,7 @@ export default function ListenerConsoleWeb() {
               testID={`dev-listener-${li.id}`}
               disabled={busy !== null}
               style={[styles.pickerRow, { backgroundColor: colors.surface }, elevation.sm]}
+              hoverStyle={{ backgroundColor: colors.surfaceAlt }}
             >
               <PersonaAvatar name={li.persona_name} size={44} online={li.status === 'online'} />
               <View style={{ flex: 1 }}>
@@ -187,7 +184,7 @@ export default function ListenerConsoleWeb() {
               ) : (
                 <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
               )}
-            </Pressable>
+            </ConsolePressable>
           ))}
           {toast ? (
             <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{toast}</Text>
@@ -198,9 +195,15 @@ export default function ListenerConsoleWeb() {
           <Ionicons name="key-outline" size={36} color={colors.inkMuted} />
           <Text style={[type.body, { color: colors.ink, textAlign: 'center' }]}>{error}</Text>
           {/* boot, not refresh: a freshly pasted #token= link must be consumed. */}
-          <Pressable onPress={() => void boot()} accessibilityRole="button" testID="console-retry">
+          <ConsolePressable
+            onPress={() => void boot()}
+            accessibilityRole="button"
+            accessibilityLabel="Retry loading the console"
+            testID="console-retry"
+            style={styles.retryBtn}
+          >
             <Text style={[type.label, { color: colors.accent }]}>Retry</Text>
-          </Pressable>
+          </ConsolePressable>
         </View>
       ) : !me ? (
         <View style={styles.center}>
@@ -214,11 +217,11 @@ export default function ListenerConsoleWeb() {
             <PersonaAvatar name={me.persona_name} size={56} online={online} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.name, { color: colors.ink }]}>{me.persona_name}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>
+              <Text style={[type.caption, styles.tnum, { color: colors.inkMuted }]}>
                 Listener console · {me.active_conversations}/{me.max_concurrent} conversations
               </Text>
             </View>
-            <Pressable
+            <ConsolePressable
               onPress={() => void toggleStatus()}
               accessibilityRole="button"
               accessibilityLabel={online ? 'Set yourself away' : 'Set yourself online'}
@@ -232,7 +235,7 @@ export default function ListenerConsoleWeb() {
                 style={[styles.dot, { backgroundColor: online ? colors.success : colors.warning }]}
               />
               <Text style={[type.label, { color: colors.ink }]}>{online ? 'Online' : 'Away'}</Text>
-            </Pressable>
+            </ConsolePressable>
           </View>
 
           <View style={[styles.note, { backgroundColor: colors.brandTint }]}>
@@ -279,24 +282,30 @@ export default function ListenerConsoleWeb() {
                   <Text style={[type.body, { color: colors.ink }]}>“{r.intro_message}”</Text>
                 ) : null}
                 <View style={styles.actions}>
-                  <Pressable
+                  <ConsolePressable
                     onPress={() => void act(r.id, 'accept')}
                     disabled={busy === r.id}
                     accessibilityRole="button"
+                    accessibilityLabel={`Accept request from ${r.requester_persona_name}`}
                     testID={`accept-${r.id}`}
                     style={[styles.acceptBtn, { backgroundColor: colors.accent }]}
                   >
-                    <Text style={[type.label, { color: colors.onAccent }]}>Accept</Text>
-                  </Pressable>
-                  <Pressable
+                    {busy === r.id ? (
+                      <ActivityIndicator size="small" color={colors.onAccent} />
+                    ) : (
+                      <Text style={[type.label, { color: colors.onAccent }]}>Accept</Text>
+                    )}
+                  </ConsolePressable>
+                  <ConsolePressable
                     onPress={() => void act(r.id, 'decline')}
                     disabled={busy === r.id}
                     accessibilityRole="button"
+                    accessibilityLabel={`Decline request from ${r.requester_persona_name}`}
                     testID={`decline-${r.id}`}
                     style={[styles.declineBtn, { borderColor: colors.border }]}
                   >
                     <Text style={[type.label, { color: colors.inkMuted }]}>Decline</Text>
-                  </Pressable>
+                  </ConsolePressable>
                 </View>
               </View>
             ))
@@ -310,11 +319,12 @@ export default function ListenerConsoleWeb() {
             </Text>
           ) : (
             convos.map((c) => (
-              <Pressable
+              <ConsolePressable
                 key={c.id}
                 onPress={() => openChat(c)}
                 disabled={c.status === 'wiped'}
                 accessibilityRole="button"
+                accessibilityLabel={`Open conversation with ${c.user_persona_name}`}
                 testID={`convo-${c.id}`}
                 style={[
                   styles.row,
@@ -322,6 +332,7 @@ export default function ListenerConsoleWeb() {
                   elevation.sm,
                   c.status !== 'active' && { opacity: 0.55 },
                 ]}
+                hoverStyle={{ backgroundColor: colors.surfaceAlt }}
               >
                 <PersonaAvatar name={c.user_persona_name} size={44} online={c.status === 'active'} />
                 <View style={{ flex: 1 }}>
@@ -344,7 +355,7 @@ export default function ListenerConsoleWeb() {
                     size={32}
                   />
                 )}
-              </Pressable>
+              </ConsolePressable>
             ))
           )}
         </ScrollView>
@@ -364,16 +375,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: space.md,
   },
-  name: { fontFamily: font.serifBold, fontSize: 20, lineHeight: 26 },
+  name: { ...type.titleSmSerif },
+  tnum: { fontVariant: ['tabular-nums'] },
+  retryBtn: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: space.md,
+  },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
     borderRadius: radius.pill,
+    minHeight: 44,
     paddingVertical: space.xs + 2,
     paddingHorizontal: space.sm + 2,
   },
-  dot: { width: 8, height: 8, borderRadius: radius.pill },
+  dot: { width: space.sm, height: space.sm, borderRadius: radius.pill },
   note: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -383,9 +402,7 @@ const styles = StyleSheet.create({
   },
   toastRow: { borderRadius: radius.md, padding: space.sm },
   section: {
-    fontFamily: font.serifBold,
-    fontSize: 20,
-    lineHeight: 26,
+    ...type.titleSmSerif,
     marginTop: space.md,
     marginBottom: space.xs,
   },
@@ -410,7 +427,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingVertical: space.sm,
     paddingHorizontal: space.lg,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -419,7 +436,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

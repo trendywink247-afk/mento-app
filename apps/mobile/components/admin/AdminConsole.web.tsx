@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 
+import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminMe, type AdminOverview } from '@/lib/adminApi';
 import { getAdminToken, saveAdminToken } from '@/lib/adminSession';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -35,19 +36,21 @@ type Tab = (typeof TABS)[number];
 
 export default function AdminConsoleWeb() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ token?: string }>();
   const { colors, elevation } = useTheme();
 
   const [me, setMe] = useState<AdminMe | null>(null);
   const [overview, setOverview] = useState<AdminOverview | null>(null);
+  const [overviewFailed, setOverviewFailed] = useState(false);
   const [tab, setTab] = useState<Tab>('Overview');
   const [error, setError] = useState<string | null>(null);
 
   const loadOverview = useCallback(async () => {
     try {
       setOverview(await adminApi.overview());
+      setOverviewFailed(false);
     } catch {
       /* overview is best-effort; the tab panels still work */
+      setOverviewFailed(true);
     }
   }, []);
 
@@ -66,8 +69,10 @@ export default function AdminConsoleWeb() {
   }, [loadOverview]);
 
   const boot = useCallback(async () => {
+    // #token= fragment ONLY — fragments never reach servers, proxies, or access
+    // logs. Query-param tokens are not accepted.
     const hash = window.location.hash.match(/[#&]token=([^&]+)/);
-    const token = hash?.[1] ? decodeURIComponent(hash[1]) : params.token;
+    const token = hash?.[1] ? decodeURIComponent(hash[1]) : null;
     if (token) {
       await saveAdminToken(token);
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -90,9 +95,14 @@ export default function AdminConsoleWeb() {
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]}>
         <View style={styles.center} testID="admin-error">
           <Text style={[type.body, { color: colors.ink, textAlign: 'center' }]}>{error}</Text>
-          <Pressable onPress={() => void boot()} accessibilityRole="button" testID="admin-retry">
+          <ConsolePressable
+            onPress={() => void boot()}
+            accessibilityRole="button"
+            testID="admin-retry"
+            style={styles.retry}
+          >
             <Text style={[type.label, { color: colors.accent }]}>Retry</Text>
-          </Pressable>
+          </ConsolePressable>
         </View>
       </SafeAreaView>
     );
@@ -127,24 +137,32 @@ export default function AdminConsoleWeb() {
       <View style={[styles.tabbar, { backgroundColor: colors.surface }, elevation.sm]}>
         <Text style={[styles.brand, { color: colors.accent }]}>mento admin</Text>
         {visibleTabs.map((t) => (
-          <Pressable
+          <ConsolePressable
             key={t}
             onPress={() => setTab(t)}
             accessibilityRole="button"
+            accessibilityState={{ selected: tab === t }}
             testID={`admin-tab-${t.toLowerCase()}`}
             style={[styles.tab, tab === t && { backgroundColor: colors.accentTint }]}
+            hoverStyle={tab === t ? undefined : { backgroundColor: colors.surfaceAlt }}
           >
-            <Text style={[type.label, { color: tab === t ? colors.accent : colors.inkMuted }]}>
+            <Text
+              style={[
+                type.label,
+                styles.tabLabel,
+                { color: tab === t ? colors.accent : colors.inkMuted },
+              ]}
+            >
               {t}
               {badge(t) ? ` (${badge(t)})` : ''}
             </Text>
-          </Pressable>
+          </ConsolePressable>
         ))}
       </View>
 
       <ScrollView contentContainerStyle={styles.body}>
         {tab === 'Overview' ? (
-          <OverviewPanel overview={overview} onGoto={goto} />
+          <OverviewPanel overview={overview} failed={overviewFailed} onGoto={goto} />
         ) : tab === 'Safety' ? (
           <SafetyPanel onReviewed={loadOverview} />
         ) : tab === 'Moderation' ? (
@@ -175,6 +193,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
   },
   brand: { fontFamily: font.serifBold, fontSize: 18, marginRight: space.md },
-  tab: { paddingVertical: space.xs, paddingHorizontal: space.md, borderRadius: radius.pill },
+  tab: {
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    borderRadius: radius.pill,
+    minHeight: 44,
+    justifyContent: 'center',
+  },
+  tabLabel: { fontVariant: ['tabular-nums'] },
+  retry: {
+    minHeight: 44,
+    paddingHorizontal: space.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   body: { padding: space.lg, gap: space.sm, maxWidth: 1100, width: '100%', alignSelf: 'center' },
 });

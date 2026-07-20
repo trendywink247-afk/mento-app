@@ -71,6 +71,15 @@ export async function getCompanionAnimal(): Promise<string | null> {
 }
 
 export async function clearSession(): Promise<void> {
+  // Tear down the Stream websocket too — otherwise the singleton keeps the old
+  // identity connected and the next persona's first chat fails.
+  // reason: dynamic import avoids a require cycle (streamClient never imports session).
+  try {
+    const { disconnectStreamClient } = await import('./streamClient');
+    await disconnectStreamClient();
+  } catch {
+    /* best-effort: storage cleanup below must always run */
+  }
   await Promise.all([
     store.deleteItemAsync(SESSION_KEY),
     store.deleteItemAsync(STREAM_KEY),

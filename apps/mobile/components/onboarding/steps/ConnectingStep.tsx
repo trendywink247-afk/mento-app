@@ -17,7 +17,7 @@ import {
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { ApiError, api } from '@/lib/api';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
-import { saveCompanionAnimal, saveSession } from '@/lib/session';
+import { getSessionToken, saveCompanionAnimal, saveSession } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -121,6 +121,9 @@ export function ConnectingStep({
   const startedRef = useRef(false);
   const activeAtRef = useRef(0);
   const retriesRef = useRef(0);
+  // Onboard-once latch: retries must never mint another anonymous account — the
+  // session from a previous attempt is reused and only the match call re-runs.
+  const onboardedRef = useRef(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const later = useCallback((fn: () => void, ms: number) => {
@@ -139,14 +142,19 @@ export function ConnectingStep({
       return;
     }
     try {
-      const onboarding = await api.startOnboarding({
-        dob: draft.dob,
-        email: draft.email ?? null,
-        companion_animal: draft.companionAnimal ?? null,
-        companion_colour: draft.companionColour ?? null,
-      });
-      await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
-      if (draft.companionAnimal) await saveCompanionAnimal(draft.companionAnimal);
+      // Onboard exactly once. A session lingering from a previous attempt (or an
+      // earlier retry in this run) is reused — only the match is retried.
+      if (!onboardedRef.current && !(await getSessionToken())) {
+        const onboarding = await api.startOnboarding({
+          dob: draft.dob,
+          email: draft.email ?? null,
+          companion_animal: draft.companionAnimal ?? null,
+          companion_colour: draft.companionColour ?? null,
+        });
+        await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
+        if (draft.companionAnimal) await saveCompanionAnimal(draft.companionAnimal);
+      }
+      onboardedRef.current = true;
 
       const match = await api.match({ kind: 'general' });
       clearDraft();

@@ -1,7 +1,8 @@
 /** Typed client for the Mento API. Mirrors services/api schemas. */
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 
-import { getSessionToken } from './session';
+import { clearSession, getSessionToken } from './session';
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
@@ -156,8 +157,33 @@ export type PathState = {
   listeners_online: number;
 };
 
+// One-shot latch so overlapping 401s from parallel requests trigger a single
+// session-clear + redirect instead of a replace() loop.
+let handling401 = false;
+
+/** USER-realm 401: the anonymous session is invalid/expired server-side. Clear it and
+ * route honestly to the landing. Listener/admin consoles have their own handling. */
+async function handleUserUnauthorized(): Promise<void> {
+  if (handling401) return;
+  handling401 = true;
+  try {
+    await clearSession();
+    router.replace('/');
+  } finally {
+    // Allow future (post-re-onboarding) 401s to be handled again.
+    handling401 = false;
+  }
+}
+
 async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
-  return apiRequest<T>(path, init, auth ? getSessionToken : undefined);
+  try {
+    return await apiRequest<T>(path, init, auth ? getSessionToken : undefined);
+  } catch (e) {
+    if (auth && e instanceof ApiError && e.status === 401) {
+      await handleUserUnauthorized();
+    }
+    throw e;
+  }
 }
 
 export const api = {
