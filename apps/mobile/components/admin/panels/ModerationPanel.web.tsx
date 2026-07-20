@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminModerationItem } from '@/lib/adminApi';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
@@ -24,6 +25,7 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -43,6 +45,7 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
   const resolve = async (event: AdminModerationItem) => {
     setBusy(event.id);
     setError(null);
+    setConfirmId(null);
     try {
       await adminApi.resolveEvent(event.id);
       setEvents((prev) => (prev ? prev.filter((e) => e.id !== event.id) : prev));
@@ -55,11 +58,18 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
   };
 
   const suspend = async (event: AdminModerationItem) => {
+    if (confirmId !== event.id) {
+      setConfirmId(event.id);
+      return;
+    }
     setBusy(event.id);
     setError(null);
     try {
       await adminApi.suspendListener(event.subject_id);
+      setEvents((prev) => (prev ? prev.filter((e) => e.id !== event.id) : prev));
       setToast('Listener suspended');
+      setConfirmId(null);
+      onResolved();
     } catch {
       setError('Could not suspend that listener. Try again.');
     } finally {
@@ -103,13 +113,13 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
             <Text style={[type.body, { color: colors.ink }]}>
               {event.reason ?? 'No reason given'}
             </Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
+            <Text style={[type.caption, styles.ids, { color: colors.inkMuted }]}>
               Reporter {event.reporter_id ? event.reporter_id.slice(0, 8) : '—'} · Subject{' '}
               {event.subject_id.slice(0, 8)}
             </Text>
 
             <View style={styles.actions}>
-              <Pressable
+              <ConsolePressable
                 onPress={() => void resolve(event)}
                 disabled={busy === event.id}
                 accessibilityRole="button"
@@ -117,16 +127,34 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
                 style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
               >
                 <Text style={[type.label, { color: colors.onAccent }]}>Resolve</Text>
-              </Pressable>
-              <Pressable
+              </ConsolePressable>
+              <ConsolePressable
                 onPress={() => void suspend(event)}
                 disabled={busy === event.id}
                 accessibilityRole="button"
+                accessibilityLabel={`Suspend listener ${event.subject_id.slice(0, 8)}`}
                 testID={`admin-moderation-${event.id}-suspend`}
-                style={[styles.secondaryBtn, { borderColor: colors.border }]}
+                style={[
+                  styles.secondaryBtn,
+                  confirmId === event.id
+                    ? { backgroundColor: colors.danger, borderColor: colors.danger }
+                    : { borderColor: colors.border },
+                ]}
               >
-                <Text style={[type.label, { color: colors.danger }]}>Suspend listener</Text>
-              </Pressable>
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={14}
+                  color={confirmId === event.id ? colors.onAccent : colors.danger}
+                />
+                <Text
+                  style={[
+                    type.label,
+                    { color: confirmId === event.id ? colors.onAccent : colors.danger },
+                  ]}
+                >
+                  {confirmId === event.id ? 'Confirm suspend?' : 'Suspend listener'}
+                </Text>
+              </ConsolePressable>
             </View>
           </View>
         ))
@@ -146,21 +174,24 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: space.sm,
   },
+  ids: { fontVariant: ['tabular-nums'] },
   actions: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
   primaryBtn: {
     borderRadius: radius.pill,
     paddingVertical: space.sm,
     paddingHorizontal: space.lg,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryBtn: {
+    flexDirection: 'row',
+    gap: space.xs,
     borderRadius: radius.pill,
     borderWidth: 1.5,
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

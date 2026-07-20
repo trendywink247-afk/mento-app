@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { adminApi, type AdminContribution } from '@/lib/adminApi';
+import { formatTimestamp } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -63,7 +64,7 @@ export default function ContributionsPanel() {
               </Text>
               <Text style={[type.body, styles.colStatus, { color: colors.ink }]}>{r.status}</Text>
               <Text style={[type.body, styles.colDate, { color: colors.inkMuted }]}>
-                {new Date(r.created_at).toLocaleDateString()}
+                {formatTimestamp(r.created_at)}
               </Text>
             </View>
           ))}
@@ -85,7 +86,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headRow: { borderBottomWidth: 1.5 },
-  colAmount: { flex: 1 },
+  colAmount: { flex: 1, textAlign: 'right', fontVariant: ['tabular-nums'] },
   colStatus: { flex: 1 },
   colDate: { flex: 1 },
 });

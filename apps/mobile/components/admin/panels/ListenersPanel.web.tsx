@@ -1,7 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminListener } from '@/lib/adminApi';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
@@ -25,6 +26,7 @@ export default function ListenersPanel() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const [categories, setCategories] = useState('');
   const [maxConc, setMaxConc] = useState('3');
@@ -46,6 +48,7 @@ export default function ListenersPanel() {
   const create = async () => {
     setCreating(true);
     setError(null);
+    setConfirmId(null);
     try {
       const parsed = categories
         .split(',')
@@ -64,14 +67,19 @@ export default function ListenersPanel() {
   };
 
   const setStatus = async (id: string, action: 'suspend' | 'reinstate') => {
+    if (action === 'suspend' && confirmId !== id) {
+      setConfirmId(id);
+      return;
+    }
     setBusy(id);
     setError(null);
+    setConfirmId(null);
     try {
       if (action === 'suspend') await adminApi.suspendListener(id);
       else await adminApi.reinstateListener(id);
       await load();
     } catch {
-      setError('That did not work. Try again.');
+      setError("Couldn't update that listener. Try again.");
     } finally {
       setBusy(null);
     }
@@ -80,6 +88,7 @@ export default function ListenersPanel() {
   const copyLink = async (id: string) => {
     setBusy(id);
     setError(null);
+    setConfirmId(null);
     try {
       const { url } = await adminApi.listenerLink(id);
       await navigator.clipboard.writeText(url);
@@ -101,6 +110,7 @@ export default function ListenersPanel() {
           onChangeText={setCategories}
           placeholder="Categories (comma-separated)"
           placeholderTextColor={colors.inkMuted}
+          accessibilityLabel="Categories (comma-separated)"
           style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
           testID="admin-listener-categories"
         />
@@ -109,11 +119,12 @@ export default function ListenersPanel() {
           onChangeText={setMaxConc}
           placeholder="Max concurrent"
           placeholderTextColor={colors.inkMuted}
+          accessibilityLabel="Max concurrent"
           keyboardType="number-pad"
           style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
           testID="admin-listener-maxconc"
         />
-        <Pressable
+        <ConsolePressable
           onPress={() => void create()}
           disabled={creating}
           accessibilityRole="button"
@@ -123,7 +134,7 @@ export default function ListenersPanel() {
           <Text style={[type.label, { color: colors.onAccent }]}>
             {creating ? 'Creating…' : 'Create'}
           </Text>
-        </Pressable>
+        </ConsolePressable>
       </View>
 
       {error ? <Text style={[type.caption, { color: colors.danger }]}>{error}</Text> : null}
@@ -149,7 +160,7 @@ export default function ListenersPanel() {
                 <PersonaAvatar name={li.persona_name} size={44} online={li.status === 'online'} />
                 <View style={{ flex: 1 }}>
                   <Text style={[type.bodySemi, { color: colors.ink }]}>{li.persona_name}</Text>
-                  <Text style={[type.caption, { color: colors.inkMuted }]}>
+                  <Text style={[type.caption, styles.rosterNums, { color: colors.inkMuted }]}>
                     {li.vetting_status} · {li.status} · {li.active_conversations}/{li.max_concurrent}{' '}
                     · rank {li.rank}
                   </Text>
@@ -168,36 +179,56 @@ export default function ListenersPanel() {
 
               <View style={styles.actions}>
                 {approved ? (
-                  <Pressable
+                  <ConsolePressable
                     onPress={() => void setStatus(li.id, 'suspend')}
                     disabled={busy === li.id}
                     accessibilityRole="button"
+                    accessibilityLabel={`Suspend ${li.persona_name}`}
                     testID={`admin-listener-${li.id}-suspend`}
-                    style={[styles.secondaryBtn, { borderColor: colors.border }]}
+                    style={[
+                      styles.secondaryBtn,
+                      confirmId === li.id
+                        ? { backgroundColor: colors.danger, borderColor: colors.danger }
+                        : { borderColor: colors.border },
+                    ]}
                   >
-                    <Text style={[type.label, { color: colors.danger }]}>Suspend</Text>
-                  </Pressable>
+                    <Ionicons
+                      name="alert-circle-outline"
+                      size={14}
+                      color={confirmId === li.id ? colors.onAccent : colors.danger}
+                    />
+                    <Text
+                      style={[
+                        type.label,
+                        { color: confirmId === li.id ? colors.onAccent : colors.danger },
+                      ]}
+                    >
+                      {confirmId === li.id ? 'Confirm suspend?' : 'Suspend'}
+                    </Text>
+                  </ConsolePressable>
                 ) : null}
                 {suspended ? (
-                  <Pressable
+                  <ConsolePressable
                     onPress={() => void setStatus(li.id, 'reinstate')}
                     disabled={busy === li.id}
                     accessibilityRole="button"
+                    accessibilityLabel={`Reinstate ${li.persona_name}`}
                     testID={`admin-listener-${li.id}-reinstate`}
                     style={[styles.secondaryBtn, { borderColor: colors.border }]}
                   >
                     <Text style={[type.label, { color: colors.success }]}>Reinstate</Text>
-                  </Pressable>
+                  </ConsolePressable>
                 ) : null}
-                <Pressable
+                <ConsolePressable
                   onPress={() => void copyLink(li.id)}
                   disabled={busy === li.id}
                   accessibilityRole="button"
+                  accessibilityLabel={`Copy console link for ${li.persona_name}`}
                   testID={`admin-listener-${li.id}-copy`}
                   style={[styles.secondaryBtn, { borderColor: colors.border }]}
                 >
                   <Text style={[type.label, { color: colors.ink }]}>Copy link</Text>
-                </Pressable>
+                </ConsolePressable>
               </View>
             </View>
           );
@@ -221,6 +252,7 @@ const styles = StyleSheet.create({
     minHeight: 42,
   },
   rosterHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  rosterNums: { fontVariant: ['tabular-nums'] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   chip: {
     borderRadius: radius.pill,
@@ -232,17 +264,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingVertical: space.sm,
     paddingHorizontal: space.lg,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
   },
   secondaryBtn: {
+    flexDirection: 'row',
+    gap: space.xs,
     borderRadius: radius.pill,
     borderWidth: 1.5,
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

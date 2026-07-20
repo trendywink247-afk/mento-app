@@ -1,7 +1,7 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,11 +9,13 @@ import {
   View,
 } from 'react-native';
 
+import { ConsolePressable } from '@/components/console/ConsolePressable';
 import {
   adminApi,
   type AdminAccountItem,
   type AdminAuditItem,
 } from '@/lib/adminApi';
+import { formatTimestamp } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -29,6 +31,7 @@ export default function AdminsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -59,6 +62,7 @@ export default function AdminsPanel() {
     if (!name.trim()) return;
     setCreating(true);
     setError(null);
+    setConfirmId(null);
     try {
       const { url } = await adminApi.createAdmin(name.trim());
       setNewUrl(url);
@@ -74,8 +78,13 @@ export default function AdminsPanel() {
   };
 
   const revoke = async (id: string) => {
+    if (confirmId !== id) {
+      setConfirmId(id);
+      return;
+    }
     setBusy(id);
     setError(null);
+    setConfirmId(null);
     try {
       await adminApi.revokeAdmin(id);
       await loadAdmins();
@@ -107,10 +116,11 @@ export default function AdminsPanel() {
           onChangeText={setName}
           placeholder="Name"
           placeholderTextColor={colors.inkMuted}
+          accessibilityLabel="Name"
           style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
           testID="admin-admins-name"
         />
-        <Pressable
+        <ConsolePressable
           onPress={() => void create()}
           disabled={creating}
           accessibilityRole="button"
@@ -120,7 +130,7 @@ export default function AdminsPanel() {
           <Text style={[type.label, { color: colors.onAccent }]}>
             {creating ? 'Creating…' : 'Create'}
           </Text>
-        </Pressable>
+        </ConsolePressable>
         {newUrl ? (
           <View style={[styles.urlField, { backgroundColor: colors.surfaceAlt }]}>
             <Text
@@ -131,13 +141,15 @@ export default function AdminsPanel() {
             >
               {newUrl}
             </Text>
-            <Pressable
+            <ConsolePressable
               onPress={() => void copyUrl()}
               accessibilityRole="button"
+              accessibilityLabel="Copy new admin console link"
               testID="admin-admins-copy-url"
+              style={styles.copyBtn}
             >
               <Text style={[type.label, { color: colors.accent }]}>Copy</Text>
-            </Pressable>
+            </ConsolePressable>
           </View>
         ) : null}
       </View>
@@ -149,6 +161,10 @@ export default function AdminsPanel() {
       <Text style={[styles.section, { color: colors.ink }]}>Admins</Text>
       {!admins ? (
         <ActivityIndicator color={colors.accent} />
+      ) : admins.length === 0 ? (
+        <Text style={[type.caption, { color: colors.inkMuted }]}>
+          No admins yet — create the first one above.
+        </Text>
       ) : (
         admins.map((a) => {
           const isOwner = a.role === 'owner';
@@ -166,15 +182,33 @@ export default function AdminsPanel() {
                 </Text>
               </View>
               {!isOwner && !revoked ? (
-                <Pressable
+                <ConsolePressable
                   onPress={() => void revoke(a.id)}
                   disabled={busy === a.id}
                   accessibilityRole="button"
+                  accessibilityLabel={`Revoke ${a.name}`}
                   testID={`admin-admins-${a.id}-revoke`}
-                  style={[styles.secondaryBtn, { borderColor: colors.border }]}
+                  style={[
+                    styles.secondaryBtn,
+                    confirmId === a.id
+                      ? { backgroundColor: colors.danger, borderColor: colors.danger }
+                      : { borderColor: colors.border },
+                  ]}
                 >
-                  <Text style={[type.label, { color: colors.danger }]}>Revoke</Text>
-                </Pressable>
+                  <Ionicons
+                    name="alert-circle-outline"
+                    size={14}
+                    color={confirmId === a.id ? colors.onAccent : colors.danger}
+                  />
+                  <Text
+                    style={[
+                      type.label,
+                      { color: confirmId === a.id ? colors.onAccent : colors.danger },
+                    ]}
+                  >
+                    {confirmId === a.id ? 'Confirm revoke?' : 'Revoke'}
+                  </Text>
+                </ConsolePressable>
               ) : null}
             </View>
           );
@@ -200,7 +234,7 @@ export default function AdminsPanel() {
                   {entry.admin_name} · {entry.action}
                 </Text>
                 <Text style={[type.caption, { color: colors.inkMuted }]}>
-                  {entry.subject_type ?? '—'} · {new Date(entry.created_at).toLocaleString()}
+                  {entry.subject_type ?? '—'} · {formatTimestamp(entry.created_at)}
                 </Text>
               </View>
             </View>
@@ -215,9 +249,7 @@ const styles = StyleSheet.create({
   body: { padding: space.lg, gap: space.sm, paddingBottom: space.xxl },
   card: { borderRadius: radius.lg, padding: space.md, gap: space.sm },
   section: {
-    fontFamily: type.titleSerif.fontFamily,
-    fontSize: 20,
-    lineHeight: 26,
+    ...type.titleSmSerif,
     marginTop: space.md,
     marginBottom: space.xs,
   },
@@ -237,6 +269,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: space.sm,
   },
+  copyBtn: {
+    minHeight: 44,
+    paddingHorizontal: space.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -248,17 +286,19 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingVertical: space.sm,
     paddingHorizontal: space.lg,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
   },
   secondaryBtn: {
+    flexDirection: 'row',
+    gap: space.xs,
     borderRadius: radius.pill,
     borderWidth: 1.5,
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

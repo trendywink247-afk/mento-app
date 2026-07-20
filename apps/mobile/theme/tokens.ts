@@ -95,6 +95,10 @@ export const type = {
   bodySemi: { fontSize: 16, fontFamily: font.sansSemi, lineHeight: 24 },
   label: { fontSize: 14, fontFamily: font.sansBold, lineHeight: 20 },
   caption: { fontSize: 13, fontFamily: font.sans, lineHeight: 18, color: colors.inkMuted },
+  /** Section headings on the web-only console surfaces (listener console, admin cockpit). */
+  titleSmSerif: { fontSize: 20, fontFamily: font.serifBold, lineHeight: 26 },
+  /** Big cockpit stat numerals (admin overview tiles) — pair with tabular-nums. */
+  stat: { fontSize: 26, fontFamily: font.serifBold, lineHeight: 32 },
 } as const;
 
 /**

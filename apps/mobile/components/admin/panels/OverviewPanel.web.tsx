@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { type AdminOverview } from '@/lib/adminApi';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 
 /**
  * Admin dashboard home — a row of at-a-glance stat tiles plus a "Needs attention"
@@ -12,9 +13,11 @@ import { font, radius, space, type } from '@/theme/tokens';
  */
 export default function OverviewPanel({
   overview,
+  failed,
   onGoto,
 }: {
   overview: AdminOverview | null;
+  failed: boolean;
   onGoto: (tab: string) => void;
 }) {
   const { colors, elevation } = useTheme();
@@ -47,29 +50,34 @@ export default function OverviewPanel({
       </View>
 
       <Text style={[styles.section, { color: colors.ink }]}>Needs attention</Text>
-      {overview && overview.attention.length > 0 ? (
+      {failed ? (
+        <Text style={[type.caption, { color: colors.inkMuted }]}>
+          Overview couldn&apos;t load. Retry from the header.
+        </Text>
+      ) : overview && overview.attention.length > 0 ? (
         overview.attention.map((item) => (
-          <Pressable
+          <ConsolePressable
             key={`${item.kind}-${item.href}`}
             onPress={() => onGoto(item.href)}
             accessibilityRole="button"
             accessibilityLabel={item.text}
             testID={`admin-attention-${item.kind}`}
             style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+            hoverStyle={{ backgroundColor: colors.surfaceAlt }}
           >
             <Ionicons name="alert-circle" size={20} color={colors.warning} />
             <Text style={[type.body, { color: colors.ink, flex: 1 }]}>{item.text}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-          </Pressable>
+          </ConsolePressable>
         ))
-      ) : (
+      ) : overview ? (
         <View style={[styles.clear, { backgroundColor: colors.surface }, elevation.sm]}>
           <Ionicons name="checkmark-circle" size={20} color={colors.success} />
           <Text style={[type.body, { color: colors.inkMuted }]}>
             All clear — nothing needs attention.
           </Text>
         </View>
-      )}
+      ) : null}
     </ScrollView>
   );
 }
@@ -85,11 +93,9 @@ const styles = StyleSheet.create({
     padding: space.md,
     gap: space.xs,
   },
-  tileNum: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 32 },
+  tileNum: { ...type.stat, fontVariant: ['tabular-nums'] },
   section: {
-    fontFamily: font.serifBold,
-    fontSize: 20,
-    lineHeight: 26,
+    ...type.titleSmSerif,
     marginTop: space.md,
     marginBottom: space.xs,
   },

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { adminApi, type AdminHealth } from '@/lib/adminApi';
+import { formatTimestamp } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -69,9 +70,7 @@ export default function HealthPanel() {
             <View style={[styles.dot, { backgroundColor: dotColor(!webhookStale) }]} />
             <Text style={[type.body, { color: colors.ink, flex: 1 }]}>Last Stream webhook</Text>
             <Text style={[type.caption, { color: webhookStale ? colors.danger : colors.inkMuted }]}>
-              {health.last_webhook_at
-                ? new Date(health.last_webhook_at).toLocaleString()
-                : 'never'}
+              {formatTimestamp(health.last_webhook_at)}
             </Text>
           </View>
         </View>

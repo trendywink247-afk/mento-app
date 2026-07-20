@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminFlag, type AdminMessage } from '@/lib/adminApi';
+import { formatTimestamp } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type, wash } from '@/theme/tokens';
 
@@ -100,7 +102,7 @@ export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) 
                 <Text style={[type.caption, { color: colors.danger }]}>{flag.signal}</Text>
               </View>
               <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {new Date(flag.created_at).toLocaleString()}
+                {formatTimestamp(flag.created_at)}
               </Text>
             </View>
 
@@ -109,9 +111,12 @@ export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) 
             </Text>
 
             {flag.conversation_id ? (
-              <Pressable
+              <ConsolePressable
                 onPress={() => void toggleConversation(flag)}
                 accessibilityRole="button"
+                accessibilityLabel={`${
+                  openId === flag.id ? 'Hide' : 'Open'
+                } conversation for ${flag.signal} flag from ${flag.member_persona ?? 'Member'}`}
                 testID={`admin-flag-open-${flag.id}`}
                 style={styles.openBtn}
               >
@@ -123,7 +128,7 @@ export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) 
                 <Text style={[type.label, { color: colors.accent }]}>
                   {openId === flag.id ? 'Hide conversation' : 'Open conversation'}
                 </Text>
-              </Pressable>
+              </ConsolePressable>
             ) : null}
 
             {openId === flag.id ? (
@@ -134,7 +139,7 @@ export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) 
                   messages.map((m) => (
                     <View key={m.id} style={styles.bubble}>
                       <Text style={[type.caption, { color: colors.inkMuted }]}>
-                        {m.user_persona} · {new Date(m.at).toLocaleTimeString()}
+                        {m.user_persona} · {formatTimestamp(m.at)}
                       </Text>
                       <Text style={[type.body, { color: colors.ink }]}>{m.text}</Text>
                     </View>
@@ -155,16 +160,19 @@ export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) 
                   { label: 'No action', action: 'no_action' as const },
                 ]
               ).map((b) => (
-                <Pressable
+                <ConsolePressable
                   key={b.action}
                   onPress={() => void review(flag, b.action)}
                   disabled={busy === flag.id}
                   accessibilityRole="button"
+                  accessibilityLabel={`${b.label} — ${flag.signal} flag from ${
+                    flag.member_persona ?? 'Member'
+                  }`}
                   testID={`admin-flag-${flag.id}-${b.action}`}
                   style={[styles.reviewBtn, { borderColor: colors.border }]}
                 >
                   <Text style={[type.label, { color: colors.ink }]}>{b.label}</Text>
-                </Pressable>
+                </ConsolePressable>
               ))}
             </View>
           </View>
@@ -185,7 +193,14 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: space.sm,
   },
-  openBtn: { flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start' },
+  openBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.xs,
+    alignSelf: 'flex-start',
+    minHeight: 44,
+  },
   thread: { borderRadius: radius.md, padding: space.sm, gap: space.sm },
   bubble: { gap: 2 },
   actions: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
@@ -194,7 +209,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
-    minHeight: 40,
+    minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
