@@ -26,6 +26,8 @@
 
 **How to resume:** stack RUNNING (API :8000, Expo web :8081, containers healthy, listeners seeded, env reset). Gotcha for the registry: this Windows bash mangles quoted `-m`/`-c` arguments — write commit messages and psql/PowerShell one-liners to temp files (`git commit -F`, `powershell -File`) instead of inline quoting.
 
+**Same session, later — two uncaught web crashes fixed (`298189d`):** user hit "Failed to construct 'ImageData': source width is zero" (dotlottie-react). Root cause: pushing any route while a `LottieTile` was on screen (e.g. chats empty state → Start a Conversation → `/chat/…`) left the DotLottie canvas alive on the hidden tab screen where it collapses to 0×0 and the render loop throws — the exact bug the landing already guards with `leaving`, unguarded in the three LottieTile spots. Fix: `LottieTile` renders the still SceneTile fallback whenever its screen is unfocused (`useIsFocused`). Repro-hunting also exposed a second crash: an unknown stored `companion_animal` (e.g. lowercase `'panda'`) fell through all three art maps and crashed /profile and /path with "reading 'xml'" — `Companion` now degrades unknown values to the Panda brand guide. Both proven by headless repros (0 page errors), tsc clean, both committed e2e suites re-run green.
+
 ---
 
 ## 2026-07-19 (session 19) — Architecture-audit fixes: capacity accounting, JWT hygiene, prod CORS, Hindi crisis lexicon, crisis alerting ✅
