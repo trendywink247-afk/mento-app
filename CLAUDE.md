@@ -259,6 +259,8 @@ Six project skills encode the workflows this repo repeats every session. **Invok
 
 Standing rules the skills assume: the founder's product calls get implemented then logged in `PROGRESS.md → Open decisions` (never silently decided, never blocked on); gotchas that cost >15 min get written into the relevant skill or this file the same session; commit counts, test counts, and layout claims in docs are treated as hints — the repo is the truth.
 
+**External skills are advisory, this file wins.** The installed third-party skills (`gsap-*`, `high-end-visual-design`, `imagegen-frontend-mobile`, `redesign-existing-projects`) are reference taste/technique — where they prescribe fonts, colors, shadows, spacing, or animation defaults that differ from Mento's tokens, motion rules, or Calm register, **Mento's design system wins, always**. GSAP is DOM-only: never propose it for app screens (Reanimated + Skia is the stack); it's only ever a candidate for genuinely web-only surfaces, and even there prefer the motion tokens.
+
 ---
 
 ## Docs drift to reconcile (as of 2026-07-14)
