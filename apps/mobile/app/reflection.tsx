@@ -21,7 +21,9 @@ export default function ReflectionScreen() {
   const router = useRouter();
   useSessionGuard();
   const { colors } = useTheme();
-  const { conversation, listener } = useLocalSearchParams<{
+  // reason: `listener` stays in the type because EndFlow still routes with ?listener=
+  // (deep-link compat); the self-check copy no longer renders it.
+  const { conversation } = useLocalSearchParams<{
     conversation?: string;
     listener?: string;
   }>();
@@ -69,11 +71,10 @@ export default function ReflectionScreen() {
         </View>
 
         <Text style={[styles.question, { color: colors.ink }]}>
-          How would you rate this conversation?
+          How do you feel right now?
         </Text>
         <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          Your feedback helps us create a better{'\n'}
-          {listener ?? 'Mento'} for you. 💜
+          One quiet check-in before you go —{'\n'}no right answers. 💜
         </Text>
 
         <View style={[styles.sliderCard, { backgroundColor: colors.surface }]}>
@@ -86,7 +87,7 @@ export default function ReflectionScreen() {
                   <Pressable
                     key={n}
                     onPress={() => setEnergy(n)}
-                    hitSlop={10}
+                    hitSlop={12}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
                     accessibilityLabel={`Energy level ${n} of 5`}
@@ -162,15 +163,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: space.xs,
+    paddingVertical: space.sm,
   },
   node: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nodeSelected: { width: 30, height: 30, borderRadius: 15 },
+  nodeSelected: { width: 32, height: 32, borderRadius: 16 },
   labels: { flexDirection: 'row', justifyContent: 'space-between' },
   privacy: {
     flexDirection: 'row',

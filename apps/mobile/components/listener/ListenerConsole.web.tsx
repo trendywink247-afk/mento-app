@@ -367,7 +367,9 @@ export default function ListenerConsoleWeb() {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
-  body: { padding: space.lg, gap: space.sm, paddingBottom: space.xxl },
+  // Desktop readability (UX review 2026-07-13 #8): the console is a mobile-layout
+  // surface — cap and center it instead of stretching to full monitor width.
+  body: { padding: space.lg, gap: space.sm, paddingBottom: space.xxl, width: '100%', maxWidth: 720, alignSelf: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',

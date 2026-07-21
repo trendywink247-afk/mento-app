@@ -195,6 +195,10 @@ export default function ChatsTab() {
     { key: 'completed', label: 'Completed' },
   ];
 
+  // Search + filters earn their place only once there's something to sift through
+  // (UX review 2026-07-13 #5): below ~5 conversations they're noise before utility.
+  const showTools = rows.length >= 5;
+
   return (
     <Screen>
       <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
@@ -204,43 +208,47 @@ export default function ChatsTab() {
         Your conversations with mentors
       </Text>
 
-      <View style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Ionicons name="search-outline" size={18} color={colors.inkMuted} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.ink }]}
-          placeholder="Search conversations…"
-          placeholderTextColor={colors.inkMuted}
-          value={query}
-          onChangeText={setQuery}
-          accessibilityLabel="Search conversations"
-          testID="chats-search"
-        />
-      </View>
+      {showTools ? (
+        <>
+          <View style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Ionicons name="search-outline" size={18} color={colors.inkMuted} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.ink }]}
+              placeholder="Search conversations…"
+              placeholderTextColor={colors.inkMuted}
+              value={query}
+              onChangeText={setQuery}
+              accessibilityLabel="Search conversations"
+              testID="chats-search"
+            />
+          </View>
 
-      <View style={styles.chips}>
-        {chips.map((c) => {
-          const selected = filter === c.key;
-          return (
-            <Pressable
-              key={c.key}
-              onPress={() => setFilter(c.key)}
-              accessibilityRole="button"
-              accessibilityState={{ selected }}
-              testID={`filter-${c.key}`}
-              style={[
-                styles.chip,
-                selected
-                  ? { backgroundColor: colors.accent }
-                  : { borderWidth: 1, borderColor: colors.accentSoft },
-              ]}
-            >
-              <Text style={[type.label, { color: selected ? colors.onAccent : colors.accent }]}>
-                {c.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+          <View style={styles.chips}>
+            {chips.map((c) => {
+              const selected = filter === c.key;
+              return (
+                <Pressable
+                  key={c.key}
+                  onPress={() => setFilter(c.key)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  testID={`filter-${c.key}`}
+                  style={[
+                    styles.chip,
+                    selected
+                      ? { backgroundColor: colors.accent }
+                      : { borderWidth: 1, borderColor: colors.accentSoft },
+                  ]}
+                >
+                  <Text style={[type.label, { color: selected ? colors.onAccent : colors.accent }]}>
+                    {c.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </>
+      ) : null}
 
       {note ? (
         <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]} testID="chats-note">

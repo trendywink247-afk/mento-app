@@ -469,16 +469,17 @@ export default function ChatScreenWeb() {
           <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
             {listenerName}
           </Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>Mentor</Text>
           <View style={styles.statusRow}>
             <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
+            <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
               Here to listen and support
             </Text>
           </View>
         </View>
-        <View style={[styles.connectedPill, { backgroundColor: colors.surfaceAlt }]}>
-          <Text style={[type.caption, { color: colors.ink }]}>Connected</Text>
+        <View
+          style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
+          accessibilityLabel="Connected"
+        >
           <View style={[styles.dot, { backgroundColor: colors.success }]} />
         </View>
         <Pressable
@@ -595,13 +596,11 @@ const styles = StyleSheet.create({
   },
   personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  connectedPill: {
-    flexDirection: 'row',
+  connectedDot: {
     alignItems: 'center',
-    gap: space.xs,
+    justifyContent: 'center',
     borderRadius: radius.pill,
-    paddingVertical: 4,
-    paddingHorizontal: space.sm,
+    padding: 6,
   },
   dot: { width: 8, height: 8, borderRadius: radius.pill },
   privacy: {

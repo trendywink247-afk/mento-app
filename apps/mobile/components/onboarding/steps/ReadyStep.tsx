@@ -56,7 +56,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
     >
       <Entrance index={0}>
         <View style={styles.head}>
-          <IconBadge icon="checkmark" size={72} />
+          <IconBadge icon="checkmark" size={56} />
           <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
             Mento space ready!
           </Text>
@@ -123,13 +123,13 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  head: { alignItems: 'center', gap: space.sm, marginTop: space.md, marginBottom: space.lg },
+  head: { alignItems: 'center', gap: space.sm, marginTop: space.sm, marginBottom: space.md },
   headline: { fontFamily: font.serifBold, fontSize: 30, lineHeight: 38, textAlign: 'center' },
   center: { textAlign: 'center' },
-  companionZone: { alignItems: 'center', gap: space.xs, marginBottom: space.lg },
+  companionZone: { alignItems: 'center', gap: space.xs, marginBottom: space.md },
   arch: {
-    width: 200,
-    height: 170,
+    width: 184,
+    height: 150,
     borderTopLeftRadius: 100,
     borderTopRightRadius: 100,
     borderBottomLeftRadius: radius.md,
@@ -137,14 +137,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: space.md,
-    marginBottom: space.sm,
+    marginBottom: space.xs,
   },
   companionName: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 34, textAlign: 'center' },
   sparkleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    marginVertical: space.lg,
+    marginVertical: space.md,
   },
   hairline: { flex: 1, height: 1 },
   sectionTitle: {
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: space.sm,
   },
-  card: { borderRadius: radius.lg, padding: space.md, marginTop: space.lg },
+  card: { borderRadius: radius.lg, padding: space.md, marginTop: space.md },
   cardHead: { flexDirection: 'row', alignItems: 'center', marginBottom: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
   rowDivider: { height: 1, marginLeft: 40 + space.md },

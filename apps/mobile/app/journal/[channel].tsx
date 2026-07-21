@@ -21,6 +21,14 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, type Wash } from '@/theme/tokens';
 
 const MOODS = ['Calm', 'Happy', 'Okay', 'Low', 'Anxious'] as const;
+/** Weather glyphs for the mood chips — feelings as sky, in the brand's aurora language. */
+const MOOD_ICONS: Record<(typeof MOODS)[number], keyof typeof Ionicons.glyphMap> = {
+  Calm: 'leaf-outline',
+  Happy: 'sunny-outline',
+  Okay: 'cloud-outline',
+  Low: 'rainy-outline',
+  Anxious: 'thunderstorm-outline',
+};
 const FINANCE_CATEGORIES = ['Food', 'Travel', 'Books', 'Rent', 'Other'] as const;
 
 type Config = {
@@ -205,12 +213,16 @@ export default function JournalScreen() {
                   testID={`mood-${m.toLowerCase()}`}
                   style={[
                     styles.chip,
-                    selected
-                      ? { backgroundColor: colors.accent }
-                      : { borderWidth: 1, borderColor: colors.accentSoft },
+                    { backgroundColor: selected ? colors.accentTint : colors.surfaceAlt },
+                    selected && { borderWidth: 1, borderColor: colors.accent },
                   ]}
                 >
-                  <Text style={[styles.chipText, { color: selected ? colors.onAccent : colors.accent }]}>
+                  <Ionicons
+                    name={MOOD_ICONS[m]}
+                    size={14}
+                    color={selected ? colors.accent : colors.inkMuted}
+                  />
+                  <Text style={[styles.chipText, { color: selected ? colors.accent : colors.ink }]}>
                     {m}
                   </Text>
                 </Pressable>
@@ -349,7 +361,14 @@ const styles = StyleSheet.create({
   title: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 33 },
   composer: { borderRadius: radius.lg, padding: space.md, gap: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  chip: { borderRadius: radius.pill, paddingVertical: space.xs + 2, paddingHorizontal: space.sm + 4 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    borderRadius: radius.pill,
+    paddingVertical: space.xs + 2,
+    paddingHorizontal: space.sm + 4,
+  },
   chipText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
   input: {
     minHeight: 46,

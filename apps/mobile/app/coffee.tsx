@@ -139,7 +139,10 @@ export default function CoffeeScreen() {
             <Text style={[type.label, { color: colors.ink }]}>{m.title}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>{m.body}</Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+          {/* Transparent until Razorpay creds land (T&S #4) — no tap wasted to find out. */}
+          <View style={[styles.soonTag, { backgroundColor: colors.surfaceAlt }]}>
+            <Text style={[styles.soonText, { color: colors.inkMuted }]}>Soon</Text>
+          </View>
         </Pressable>
       ))}
       {note ? (
@@ -213,6 +216,12 @@ const styles = StyleSheet.create({
     padding: space.sm,
     marginTop: space.sm,
   },
+  soonTag: {
+    borderRadius: radius.pill,
+    paddingVertical: 3,
+    paddingHorizontal: space.sm,
+  },
+  soonText: { fontFamily: font.sansBold, fontSize: 11, lineHeight: 16 },
   secureRow: {
     flexDirection: 'row',
     alignItems: 'center',

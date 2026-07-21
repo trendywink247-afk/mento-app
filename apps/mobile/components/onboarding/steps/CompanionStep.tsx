@@ -100,7 +100,7 @@ export function CompanionStep({
     >
       <Entrance index={0}>
         <View style={styles.head}>
-          <IconBadge icon="color-palette-outline" size={64} />
+          <IconBadge icon="color-palette-outline" size={56} />
           <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
             Your growth, your theme
           </Text>
@@ -112,7 +112,7 @@ export function CompanionStep({
 
       <Entrance index={1}>
       <View style={styles.section}>
-        <IconBadge icon="paw-outline" size={52} />
+        <IconBadge icon="paw-outline" size={44} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.stepTitle, { color: colors.ink }]}>1. Choose an animal</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
@@ -164,7 +164,7 @@ export function CompanionStep({
 
       <Entrance index={2}>
       <View style={styles.section}>
-        <IconBadge icon="water-outline" size={52} />
+        <IconBadge icon="water-outline" size={44} />
         <View style={{ flex: 1 }}>
           <Text style={[styles.stepTitle, { color: colors.ink }]}>2. Choose a colour</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
@@ -241,34 +241,34 @@ export function CompanionStep({
 }
 
 const styles = StyleSheet.create({
-  head: { alignItems: 'center', gap: space.sm, marginBottom: space.lg },
+  head: { alignItems: 'center', gap: space.sm, marginBottom: space.md },
   headline: { fontFamily: font.serifBold, fontSize: 28, lineHeight: 36, textAlign: 'center' },
   center: { textAlign: 'center' },
   section: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    marginTop: space.md,
+    marginTop: space.sm,
     marginBottom: space.sm,
   },
   stepTitle: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24 },
   rail: { gap: space.sm, paddingVertical: space.xs, paddingRight: space.lg },
   cell: { alignItems: 'center', gap: space.xs },
   animalCard: {
-    width: 104,
-    height: 104,
+    width: 96,
+    height: 96,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   colourCard: {
-    width: 84,
-    height: 84,
+    width: 76,
+    height: 76,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dot: { width: 48, height: 48, borderRadius: radius.pill },
+  dot: { width: 44, height: 44, borderRadius: radius.pill },
   check: {
     position: 'absolute',
     top: 6,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     gap: space.sm,
     borderRadius: radius.lg,
     padding: space.md,
-    marginTop: space.lg,
+    marginTop: space.md,
   },
   decideTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22 },
   outlineBtn: {
