@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-07-21 (session 21) — 24-screen UX audit + the polish batch lands: v1 confirmed feature-complete ✅
+
+**Context:** founder asked "what's done, what's missing, make it beautiful — 100M-app bar". Full audit (jcode): stack brought up from cold (Docker Desktop was down), 24 screenshots at 390×844, **0 page errors**. Verdict: **v1 is FEATURE-COMPLETE** (all 15 SCOPE items) — what remains is launch infrastructure (Razorpay creds, PostHog/Sentry/deploy, Hindi core loop, privacy policy, helpline re-verify, native device verification, LLM for Journal Assistant), not features. Audit doc: `docs/UX_REVIEW_2026-07-21.md` (`91df54d`); screenshots out-of-repo at `C:\Users\khana\mento-audit\`.
+
+**Done:**
+- **Polish batch** (`0b12f6d`, 10 files): the 2026-07-13 UX-review recommendations #1–#6 + #8 finally implemented, plus this audit's new finds — companion/ready steps tightened so Surprise Me + affirmations cards clear the sticky CTA at 844px; chat header 3→2 lines with the Connected pill → dot (persona name keeps max width); reflection copy reframed as a self-check ("How do you feel right now?") matching the no-ratings promise, energy nodes enlarged; chats search/filters hidden until ≥5 conversations; coffee methods carry a visible "Soon" tag; mood chips gained weather glyphs + soft tint fills (token-based, aurora language); listener console capped at 720px centered on desktop.
+- **Verified per mento-verify:** `tsc --noEmit` clean (twice); both committed e2e suites green **0 page errors** (connecting-experience; path-communities incl. the reduced-motion walk); every changed screen re-screenshotted at 390×844; listener console checked at 1280×800; env reset before each run.
+- **Deliberate skips (logged):** gender filter (product call, still founder's); listener-chat desktop frame (ops surface, not the reviewed item — follow-up candidate); path home/invite dead space (belongs to the phase-B signature-moments design, not polish).
+
+**Open (founder) — new:**
+- **Reflection copy veto:** rewritten to "How do you feel right now? / One quiet check-in before you go — no right answers." per DECISIONS self-reflection framing + UX review #2. 1-line veto reverts.
+- **Phase B direction pick (A/B/C question from the audit):** signature-moments design — landing first impression, match-crescendo warmth, companion presence across tabs. Awaiting founder go.
+- Carried: gender filter in/out of v1; H1-remainder PRD (PostHog, Sentry/DO deploy, Hindi core loop); privacy policy; helpline re-verify; DECISIONS §J; Razorpay creds; LLM decision; native Android perf gate.
+
+**Next:** founder picks phase B (or closes it); otherwise H1-remainder execution per session 20.
+
+**How to resume:** stack RUNNING (API :8000, Expo web :8081, containers healthy, listeners seeded, env reset). Ops gotcha (recurring): `findstr` silently fails on this repo's LF files on this machine — use `read`/`agentgrep` or node one-liners for code search; psql `-c` quoting breaks in cmd, pipe SQL via stdin (`docker exec -i … psql … < file.sql`); PowerShell needs `-ExecutionPolicy Bypass -File` for local helper scripts.
+
+---
+
 ## 2026-07-20 (session 20) — Second architecture-audit round: crisis-scan isolation, atomic rate limits, Stream client lifecycle, prod Dockerfile ✅
 
 **Context:** deep audit (session mouse, 2026-07-19 night) found 18 more findings across backend safety, mobile, and ops. Run as a 3-lane swarm (panda/peacock/penguin under coordinator horse); a jcode reload crashed the coordinator mid-campaign — this session took over, respawned the dead ops lane (parrot), unblocked lane C's missing dependency, and drove all gates green. **pytest 104 → 119.**
