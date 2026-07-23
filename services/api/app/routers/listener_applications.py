@@ -1,0 +1,103 @@
+"""Become-a-listener applications (spec 2026-07-24).
+
+Member-facing half of the funnel: apply + poll status. Approval/decline live in
+the admin console router. `decline_reason` is deliberately absent from every
+response here (T&S: no wound-poking)."""
+from __future__ import annotations
+
+from datetime import datetime, timedelta, timezone
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app import ratelimit
+from app.config import get_settings
+from app.db import get_db
+from app.models.enums import ApplicationStatus
+from app.models.listener_application import ListenerApplication
+from app.schemas import ListenerApplicationIn, ListenerApplicationOut
+from app.security import current_user_id, issue_listener_token
+from app.services.paths_data import COMMUNITIES
+
+router = APIRouter(prefix="/listener-applications", tags=["listener-applications"])
+
+REAPPLY_COOLDOWN = timedelta(days=30)
+
+
+def _out(a: ListenerApplication) -> ListenerApplicationOut:
+    console_url = None
+    if a.status == ApplicationStatus.approved and a.listener_id:
+        token = issue_listener_token(a.listener_id)
+        console_url = f"{get_settings().console_base_url}/listener#token={token}"
+    return ListenerApplicationOut(
+        id=a.id,
+        status=a.status.value,
+        mentor_interest=a.mentor_interest,
+        created_at=a.created_at.isoformat(),
+        console_url=console_url,
+    )
+
+
+def _latest(db: Session, user_id: str) -> ListenerApplication | None:
+    return db.scalars(
+        select(ListenerApplication)
+        .where(ListenerApplication.user_id == user_id)
+        .order_by(ListenerApplication.created_at.desc())
+        .limit(1)
+    ).first()
+
+
+@router.post("", response_model=ListenerApplicationOut)
+def apply(
+    payload: ListenerApplicationIn,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ListenerApplicationOut:
+    ratelimit.enforce(
+        f"listener-apply:{user_id}", 3, 24 * 3600,
+        detail="Too many attempts today — please try again tomorrow.",
+    )
+    if not payload.pledge_accepted:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "The listener pledge must be accepted."
+        )
+    unknown = [c for c in payload.communities if c not in COMMUNITIES]
+    if unknown:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Unknown community: {unknown[0]}")
+
+    latest = _latest(db, user_id)
+    if latest is not None:
+        if latest.status in (ApplicationStatus.pending, ApplicationStatus.approved):
+            raise HTTPException(status.HTTP_409_CONFLICT, "An application is already on file.")
+        declined_at = latest.updated_at
+        if declined_at.tzinfo is None:
+            declined_at = declined_at.replace(tzinfo=timezone.utc)
+        if datetime.now(timezone.utc) - declined_at < REAPPLY_COOLDOWN:
+            raise HTTPException(
+                status.HTTP_409_CONFLICT,
+                "Please wait a little before applying again — we'd love to hear from you later.",
+            )
+
+    row = ListenerApplication(
+        user_id=user_id,
+        motivation=payload.motivation,
+        communities=payload.communities,
+        availability=payload.availability,
+        email=payload.email,
+        mentor_interest=payload.mentor_interest,
+        pledge_accepted_at=datetime.now(timezone.utc),
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _out(row)
+
+
+@router.get("/me", response_model=ListenerApplicationOut | None)
+def my_application(
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ListenerApplicationOut | None:
+    latest = _latest(db, user_id)
+    return None if latest is None else _out(latest)

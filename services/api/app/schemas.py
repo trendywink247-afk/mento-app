@@ -382,6 +382,25 @@ class PathState(BaseModel):
     listeners_online: int
 
 
+# --- Become-a-listener applications ---
+class ListenerApplicationIn(BaseModel):
+    motivation: str = Field(min_length=40, max_length=500)
+    communities: list[str] = Field(default_factory=list, max_length=5)
+    availability: Literal["few_hours", "most_evenings", "weekends", "varies"]
+    email: str | None = None
+    mentor_interest: bool = False
+    pledge_accepted: bool
+
+
+class ListenerApplicationOut(BaseModel):
+    id: str
+    status: str
+    mentor_interest: bool
+    created_at: str
+    # Present only when approved: the applicant's private console link.
+    console_url: str | None = None
+
+
 # --- Moderation review queue (admin) ---
 class ModerationItem(BaseModel):
     id: str
