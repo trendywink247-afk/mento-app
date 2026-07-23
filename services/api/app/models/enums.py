@@ -76,3 +76,9 @@ class AdminRole(str, enum.Enum):
 class AdminStatus(str, enum.Enum):
     active = "active"
     revoked = "revoked"
+
+
+class ApplicationStatus(str, enum.Enum):
+    pending = "pending"
+    approved = "approved"
+    declined = "declined"

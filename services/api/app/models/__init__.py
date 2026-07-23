@@ -4,6 +4,7 @@ from app.models.contribution import Contribution
 from app.models.conversation import Conversation
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
+from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
 from app.models.reflection import ConversationReflection
 from app.models.request import ConversationRequest
@@ -18,6 +19,7 @@ __all__ = [
     "ConversationReflection",
     "ConversationRequest",
     "JournalEntry",
+    "ListenerApplication",
     "ListenerProfile",
     "ModerationEvent",
     "SafetyFlag",
