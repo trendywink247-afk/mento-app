@@ -74,6 +74,18 @@ export type AdminAuditItem = {
   created_at: string;
 };
 
+export type AdminApplication = {
+  id: string;
+  persona_name: string;
+  motivation: string;
+  communities: string[];
+  availability: string;
+  email: string | null;
+  mentor_interest: boolean;
+  status: 'pending' | 'approved' | 'declined';
+  created_at: string;
+};
+
 function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   return apiRequest<T>(path, init, getAdminToken);
 }
@@ -118,4 +130,15 @@ export const adminApi = {
   revokeAdmin: (id: string) =>
     req<{ status: string }>(`/admin/admins/${id}/revoke`, { method: 'POST' }),
   audit: () => req<AdminAuditItem[]>('/admin/audit'),
+
+  // --- Listener applications (spec 2026-07-24) ---
+  listApplications: (status?: string) =>
+    req<AdminApplication[]>(`/admin/applications${status ? `?status=${status}` : ''}`),
+  approveApplication: (id: string) =>
+    req<AdminApplication>(`/admin/applications/${id}/approve`, { method: 'POST' }),
+  declineApplication: (id: string, reason: string) =>
+    req<AdminApplication>(`/admin/applications/${id}/decline`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
 };

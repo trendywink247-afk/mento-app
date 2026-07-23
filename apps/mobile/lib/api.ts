@@ -157,6 +157,24 @@ export type PathState = {
   listeners_online: number;
 };
 
+// --- Become a listener (spec 2026-07-24) ---
+export type ListenerApplicationStatus = 'pending' | 'approved' | 'declined';
+export type ListenerApplication = {
+  id: string;
+  status: ListenerApplicationStatus;
+  mentor_interest: boolean;
+  created_at: string;
+  console_url: string | null;
+};
+export type ListenerApplicationIn = {
+  motivation: string;
+  communities: string[];
+  availability: 'few_hours' | 'most_evenings' | 'weekends' | 'varies';
+  email: string | null;
+  mentor_interest: boolean;
+  pledge_accepted: boolean;
+};
+
 // One-shot latch so overlapping 401s from parallel requests trigger a single
 // session-clear + redirect instead of a replace() loop.
 let handling401 = false;
@@ -265,4 +283,10 @@ export const api = {
 
   listJournalEntries: (channel: string) =>
     request<JournalEntry[]>(`/journals/entries?channel=${encodeURIComponent(channel)}`, {}, true),
+
+  // --- Become a listener (spec 2026-07-24) ---
+  submitListenerApplication: (payload: ListenerApplicationIn) =>
+    request<ListenerApplication>('/listener-applications', { method: 'POST', body: JSON.stringify(payload) }, true),
+
+  getListenerApplication: () => request<ListenerApplication | null>('/listener-applications/me', {}, true),
 };
