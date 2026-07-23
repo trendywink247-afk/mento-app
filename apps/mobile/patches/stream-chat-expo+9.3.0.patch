@@ -1,0 +1,42 @@
+diff --git a/node_modules/stream-chat-expo/src/native/NativeStreamVideoThumbnail.ts b/node_modules/stream-chat-expo/src/native/NativeStreamVideoThumbnail.ts
+index bd8d898..3ea6a9f 100644
+--- a/node_modules/stream-chat-expo/src/native/NativeStreamVideoThumbnail.ts
++++ b/node_modules/stream-chat-expo/src/native/NativeStreamVideoThumbnail.ts
+@@ -11,4 +11,4 @@ export interface Spec extends TurboModule {
+   createVideoThumbnails(urls: ReadonlyArray<string>): Promise<ReadonlyArray<VideoThumbnailResult>>;
+ }
+ 
+-export default TurboModuleRegistry.getEnforcing<Spec>('StreamVideoThumbnail');
++export default TurboModuleRegistry.get<Spec>('StreamVideoThumbnail');
+diff --git a/node_modules/stream-chat-expo/src/native/videoThumbnail.ts b/node_modules/stream-chat-expo/src/native/videoThumbnail.ts
+index 1182acb..ef699dc 100644
+--- a/node_modules/stream-chat-expo/src/native/videoThumbnail.ts
++++ b/node_modules/stream-chat-expo/src/native/videoThumbnail.ts
+@@ -3,6 +3,9 @@ import NativeStreamVideoThumbnail, { type VideoThumbnailResult } from './NativeS
+ export type { VideoThumbnailResult } from './NativeStreamVideoThumbnail';
+ 
+ export const createVideoThumbnails = async (urls: string[]): Promise<VideoThumbnailResult[]> => {
++  if (!NativeStreamVideoThumbnail) {
++    return urls.map(() => ({ error: 'StreamVideoThumbnail native module is not available', uri: null }));
++  }
+   const results = await NativeStreamVideoThumbnail.createVideoThumbnails(urls);
+   return Array.from(results);
+ };
+diff --git a/node_modules/stream-chat-expo/src/optionalDependencies/NativeShimmerView.ts b/node_modules/stream-chat-expo/src/optionalDependencies/NativeShimmerView.ts
+index fbbe898..2429dc6 100644
+--- a/node_modules/stream-chat-expo/src/optionalDependencies/NativeShimmerView.ts
++++ b/node_modules/stream-chat-expo/src/optionalDependencies/NativeShimmerView.ts
+@@ -1,3 +1,12 @@
++import { UIManager } from 'react-native';
++
+ import StreamShimmerViewNativeComponent from '../native/StreamShimmerViewNativeComponent';
+ 
+-export const NativeShimmerView = StreamShimmerViewNativeComponent;
++let hasNativeShimmer = false;
++try {
++  hasNativeShimmer = UIManager.hasViewManagerConfig?.('StreamShimmerView') ?? false;
++} catch {
++  hasNativeShimmer = false;
++}
++
++export const NativeShimmerView = hasNativeShimmer ? StreamShimmerViewNativeComponent : null;

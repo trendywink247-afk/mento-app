@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "main": "expo-router/entry",
   "scripts": {
+    "postinstall": "patch-package",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
@@ -47,13 +48,18 @@
     "react-native-safe-area-context": "4.12.0",
     "react-native-screens": "~4.4.0",
     "react-native-svg": "15.8.0",
+    "react-native-teleport": "1.1.8",
     "react-native-web": "~0.19.13",
     "stream-chat": "^9.45.2",
     "stream-chat-expo": "^9.3.0"
   },
   "devDependencies": {
     "@types/react": "~18.3.12",
+    "patch-package": "^8.0.1",
     "typescript": "~5.3.3"
+  },
+  "overrides": {
+    "react-native-safe-area-context": "4.12.0"
   },
   "private": true
 }

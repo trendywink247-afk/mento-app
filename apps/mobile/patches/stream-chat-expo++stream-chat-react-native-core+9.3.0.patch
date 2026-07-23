@@ -1,0 +1,39 @@
+diff --git a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/lib/commonjs/components/UIComponents/SwipableWrapper.js b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/lib/commonjs/components/UIComponents/SwipableWrapper.js
+index d9c4aff..32c8dcc 100644
+--- a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/lib/commonjs/components/UIComponents/SwipableWrapper.js
++++ b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/lib/commonjs/components/UIComponents/SwipableWrapper.js
+@@ -20,7 +20,7 @@ function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return
+ function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && {}.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }
+ var ACTION_WIDTH = 80;
+ var MAX_RIGHT_ACTIONS_WIDTH = 240;
+-var AnimatedPressable = _reactNativeReanimated.default.createAnimatedComponent(_reactNativeGestureHandler.Pressable);
++var AnimatedPressable = _reactNativeReanimated.default.createAnimatedComponent(_reactNative.Pressable);
+ var animationOptions = {
+   damping: 24,
+   mass: 1,
+diff --git a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/lib/module/components/UIComponents/SwipableWrapper.js b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/lib/module/components/UIComponents/SwipableWrapper.js
+index d9c4aff..32c8dcc 100644
+--- a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/lib/module/components/UIComponents/SwipableWrapper.js
++++ b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/lib/module/components/UIComponents/SwipableWrapper.js
+@@ -20,7 +20,7 @@ function _getRequireWildcardCache(e) { if ("function" != typeof WeakMap) return
+ function _interopRequireWildcard(e, r) { if (!r && e && e.__esModule) return e; if (null === e || "object" != typeof e && "function" != typeof e) return { default: e }; var t = _getRequireWildcardCache(r); if (t && t.has(e)) return t.get(e); var n = { __proto__: null }, a = Object.defineProperty && Object.getOwnPropertyDescriptor; for (var u in e) if ("default" !== u && {}.hasOwnProperty.call(e, u)) { var i = a ? Object.getOwnPropertyDescriptor(e, u) : null; i && (i.get || i.set) ? Object.defineProperty(n, u, i) : n[u] = e[u]; } return n.default = e, t && t.set(e, n), n; }
+ var ACTION_WIDTH = 80;
+ var MAX_RIGHT_ACTIONS_WIDTH = 240;
+-var AnimatedPressable = _reactNativeReanimated.default.createAnimatedComponent(_reactNativeGestureHandler.Pressable);
++var AnimatedPressable = _reactNativeReanimated.default.createAnimatedComponent(_reactNative.Pressable);
+ var animationOptions = {
+   damping: 24,
+   mass: 1,
+diff --git a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/UIComponents/SwipableWrapper.tsx b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/UIComponents/SwipableWrapper.tsx
+index 0ce5d9b..5c3d21a 100644
+--- a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/UIComponents/SwipableWrapper.tsx
++++ b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/UIComponents/SwipableWrapper.tsx
+@@ -1,7 +1,6 @@
+ import React, { PropsWithChildren, useEffect, useMemo, useRef } from 'react';
+-import { I18nManager, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
++import { I18nManager, Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+ 
+-import { Pressable } from 'react-native-gesture-handler';
+ import Animated, {
+   Extrapolation,
+   SharedValue,

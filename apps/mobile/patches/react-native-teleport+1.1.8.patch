@@ -1,0 +1,50 @@
+diff --git a/node_modules/react-native-teleport/lib/module/views/Portal/index.native.js b/node_modules/react-native-teleport/lib/module/views/Portal/index.native.js
+index 0ab1b75..8c6a753 100644
+--- a/node_modules/react-native-teleport/lib/module/views/Portal/index.native.js
++++ b/node_modules/react-native-teleport/lib/module/views/Portal/index.native.js
+@@ -1,4 +1,18 @@
+ "use strict";
+ 
+-export { default } from "../../specs/PortalViewNativeComponent";
++// Expo Go patch: the real PortalView is a Fabric native component that
++// re-parents its children into the PortalHost natively. Expo Go's binary
++// does not contain it, so render children inline instead. Overlays lose
++// their "break out of parent" behavior but nothing crashes.
++import { View } from "react-native";
++import { jsx as _jsx } from "react/jsx-runtime";
++const PortalView = ({
++  style,
++  children
++}) => /*#__PURE__*/_jsx(View, {
++  pointerEvents: "box-none",
++  style: style,
++  children: children
++});
++export default PortalView;
+ //# sourceMappingURL=index.native.js.map
+diff --git a/node_modules/react-native-teleport/lib/module/views/PortalHost/index.native.js b/node_modules/react-native-teleport/lib/module/views/PortalHost/index.native.js
+index 64a0796..d7fccb6 100644
+--- a/node_modules/react-native-teleport/lib/module/views/PortalHost/index.native.js
++++ b/node_modules/react-native-teleport/lib/module/views/PortalHost/index.native.js
+@@ -1,11 +1,18 @@
+ "use strict";
+ 
+-import PortalHostNativeComponent from "../../specs/PortalHostViewNativeComponent";
++// Expo Go patch: the real PortalHost is a Fabric native component missing
++// from Expo Go's binary. A plain pass-through View keeps the layout valid;
++// pointerEvents="box-none" so absolute-fill hosts never swallow touches.
++import { View } from "react-native";
+ import { jsx as _jsx } from "react/jsx-runtime";
+ const PortalHost = props => {
+-  return /*#__PURE__*/_jsx(PortalHostNativeComponent, {
++  const {
++    name,
++    ...rest
++  } = props;
++  return /*#__PURE__*/_jsx(View, {
+     pointerEvents: "box-none",
+-    ...props
++    ...rest
+   });
+ };
+ export default PortalHost;
