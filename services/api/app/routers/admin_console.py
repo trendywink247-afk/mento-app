@@ -429,6 +429,7 @@ def admin_applications(
         select(ListenerApplication, User.persona_name)
         .join(User, User.id == ListenerApplication.user_id)
         .order_by(ListenerApplication.created_at.asc())
+        .limit(200)
     )
     if status_filter:
         try:
@@ -450,7 +451,9 @@ def approve_application(
 ) -> AdminApplicationItem:
     """Approve → mint a REAL ListenerProfile (offline, vetting-approved), the same
     shape POST /admin/listeners creates. The member's /me then carries a console link."""
-    a = db.get(ListenerApplication, app_id)
+    # Row lock: two admins (or a double-click) racing this check-then-act must not
+    # mint two listeners for one applicant — same idiom as apply()'s user-row lock.
+    a = db.get(ListenerApplication, app_id, with_for_update=True)
     if a is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "application not found")
     if a.status != ApplicationStatus.pending:
@@ -493,7 +496,9 @@ def decline_application(
 ) -> AdminApplicationItem:
     """Decline with an admin-private reason — stored for our records, never
     surfaced to the member (T&S: no wound-poking)."""
-    a = db.get(ListenerApplication, app_id)
+    # Row lock: an approve racing this decline must not leave a declined row with
+    # a live listener — same idiom as apply()'s user-row lock.
+    a = db.get(ListenerApplication, app_id, with_for_update=True)
     if a is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "application not found")
     if a.status != ApplicationStatus.pending:

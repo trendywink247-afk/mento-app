@@ -265,3 +265,8 @@ def test_admin_decline_records_private_reason(client, admin_headers):
 
 def test_admin_endpoints_require_admin(client):
     assert client.get("/api/v1/admin/applications").status_code in (401, 403)
+    # Auth must reject before any lookup — a made-up id never 404s here.
+    assert client.post("/api/v1/admin/applications/nope/approve").status_code in (401, 403)
+    assert client.post(
+        "/api/v1/admin/applications/nope/decline", json={"reason": "why not"}
+    ).status_code in (401, 403)
