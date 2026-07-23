@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -78,6 +78,16 @@ export default function Landing() {
     opacity: 1 - exit.value,
     transform: [{ translateY: exit.value * -10 }],
   }));
+  // The exit fade + `leaving` swap outlive the push (the landing stays mounted
+  // under the onboarding route), so restore both whenever focus returns —
+  // otherwise navigating back lands on an invisible hero over bare sky.
+  useFocusEffect(
+    useCallback(() => {
+      exit.value = 0;
+      setLeaving(false);
+    }, [exit]),
+  );
+
   const begin = () => {
     const go = () => router.push('/onboarding');
     setLeaving(true);
