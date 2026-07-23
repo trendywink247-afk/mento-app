@@ -14,8 +14,10 @@ from sqlalchemy.orm import Session
 from app import ratelimit
 from app.config import get_settings
 from app.db import get_db
-from app.models.enums import ApplicationStatus
+from app.models.enums import ApplicationStatus, VettingStatus
+from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.user import User
 from app.schemas import ListenerApplicationIn, ListenerApplicationOut
 from app.security import current_user_id, issue_listener_token
 from app.services.paths_data import COMMUNITIES
@@ -25,11 +27,16 @@ router = APIRouter(prefix="/listener-applications", tags=["listener-applications
 REAPPLY_COOLDOWN = timedelta(days=30)
 
 
-def _out(a: ListenerApplication) -> ListenerApplicationOut:
+def _out(db: Session, a: ListenerApplication) -> ListenerApplicationOut:
     console_url = None
     if a.status == ApplicationStatus.approved and a.listener_id:
-        token = issue_listener_token(a.listener_id)
-        console_url = f"{get_settings().console_base_url}/listener#token={token}"
+        # Mirror the admin console-link endpoint: a listener suspended after
+        # approval must never be handed a fresh console token (T&S #9 —
+        # suspension revokes access instantly).
+        listener = db.get(ListenerProfile, a.listener_id)
+        if listener is not None and listener.vetting_status == VettingStatus.approved:
+            token = issue_listener_token(a.listener_id)
+            console_url = f"{get_settings().console_base_url}/listener#token={token}"
     return ListenerApplicationOut(
         id=a.id,
         status=a.status.value,
@@ -66,10 +73,18 @@ def apply(
     if unknown:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Unknown community: {unknown[0]}")
 
+    # Serialize per-user apply: the check-then-insert below must not race itself
+    # (two concurrent POSTs would create two pending rows). Row lock on the user,
+    # same idiom as the matcher — and, like the matcher, a no-op on SQLite.
+    db.execute(select(User).where(User.id == user_id).with_for_update())
+
     latest = _latest(db, user_id)
     if latest is not None:
         if latest.status in (ApplicationStatus.pending, ApplicationStatus.approved):
             raise HTTPException(status.HTTP_409_CONFLICT, "An application is already on file.")
+        # Cooldown anchors to updated_at, so any future write to a declined row
+        # restarts the 30-day clock (acceptable for now; a dedicated decided_at
+        # column is the precise fix if that ever matters).
         declined_at = latest.updated_at
         if declined_at.tzinfo is None:
             declined_at = declined_at.replace(tzinfo=timezone.utc)
@@ -91,7 +106,7 @@ def apply(
     db.add(row)
     db.commit()
     db.refresh(row)
-    return _out(row)
+    return _out(db, row)
 
 
 @router.get("/me", response_model=ListenerApplicationOut | None)
@@ -100,4 +115,4 @@ def my_application(
     db: Session = Depends(get_db),
 ) -> ListenerApplicationOut | None:
     latest = _latest(db, user_id)
-    return None if latest is None else _out(latest)
+    return None if latest is None else _out(db, latest)

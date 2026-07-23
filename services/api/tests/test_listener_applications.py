@@ -8,7 +8,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.main import app
-from app.models.enums import ApplicationStatus
+from app.models.enums import ApplicationStatus, ListenerStatus, VettingStatus
+from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.user import User
 from app.security import issue_session_token
@@ -98,6 +99,17 @@ def test_unknown_community_rejected(client):
     assert r.status_code == 422
 
 
+def test_invalid_email_rejected(client):
+    with TestSession() as s:
+        uid = _user(s)
+    r = client.post(
+        "/api/v1/listener-applications",
+        json={**PAYLOAD, "email": "not-an-email"},
+        headers=_auth(uid),
+    )
+    assert r.status_code == 422
+
+
 def test_one_open_application(client):
     with TestSession() as s:
         uid = _user(s)
@@ -138,6 +150,34 @@ def test_decline_reason_never_in_member_payload(client):
     assert body["status"] == "declined"
     assert "decline_reason" not in body
     assert "internal note" not in str(body)
+
+
+def test_suspended_listener_gets_no_console_url(client):
+    """Approved application whose listener was later suspended must not mint a
+    console link (T&S #9: suspension revokes access instantly)."""
+    with TestSession() as s:
+        uid = _user(s)
+    client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid))
+    with TestSession() as s:
+        li = ListenerProfile(
+            persona_name="Hushed Grove",
+            persona_avatar="x",
+            categories=["loneliness"],
+            status=ListenerStatus.online,
+            vetting_status=VettingStatus.suspended,
+            rank=10,
+            active_conversations=0,
+            max_concurrent=3,
+        )
+        s.add(li)
+        s.flush()
+        s.query(ListenerApplication).update(
+            {"status": ApplicationStatus.approved, "listener_id": li.id}
+        )
+        s.commit()
+    body = client.get("/api/v1/listener-applications/me", headers=_auth(uid)).json()
+    assert body["status"] == "approved"
+    assert body["console_url"] is None
 
 
 def test_requires_auth(client):

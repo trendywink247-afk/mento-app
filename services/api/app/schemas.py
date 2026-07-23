@@ -387,7 +387,7 @@ class ListenerApplicationIn(BaseModel):
     motivation: str = Field(min_length=40, max_length=500)
     communities: list[str] = Field(default_factory=list, max_length=5)
     availability: Literal["few_hours", "most_evenings", "weekends", "varies"]
-    email: str | None = None
+    email: EmailStr | None = None  # same pattern as OnboardingStart.email
     mentor_interest: bool = False
     pledge_accepted: bool
 
