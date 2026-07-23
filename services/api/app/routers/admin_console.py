@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -16,17 +16,21 @@ from app.models.conversation import Conversation
 from app.models.enums import (
     AdminRole,
     AdminStatus,
+    ApplicationStatus,
     ConversationStatus,
     ListenerStatus,
     SafetySignal,
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
+from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
 from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.schemas import (
     AdminAccountItem,
+    AdminApplicationDeclineIn,
+    AdminApplicationItem,
     AdminAuditItem,
     AdminConsoleLinkOut,
     AdminContributionItem,
@@ -396,6 +400,113 @@ def listener_console_link(
     audit.record(db, admin, "listener.link_issued", subject_type="listener", subject_id=listener_id)
     db.commit()
     return AdminConsoleLinkOut(url=f"{base}/listener#token={token}")
+
+
+# --- Listener applications (spec 2026-07-24) ----------------------------------
+
+
+def _application_item(a: ListenerApplication, persona_name: str) -> AdminApplicationItem:
+    return AdminApplicationItem(
+        id=a.id,
+        persona_name=persona_name,
+        motivation=a.motivation,
+        communities=a.communities or [],
+        availability=a.availability,
+        email=a.email,
+        mentor_interest=a.mentor_interest,
+        status=a.status.value,
+        created_at=a.created_at.isoformat(),
+    )
+
+
+@router.get("/applications", response_model=list[AdminApplicationItem])
+def admin_applications(
+    status_filter: str | None = Query(default=None, alias="status"),
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> list[AdminApplicationItem]:
+    stmt = (
+        select(ListenerApplication, User.persona_name)
+        .join(User, User.id == ListenerApplication.user_id)
+        .order_by(ListenerApplication.created_at.asc())
+    )
+    if status_filter:
+        try:
+            wanted = ApplicationStatus(status_filter)
+        except ValueError:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY, f"unknown status: {status_filter}"
+            )
+        stmt = stmt.where(ListenerApplication.status == wanted)
+    rows = db.execute(stmt).all()
+    return [_application_item(a, persona_name) for a, persona_name in rows]
+
+
+@router.post("/applications/{app_id}/approve", response_model=AdminApplicationItem)
+def approve_application(
+    app_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminApplicationItem:
+    """Approve → mint a REAL ListenerProfile (offline, vetting-approved), the same
+    shape POST /admin/listeners creates. The member's /me then carries a console link."""
+    a = db.get(ListenerApplication, app_id)
+    if a is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "application not found")
+    if a.status != ApplicationStatus.pending:
+        raise HTTPException(status.HTTP_409_CONFLICT, "application is not pending")
+    applicant = db.get(User, a.user_id)
+    if applicant is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "applicant no longer exists")
+
+    li = ListenerProfile(
+        persona_name=applicant.persona_name,
+        persona_avatar=applicant.persona_avatar,
+        categories=[],
+        community_slug=(a.communities[0] if a.communities else None),
+        status=ListenerStatus.offline,
+        vetting_status=VettingStatus.approved,
+        rank=0,
+        active_conversations=0,
+        max_concurrent=3,
+    )
+    db.add(li)
+    db.flush()
+    a.status = ApplicationStatus.approved
+    a.listener_id = li.id
+    audit.record(
+        db, admin, "listener.application_approved", subject_type="application", subject_id=a.id
+    )
+    # TODO(email-provider): when an email service is wired, send the console
+    # link to a.email here (spec: store now, send later).
+    db.commit()
+    db.refresh(a)
+    return _application_item(a, applicant.persona_name)
+
+
+@router.post("/applications/{app_id}/decline", response_model=AdminApplicationItem)
+def decline_application(
+    app_id: str,
+    payload: AdminApplicationDeclineIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminApplicationItem:
+    """Decline with an admin-private reason — stored for our records, never
+    surfaced to the member (T&S: no wound-poking)."""
+    a = db.get(ListenerApplication, app_id)
+    if a is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "application not found")
+    if a.status != ApplicationStatus.pending:
+        raise HTTPException(status.HTTP_409_CONFLICT, "application is not pending")
+    applicant = db.get(User, a.user_id)
+    a.status = ApplicationStatus.declined
+    a.decline_reason = payload.reason
+    audit.record(
+        db, admin, "listener.application_declined", subject_type="application", subject_id=a.id
+    )
+    db.commit()
+    db.refresh(a)
+    return _application_item(a, applicant.persona_name if applicant else "(deleted)")
 
 
 # --- Health + contributions ---------------------------------------------------

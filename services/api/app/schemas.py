@@ -412,3 +412,20 @@ class ModerationItem(BaseModel):
     blocked: bool
     reviewed: bool
     created_at: str
+
+
+# --- Listener applications (admin review) ---
+class AdminApplicationItem(BaseModel):
+    id: str
+    persona_name: str
+    motivation: str
+    communities: list[str]
+    availability: str
+    email: str | None
+    mentor_interest: bool
+    status: str
+    created_at: str
+
+
+class AdminApplicationDeclineIn(BaseModel):
+    reason: str = Field(min_length=3, max_length=255)

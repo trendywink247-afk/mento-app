@@ -8,11 +8,12 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app.main import app
-from app.models.enums import ApplicationStatus, ListenerStatus, VettingStatus
+from app.models.admin import AdminAccount, AdminAuditLog
+from app.models.enums import AdminRole, ApplicationStatus, ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.user import User
-from app.security import issue_session_token
+from app.security import issue_admin_token, issue_session_token
 
 from .conftest import TestSession, requires_postgres
 
@@ -27,9 +28,25 @@ def client():
 @pytest.fixture(autouse=True)
 def _clean():
     with TestSession() as s:
-        s.execute(text("TRUNCATE users, listener_profiles, listener_applications CASCADE"))
+        s.execute(
+            text(
+                "TRUNCATE users, listener_profiles, listener_applications, "
+                "admin_accounts, admin_audit_log CASCADE"
+            )
+        )
         s.commit()
     yield
+
+
+@pytest.fixture
+def admin_headers():
+    with TestSession() as s:
+        a = AdminAccount(name="Founder", role=AdminRole.owner)
+        s.add(a)
+        s.flush()
+        admin_id = a.id
+        s.commit()
+    return {"Authorization": f"Bearer {issue_admin_token(admin_id)}"}
 
 
 def _user(s) -> str:
@@ -183,3 +200,68 @@ def test_suspended_listener_gets_no_console_url(client):
 def test_requires_auth(client):
     assert client.get("/api/v1/listener-applications/me").status_code in (401, 403)
     assert client.post("/api/v1/listener-applications", json=PAYLOAD).status_code in (401, 403)
+
+
+# --- Admin half ---------------------------------------------------------------
+
+
+def test_admin_queue_approve_creates_listener(client, admin_headers):
+    with TestSession() as s:
+        uid = _user(s)
+    client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid))
+
+    q = client.get("/api/v1/admin/applications?status=pending", headers=admin_headers)
+    assert q.status_code == 200
+    items = q.json()
+    assert len(items) == 1
+    assert items[0]["persona_name"] == "Quiet Cove"
+    app_id = items[0]["id"]
+
+    ok = client.post(f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers)
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["status"] == "approved"
+
+    # Approval must create a REAL listener, ready for the matcher.
+    with TestSession() as s:
+        li = s.query(ListenerProfile).filter_by(persona_name="Quiet Cove").one()
+        assert li.vetting_status == VettingStatus.approved
+        assert "listener.application_approved" in [
+            a.action for a in s.query(AdminAuditLog).all()
+        ]
+
+    # The member now sees an approved card with a working console link.
+    me = client.get("/api/v1/listener-applications/me", headers=_auth(uid)).json()
+    assert me["status"] == "approved"
+    assert me["console_url"] and "/listener#token=" in me["console_url"]
+
+    # Approving again is a conflict.
+    assert client.post(
+        f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers
+    ).status_code == 409
+
+
+def test_admin_decline_records_private_reason(client, admin_headers):
+    with TestSession() as s:
+        uid = _user(s)
+    client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid))
+    app_id = client.get(
+        "/api/v1/admin/applications?status=pending", headers=admin_headers
+    ).json()[0]["id"]
+
+    r = client.post(
+        f"/api/v1/admin/applications/{app_id}/decline",
+        json={"reason": "needs more lived experience"},
+        headers=admin_headers,
+    )
+    assert r.status_code == 200
+    with TestSession() as s:
+        assert "listener.application_declined" in [
+            a.action for a in s.query(AdminAuditLog).all()
+        ]
+    me = client.get("/api/v1/listener-applications/me", headers=_auth(uid)).json()
+    assert me["status"] == "declined"
+    assert "needs more lived experience" not in str(me)
+
+
+def test_admin_endpoints_require_admin(client):
+    assert client.get("/api/v1/admin/applications").status_code in (401, 403)
