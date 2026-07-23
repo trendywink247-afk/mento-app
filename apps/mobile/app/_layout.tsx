@@ -49,6 +49,15 @@ export default function RootLayout() {
                 shot; everything else keeps the default push. */}
             <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
             <Stack.Screen name="chat/[id]" options={{ animation: 'fade' }} />
+            {/* Confirm dialog as a screens-backed transparent modal (see app/start-fresh.tsx). */}
+            <Stack.Screen
+              name="start-fresh"
+              options={{
+                presentation: 'transparentModal',
+                animation: 'fade',
+                contentStyle: { backgroundColor: 'transparent' },
+              }}
+            />
           </Stack>
         </ThemeProvider>
       </AppProviders>
