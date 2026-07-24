@@ -933,6 +933,12 @@ git add apps/mobile/app/listener-apply.tsx
 git commit -m "feat(mobile): become-a-listener application screen"
 ```
 
+**Review amendments (shipped 2026-07-24):**
+- `<Screen onBack={() => router.back()}>` — headers are hidden app-wide, so the screen needs its own back affordance like every other pushed screen.
+- `keyboardShouldPersistTaps="handled"` on the ScrollView (StepScaffold pattern) so chip/submit taps work while the keyboard is up on native.
+- Client-side email validation before submit (same `EMAIL_RE` as EmailStep) + `autoCorrect={false}` on the email input — a typo'd email no longer round-trips to the server's EmailStr 422 (whose list-of-dicts detail rendered as "[object Object]").
+- Note: the client method landed as `api.submitListenerApplication` (method on the `api` object), not the standalone import shown in the snippet above.
+
 ---
 
 ### Task 6: Profile row + status card

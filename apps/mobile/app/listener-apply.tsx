@@ -9,6 +9,7 @@ import { api, ApiError } from '@/lib/api';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
+// Must match services/api/app/services/paths_data.py COMMUNITIES (server validates; drift = submit-time 422).
 const COMMUNITIES = [
   { slug: 'upsc', label: 'UPSC' },
   { slug: 'neet', label: 'NEET' },
@@ -22,6 +23,10 @@ const AVAILABILITY = [
   { key: 'weekends', label: 'Weekends' },
   { key: 'varies', label: 'It varies' },
 ] as const;
+
+// Same shape as components/onboarding/steps/EmailStep.tsx — a friendly client-side
+// check so a typo never round-trips to the server's EmailStr 422.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Become-a-listener application (spec 2026-07-24). One warm screen; the
  * pledge is a hard gate (T&S: listeners are not therapists). */
@@ -44,6 +49,11 @@ export default function ListenerApply() {
 
   const submit = async () => {
     if (!valid || submitting || availability === null) return;
+    const trimmedEmail = email.trim();
+    if (trimmedEmail && !EMAIL_RE.test(trimmedEmail)) {
+      setError("That email doesn't look right — or leave it blank.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -51,7 +61,7 @@ export default function ListenerApply() {
         motivation: motivation.trim(),
         communities,
         availability,
-        email: email.trim() ? email.trim() : null,
+        email: trimmedEmail ? trimmedEmail : null,
         mentor_interest: mentorInterest,
         pledge_accepted: true,
       });
@@ -68,8 +78,12 @@ export default function ListenerApply() {
   ];
 
   return (
-    <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.xl }}>
+    <Screen onBack={() => router.back()}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: space.xl }}
+      >
         <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
           Become a listener
         </Text>
@@ -130,6 +144,7 @@ export default function ListenerApply() {
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
+          autoCorrect={false}
           keyboardType="email-address"
           placeholder="Only for sending your listener link"
           placeholderTextColor={colors.inkMuted}
