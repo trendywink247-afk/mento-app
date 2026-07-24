@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { api, type ListenerApplication } from '@/lib/api';
 import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
@@ -26,6 +27,24 @@ export default function ProfileTab() {
   const { colors, elevation, companionColor, setCompanionColor } = useTheme();
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
+  const [application, setApplication] = useState<ListenerApplication | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let active = true;
+      void api
+        .getListenerApplication()
+        .then((a) => {
+          if (active) setApplication(a);
+        })
+        .catch(() => {
+          /* status card is best-effort; the apply row still renders */
+        });
+      return () => {
+        active = false;
+      };
+    }, []),
+  );
 
   useEffect(() => {
     let active = true;
@@ -134,6 +153,63 @@ export default function ProfileTab() {
             </Text>
           </View>
         </View>
+
+        {application === null ? (
+          <Pressable
+            onPress={() => router.push('/listener-apply')}
+            accessibilityRole="button"
+            testID="profile-become-listener"
+            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+          >
+            <IconBadge icon="ear-outline" tone="green" size={44} />
+            <View style={{ flex: 1 }}>
+              <Text style={[type.label, { color: colors.ink }]}>Become a listener</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>
+                Been through a hard season? Help someone through theirs.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+          </Pressable>
+        ) : (
+          <View
+            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+            testID="profile-listener-status"
+          >
+            <IconBadge
+              icon={application.status === 'approved' ? 'checkmark-circle-outline' : 'ear-outline'}
+              tone={application.status === 'approved' ? 'green' : 'accent'}
+              size={44}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[type.label, { color: colors.ink }]}>
+                {application.status === 'pending'
+                  ? 'Listener application received'
+                  : application.status === 'approved'
+                    ? "You're a listener now"
+                    : 'About your application'}
+              </Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>
+                {application.status === 'pending'
+                  ? 'We read every application — hang tight.'
+                  : application.status === 'approved'
+                    ? 'Your private listener console is ready. It opens in your browser.'
+                    : 'Not this time — and truly, thank you. You can apply again in a month.'}
+              </Text>
+              {application.status === 'approved' && application.console_url ? (
+                <Pressable
+                  onPress={() => void Linking.openURL(application.console_url as string)}
+                  accessibilityRole="link"
+                  testID="profile-open-console"
+                  style={{ minHeight: 44, justifyContent: 'center' }}
+                >
+                  <Text style={[type.bodySemi, { color: colors.accent }]}>
+                    Open my listener console →
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        )}
 
         <Pressable
           onPress={() => router.push('/start-fresh')}
