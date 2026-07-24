@@ -81,11 +81,20 @@ export default function Landing() {
   // The exit fade + `leaving` swap outlive the push (the landing stays mounted
   // under the onboarding route), so restore both whenever focus returns —
   // otherwise navigating back lands on an invisible hero over bare sky.
+  // Also re-check the session on focus: a signed-in user must never sit on the
+  // pre-session landing (mirrors the cold-start redirect above).
   useFocusEffect(
     useCallback(() => {
       exit.value = 0;
       setLeaving(false);
-    }, [exit]),
+      let active = true;
+      void getSessionToken().then((token) => {
+        if (active && token) router.replace('/chats');
+      });
+      return () => {
+        active = false;
+      };
+    }, [exit, router]),
   );
 
   const begin = () => {

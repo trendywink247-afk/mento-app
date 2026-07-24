@@ -95,11 +95,18 @@ export function OnboardingJourney() {
   const onMatched = useCallback(
     (match: MatchParams) => {
       haptic.success();
-      const go = () =>
-        router.replace({
+      const go = () => {
+        // Rebuild the stack so the app's home sits under the chat: pop to the
+        // root, replace the landing with the Chats tab, then push the chat.
+        // Hardware back from the first chat must land on My Chats — never on
+        // the pre-session landing (which would read as a broken flow).
+        router.dismissAll();
+        router.replace('/chats');
+        router.push({
           pathname: '/chat/[id]',
           params: { id: match.id, listener: match.listener, channel: match.channel },
         });
+      };
       if (reduced) {
         go();
         return;
