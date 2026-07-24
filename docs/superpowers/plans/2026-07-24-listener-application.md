@@ -1038,6 +1038,8 @@ git add "apps/mobile/app/(tabs)/profile.tsx"
 git commit -m "feat(mobile): profile entry + status card for listener applications"
 ```
 
+**Amendment (review, 2026-07-24):** the declined status card is a Pressable that pushes `/listener-apply` (chevron, `accessibilityRole="button"`, same `testID="profile-listener-status"`) so "apply again in a month" is actually reachable; a too-early reapply surfaces the server's 409 through the apply screen's existing error display. Pending/approved stay non-tappable.
+
 ---
 
 ### Task 7: Admin panel — Applications section

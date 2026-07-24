@@ -170,6 +170,24 @@ export default function ProfileTab() {
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
           </Pressable>
+        ) : application.status === 'declined' ? (
+          /* Declined members can reapply — the server enforces the cool-down (409
+           * surfaces through the apply screen's error display). */
+          <Pressable
+            onPress={() => router.push('/listener-apply')}
+            accessibilityRole="button"
+            testID="profile-listener-status"
+            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+          >
+            <IconBadge icon="ear-outline" tone="accent" size={44} />
+            <View style={{ flex: 1 }}>
+              <Text style={[type.label, { color: colors.ink }]}>About your application</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>
+                Not this time — and truly, thank you. You can apply again in a month.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+          </Pressable>
         ) : (
           <View
             style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
@@ -182,18 +200,14 @@ export default function ProfileTab() {
             />
             <View style={{ flex: 1 }}>
               <Text style={[type.label, { color: colors.ink }]}>
-                {application.status === 'pending'
-                  ? 'Listener application received'
-                  : application.status === 'approved'
-                    ? "You're a listener now"
-                    : 'About your application'}
+                {application.status === 'approved'
+                  ? "You're a listener now"
+                  : 'Listener application received'}
               </Text>
               <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {application.status === 'pending'
-                  ? 'We read every application — hang tight.'
-                  : application.status === 'approved'
-                    ? 'Your private listener console is ready. It opens in your browser.'
-                    : 'Not this time — and truly, thank you. You can apply again in a month.'}
+                {application.status === 'approved'
+                  ? 'Your private listener console is ready. It opens in your browser.'
+                  : 'We read every application — hang tight.'}
               </Text>
               {application.status === 'approved' && application.console_url ? (
                 <Pressable
