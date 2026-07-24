@@ -11,7 +11,8 @@ import {
 
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
-import { adminApi, type AdminListener } from '@/lib/adminApi';
+import { adminApi, type AdminApplication, type AdminListener } from '@/lib/adminApi';
+import { formatTimestamp, formatTopic } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -32,6 +33,10 @@ export default function ListenersPanel() {
   const [maxConc, setMaxConc] = useState('3');
   const [creating, setCreating] = useState(false);
 
+  const [applications, setApplications] = useState<AdminApplication[] | null>(null);
+  const [declineId, setDeclineId] = useState<string | null>(null);
+  const [declineReason, setDeclineReason] = useState('');
+
   const load = async () => {
     try {
       setListeners(await adminApi.listeners());
@@ -41,9 +46,58 @@ export default function ListenersPanel() {
     }
   };
 
+  const loadApplications = async () => {
+    try {
+      setApplications(await adminApi.listApplications('pending'));
+    } catch {
+      setError('Could not load pending applications. Retry shortly.');
+    }
+  };
+
   useEffect(() => {
     void load();
+    void loadApplications();
   }, []);
+
+  const approve = async (id: string) => {
+    setBusy(id);
+    setError(null);
+    setConfirmId(null);
+    try {
+      await adminApi.approveApplication(id);
+      setToast('Application approved — listener added to the roster');
+      await Promise.all([loadApplications(), load()]);
+    } catch {
+      setError('Could not approve that application. Try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const decline = async (id: string) => {
+    // First press opens the reason input; second press (reason ≥3 chars) submits.
+    if (declineId !== id) {
+      setDeclineId(id);
+      setDeclineReason('');
+      return;
+    }
+    const reason = declineReason.trim();
+    if (reason.length < 3) return;
+    setBusy(id);
+    setError(null);
+    setConfirmId(null);
+    try {
+      await adminApi.declineApplication(id, reason);
+      setToast('Application declined');
+      setDeclineId(null);
+      setDeclineReason('');
+      await loadApplications();
+    } catch {
+      setError('Could not decline that application. Try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const create = async () => {
     setCreating(true);
@@ -140,6 +194,96 @@ export default function ListenersPanel() {
       {error ? <Text style={[type.caption, { color: colors.danger }]}>{error}</Text> : null}
       {toast ? <Text style={[type.caption, { color: colors.ink }]}>{toast}</Text> : null}
 
+      {/* Pending listener applications — the human half of the become-a-listener funnel */}
+      <View style={styles.section} testID="admin-applications">
+        <Text style={[type.bodySemi, { color: colors.ink }]}>Applications</Text>
+        {!applications ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={colors.accent} />
+          </View>
+        ) : applications.length === 0 ? (
+          <Text style={[type.caption, { color: colors.inkMuted }]}>No pending applications.</Text>
+        ) : (
+          applications.map((app) => (
+            <View
+              key={app.id}
+              style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]}
+              testID={`admin-app-${app.id}`}
+            >
+              <View style={styles.rosterHead}>
+                <PersonaAvatar name={app.persona_name} size={44} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[type.bodySemi, { color: colors.ink }]}>{app.persona_name}</Text>
+                  <Text style={[type.caption, styles.rosterNums, { color: colors.inkMuted }]}>
+                    {formatTopic(app.availability)} · {formatTimestamp(app.created_at)}
+                  </Text>
+                </View>
+                {app.mentor_interest ? (
+                  <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
+                    <Text style={[type.caption, { color: colors.ink }]}>Mentor interest</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              <Text style={[type.body, { color: colors.ink }]}>{app.motivation}</Text>
+
+              {app.communities.length > 0 ? (
+                <View style={styles.chips}>
+                  {app.communities.map((c) => (
+                    <View key={c} style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
+                      <Text style={[type.caption, { color: colors.ink }]}>{formatTopic(c)}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
+              {declineId === app.id ? (
+                <TextInput
+                  value={declineReason}
+                  onChangeText={setDeclineReason}
+                  placeholder="Reason for declining (kept internal)"
+                  placeholderTextColor={colors.inkMuted}
+                  accessibilityLabel="Reason for declining"
+                  style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
+                  testID={`admin-app-decline-reason-${app.id}`}
+                />
+              ) : null}
+
+              <View style={styles.actions}>
+                <ConsolePressable
+                  onPress={() => void approve(app.id)}
+                  disabled={busy === app.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Approve ${app.persona_name}`}
+                  testID={`admin-app-approve-${app.id}`}
+                  style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
+                >
+                  <Text style={[type.label, { color: colors.onAccent }]}>
+                    {busy === app.id ? 'Working…' : 'Approve'}
+                  </Text>
+                </ConsolePressable>
+                <ConsolePressable
+                  onPress={() => void decline(app.id)}
+                  disabled={
+                    busy === app.id ||
+                    (declineId === app.id && declineReason.trim().length < 3)
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={`Decline ${app.persona_name}`}
+                  testID={`admin-app-decline-${app.id}`}
+                  style={[styles.secondaryBtn, { borderColor: colors.border }]}
+                >
+                  <Text style={[type.label, { color: colors.danger }]}>
+                    {declineId === app.id ? 'Confirm decline' : 'Decline'}
+                  </Text>
+                </ConsolePressable>
+              </View>
+            </View>
+          ))
+        )}
+      </View>
+
+      <Text style={[type.bodySemi, { color: colors.ink }]}>Roster</Text>
       {!listeners ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.accent} />
@@ -240,6 +384,7 @@ export default function ListenersPanel() {
 
 const styles = StyleSheet.create({
   body: { padding: space.lg, gap: space.sm, paddingBottom: space.xxl },
+  section: { gap: space.sm },
   center: { alignItems: 'center', justifyContent: 'center', padding: space.xl },
   card: { borderRadius: radius.lg, padding: space.md, gap: space.sm },
   input: {
