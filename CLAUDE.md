@@ -74,6 +74,9 @@ E2E specs are plain Node scripts in `apps/mobile/e2e/` (not `@playwright/test` �
 - Lottie on web: `lottie-react-native` delegates to dotlottie and ignores `style` — set **both** `style` and `webStyle`; unmount during route teardown crashes ("ImageData width 0") — guard with a `leaving` state (pattern: `app/index.tsx`).
 - Outside dev the API **refuses to boot** on default `JWT_SECRET` or missing Stream creds (`app/main.py` invariants) — that's deliberate, not a bug.
 - Crisis webhook live-testing needs a tunnel: `cloudflared tunnel` + `scripts.configure_stream` (README).
+- **Native/Expo Go (session 22):** `apps/mobile/.npmrc` (`legacy-peer-deps`) + `apps/mobile/patches/` (patch-package, postinstall) hold the device-compat fixes — **never remove them**; without them the app crashes at boot on-device (duplicate safe-area registration, Reanimated Pressable invariant, Stream/teleport native modules absent from Expo Go). Metro bundles stream-chat's **`src/` TS** (its `react-native` entry field), not `lib/` — patch src, and verify fixes in the served bundle, not just on disk.
+- **RN `<Modal>` renders blank on Android under the new arch** (presents natively, content invisible = app looks frozen; back dismisses it). Use a screens-backed `presentation: 'transparentModal'` route instead (pattern: `app/start-fresh.tsx`).
+- Phone testing: Expo Go **2.32.20** (SDK 52) sideloaded from Expo's GitHub releases (Play Store Expo Go is newer-SDK-only); API must run `--host 0.0.0.0` with `EXPO_PUBLIC_API_URL` on the LAN IP.
 
 ---
 
@@ -85,7 +88,8 @@ mento/
     app/                    expo-router: index (landing, live Lottie hero) · onboarding/ (index = OnboardingJourney;
                             age|email|companion|connecting|ready are legacy deep-link stubs) · chat/[id]
                             · (tabs)/ chats|path|journals|profile (+ mentors: hidden-but-routable via Browse)
-                            · journal/[channel] · mentor/[id] · reflection · coffee
+                            · journal/[channel] · mentor/[id] · reflection · coffee · start-fresh (transparentModal)
+                            · listener-apply (become-a-listener form)
                             · listener/ (web-only console) · admin/ (web-only dashboard)
     components/
       art/                  Logo, Panda, AnimatedPanda rig, Companion(s), ReactiveCompanion (idle states:
@@ -102,7 +106,8 @@ mento/
                             · useSessionGuard · format
     assets/                 lottie/ (5 themed animations + license README) · companions/ (fluent/ SVG sources +
                             convert.js, generated/ webp incl. panda-poses, registry.ts) · scenes/ (webp empty-states)
-    e2e/                    connecting-experience.e2e.js · path-communities.e2e.js · README.md
+    e2e/                    connecting-experience.e2e.js · path-communities.e2e.js · listener-apply.e2e.js · README.md
+    patches/ + .npmrc       Expo Go device-compat (patch-package via postinstall + legacy-peer-deps) — do not remove
   services/api/
     app/                    routers/ (onboarding, match, conversation, stream_hooks, moderation, journals, listeners,
                             listener_console, admin_console, safety, paths, health)
@@ -165,6 +170,7 @@ mento/
 13. **Minimal listener console (DECISIONS §I.6)** — web-only, per-listener token-link auth: own conversations, real-time reply, accept/decline own Personal requests, online/away toggle. Nothing more.
 14. **Admin dashboard** — web-only `/admin` (spec `docs/superpowers/specs/2026-07-13-admin-dashboard-design.md`), owner/helper token-link auth (per-request revocation), full audit trail. Seven tabs: Overview cockpit · Safety review (audited read-only live conversation view — bodies never stored) · Moderation (+ one-click suspend) · Listener management (replaces the CLI scripts) · Contributions stub · Health (incl. silent-webhook-death detector) · Admins + audit. Bootstrap: `python -m scripts.issue_admin_token --owner --name "<n>"`. **Privacy policy must disclose safety-staff conversation access before launch.**
 15. **Path (Communities) — SHIPPED session 17, awaiting DECISIONS §J ratification** — Pathfinder → community lens (upsc/neet/jee/exams/life) with journey stages, warm-up prompts and seasonal cards, all server-driven (`GET /paths/tree`, `GET/PUT/DELETE /paths/me`, content in `services/paths_data.py`). Prompt taps pre-fill the composer via `?starter=` — **never auto-send**. Community is the strongest **soft** matcher preference — it must never strand a user unmatched. Tabs: **Chats · Path · Journals · Profile**. Community + stage are coarse, optional, clearable (privacy-policy note pending).
+16. **Become-a-listener funnel — SHIPPED session 22, awaiting DECISIONS ratification** — Profile → application (motivation, communities, availability, optional email, `mentor_interest` Module B staging flag, hard-gated "not therapists" pledge) → admin Applications queue in the Listeners panel (approve mints a real listener + audit row; decline stores an admin-private reason) → in-app status card (approved reveals the private console link; declined can reapply after a 30-day server-enforced cooldown). Emails stored, not sent (no provider yet).
 
 ### v2 — deferred (spec separately, don't build by default)
 - **Module B**: mentor real profiles, paid 1:1 sessions (+~10% platform fee), full mentor portal, MSG91 verification.
@@ -266,6 +272,7 @@ Standing rules the skills assume: the founder's product calls get implemented th
 ## Docs drift to reconcile (as of 2026-07-14)
 
 - `DECISIONS.md` needs **§J**: communities-as-lens + the Chats · Path · Journals · Profile tab swap (session 17 shipped ahead of the docs on founder instruction).
+- `DECISIONS.md` needs the **listener-application ruling** (session 22, founder-approved): in-app funnel + Module B staging via `mentor_interest`; email provider choice pending.
 - Privacy policy (launch gate): safety-staff conversation access + community/stage data note.
 - Helplines: re-verify Tele-MANAS / KIRAN numbers before launch.
 Clear an item from this list when the underlying doc is updated — then delete the line.
