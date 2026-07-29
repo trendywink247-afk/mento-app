@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-07-30 (session 23) — Pilot-transcript review: Module A vs Module B conflicts logged 📋
+
+**Context:** founder shared an AI-generated analysis of a founder–developer call transcript describing a pilot — 50 mentees + 15–20 mentors, 2 sessions/day caps, 24h cooldowns, manual username/password accounts with verification ticks, possible per-session mentor pay. This session assessed it against DECISIONS/PRD/codebase. Verdict: the critique's structure is sound (the transcript has no duration, no success metrics, no decision gate), but the pilot it describes is **Module B** (paid, verified, session-based mentorship) while the repo built **Module A** (anonymous volunteer-listener chat); several of its anchors (a "6-step verification layer", app-store review cycles) don't exist in this repo or don't apply to the Expo stack.
+
+**Done:** assessment only — no code changed.
+
+**Open (founder) — new:**
+1. **Pilot scope ruling needed:** the transcript's pilot (verified mentors, session caps, per-session fees) is Module B, which DECISIONS defers until Module A is solid. Rule: does the pilot test the anonymous-listener product as built, or is this a re-scope toward the mentor module? (DECISIONS-level change if the latter.)
+2. **Manual credentialed accounts contradict anonymity (DECISIONS §C):** username/password + verification ticks bypass the shipped onboarding, personas, and the <30s promise — the pilot would then never exercise the thing v1 exists to prove.
+3. **Session-cap machinery doesn't exist:** 2/day caps, 24h cooldown, time-boxed chats — no "session" concept in the codebase (conversations are open-ended). If ruled in, build as server config (pattern: `services/paths_data.py`), not code constants.
+4. **Mentor pay in the pilot touches honest-money (DECISIONS §H):** even token per-session pay is Module B economics; needs an explicit ruling, not a pilot footnote.
+5. **"Skip admin approval for mentors" — recommend reject:** conflicts with the session-22 listener-application funnel (shipped, tested, audited). Keep "visible path, locked door".
+6. **Store-review fear is moot for a 65-person pilot:** internal-distribution APK / Expo Go + EAS Update (OTA JS pushes, no review). Recommend Android-first via the existing sideload path.
+7. **Pilot design gaps to fix before launch:** duration (≥3–4 weeks), pass/fail gates, and instrumentation — any metrics via PostHog must carry the T&S filter (no content/PII; crisis sessions excluded from retention).
+
+**Next:** unchanged from session 22 — founder re-tests on the phone (onboarding → chat → profile → apply), then dev-build setup or H1-remainder. Plus: founder rules on the pilot-scope items above.
+
+**How to resume:** unchanged from session 22 (see below — stack ports, phone setup, patches warning all still apply).
+
+---
+
 ## 2026-07-24 (session 22) — First real-device run (Expo Go, Android) + become-a-listener funnel ships end-to-end ✅
 
 **Context:** founder tested Mento on a physical Android phone for the first time (Expo Go SDK 52, sideloaded APK — Play Store Expo Go is SDK 54). The device run surfaced a stack of native-only crashes invisible to the web test surface, then two real app bugs found by founder testing. Afterward the founder proposed and approved a new v1 feature: an in-app "become a listener" application funnel (spec + plan committed, executed via subagent-driven development — every task passed a spec review AND a code-quality review, with fix rounds applied).
