@@ -30,7 +30,8 @@
       "expo-secure-store",
       "expo-audio",
       "expo-video",
-      "expo-font"
+      "expo-font",
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true

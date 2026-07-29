@@ -1,0 +1,69 @@
+# DigitalOcean App Platform spec for the Mento API (H1-remainder B4).
+# Apply:  doctl apps create --spec deploy/do-app.yaml   (or paste in the DO console)
+# Fill the `github:` block with the real repo before first use, and set every
+# SECRET env in the DO console — this file never carries real values.
+#
+# The container's entrypoint ALSO runs `alembic upgrade head` before serving
+# (migrations-on-deploy, session 20); the PRE_DEPLOY job below runs them once
+# up-front so old containers never overlap a half-migrated schema. Idempotent.
+name: mento-api
+region: blr # Bangalore — closest to the first (India) cohort
+
+services:
+  - name: api
+    dockerfile_path: services/api/Dockerfile
+    source_dir: services/api
+    # github:
+    #   repo: <owner>/<repo>
+    #   branch: main
+    #   deploy_on_push: true
+    http_port: 8000
+    instance_count: 1
+    instance_size_slug: basic-xs
+    health_check:
+      http_path: /api/v1/health
+      initial_delay_seconds: 20
+    envs:
+      # Outside dev the API REFUSES TO BOOT with a default JWT_SECRET, missing
+      # Stream creds, empty CORS origins, or a reused ADMIN_JWT_SECRET — that is
+      # the invariant working, not a deploy bug (docs/DEPLOYMENT.md).
+      - key: ENV
+        value: prod
+      - key: JWT_SECRET
+        type: SECRET
+      - key: ADMIN_JWT_SECRET # must differ from JWT_SECRET
+        type: SECRET
+      - key: DATABASE_URL # DO Managed Postgres 16, keep the +psycopg driver prefix
+        type: SECRET
+      - key: REDIS_URL # DO Managed Redis
+        type: SECRET
+      - key: STREAM_API_KEY
+        type: SECRET
+      - key: STREAM_API_SECRET
+        type: SECRET
+      - key: RAZORPAY_KEY_ID
+        type: SECRET
+      - key: RAZORPAY_KEY_SECRET
+        type: SECRET
+      - key: POSTHOG_API_KEY
+        type: SECRET
+      - key: SENTRY_DSN # empty = Sentry off (errors-only when set)
+        type: SECRET
+      - key: CORS_ORIGINS # comma-separated console origins
+        value: ""
+      - key: CONSOLE_BASE_URL # printed into admin-issued console links
+        value: ""
+      - key: TRUSTED_PROXY_HOPS # DO's load balancer = 1 trusted hop
+        value: "1"
+
+jobs:
+  - name: migrate
+    kind: PRE_DEPLOY
+    dockerfile_path: services/api/Dockerfile
+    source_dir: services/api
+    run_command: alembic upgrade head
+    envs:
+      - key: ENV
+        value: prod
+      - key: DATABASE_URL
+        type: SECRET

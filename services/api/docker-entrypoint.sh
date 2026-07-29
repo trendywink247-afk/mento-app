@@ -3,6 +3,12 @@
 # Fails hard (set -e) if migrations fail — never serve against a stale schema.
 set -e
 
+# One-off mode: any args (e.g. deploy/do-app.yaml's PRE_DEPLOY migrate job or an
+# ad-hoc script) run INSTEAD of the migrate-then-serve default.
+if [ "$#" -gt 0 ]; then
+  exec "$@"
+fi
+
 echo "[entrypoint] running alembic upgrade head..."
 alembic upgrade head
 
