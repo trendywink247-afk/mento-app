@@ -361,7 +361,13 @@ def create_listener(
     audit.record(db, admin, "listener.created", subject_type="listener", subject_id=li.id)
     db.commit()
     db.refresh(li)
-    return _listener_item(li)
+    item = _listener_item(li)
+    # End refresh's transaction BEFORE the outbound Stream call (onboarding's
+    # phasing) — without this upsert the listener's first channel creation fails
+    # in prod (only seed_listeners upserted until now).
+    db.commit()
+    stream.upsert_user(item.id, item.persona_name, item.persona_avatar)
+    return item
 
 
 @router.patch("/listeners/{listener_id}", response_model=AdminListenerItem)
@@ -484,7 +490,14 @@ def approve_application(
     # link to a.email here (spec: store now, send later).
     db.commit()
     db.refresh(a)
-    return _application_item(a, applicant.persona_name)
+    item = _application_item(a, applicant.persona_name)
+    new_listener = (a.listener_id, applicant.persona_name, applicant.persona_avatar)
+    # End refresh's transaction BEFORE the outbound Stream call (onboarding's
+    # phasing) — without this upsert the listener's first channel creation fails
+    # in prod (only seed_listeners upserted until now).
+    db.commit()
+    stream.upsert_user(*new_listener)
+    return item
 
 
 @router.post("/applications/{app_id}/decline", response_model=AdminApplicationItem)

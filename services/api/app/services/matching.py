@@ -18,6 +18,7 @@ from app.models.enums import (
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
+from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
 from app.models.request import ConversationRequest
 from app.models.user import User
@@ -42,6 +43,18 @@ def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
         select(ModerationEvent.subject_id).where(
             ModerationEvent.reporter_id == user_id,
             ModerationEvent.blocked.is_(True),
+        )
+    ).scalars().all()
+    return set(rows)
+
+
+def _own_listener_ids(db: Session, user_id: str) -> set[str]:
+    """Listener profiles minted from this user's own applications (session 22
+    funnel) — a member who became a listener must never be paired with themself."""
+    rows = db.execute(
+        select(ListenerApplication.listener_id).where(
+            ListenerApplication.user_id == user_id,
+            ListenerApplication.listener_id.is_not(None),
         )
     ).scalars().all()
     return set(rows)
@@ -166,7 +179,7 @@ def open_conversation(
 
 def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
     """Match the user to the next available listener and open a Stream channel."""
-    blocked_ids = _blocked_listener_ids(db, user.id)
+    blocked_ids = _blocked_listener_ids(db, user.id) | _own_listener_ids(db, user.id)
     listener = _pick_available_listener(db, category, blocked_ids, community=user.community_slug)
     if listener is None:
         raise NoListenerAvailable()

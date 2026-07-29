@@ -25,6 +25,7 @@ from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
     _blocked_listener_ids,
+    _own_listener_ids,
     accept_personal_request,
     decline_personal_request,
 )
@@ -61,14 +62,15 @@ def list_listeners(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> list[ListenerOut]:
-    """Approved listeners (minus anyone this user blocked), available first."""
-    blocked = _blocked_listener_ids(db, user_id)
+    """Approved listeners (minus anyone this user blocked — and minus the user's
+    own listener profile, if their application was approved), available first."""
+    excluded = _blocked_listener_ids(db, user_id) | _own_listener_ids(db, user_id)
     listeners = db.scalars(
         select(ListenerProfile)
         .where(ListenerProfile.vetting_status == VettingStatus.approved)
         .order_by(ListenerProfile.rank.desc())
     ).all()
-    out = [_listener_out(li) for li in listeners if li.id not in blocked]
+    out = [_listener_out(li) for li in listeners if li.id not in excluded]
     return sorted(out, key=lambda x: not x.available)
 
 
@@ -83,7 +85,9 @@ def create_personal_request(
     listener = db.get(ListenerProfile, listener_id)
     if listener is None or listener.vetting_status != VettingStatus.approved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
-    if listener_id in _blocked_listener_ids(db, user_id):
+    # Blocked listeners and the user's own listener profile are equally
+    # unreachable — same opaque refusal for both.
+    if listener_id in _blocked_listener_ids(db, user_id) | _own_listener_ids(db, user_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "listener unavailable")
 
     existing = db.scalars(
