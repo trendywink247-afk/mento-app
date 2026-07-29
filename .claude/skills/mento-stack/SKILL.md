@@ -34,6 +34,7 @@ Docker Desktop itself may be down — `docker compose` failing with a pipe/daemo
 | Matching returns 503 | Listeners table empty (pytest truncation) or capacity exhausted | Re-seed; if E2E-related see **mento-e2e** reset |
 | Onboarding 429 | Rate limit 10/h per IP hit (usually by E2E runs) | `docker exec mento-redis redis-cli FLUSHDB` |
 | Bundler serves stale/broken modules | Metro cache after dep change | `npx expo start --web --port 8081 -c` |
+| Browser flow stalls at connecting; EVERY API call `net::ERR_ABORTED` (API itself fine via curl) | `apps/mobile/.env` `EXPO_PUBLIC_API_URL` points at a stale LAN IP — DHCP re-leases between sessions (was .12, then .10) | Set it to `http://localhost:8000/api/v1` for web/e2e work, restart Expo with `-c`; phone testing re-points at the CURRENT `Get-NetIPAddress` IP |
 
 Kill a stuck port (8000 shown; same for 8081):
 

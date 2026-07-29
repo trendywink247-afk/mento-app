@@ -32,9 +32,11 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 | Messaging | **Stream Chat** (getstream.io) | presence/typing/read-state; **crisis scan enforced via its webhooks** (see T&S #1). Storage promise resolved — see T&S #8. |
 | Payments | **Razorpay** | processor for **contributions** + later Module B session fees. **Not** membership tiers (DECISIONS §H.1). Awaiting creds — coffee screen ships transparently disabled. |
 | OTP | **MSG91** | **NOT in the v1 user path**. Reserved for mentor verification (deferred Module B). |
-| Analytics | **PostHog** | never message content or PII; crisis sessions excluded from retention metrics. |
+| Analytics | **PostHog** | **wired (session 23):** anonymous client funnel via `lib/analytics.ts` (raw HTTP capture, no SDK, closed event union) — dark until `EXPO_PUBLIC_POSTHOG_KEY` is set. Never message content or PII; crisis sessions excluded from retention metrics. |
+| Errors | **Sentry** | env-gated both sides (empty DSN = off): API errors-only with request bodies stripped (`SENTRY_DSN`); mobile JS-error capture (`EXPO_PUBLIC_SENTRY_DSN`) — native crash symbolication is release-build work. |
+| i18n | **i18n-js** + expo-localization | EN + HI over `locales/{en,hi}.json`, typed keys (`lib/i18n.tsx`), persisted `mento.lang`, live Profile toggle; chat bodies/server Path content/personas stay untranslated. Devanagari via Noto Sans (loaded) + platform fallback. |
 
-**Key env vars** — API (`services/api/.env`, template `.env.example`): `ENV`, `JWT_SECRET`, `DATABASE_URL`, `REDIS_URL`, `STREAM_API_KEY`/`STREAM_API_SECRET`, `ADMIN_TOKEN` (empty ⇒ moderation queue disabled), `RAZORPAY_KEY_ID`/`_SECRET`, `POSTHOG_API_KEY`. Mobile (`apps/mobile/.env`): `EXPO_PUBLIC_API_URL`.
+**Key env vars** — API (`services/api/.env`, template `.env.example`): `ENV`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, `DATABASE_URL`, `REDIS_URL`, `STREAM_API_KEY`/`STREAM_API_SECRET`, `RAZORPAY_KEY_ID`/`_SECRET`, `POSTHOG_API_KEY`, `SENTRY_DSN`. Mobile (`apps/mobile/.env`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`, `EXPO_PUBLIC_SENTRY_DSN`.
 
 ---
 
@@ -56,7 +58,7 @@ npx expo start --web --port 8081                             # add -c after depe
 ### Verify — run these before claiming ANY work done
 ```powershell
 # API touched:
-.\.venv\Scripts\python.exe -m pytest          # 54 passing as of session 17 — pytest is the truth, not this number
+.\.venv\Scripts\python.exe -m pytest          # 137 passing as of session 23 — pytest is the truth, not this number
 .\.venv\Scripts\python.exe -m alembic check   # model/migration sync — CI fails without it
 .\.venv\Scripts\python.exe -m scripts.seed_listeners   # pytest TRUNCATES dev-DB listeners — always re-seed after
 
@@ -106,7 +108,9 @@ mento/
                             · useSessionGuard · format
     assets/                 lottie/ (5 themed animations + license README) · companions/ (fluent/ SVG sources +
                             convert.js, generated/ webp incl. panda-poses, registry.ts) · scenes/ (webp empty-states)
-    e2e/                    connecting-experience.e2e.js · path-communities.e2e.js · listener-apply.e2e.js · README.md
+    locales/                en.json · hi.json (typed keys via lib/i18n.tsx; EN is canonical)
+    e2e/                    connecting-experience.e2e.js · path-communities.e2e.js · listener-apply.e2e.js
+                            · analytics-dark.e2e.js · hindi-core-loop.e2e.js · README.md
     patches/ + .npmrc       Expo Go device-compat (patch-package via postinstall + legacy-peer-deps) — do not remove
   services/api/
     app/                    routers/ (onboarding, match, conversation, stream_hooks, moderation, journals, listeners,
@@ -120,6 +124,7 @@ mento/
     tests/                  pytest — 12 files / 54 tests: matcher concurrency, crisis-webhook proofs, security
                             hardening (age gate, wipe, PIN lockout, scan ownership), paths, admin, listener console
     docker-compose.yml      Postgres 16 + Redis 7
+  deploy/                   do-app.yaml (DigitalOcean App Platform spec; runbook in docs/DEPLOYMENT.md)
   scripts/                  repo-root: sample_mockup_colors.py · theme_lottie.py (Lottie → Mento palette)
   docs/                     PRD.md · DECISIONS.md (WINS) · ALIGNMENT.md · MOCKUP_INVENTORY.md · MASCOT_ASSETS.md
                             · UX_REVIEW_2026-07-13.md · Mockups/ · superpowers/{plans,specs}/ (admin dashboard,
@@ -136,7 +141,8 @@ mento/
 - **Python**: type hints required; `ruff` + `black` style; functions do one thing.
 - Components: function components + hooks. One component per file. Co-locate styles.
 - **Design tokens, never raw hex** in components — consume via `useTheme()`. Never raw durations — consume `theme/motion.ts`.
-- **Typed API clients only** — extend `lib/api.ts` (member), `lib/listenerApi.ts` (console), `lib/adminApi.ts` (dashboard). Never hand-write `fetch` in a component. Server side: Pydantic models in/out.
+- **Typed API clients only** — extend `lib/api.ts` (member), `lib/listenerApi.ts` (console), `lib/adminApi.ts` (dashboard). Never hand-write `fetch` in a component. Server side: Pydantic models in/out. (`lib/analytics.ts`'s fire-and-forget fetch is the sanctioned third-party exception.)
+- **User-visible strings via `useI18n().t()`** — never hardcoded literals in components (EN canonical in `locales/en.json`, typed keys). **Analytics via `lib/analytics.ts` only** — allowlisted closed event union, no PII ever, no crisis events.
 - **Web/native splits** use the `.web.tsx` convention (`AppProviders*`, `ChatScreen*`, `ListenerConsole*`, `AdminConsole*`). Listener console and admin dashboard are web-only — native gets `WebOnlyNotice`.
 - **Motion rules (non-negotiable):**
   - Timings/easings from `theme/motion.ts` — never raw durations/beziers in components.

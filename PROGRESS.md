@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-07-30 (session 24) — Session-22 fixes + the whole H1-remainder PRD executed: analytics, Sentry, deploy spec, Hindi ✅
+
+**Context:** "continue where we left off" after the session-23 pilot review. The logged Next converged on the two session-22 open fixes plus `docs/superpowers/plans/2026-07-20-h1-remainder-prd.md` top-to-bottom (also the pilot plan's Week-0 prerequisites).
+
+**Done (per commit, all gates green before each):**
+- **Listener provisioning fixes** (`b41fcee`): admin-created and application-approved listeners now `stream.upsert_user` after commit (onboarding's phasing) — previously only `seed_listeners` did, so a fresh prod listener's first channel would fail; members who became listeners are excluded from their own matcher pool, Browse list, and Personal-request path (`_own_listener_ids` via `listener_applications.listener_id`). 5 new tests (`test_listener_provisioning.py`); **pytest 132 → 137**, alembic clean, re-seeded.
+- **Milestone A — PostHog funnel, dark** (`73723e0`): `lib/analytics.ts` (raw HTTP capture, no SDK, closed event/prop union — PII props are compile errors, proven by a temporary probe file; random persisted `mento.analytics_id`), journey instrumented at existing success points (landing → age → email(skipped) → companion → completed → match_requested/found(bucketed wait, one-shot latch on 503 retries) → first message → reflection + path_chosen). New `e2e/analytics-dark.e2e.js`: full journey with no key = **0 PostHog requests, 0 page errors**.
+- **Milestone B — Sentry + deploy** (`6e92fb6`, `c5e245b`): API `sentry-sdk[fastapi]==2.66.1` env-gated (errors-only, `send_default_pii=False`, `before_send` strips request bodies); mobile `@sentry/react-native` in both AppProviders variants behind a guarded require (SDK never evaluates when `EXPO_PUBLIC_SENTRY_DSN` empty — Expo Go boot-safe); `deploy/do-app.yaml` (secrets as slots, `/api/v1/health` check, PRE_DEPLOY migrate job; entrypoint gained one-off arg mode); DEPLOYMENT.md gained the DO runbook, Sentry known-gap note replaced. Image rebuilt + smoke-booted: `{"status":"ok"}`. **PRD deviations (deliberate):** B3 skipped (session 20 already shipped the Dockerfile); extended existing `docs/DEPLOYMENT.md` instead of creating `DEPLOY.md`; `do-app.yaml` carries `ADMIN_JWT_SECRET` not the PRD's `ADMIN_TOKEN` (deleted session 19).
+- **Milestone C — Hindi** (`e162b17`, `303d52f`, `33079ff`): `lib/i18n.tsx` (i18n-js, compile-checked dotted keys + `%{var}` interpolation, persisted `mento.lang` → device locale → en, web `?lang=` e2e hook), Noto Sans Devanagari 400/700 via the existing expo-google-fonts mechanism (PRD said raw asset files — mirrored the established loader instead) + `font.devanagari*` tokens; full extraction of core loop + tabs (**380 keys, en/hi parity**; C3–C5 landed as one commit, executed via subagent with independent re-verification); Profile gains the live English/हिंदी toggle. New `e2e/hindi-core-loop.e2e.js` green **twice in a row** (normal pass asserts Hindi at every stage; reduced-motion pass completes), toggle probed both directions, hi landing screenshotted (Devanagari clean).
+- **Milestone D** (this commit): CLAUDE.md reconciled (PostHog/Sentry/i18n stack rows, env vars incl. `ADMIN_JWT_SECRET`, repo layout `locales/` + `deploy/` + 2 new e2e, i18n/analytics conventions bullet, pytest hint 54→137); mento-stack repair table gained the stale-LAN-IP row.
+- **Verified (final state):** pytest **137**, `alembic check` clean, listeners re-seeded, `tsc --noEmit` clean, all four e2e suites green with 0 page errors (connecting-experience, path-communities incl. reduced-motion, analytics-dark, hindi-core-loop ×2), Docker image boots healthy.
+
+**Open (founder) — new:**
+- **Hindi crisis-card copy needs native-speaker review before launch** (launch gate, same tier as the privacy policy). Also flag: Panda Mask/Pause/Wipe transliterated (पांडा मास्क…), "Path" = "राह", listener = "सुनने वाले" — veto welcome.
+- **Server-driven Path content localization** deferred by design (community names/stages/prompts arrive EN from the API; no locale param added).
+- **Lora has no Devanagari** — hi display text renders in bold Noto sans instead of the serif; aesthetic call logged per PRD.
+- **DO provisioning + real creds** (PostHog key, Sentry DSNs, the do-app.yaml secrets) when founder is ready — everything ships dark until then.
+- Sentry mobile is JS-errors only; native crash symbolication + source maps = EAS release-build work.
+- Carried: pilot D1–D7 rulings (`docs/PILOT_PLAN_2026-07-30.md`), email provider, DECISIONS §J + listener-application ruling, privacy policy, helpline re-verify, Razorpay creds, LLM decision, native perf gate, EAS dev build / SDK 54.
+
+**Next:** founder rules pilot D1–D7; then DO provisioning per DEPLOYMENT.md runbook, or founder phone re-test (now incl. Hindi toggle + the funnel fixes; Expo Go needs the CURRENT LAN IP re-pointed in `apps/mobile/.env`).
+
+**How to resume:** stack RUNNING (API :8000, Expo web :8081; `apps/mobile/.env` now points at **localhost** — the session-22 LAN IP went stale when DHCP re-leased .12→.10 and every browser API call ERR_ABORTED'd; mento-stack repair table has the row). Listeners seeded (3). E2E: 4 committed suites, reset Redis + capacity before EACH (mento-e2e), `NODE_PATH=C:\Users\khana\.claude\skills\playwright-skill\node_modules` — set it in the SAME shell invocation as `node` (fresh shells drop it). Gotcha: onboarding endpoint is `/api/v1/onboarding/start`, not `/onboarding`.
+
+---
+
 ## 2026-07-30 (session 23) — Pilot-transcript review: Module A vs Module B conflicts logged 📋
 
 **Context:** founder shared an AI-generated analysis of a founder–developer call transcript describing a pilot — 50 mentees + 15–20 mentors, 2 sessions/day caps, 24h cooldowns, manual username/password accounts with verification ticks, possible per-session mentor pay. This session assessed it against DECISIONS/PRD/codebase. Verdict: the critique's structure is sound (the transcript has no duration, no success metrics, no decision gate), but the pilot it describes is **Module B** (paid, verified, session-based mentorship) while the repo built **Module A** (anonymous volunteer-listener chat); several of its anchors (a "6-step verification layer", app-store review cycles) don't exist in this repo or don't apply to the Expo stack.
