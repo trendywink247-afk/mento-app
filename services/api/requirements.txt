@@ -12,3 +12,4 @@ stream-chat==4.19.0
 razorpay==1.4.2
 posthog==3.7.4
 httpx==0.28.1
+sentry-sdk[fastapi]==2.66.1

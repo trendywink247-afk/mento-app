@@ -82,6 +82,10 @@ class Settings(BaseSettings):
     posthog_api_key: str = ""
     posthog_host: str = "https://app.posthog.com"
 
+    # Sentry error reporting. Empty = Sentry off (dev default); errors-only when
+    # set — never performance traces, never request bodies (see app/main.py).
+    sentry_dsn: str = ""
+
     # Raw JSON string from env; parsed via `helplines`.
     crisis_helplines_json: str = (
         '[{"name":"Tele-MANAS","number":"14416","hours":"24x7"},'
