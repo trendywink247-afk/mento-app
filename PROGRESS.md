@@ -8,7 +8,7 @@
 
 **Context:** founder shared an AI-generated analysis of a founder–developer call transcript describing a pilot — 50 mentees + 15–20 mentors, 2 sessions/day caps, 24h cooldowns, manual username/password accounts with verification ticks, possible per-session mentor pay. This session assessed it against DECISIONS/PRD/codebase. Verdict: the critique's structure is sound (the transcript has no duration, no success metrics, no decision gate), but the pilot it describes is **Module B** (paid, verified, session-based mentorship) while the repo built **Module A** (anonymous volunteer-listener chat); several of its anchors (a "6-step verification layer", app-store review cycles) don't exist in this repo or don't apply to the Expo stack.
 
-**Done:** assessment only — no code changed.
+**Done:** assessment (this entry's Open items) + **`docs/PILOT_PLAN_2026-07-30.md`** — repo-grounded pilot plan DRAFT for founder review: pilots Module A as built (real anonymous onboarding, funnel-onboarded listeners, no caps/no pay by default), Week-0 prerequisites all map to existing repo work (H1-remainder Milestones A/B, Stream upsert gap, matcher self-match, `/health/crisis` monitor, helplines, privacy policy), 4-week run + week-5 decision gate with pass/fail numbers, D1–D7 founder rulings table. No code changed.
 
 **Open (founder) — new:**
 1. **Pilot scope ruling needed:** the transcript's pilot (verified mentors, session caps, per-session fees) is Module B, which DECISIONS defers until Module A is solid. Rule: does the pilot test the anonymous-listener product as built, or is this a re-scope toward the mentor module? (DECISIONS-level change if the latter.)
@@ -19,7 +19,7 @@
 6. **Store-review fear is moot for a 65-person pilot:** internal-distribution APK / Expo Go + EAS Update (OTA JS pushes, no review). Recommend Android-first via the existing sideload path.
 7. **Pilot design gaps to fix before launch:** duration (≥3–4 weeks), pass/fail gates, and instrumentation — any metrics via PostHog must carry the T&S filter (no content/PII; crisis sessions excluded from retention).
 
-**Next:** unchanged from session 22 — founder re-tests on the phone (onboarding → chat → profile → apply), then dev-build setup or H1-remainder. Plus: founder rules on the pilot-scope items above.
+**Next:** founder reviews `docs/PILOT_PLAN_2026-07-30.md` and rules D1–D7; if the pilot is a go, Week-0 = execute the H1-remainder PRD (its Milestones A/B are pilot prerequisites) + the two small fixes (Stream upsert, matcher self-match). Otherwise unchanged from session 22 — phone re-test, then dev-build or H1-remainder.
 
 **How to resume:** unchanged from session 22 (see below — stack ports, phone setup, patches warning all still apply).
 
