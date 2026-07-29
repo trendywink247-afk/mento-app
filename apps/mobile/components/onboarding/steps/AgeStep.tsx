@@ -9,6 +9,7 @@ import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { LogoLockup } from '@/components/art/Logo';
 import { capture } from '@/lib/analytics';
 import { haptic } from '@/lib/haptics';
+import { useI18n } from '@/lib/i18n';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, space, type } from '@/theme/tokens';
@@ -31,6 +32,7 @@ function isoToDob(iso: string): Dob | null {
  * journey's). Restores a previously-picked DOB from the draft when stepping back. */
 export function AgeStep({ onNext }: { onNext: () => void }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const today = new Date();
   const [dob, setDob] = useState<Dob>(() => {
     const saved = getDraft().dob;
@@ -62,14 +64,14 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
         <>
           {underAge ? (
             <Text style={[styles.block, { color: colors.danger }]}>
-              Mento is available to people {MIN_AGE} and older.
+              {t('onboarding.age.underAge', { age: MIN_AGE })}
             </Text>
           ) : null}
           {future ? (
-            <Text style={[styles.block, { color: colors.danger }]}>That date is in the future.</Text>
+            <Text style={[styles.block, { color: colors.danger }]}>{t('onboarding.age.future')}</Text>
           ) : null}
           <PrimaryButton
-            label="Continue"
+            label={t('common.continue')}
             tone="ink"
             trailing="arrow"
             onPress={onContinue}
@@ -87,8 +89,8 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
 
       <Entrance index={1}>
         <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-          Your age helps us{'\n'}keep Mento safe,{'\n'}while keeping you{'\n'}
-          <Text style={{ color: colors.accentSoft }}>anonymous.</Text>
+          {t('onboarding.age.headline')}
+          <Text style={{ color: colors.accentSoft }}>{t('onboarding.age.headlineAccent')}</Text>
         </Text>
       </Entrance>
 
@@ -96,13 +98,12 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
         <View style={styles.reassure}>
           <Ionicons name="shield-checkmark-outline" size={34} color={colors.accentSoft} />
           <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-            We use your age to create appropriate conversations and maintain a safe space for
-            everyone.
+            {t('onboarding.age.reassure')}
           </Text>
           <View style={styles.lockRow}>
             <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              Your age is never shown to other users.
+              {t('onboarding.age.neverShown')}
             </Text>
           </View>
         </View>
@@ -110,7 +111,7 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
 
       <Entrance index={3}>
         <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <Text style={[styles.question, { color: colors.ink }]}>How old are you?</Text>
+        <Text style={[styles.question, { color: colors.ink }]}>{t('onboarding.age.question')}</Text>
         <DobPicker value={dob} onChange={changeDob} />
       </Entrance>
     </StepScaffold>

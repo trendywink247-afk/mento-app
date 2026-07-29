@@ -28,6 +28,7 @@ import { ConnectingStep, type MatchParams } from '@/components/onboarding/steps/
 import { EmailStep } from '@/components/onboarding/steps/EmailStep';
 import { ReadyStep } from '@/components/onboarding/steps/ReadyStep';
 import { haptic } from '@/lib/haptics';
+import { useI18n } from '@/lib/i18n';
 import { getDraft } from '@/lib/onboardingDraft';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
@@ -52,6 +53,7 @@ export function OnboardingJourney() {
   const router = useRouter();
   const params = useLocalSearchParams<{ step?: string }>();
   const { colors } = useTheme();
+  const { t } = useI18n();
   const reduced = useReducedMotion();
   const [celebrate, setCelebrate] = useState(0);
   // The chosen animal — the star from the moment of choice (DECISIONS §I.5).
@@ -176,7 +178,7 @@ export function OnboardingJourney() {
               onPress={goBack}
               hitSlop={12}
               accessibilityRole="button"
-              accessibilityLabel="Go back"
+              accessibilityLabel={t('common.goBack')}
               testID="back"
               // Ritual screens float the chevron in a white circle (mockup #58).
               style={lavender && [styles.backCircle, { backgroundColor: colors.surface }]}

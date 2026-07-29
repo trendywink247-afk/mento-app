@@ -16,6 +16,7 @@ import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -63,13 +64,14 @@ export default function ChatScreen() {
   // 403 with only a small inline error — route back to landing instead.
   useSessionGuard();
   const { colors } = useTheme();
+  const { t } = useI18n();
   const { id: conversationId, listener, channel: channelId, starter } = useLocalSearchParams<{
     id: string;
     listener?: string;
     channel?: string;
     starter?: string;
   }>();
-  const listenerName = listener ?? 'Your listener';
+  const listenerName = listener ?? t('chat.yourListener');
 
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
@@ -110,14 +112,14 @@ export default function ChatScreen() {
             dismissOverlay();
           },
           actionType: 'saveToMentorNotes',
-          title: 'Save to Mentor Notes',
+          title: t('chat.saveToNotes'),
           type: 'standard' as const,
         },
         copyMessage,
         quotedReply,
       ];
     },
-    [conversationId, listenerName],
+    [conversationId, listenerName, t],
   );
 
   // Theme the Stream kit (v9 semantics tokens) to the mockup chat language: cream app
@@ -176,8 +178,8 @@ export default function ChatScreen() {
     const setup = async () => {
       try {
         const [persona, token] = await Promise.all([getPersona(), getStreamToken()]);
-        if (!persona || !token) throw new Error('Missing session — please start again.');
-        if (!channelId) throw new Error('Missing channel.');
+        if (!persona || !token) throw new Error(t('chat.errMissingSession'));
+        if (!channelId) throw new Error(t('chat.errMissingChannel'));
 
         const client = await ensureConnected(
           { id: persona.id, name: persona.persona_name },
@@ -192,7 +194,7 @@ export default function ChatScreen() {
         ch.state.messages.forEach((m) => surfaceCrisis(m as CrisisCarrier));
         ch.on('message.new', (e: Event) => surfaceCrisis(e.message as CrisisCarrier));
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not open the chat.');
+        if (!cancelled) setError(e instanceof Error ? e.message : t('chat.errOpen'));
       }
     };
 
@@ -200,6 +202,8 @@ export default function ChatScreen() {
     return () => {
       cancelled = true;
     };
+    // reason: `t` is intentionally not a trigger — a locale flip must not re-run channel setup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, surfaceCrisis]);
 
   return (
@@ -210,7 +214,7 @@ export default function ChatScreen() {
           onPress={() => router.replace('/chats')}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Leave conversation"
+          accessibilityLabel={t('chat.leaveA11y')}
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
@@ -222,13 +226,13 @@ export default function ChatScreen() {
           <View style={styles.statusRow}>
             <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
             <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-              Here to listen and support
+              {t('chat.statusLine')}
             </Text>
           </View>
         </View>
         <View
           style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
-          accessibilityLabel="Connected"
+          accessibilityLabel={t('chat.connectedA11y')}
         >
           <View style={[styles.dot, { backgroundColor: colors.success }]} />
         </View>
@@ -237,7 +241,7 @@ export default function ChatScreen() {
           hitSlop={12}
           testID="open-options"
           accessibilityRole="button"
-          accessibilityLabel="Conversation options"
+          accessibilityLabel={t('chat.optionsA11y')}
         >
           <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
         </Pressable>
@@ -248,13 +252,13 @@ export default function ChatScreen() {
         <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
           <Ionicons name="lock-closed" size={13} color={colors.accent} />
           <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
-            This conversation is private. You're anonymous here.
+            {t('chat.privacy')}
           </Text>
           <Pressable
             onPress={() => setPrivacyNote(false)}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Dismiss privacy note"
+            accessibilityLabel={t('chat.privacyDismissA11y')}
           >
             <Ionicons name="close" size={16} color={colors.inkMuted} />
           </Pressable>
@@ -284,7 +288,7 @@ export default function ChatScreen() {
       ) : (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={[type.body, { color: colors.inkMuted }]}>Opening your conversation…</Text>
+          <Text style={[type.body, { color: colors.inkMuted }]}>{t('chat.opening')}</Text>
         </View>
       )}
 
@@ -308,9 +312,10 @@ function CrisisCard({
   onDismiss: () => void;
   colors: ReturnType<typeof useTheme>['colors'];
 }) {
+  const { t } = useI18n();
   return (
     <View style={[styles.crisis, { backgroundColor: colors.brandTint }]} testID="crisis-card">
-      <Text style={[styles.crisisTitle, { color: colors.ink }]}>You matter. Support is here.</Text>
+      <Text style={[styles.crisisTitle, { color: colors.ink }]}>{t('crisis.title')}</Text>
       <Text style={[type.body, { color: colors.ink }]}>{crisis.support}</Text>
       <View style={{ gap: space.sm }}>
         {crisis.helplines.map((h) => (
@@ -319,7 +324,7 @@ function CrisisCard({
             style={[styles.helpline, { backgroundColor: colors.surface }]}
             onPress={() => void Linking.openURL(`tel:${h.number}`)}
             accessibilityRole="button"
-            accessibilityLabel={`Call ${h.name} at ${h.number}, available ${h.hours}`}
+            accessibilityLabel={t('crisis.callA11y', { name: h.name, number: h.number, hours: h.hours })}
           >
             <IconBadge icon="call-outline" size={36} tone="green" />
             <View style={{ flex: 1 }}>
@@ -331,7 +336,7 @@ function CrisisCard({
         ))}
       </View>
       <Pressable onPress={onDismiss} hitSlop={8} style={styles.crisisDismiss} accessibilityRole="button">
-        <Text style={[type.caption, { color: colors.accent }]}>Close</Text>
+        <Text style={[type.caption, { color: colors.accent }]}>{t('crisis.close')}</Text>
       </Pressable>
     </View>
   );

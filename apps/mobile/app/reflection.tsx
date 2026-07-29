@@ -9,6 +9,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -22,6 +23,7 @@ export default function ReflectionScreen() {
   const router = useRouter();
   useSessionGuard();
   const { colors } = useTheme();
+  const { t } = useI18n();
   // reason: `listener` stays in the type because EndFlow still routes with ?listener=
   // (deep-link compat); the self-check copy no longer renders it.
   const { conversation } = useLocalSearchParams<{
@@ -53,7 +55,7 @@ export default function ReflectionScreen() {
           onPress={leave}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Skip reflection"
+          accessibilityLabel={t('reflection.skipA11y')}
           testID="reflection-skip"
         >
           <Ionicons name="close" size={26} color={colors.ink} />
@@ -62,11 +64,10 @@ export default function ReflectionScreen() {
 
       <View style={styles.body}>
         <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-          Conversation ended
+          {t('reflection.headline')}
         </Text>
         <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          You've taken a thoughtful step today.{'\n'}We hope this space brought you some clarity
-          and comfort.
+          {t('reflection.sub')}
         </Text>
 
         <View style={styles.art}>
@@ -74,10 +75,10 @@ export default function ReflectionScreen() {
         </View>
 
         <Text style={[styles.question, { color: colors.ink }]}>
-          How do you feel right now?
+          {t('reflection.question')}
         </Text>
         <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          One quiet check-in before you go —{'\n'}no right answers. 💜
+          {t('reflection.checkin')}
         </Text>
 
         <View style={[styles.sliderCard, { backgroundColor: colors.surface }]}>
@@ -93,7 +94,7 @@ export default function ReflectionScreen() {
                     hitSlop={12}
                     accessibilityRole="radio"
                     accessibilityState={{ selected }}
-                    accessibilityLabel={`Energy level ${n} of 5`}
+                    accessibilityLabel={t('reflection.energyA11y', { n })}
                     testID={`energy-${n}`}
                     style={[
                       styles.node,
@@ -109,17 +110,17 @@ export default function ReflectionScreen() {
             <Panda pose="excited" size={52} />
           </View>
           <View style={styles.labels}>
-            <Text style={[type.label, { color: colors.ink }]}>Left drained</Text>
-            <Text style={[type.label, { color: colors.ink }]}>Left energized</Text>
+            <Text style={[type.label, { color: colors.ink }]}>{t('reflection.drained')}</Text>
+            <Text style={[type.label, { color: colors.ink }]}>{t('reflection.energized')}</Text>
           </View>
         </View>
 
         <View style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
           <IconBadge icon="shield-checkmark-outline" size={36} />
           <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>Your feedback is private</Text>
+            <Text style={[type.label, { color: colors.ink }]}>{t('reflection.privateTitle')}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              It's only for us and helps improve the support experience.
+              {t('reflection.privateBody')}
             </Text>
           </View>
         </View>
@@ -127,7 +128,7 @@ export default function ReflectionScreen() {
 
       <View style={styles.footer}>
         <PrimaryButton
-          label="Finish"
+          label={t('reflection.finish')}
           onPress={() => void finish()}
           disabled={!energy}
           loading={busy}

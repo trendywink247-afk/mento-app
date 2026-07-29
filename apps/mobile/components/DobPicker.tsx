@@ -3,6 +3,7 @@ import { Picker } from '@react-native-picker/picker';
 import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useI18n, type TKey } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -17,9 +18,11 @@ import { font, radius, space, type } from '@/theme/tokens';
 
 export type Dob = { day: number; month: number; year: number };
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
+const MONTHS: TKey[] = [
+  'onboarding.dob.month1', 'onboarding.dob.month2', 'onboarding.dob.month3',
+  'onboarding.dob.month4', 'onboarding.dob.month5', 'onboarding.dob.month6',
+  'onboarding.dob.month7', 'onboarding.dob.month8', 'onboarding.dob.month9',
+  'onboarding.dob.month10', 'onboarding.dob.month11', 'onboarding.dob.month12',
 ];
 
 function daysInMonth(month: number, year: number): number {
@@ -58,6 +61,7 @@ export function DobPicker({
   onChange: (dob: Dob) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const thisYear = new Date().getFullYear();
   const years = Array.from({ length: 100 }, (_, i) => thisYear - i); // newest first
   const maxDay = daysInMonth(value.month, value.year);
@@ -73,11 +77,11 @@ export function DobPicker({
 
   return (
     <View style={[styles.card, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
-      <Column label="Day" display={pad2(value.day)}>
+      <Column label={t('onboarding.dob.day')} display={pad2(value.day)}>
         <Picker
           selectedValue={value.day}
           onValueChange={(v) => set({ day: Number(v) })}
-          accessibilityLabel="Day of birth"
+          accessibilityLabel={t('onboarding.dob.dayA11y')}
           style={styles.picker}
         >
           {days.map((d) => (
@@ -86,24 +90,24 @@ export function DobPicker({
         </Picker>
       </Column>
 
-      <Column label="Month" display={pad2(value.month)} divider>
+      <Column label={t('onboarding.dob.month')} display={pad2(value.month)} divider>
         <Picker
           selectedValue={value.month}
           onValueChange={(v) => set({ month: Number(v) })}
-          accessibilityLabel="Month of birth"
+          accessibilityLabel={t('onboarding.dob.monthA11y')}
           style={styles.picker}
         >
           {MONTHS.map((m, i) => (
-            <Picker.Item key={m} label={m} value={i + 1} color={colors.ink} />
+            <Picker.Item key={m} label={t(m)} value={i + 1} color={colors.ink} />
           ))}
         </Picker>
       </Column>
 
-      <Column label="Year" display={String(value.year)} divider>
+      <Column label={t('onboarding.dob.year')} display={String(value.year)} divider>
         <Picker
           selectedValue={value.year}
           onValueChange={(v) => set({ year: Number(v) })}
-          accessibilityLabel="Year of birth"
+          accessibilityLabel={t('onboarding.dob.yearA11y')}
           style={styles.picker}
         >
           {years.map((y) => (

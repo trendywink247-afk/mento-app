@@ -17,6 +17,7 @@ import {
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { capture, waitBucket } from '@/lib/analytics';
 import { ApiError, api } from '@/lib/api';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { getSessionToken, saveCompanionAnimal, saveSession } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -40,25 +41,22 @@ const MAX_RETRIES = 3;
 /** The found crescendo plays before the journey's own celebrate beat. */
 const FOUND_CRESCENDO_MS = 700;
 
-const SEARCH_LINES = [
-  'Reaching out to our listeners…',
-  'A few kind people are nearby…',
-  'Finding someone right for this moment…',
-];
+const SEARCH_LINES: TKey[] = ['connecting.line1', 'connecting.line2', 'connecting.line3'];
 
-type Card = { icon: keyof typeof Ionicons.glyphMap; title: string; body: string };
+type Card = { icon: keyof typeof Ionicons.glyphMap; title: TKey; body: TKey };
 
 /** Safety guidelines (mockup #5) interleaved with conversation warm-ups — the
- * founder's ruling: "they won't know how to ask — give them sample questions." */
+ * founder's ruling: "they won't know how to ask — give them sample questions."
+ * Copy lives in the locale files; these are the keys. */
 const CARDS: Card[] = [
-  { icon: 'shield-checkmark-outline', title: 'This is a safe place', body: "We're here to listen and support, without judgment." },
-  { icon: 'chatbubble-outline', title: 'Not sure how to start?', body: '"Today felt heavy" is more than enough for a first message.' },
-  { icon: 'lock-closed-outline', title: "Don't share personal information", body: 'Keep your identity and details private.' },
-  { icon: 'compass-outline', title: 'You set the pace', body: 'Ask for advice, or just be heard — both are welcome here.' },
-  { icon: 'person-outline', title: 'Reflect for better understanding', body: 'Use this space to reflect and grow.' },
-  { icon: 'happy-outline', title: "You're anonymous. So are they.", body: 'Just two people, personas on, walls down.' },
-  { icon: 'heart-outline', title: 'Be yourself', body: 'Honesty helps build meaningful conversations.' },
-  { icon: 'people-outline', title: 'Respect each other', body: "Let's create a kind and respectful space together." },
+  { icon: 'shield-checkmark-outline', title: 'connecting.card1Title', body: 'connecting.card1Body' },
+  { icon: 'chatbubble-outline', title: 'connecting.card2Title', body: 'connecting.card2Body' },
+  { icon: 'lock-closed-outline', title: 'connecting.card3Title', body: 'connecting.card3Body' },
+  { icon: 'compass-outline', title: 'connecting.card4Title', body: 'connecting.card4Body' },
+  { icon: 'person-outline', title: 'connecting.card5Title', body: 'connecting.card5Body' },
+  { icon: 'happy-outline', title: 'connecting.card6Title', body: 'connecting.card6Body' },
+  { icon: 'heart-outline', title: 'connecting.card7Title', body: 'connecting.card7Body' },
+  { icon: 'people-outline', title: 'connecting.card8Title', body: 'connecting.card8Body' },
 ];
 
 export type MatchParams = { id: string; listener: string; channel: string };
@@ -111,6 +109,7 @@ export function ConnectingStep({
   onMatched: (params: MatchParams) => void;
 }) {
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const reduced = useReducedMotion();
   const [phase, setPhase] = useState<Phase>('searching');
   const [error, setError] = useState<string | null>(null);
@@ -199,13 +198,13 @@ export function ConnectingStep({
       const msg =
         e instanceof ApiError
           ? e.status === 503
-            ? "It's a very busy moment — all our listeners are with someone. Please try again shortly."
+            ? t('connecting.errorBusy')
             : e.message
-          : 'We had trouble connecting. Please check your network and try again.';
+          : t('common.networkError');
       setError(msg);
       setPhase('error');
     }
-  }, [onInvalidDraft, onMatched, later, reduced]);
+  }, [onInvalidDraft, onMatched, later, reduced, t]);
 
   useEffect(() => {
     if (active && !startedRef.current) {
@@ -250,21 +249,21 @@ export function ConnectingStep({
 
   const headline =
     phase === 'found'
-      ? 'Found someone\nfor you 💜'
+      ? t('connecting.headlineFound')
       : phase === 'error'
-        ? "We couldn't connect just yet"
+        ? t('connecting.headlineError')
         : phase === 'busy'
-          ? "It's a busy moment —\nyou're next in line"
-          : 'Connecting you to an\navailable mentor…';
+          ? t('connecting.headlineBusy')
+          : t('connecting.headlineSearching');
 
   const subline =
     phase === 'found'
-      ? 'Taking you to your conversation…'
+      ? t('connecting.subFound')
       : phase === 'error'
         ? (error ?? '')
         : phase === 'busy'
-          ? "Everyone's with someone right now. We're holding your place and retrying."
-          : SEARCH_LINES[line];
+          ? t('connecting.subBusy')
+          : t(SEARCH_LINES[line]);
 
   const activeCard = CARDS[card];
 
@@ -273,7 +272,7 @@ export function ConnectingStep({
       footer={
         phase === 'error' ? (
           <PrimaryButton
-            label="Try again"
+            label={t('connecting.tryAgain')}
             onPress={() => {
               retriesRef.current = 0;
               void connect();
@@ -297,7 +296,7 @@ export function ConnectingStep({
           <ConnectionConstellation state={constellation} breatheActive={breathing} />
           {breathing && (phase === 'searching' || phase === 'busy') ? (
             <CrossfadeLine
-              text={breathIn ? 'Breathe in with your companion…' : '…and slowly out'}
+              text={breathIn ? t('connecting.breatheIn') : t('connecting.breatheOut')}
               style={[type.caption, styles.center, { color: colors.accentSoft }]}
             />
           ) : null}
@@ -309,7 +308,7 @@ export function ConnectingStep({
           <View style={[styles.foundCard, elevation.sm, { backgroundColor: colors.surface }]} testID="found-card">
             <Ionicons name="heart-circle" size={28} color={colors.accent} />
             <Text style={[styles.foundName, { color: colors.ink }]}>
-              {foundName} is here for you
+              {t('connecting.isHere', { name: foundName })}
             </Text>
           </View>
         </Entrance>
@@ -319,7 +318,7 @@ export function ConnectingStep({
         <>
           <Entrance index={2}>
             <Text style={[styles.waitTitle, { color: colors.ink }]}>
-              While you wait — what makes{'\n'}Mento a safe, supportive space
+              {t('connecting.waitTitle')}
             </Text>
           </Entrance>
 
@@ -332,8 +331,8 @@ export function ConnectingStep({
                   <View style={styles.row}>
                     <IconBadge icon={g.icon} size={48} />
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.rowTitle, { color: colors.ink }]}>{g.title}</Text>
-                      <Text style={[type.caption, { color: colors.inkMuted }]}>{g.body}</Text>
+                      <Text style={[styles.rowTitle, { color: colors.ink }]}>{t(g.title)}</Text>
+                      <Text style={[type.caption, { color: colors.inkMuted }]}>{t(g.body)}</Text>
                     </View>
                   </View>
                 </View>
@@ -344,8 +343,8 @@ export function ConnectingStep({
               <View style={[styles.card, elevation.sm, { backgroundColor: colors.surface }]}>
                 <IconBadge icon={activeCard.icon} size={48} />
                 <View style={{ flex: 1 }}>
-                  <CrossfadeLine text={activeCard.title} style={[styles.rowTitle, { color: colors.ink }]} />
-                  <CrossfadeLine text={activeCard.body} style={[type.caption, { color: colors.inkMuted }]} />
+                  <CrossfadeLine text={t(activeCard.title)} style={[styles.rowTitle, { color: colors.ink }]} />
+                  <CrossfadeLine text={t(activeCard.body)} style={[type.caption, { color: colors.inkMuted }]} />
                 </View>
               </View>
               <View style={styles.dots}>
@@ -367,8 +366,8 @@ export function ConnectingStep({
             <View style={[styles.footerCard, { backgroundColor: colors.accentTint }]}>
               <Ionicons name="sparkles-outline" size={18} color={colors.accentSoft} />
               <Text style={[styles.footerTitle, { color: colors.ink }]}>
-                Let's begin a conversation{'\n'}
-                <Text style={{ color: colors.accent }}>that brings you peace of mind.</Text>
+                {t('connecting.footerTitle')}
+                <Text style={{ color: colors.accent }}>{t('connecting.footerAccent')}</Text>
               </Text>
               <Text style={[type.body, { color: colors.accent }]}>💜</Text>
             </View>

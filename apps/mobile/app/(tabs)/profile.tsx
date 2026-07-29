@@ -9,6 +9,7 @@ import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { api, type ListenerApplication } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
@@ -25,6 +26,7 @@ const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
 export default function ProfileTab() {
   const router = useRouter();
   const { colors, elevation, companionColor, setCompanionColor } = useTheme();
+  const { t, locale, setLocale } = useI18n();
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   const [application, setApplication] = useState<ListenerApplication | null>(null);
@@ -63,21 +65,21 @@ export default function ProfileTab() {
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.lg }}>
         <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
-          Profile
+          {t('profile.title')}
         </Text>
 
         <View style={styles.identity}>
           <PersonaAvatar name={persona?.persona_name ?? 'Mento'} size={88} />
           <Text style={[styles.name, { color: colors.ink }]}>
-            {persona?.persona_name ?? 'Anonymous'}
+            {persona?.persona_name ?? t('profile.anonymous')}
           </Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            Your identity stays yours — this is all anyone ever sees.
+            {t('profile.identityNote')}
           </Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]}>
-          <Text style={[styles.cardTitle, { color: colors.ink }]}>Your growth companion</Text>
+          <Text style={[styles.cardTitle, { color: colors.ink }]}>{t('profile.companionTitle')}</Text>
           {animal ? (
             <View style={styles.companionRow}>
               <View style={[styles.companionBubble, { backgroundColor: colors.accentTint }]}>
@@ -89,7 +91,7 @@ export default function ProfileTab() {
             </View>
           ) : null}
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            Switching colours re-tints the whole app, instantly.
+            {t('profile.recolour')}
           </Text>
           <View style={styles.swatches}>
             {COLOR_KEYS.map((key) => {
@@ -101,7 +103,7 @@ export default function ProfileTab() {
                   onPress={() => setCompanionColor(key)}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
-                  accessibilityLabel={`${COMPANION_COLOR_LABELS[key]} theme`}
+                  accessibilityLabel={t('onboarding.companion.themeA11y', { label: COMPANION_COLOR_LABELS[key] })}
                   testID={`profile-colour-${key}`}
                   style={[styles.swatchWrap, selected && { borderColor: set.accent, borderWidth: 2 }]}
                 >
@@ -114,7 +116,43 @@ export default function ProfileTab() {
           </View>
         </View>
 
-        <Text style={[styles.section, { color: colors.ink }]}>Support & About</Text>
+        <Text style={[styles.section, { color: colors.ink }]}>{t('profile.section')}</Text>
+
+        <View style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}>
+          <IconBadge icon="language-outline" size={44} />
+          <View style={{ flex: 1 }}>
+            <Text style={[type.label, { color: colors.ink }]}>{t('profile.language')}</Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>
+              {t('profile.languageBody')}
+            </Text>
+          </View>
+          <View style={styles.langChips}>
+            {(['en', 'hi'] as const).map((l) => {
+              const selected = locale === l;
+              const label = l === 'en' ? t('profile.languageEnglish') : t('profile.languageHindi');
+              return (
+                <Pressable
+                  key={l}
+                  onPress={() => setLocale(l)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={label}
+                  testID={`profile-lang-${l}`}
+                  style={[
+                    styles.langChip,
+                    selected
+                      ? { backgroundColor: colors.accent }
+                      : { borderWidth: 1, borderColor: colors.border },
+                  ]}
+                >
+                  <Text style={[styles.langChipText, { color: selected ? colors.onAccent : colors.inkMuted }]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
 
         <Pressable
           onPress={() => router.push('/coffee')}
@@ -124,9 +162,9 @@ export default function ProfileTab() {
         >
           <IconBadge icon="cafe-outline" tone="orange" size={44} />
           <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>Buy the Mento Team a Coffee</Text>
+            <Text style={[type.label, { color: colors.ink }]}>{t('profile.coffeeTitle')}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              Optional, always — it keeps this space free and safe.
+              {t('profile.coffeeBody')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
@@ -135,10 +173,9 @@ export default function ProfileTab() {
         <View style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}>
           <IconBadge icon="heart-outline" size={44} />
           <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>Listeners, not therapists</Text>
+            <Text style={[type.label, { color: colors.ink }]}>{t('profile.listenersTitle')}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              Mento connects you with real people who listen. For clinical support, please reach
-              a professional — in a crisis, call Tele-MANAS (14416), free, 24×7.
+              {t('profile.listenersBody')}
             </Text>
           </View>
         </View>
@@ -146,10 +183,9 @@ export default function ProfileTab() {
         <View style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}>
           <IconBadge icon="shield-checkmark-outline" tone="green" size={44} />
           <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>Privacy, plainly</Text>
+            <Text style={[type.label, { color: colors.ink }]}>{t('profile.privacyTitle')}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              No real names. No photos. Panda Wipe deletes a conversation from your device and
-              our servers. Analytics never see your messages.
+              {t('profile.privacyBody')}
             </Text>
           </View>
         </View>
@@ -163,9 +199,9 @@ export default function ProfileTab() {
           >
             <IconBadge icon="ear-outline" tone="green" size={44} />
             <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>Become a listener</Text>
+              <Text style={[type.label, { color: colors.ink }]}>{t('profile.becomeTitle')}</Text>
               <Text style={[type.caption, { color: colors.inkMuted }]}>
-                Been through a hard season? Help someone through theirs.
+                {t('profile.becomeBody')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
@@ -181,9 +217,9 @@ export default function ProfileTab() {
           >
             <IconBadge icon="ear-outline" tone="accent" size={44} />
             <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>About your application</Text>
+              <Text style={[type.label, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
               <Text style={[type.caption, { color: colors.inkMuted }]}>
-                Not this time — and truly, thank you. You can apply again in a month.
+                {t('profile.declinedBody')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
@@ -201,13 +237,13 @@ export default function ProfileTab() {
             <View style={{ flex: 1 }}>
               <Text style={[type.label, { color: colors.ink }]}>
                 {application.status === 'approved'
-                  ? "You're a listener now"
-                  : 'Listener application received'}
+                  ? t('profile.approvedTitle')
+                  : t('profile.receivedTitle')}
               </Text>
               <Text style={[type.caption, { color: colors.inkMuted }]}>
                 {application.status === 'approved'
-                  ? 'Your private listener console is ready. It opens in your browser.'
-                  : 'We read every application — hang tight.'}
+                  ? t('profile.approvedBody')
+                  : t('profile.receivedBody')}
               </Text>
               {application.status === 'approved' && application.console_url ? (
                 <Pressable
@@ -217,7 +253,7 @@ export default function ProfileTab() {
                   style={{ minHeight: 44, justifyContent: 'center' }}
                 >
                   <Text style={[type.bodySemi, { color: colors.accent }]}>
-                    Open my listener console →
+                    {t('profile.openConsole')}
                   </Text>
                 </Pressable>
               ) : null}
@@ -233,16 +269,16 @@ export default function ProfileTab() {
         >
           <IconBadge icon="leaf-outline" tone="danger" size={44} />
           <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.danger }]}>Start fresh</Text>
+            <Text style={[type.label, { color: colors.danger }]}>{t('profile.startFreshTitle')}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              Leave this persona behind and begin again as someone new.
+              {t('profile.startFreshBody')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
         </Pressable>
 
         <Text style={[type.caption, styles.version, { color: colors.inkMuted }]}>
-          Mento · early access
+          {t('profile.version')}
         </Text>
       </ScrollView>
     </Screen>
@@ -293,4 +329,11 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
   },
   version: { textAlign: 'center', marginTop: space.md },
+  langChips: { flexDirection: 'row', gap: space.xs },
+  langChip: {
+    borderRadius: radius.pill,
+    paddingVertical: space.xs + 2,
+    paddingHorizontal: space.sm + 4,
+  },
+  langChipText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
 });

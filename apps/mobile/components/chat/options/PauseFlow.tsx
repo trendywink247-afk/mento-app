@@ -4,6 +4,7 @@ import { StyleSheet, Switch, Text, View } from 'react-native';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
 import { ApiError, api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -22,6 +23,7 @@ export function PauseFlow({
   onChanged: (paused: boolean) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [next, setNext] = useState(!paused); // the state the user is about to apply
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export function PauseFlow({
       if (s.is_paused) setDone(true);
       else onBack();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+      setError(e instanceof ApiError ? e.message : t('common.somethingWrong'));
     } finally {
       setBusy(false);
     }
@@ -45,8 +47,8 @@ export function PauseFlow({
 
   return (
     <FlowScreen
-      title="Panda Pause"
-      subtitle="Take a break from this conversation"
+      title={t('options.pause.title')}
+      subtitle={t('options.pause.subtitle')}
       icon="notifications-off-outline"
       onBack={onBack}
       footer={
@@ -55,43 +57,42 @@ export function PauseFlow({
             <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
           ) : null}
           <PrimaryButton
-            label={next ? 'Turn on Panda Pause' : 'Resume notifications'}
+            label={next ? t('options.pause.ctaOn') : t('options.pause.ctaResume')}
             onPress={() => void apply()}
             loading={busy}
             testID="opt-confirm"
           />
-          <LockFootnote text="This setting is only for this conversation and won't affect others." />
+          <LockFootnote text={t('options.onlyThisConversation')} />
         </>
       }
     >
       <View style={[styles.hero, { backgroundColor: colors.surface }]}>
         <Panda pose="sleep" size={120} />
         <Text style={[styles.heroTitle, { color: colors.ink }]}>
-          Need a little{'\n'}breathing room?
+          {t('options.pause.heroTitle')}
         </Text>
         <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-          Turn on Panda Pause and we'll quietly hold any new messages from this mentor until
-          you're ready to return.
+          {t('options.pause.heroBody')}
         </Text>
       </View>
 
       <InfoRow
         icon="chatbubble-ellipses-outline"
-        title="Your mentor can still write to you."
-        body="They can send messages as usual."
+        title={t('options.pause.info1Title')}
+        body={t('options.pause.info1Body')}
       />
       <InfoRow
         icon="notifications-off-outline"
         tone="orange"
-        title="You simply won't be notified."
-        body="No alerts, no sounds, no distractions."
+        title={t('options.pause.info2Title')}
+        body={t('options.pause.info2Body')}
       />
 
       <View style={[styles.toggleCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={{ flex: 1 }}>
-          <Text style={[type.label, { color: colors.ink }]}>Pause this conversation</Text>
+          <Text style={[type.label, { color: colors.ink }]}>{t('options.pause.toggleTitle')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            You won't receive any messages until you resume.
+            {t('options.pause.toggleBody')}
           </Text>
         </View>
         <Switch
@@ -99,7 +100,7 @@ export function PauseFlow({
           onValueChange={setNext}
           trackColor={{ true: colors.accent, false: colors.border }}
           thumbColor={colors.surface}
-          accessibilityLabel="Pause this conversation"
+          accessibilityLabel={t('options.pause.toggleTitle')}
           testID="pause-toggle"
         />
       </View>
@@ -107,9 +108,9 @@ export function PauseFlow({
       <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]}>
         <Panda pose="shield" size={56} />
         <View style={{ flex: 1 }}>
-          <Text style={[type.label, { color: colors.ink }]}>Nothing will be lost.</Text>
+          <Text style={[type.label, { color: colors.ink }]}>{t('options.pause.lostTitle')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            We'll keep every message safe until you come back. 💜
+            {t('options.pause.lostBody')}
           </Text>
         </View>
       </View>
@@ -117,13 +118,13 @@ export function PauseFlow({
       <ConfirmModal
         visible={done}
         art={<Panda pose="sleep" size={110} />}
-        title="Panda Pause is on."
-        body="Take all the time you need. We'll quietly hold new messages from this mentor until you're ready to continue."
+        title={t('options.pause.doneTitle')}
+        body={t('options.pause.doneBody')}
         rows={[
-          { icon: 'notifications-off-outline', tone: 'orange', title: 'Notifications paused', body: "You won't get any alerts." },
-          { icon: 'file-tray-outline', title: 'Messages safely stored', body: "We'll keep everything secure until you return." },
+          { icon: 'notifications-off-outline', tone: 'orange', title: t('options.pause.row1Title'), body: t('options.pause.row1Body') },
+          { icon: 'file-tray-outline', title: t('options.pause.row2Title'), body: t('options.pause.row2Body') },
         ]}
-        cta="Got it"
+        cta={t('common.gotIt')}
         onDone={onBack}
       />
     </FlowScreen>

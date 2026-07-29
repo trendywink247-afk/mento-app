@@ -17,9 +17,12 @@ import { Screen } from '@/components/Screen';
 import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
 import { api, type JournalEntry } from '@/lib/api';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, type Wash } from '@/theme/tokens';
 
+/** Canonical mood values — stored in entry meta and used for testIDs; only the
+ * displayed chip label translates. */
 const MOODS = ['Calm', 'Happy', 'Okay', 'Low', 'Anxious'] as const;
 /** Weather glyphs for the mood chips — feelings as sky, in the brand's aurora language. */
 const MOOD_ICONS: Record<(typeof MOODS)[number], keyof typeof Ionicons.glyphMap> = {
@@ -29,48 +32,63 @@ const MOOD_ICONS: Record<(typeof MOODS)[number], keyof typeof Ionicons.glyphMap>
   Low: 'rainy-outline',
   Anxious: 'thunderstorm-outline',
 };
+const MOOD_LABELS: Record<(typeof MOODS)[number], TKey> = {
+  Calm: 'journals.moodCalm',
+  Happy: 'journals.moodHappy',
+  Okay: 'journals.moodOkay',
+  Low: 'journals.moodLow',
+  Anxious: 'journals.moodAnxious',
+};
+/** Canonical category values — stored in entry meta; the chip label translates. */
 const FINANCE_CATEGORIES = ['Food', 'Travel', 'Books', 'Rent', 'Other'] as const;
+const CATEGORY_LABELS: Record<(typeof FINANCE_CATEGORIES)[number], TKey> = {
+  Food: 'journals.catFood',
+  Travel: 'journals.catTravel',
+  Books: 'journals.catBooks',
+  Rent: 'journals.catRent',
+  Other: 'journals.catOther',
+};
 
 type Config = {
   channel: string;
-  title: string;
+  title: TKey;
   icon: keyof typeof Ionicons.glyphMap;
   tone: Wash;
-  empty: string;
+  empty: TKey;
   composer: 'mood' | 'finance' | 'note' | 'none';
 };
 
 const CONFIGS: Record<string, Config> = {
   'mentor-notes': {
     channel: 'mentor_notes',
-    title: 'Mentor Notes',
+    title: 'journals.mentorNotesTitle',
     icon: 'book-outline',
     tone: 'accent',
-    empty: 'Words worth keeping will land here. Long-press a mentor message in chat to save it.',
+    empty: 'journals.emptyMentorNotes',
     composer: 'none',
   },
   mood: {
     channel: 'mood',
-    title: 'Mood Journal',
+    title: 'journals.moodTitle',
     icon: 'heart-outline',
     tone: 'danger',
-    empty: 'How are you feeling today? Your first entry is one tap away.',
+    empty: 'journals.emptyMood',
     composer: 'mood',
   },
   finance: {
     channel: 'finance',
-    title: 'Finance Journal',
+    title: 'journals.financeTitle',
     icon: 'wallet-outline',
     tone: 'green',
-    empty: 'Track an expense or income — small notes add up to clarity.',
+    empty: 'journals.emptyFinance',
     composer: 'finance',
   },
   gratitude: {
     channel: 'gratitude',
-    title: 'Gratitude Journal',
+    title: 'journals.gratitudeTitle',
     icon: 'leaf-outline',
     tone: 'orange',
-    empty: "One good thing from today — that's all it takes.",
+    empty: 'journals.emptyGratitude',
     composer: 'note',
   },
 };
@@ -80,6 +98,7 @@ const CONFIGS: Record<string, Config> = {
 export default function JournalScreen() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const { channel: route } = useLocalSearchParams<{ channel: string }>();
   const cfg = CONFIGS[route ?? ''] ?? CONFIGS['mentor-notes'];
 
@@ -171,7 +190,11 @@ export default function JournalScreen() {
         ) : null}
         {cfg.channel === 'mood' && item.meta.mood ? (
           <View style={styles.financeRow}>
-            <Text style={[type.label, { color: colors.accent }]}>{String(item.meta.mood)}</Text>
+            <Text style={[type.label, { color: colors.accent }]}>
+              {MOOD_LABELS[String(item.meta.mood) as (typeof MOODS)[number]]
+                ? t(MOOD_LABELS[String(item.meta.mood) as (typeof MOODS)[number]])
+                : String(item.meta.mood)}
+            </Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>{when}</Text>
           </View>
         ) : null}
@@ -194,13 +217,13 @@ export default function JournalScreen() {
       <View style={styles.head}>
         <IconBadge icon={cfg.icon} tone={cfg.tone} size={44} />
         <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
-          {cfg.title}
+          {t(cfg.title)}
         </Text>
       </View>
 
       {cfg.composer === 'mood' ? (
         <View style={[styles.composer, { backgroundColor: colors.surface }, elevation.sm]}>
-          <Text style={[type.label, { color: colors.ink }]}>How are you feeling?</Text>
+          <Text style={[type.label, { color: colors.ink }]}>{t('journals.howFeeling')}</Text>
           <View style={styles.chips}>
             {MOODS.map((m) => {
               const selected = mood === m;
@@ -223,7 +246,7 @@ export default function JournalScreen() {
                     color={selected ? colors.accent : colors.inkMuted}
                   />
                   <Text style={[styles.chipText, { color: selected ? colors.accent : colors.ink }]}>
-                    {m}
+                    {t(MOOD_LABELS[m])}
                   </Text>
                 </Pressable>
               );
@@ -231,13 +254,13 @@ export default function JournalScreen() {
           </View>
           <TextInput
             style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
-            placeholder="Add a note (optional)"
+            placeholder={t('journals.addNote')}
             placeholderTextColor={colors.inkMuted}
             value={note}
             onChangeText={setNote}
             testID="journal-note"
           />
-          <PrimaryButton label="Save entry" onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
+          <PrimaryButton label={t('journals.saveEntry')} onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
         </View>
       ) : null}
 
@@ -246,12 +269,12 @@ export default function JournalScreen() {
           <View style={styles.financeInputRow}>
             <TextInput
               style={[styles.input, styles.amountInput, { borderColor: colors.border, color: colors.ink }]}
-              placeholder="₹ 0"
+              placeholder={t('journals.amountPlaceholder')}
               placeholderTextColor={colors.inkMuted}
               keyboardType="decimal-pad"
               value={amount}
               onChangeText={setAmount}
-              accessibilityLabel="Amount in rupees"
+              accessibilityLabel={t('journals.amountA11y')}
               testID="finance-amount"
             />
             <View style={styles.chips}>
@@ -272,7 +295,7 @@ export default function JournalScreen() {
                     ]}
                   >
                     <Text style={[styles.chipText, { color: selected ? colors.onAccent : colors.inkMuted }]}>
-                      {d === 'expense' ? 'Expense' : 'Income'}
+                      {d === 'expense' ? t('journals.expense') : t('journals.income')}
                     </Text>
                   </Pressable>
                 );
@@ -296,7 +319,7 @@ export default function JournalScreen() {
                   ]}
                 >
                   <Text style={[styles.chipText, { color: selected ? colors.accent : colors.inkMuted }]}>
-                    {c}
+                    {t(CATEGORY_LABELS[c])}
                   </Text>
                 </Pressable>
               );
@@ -304,13 +327,13 @@ export default function JournalScreen() {
           </View>
           <TextInput
             style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
-            placeholder="What was it? (optional)"
+            placeholder={t('journals.whatWasIt')}
             placeholderTextColor={colors.inkMuted}
             value={note}
             onChangeText={setNote}
             testID="journal-note"
           />
-          <PrimaryButton label="Save entry" onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
+          <PrimaryButton label={t('journals.saveEntry')} onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
         </View>
       ) : null}
 
@@ -318,13 +341,13 @@ export default function JournalScreen() {
         <View style={[styles.composer, { backgroundColor: colors.surface }, elevation.sm]}>
           <TextInput
             style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
-            placeholder="Today I'm grateful for…"
+            placeholder={t('journals.gratitudePlaceholder')}
             placeholderTextColor={colors.inkMuted}
             value={note}
             onChangeText={setNote}
             testID="journal-note"
           />
-          <PrimaryButton label="Save entry" onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
+          <PrimaryButton label={t('journals.saveEntry')} onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
         </View>
       ) : null}
 
@@ -346,7 +369,7 @@ export default function JournalScreen() {
               ) : (
                 <SceneTile name="journalEmpty" size={120} />
               )}
-              <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>{cfg.empty}</Text>
+              <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>{t(cfg.empty)}</Text>
             </View>
           }
           renderItem={renderEntry}

@@ -32,6 +32,9 @@ type Paths<T> = {
 }[keyof T & string];
 export type TKey = Paths<typeof en>;
 
+/** Translate function: typed key + optional %{placeholder} interpolation values. */
+export type TFunc = (key: TKey, options?: Record<string, string | number>) => string;
+
 const i18n = new I18n({ en, hi });
 i18n.defaultLocale = 'en';
 i18n.enableFallback = true; // an untranslated key renders English, never a key name
@@ -70,13 +73,13 @@ function webInitialLocale(): Locale {
 }
 
 type LanguageContextValue = {
-  t: (key: TKey) => string;
+  t: TFunc;
   locale: Locale;
   setLocale: (locale: Locale) => void;
 };
 
 const LanguageContext = createContext<LanguageContextValue>({
-  t: (key) => i18n.t(key),
+  t: (key, options) => i18n.t(key, options),
   locale: 'en',
   setLocale: () => {},
 });
@@ -123,7 +126,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   i18n.locale = locale; // module-level instance follows the provider
 
   const value = useMemo<LanguageContextValue>(
-    () => ({ t: (key: TKey) => i18n.t(key), locale, setLocale }),
+    () => ({
+      t: (key: TKey, options?: Record<string, string | number>) => i18n.t(key, options),
+      locale,
+      setLocale,
+    }),
     [locale, setLocale],
   );
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

@@ -6,20 +6,23 @@ import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
 import { ApiError, api } from '@/lib/api';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, type Wash } from '@/theme/tokens';
 
 import { ConfirmModal, FlowScreen, LockFootnote, RadioRow } from './bits';
 
 /** Panda Mask presets per mockup #21 — replaces the old free-text mask client-side
- * (the backend stores the chosen string unchanged). */
-const STATUSES: { label: string; body: string; icon: keyof typeof Ionicons.glyphMap; tone: Wash }[] = [
-  { label: 'Available', body: "I'm available to chat", icon: 'ellipse', tone: 'green' },
-  { label: 'Away', body: "I'll reply when I can", icon: 'moon-outline', tone: 'indigo' },
-  { label: 'Taking Time for Myself', body: "I'm focusing on self-care", icon: 'leaf-outline', tone: 'green' },
-  { label: 'Focusing', body: "I'm working on something important", icon: 'book-outline', tone: 'accent' },
-  { label: 'Be Right Back', body: "I'll be back shortly", icon: 'cafe-outline', tone: 'orange' },
-  { label: 'Invisible', body: 'Hide my presence in this chat', icon: 'eye-off-outline', tone: 'indigo' },
+ * (the backend stores the chosen string unchanged). `label` is the canonical value
+ * sent to the API (and the testID seed) — it stays English in every locale; only
+ * the displayed title/body translate. */
+const STATUSES: { label: string; titleKey: TKey; bodyKey: TKey; icon: keyof typeof Ionicons.glyphMap; tone: Wash }[] = [
+  { label: 'Available', titleKey: 'options.mask.availableTitle', bodyKey: 'options.mask.availableBody', icon: 'ellipse', tone: 'green' },
+  { label: 'Away', titleKey: 'options.mask.awayTitle', bodyKey: 'options.mask.awayBody', icon: 'moon-outline', tone: 'indigo' },
+  { label: 'Taking Time for Myself', titleKey: 'options.mask.selfCareTitle', bodyKey: 'options.mask.selfCareBody', icon: 'leaf-outline', tone: 'green' },
+  { label: 'Focusing', titleKey: 'options.mask.focusingTitle', bodyKey: 'options.mask.focusingBody', icon: 'book-outline', tone: 'accent' },
+  { label: 'Be Right Back', titleKey: 'options.mask.brbTitle', bodyKey: 'options.mask.brbBody', icon: 'cafe-outline', tone: 'orange' },
+  { label: 'Invisible', titleKey: 'options.mask.invisibleTitle', bodyKey: 'options.mask.invisibleBody', icon: 'eye-off-outline', tone: 'indigo' },
 ];
 
 export function MaskFlow({
@@ -34,6 +37,7 @@ export function MaskFlow({
   onChanged: (mask: string | null) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [choice, setChoice] = useState<string | null>(current);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,16 +52,18 @@ export function MaskFlow({
       onChanged(s.status_mask);
       setDone(true);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+      setError(e instanceof ApiError ? e.message : t('common.somethingWrong'));
     } finally {
       setBusy(false);
     }
   };
 
+  const chosen = STATUSES.find((s) => s.label === choice);
+
   return (
     <FlowScreen
-      title="Panda Mask"
-      subtitle="Status for this conversation"
+      title={t('options.mask.title')}
+      subtitle={t('options.mask.subtitle')}
       icon="glasses-outline"
       onBack={onBack}
       footer={
@@ -66,41 +72,41 @@ export function MaskFlow({
             <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
           ) : null}
           <PrimaryButton
-            label="Apply Mask"
+            label={t('options.mask.apply')}
             onPress={() => void apply()}
             disabled={!choice}
             loading={busy}
             testID="opt-confirm"
           />
-          <LockFootnote text="This setting is only for this conversation and won't affect others." />
+          <LockFootnote text={t('options.onlyThisConversation')} />
         </>
       }
     >
       <View style={[styles.hero, { backgroundColor: colors.surface }]}>
         <Panda pose="shield" size={110} />
-        <Text style={[styles.heroTitle, { color: colors.ink }]}>Panda Mask</Text>
+        <Text style={[styles.heroTitle, { color: colors.ink }]}>{t('options.mask.title')}</Text>
         <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-          Choose how you'd like to appear in this conversation.
+          {t('options.mask.heroBody')}
         </Text>
       </View>
 
       <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]}>
         <IconBadge icon="shield-outline" size={34} />
         <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
-          The mentor will see the status you choose, not your actual status.
+          {t('options.mask.note')}
         </Text>
       </View>
 
       <Text style={[styles.section, { color: colors.ink }]}>
-        Choose a status for this conversation
+        {t('options.mask.section')}
       </Text>
       {STATUSES.map((s) => (
         <RadioRow
           key={s.label}
           icon={s.icon}
           tone={s.tone}
-          title={s.label}
-          body={s.body}
+          title={t(s.titleKey)}
+          body={t(s.bodyKey)}
           selected={choice === s.label}
           onPress={() => setChoice(s.label)}
           testID={`mask-${s.label.toLowerCase().replace(/[^a-z]+/g, '-')}`}
@@ -110,10 +116,9 @@ export function MaskFlow({
       <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]}>
         <Panda pose="shield" size={56} />
         <View style={{ flex: 1 }}>
-          <Text style={[type.label, { color: colors.ink }]}>Your real status stays private.</Text>
+          <Text style={[type.label, { color: colors.ink }]}>{t('options.mask.privateTitle')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            Only this mentor will see the status you set here. Your actual status won't be shared
-            in this conversation.
+            {t('options.mask.privateBody')}
           </Text>
         </View>
       </View>
@@ -121,9 +126,9 @@ export function MaskFlow({
       <ConfirmModal
         visible={done}
         art={<Panda pose="excited" size={110} />}
-        title="Panda Mask is on!!"
-        body={`This mentor now sees you as "${choice ?? ''}".`}
-        cta="Got it"
+        title={t('options.mask.doneTitle')}
+        body={t('options.mask.doneBody', { status: chosen ? t(chosen.titleKey) : (choice ?? '') })}
+        cta={t('common.gotIt')}
         onDone={onBack}
       />
     </FlowScreen>

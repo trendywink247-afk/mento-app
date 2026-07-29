@@ -6,6 +6,7 @@ import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
 import { ApiError, api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -24,6 +25,7 @@ export function EndFlow({
   onEnded: (how: 'end' | 'wipe') => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [step, setStep] = useState<'choose' | 'wipe-confirm' | 'all-clean'>('choose');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +37,7 @@ export function EndFlow({
     try {
       await fn();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+      setError(e instanceof ApiError ? e.message : t('common.somethingWrong'));
     } finally {
       setBusy(false);
     }
@@ -56,21 +58,21 @@ export function EndFlow({
   if (step === 'all-clean') {
     return (
       <FlowScreen
-        title="Panda Wipe"
+        title={t('options.end.wipeScreenTitle')}
         onBack={() => onEnded('wipe')}
-        footer={<PrimaryButton label="Got it!" onPress={() => onEnded('wipe')} testID="opt-confirm" />}
+        footer={<PrimaryButton label={t('options.end.gotItBang')} onPress={() => onEnded('wipe')} testID="opt-confirm" />}
       >
         <View style={styles.hero}>
           <Panda pose="excited" size={130} />
-          <Text style={[styles.heroTitle, { color: colors.ink }]}>All clean! 🍃</Text>
+          <Text style={[styles.heroTitle, { color: colors.ink }]}>{t('options.end.allClean')}</Text>
           <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-            The conversation has been deleted from both accounts.
+            {t('options.end.allCleanBody')}
           </Text>
         </View>
         <InfoRow
           icon="lock-closed-outline"
-          title="Deleted everywhere"
-          body="Messages were removed from your device and from our servers. You're always in control of your conversations."
+          title={t('options.end.deletedTitle')}
+          body={t('options.end.deletedBody')}
         />
       </FlowScreen>
     );
@@ -79,31 +81,31 @@ export function EndFlow({
   if (step === 'wipe-confirm') {
     return (
       <FlowScreen
-        title="Panda Wipe!!"
+        title={t('options.end.wipeTitle')}
         onBack={() => setStep('choose')}
         footer={
           <>
             {error ? (
               <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
             ) : null}
-            <PrimaryButton label="Yes, wipe it clean!" onPress={() => void doWipe()} loading={busy} testID="opt-confirm" />
-            <PrimaryButton label="Cancel" variant="link" onPress={() => setStep('choose')} testID="opt-cancel" />
+            <PrimaryButton label={t('options.end.wipeCta')} onPress={() => void doWipe()} loading={busy} testID="opt-confirm" />
+            <PrimaryButton label={t('common.cancel')} variant="link" onPress={() => setStep('choose')} testID="opt-cancel" />
           </>
         }
       >
         <View style={styles.hero}>
           <Panda pose="wave" size={120} />
-          <Text style={[styles.heroTitle, { color: colors.ink }]}>Panda Wipe!!</Text>
+          <Text style={[styles.heroTitle, { color: colors.ink }]}>{t('options.end.wipeTitle')}</Text>
           <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-            Are you sure you want to delete this conversation?
+            {t('options.end.confirmBody')}
           </Text>
         </View>
         <View style={[styles.infoCard, { backgroundColor: colors.surfaceAlt }]}>
-          <InfoRowPlain icon="chatbubble-outline" text="All messages in this conversation will be deleted." />
-          <InfoRowPlain icon="alert-circle-outline" text="This action cannot be undone." />
+          <InfoRowPlain icon="chatbubble-outline" text={t('options.end.info1')} />
+          <InfoRowPlain icon="alert-circle-outline" text={t('options.end.info2')} />
           <InfoRowPlain
             icon="shield-checkmark-outline"
-            text="Messages will be deleted from your device and from our servers — both your account and your mentor's."
+            text={t('options.end.info3')}
           />
         </View>
       </FlowScreen>
@@ -112,23 +114,22 @@ export function EndFlow({
 
   return (
     <FlowScreen
-      title="End Conversation"
+      title={t('options.end.title')}
       onBack={onBack}
       footer={
         <>
           {error ? (
             <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
           ) : null}
-          <PrimaryButton label="Cancel" variant="ghost" onPress={onBack} testID="opt-cancel" />
+          <PrimaryButton label={t('common.cancel')} variant="ghost" onPress={onBack} testID="opt-cancel" />
         </>
       }
     >
       <View style={styles.hero}>
         <Panda pose="wave" size={130} />
-        <Text style={[styles.heroTitle, { color: colors.ink }]}>End Conversation?</Text>
+        <Text style={[styles.heroTitle, { color: colors.ink }]}>{t('options.end.endQ')}</Text>
         <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-          You can close this conversation anytime. This will end the chat, but it won't delete
-          any messages.
+          {t('options.end.endBody')}
         </Text>
       </View>
 
@@ -136,15 +137,15 @@ export function EndFlow({
         <Pressable
           onPress={() => void doEnd()}
           accessibilityRole="button"
-          accessibilityLabel="End conversation"
+          accessibilityLabel={t('options.end.endA11y')}
           testID="end-only"
           style={styles.choiceRow}
         >
           <IconBadge icon="chatbubble-ellipses-outline" size={44} />
           <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>End Conversation</Text>
+            <Text style={[type.label, { color: colors.ink }]}>{t('options.end.title')}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              Close the chat. Your messages stay until you wipe them.
+              {t('options.end.endRowBody')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
@@ -153,15 +154,15 @@ export function EndFlow({
         <Pressable
           onPress={() => setStep('wipe-confirm')}
           accessibilityRole="button"
-          accessibilityLabel="Panda Wipe — delete all messages"
+          accessibilityLabel={t('options.end.wipeA11y')}
           testID="wipe-choice"
           style={styles.choiceRow}
         >
           <IconBadge icon="trash-outline" tone="danger" size={44} />
           <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>Panda Wipe!!</Text>
+            <Text style={[type.label, { color: colors.ink }]}>{t('options.end.wipeTitle')}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              Delete all messages from this conversation for both you and your mentor.
+              {t('options.end.wipeRowBody')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
@@ -171,10 +172,9 @@ export function EndFlow({
       <View style={[styles.privacyCard, { backgroundColor: colors.surfaceAlt }]}>
         <IconBadge icon="shield-checkmark-outline" size={36} />
         <View style={{ flex: 1 }}>
-          <Text style={[type.label, { color: colors.ink }]}>We value your privacy</Text>
+          <Text style={[type.label, { color: colors.ink }]}>{t('options.end.privacyTitle')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            Ending a chat keeps your messages. Panda Wipe deletes them from your device and from
-            our servers — both sides, permanently.
+            {t('options.end.privacyBody')}
           </Text>
         </View>
       </View>

@@ -3,6 +3,7 @@ import { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
@@ -25,6 +26,7 @@ export function Screen({
   bg?: 'cream' | 'lavender';
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const Body = scroll ? ScrollView : View;
   const bodyProps = scroll
     ? { contentContainerStyle: styles.scrollContent, showsVerticalScrollIndicator: false }
@@ -42,7 +44,7 @@ export function Screen({
             onPress={onBack}
             hitSlop={12}
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={t('common.goBack')}
             testID="back"
             // Ritual screens float the chevron in a white circle (mockup #58).
             style={lavender && [styles.backCircle, { backgroundColor: colors.surface }]}

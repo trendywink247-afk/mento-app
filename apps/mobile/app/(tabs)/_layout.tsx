@@ -4,6 +4,7 @@ import { Tabs } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useI18n, type TKey } from '@/lib/i18n';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space } from '@/theme/tokens';
@@ -16,20 +17,21 @@ import { font, radius, space } from '@/theme/tokens';
  */
 const TABS: {
   name: string;
-  label: string;
+  label: TKey;
   active: keyof typeof Ionicons.glyphMap;
   idle: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { name: 'chats', label: 'Chats', active: 'chatbubble-ellipses', idle: 'chatbubble-ellipses-outline' },
-  { name: 'path', label: 'Path', active: 'trail-sign', idle: 'trail-sign-outline' },
-  { name: 'journals', label: 'Journals', active: 'book', idle: 'book-outline' },
-  { name: 'profile', label: 'Profile', active: 'person', idle: 'person-outline' },
+  { name: 'chats', label: 'tabs.chats', active: 'chatbubble-ellipses', idle: 'chatbubble-ellipses-outline' },
+  { name: 'path', label: 'tabs.path', active: 'trail-sign', idle: 'trail-sign-outline' },
+  { name: 'journals', label: 'tabs.journals', active: 'book', idle: 'book-outline' },
+  { name: 'profile', label: 'tabs.profile', active: 'person', idle: 'person-outline' },
 ];
 
 /** Mockup bar: white surface, rounded top, soft shadow; the active tab's icon sits
  * in a lavender-tint pill with the label tinted accent below it. */
 function TabBar({ state, navigation }: BottomTabBarProps) {
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
 
   return (
@@ -63,7 +65,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
             }}
             accessibilityRole="tab"
             accessibilityState={{ selected: focused }}
-            accessibilityLabel={tab.label}
+            accessibilityLabel={t(tab.label)}
             testID={`tab-${tab.name}`}
           >
             <View style={[styles.pill, focused && { backgroundColor: colors.accentTint }]}>
@@ -80,7 +82,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
                 focused && { fontFamily: font.sansBold },
               ]}
             >
-              {tab.label}
+              {t(tab.label)}
             </Text>
           </Pressable>
         );
@@ -91,11 +93,12 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
 
 export default function TabsLayout() {
   useSessionGuard();
+  const { t } = useI18n();
 
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
       {TABS.map((tab) => (
-        <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.label }} />
+        <Tabs.Screen key={tab.name} name={tab.name} options={{ title: t(tab.label) }} />
       ))}
       {/* Routable but off the bar — reached via Path → Browse and existing deep links. */}
       <Tabs.Screen name="mentors" options={{ title: 'Mentors', href: null }} />

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 
 import { LockFlow } from './options/LockFlow';
@@ -30,6 +31,7 @@ type Props = {
 export function ConversationOptions({ conversationId, visible, onClose, onLeft, listenerName }: Props) {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [flow, setFlow] = useState<SheetChoice | null>(null);
   // Server-confirmed state, reflected back into the sheet labels.
   const [locked, setLocked] = useState(false);
@@ -60,7 +62,7 @@ export function ConversationOptions({ conversationId, visible, onClose, onLeft, 
         style={[styles.backdropFill, { backgroundColor: colors.scrim }]}
         onPress={close}
         testID="options-backdrop"
-        accessibilityLabel="Close options"
+        accessibilityLabel={t('options.sheet.closeA11y')}
       />
       {flow === null ? (
         <OptionsSheet locked={locked} onChoose={choose} onClose={close} />

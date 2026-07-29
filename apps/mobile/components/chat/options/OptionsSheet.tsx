@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, type Wash } from '@/theme/tokens';
 
@@ -11,56 +12,56 @@ const ITEMS: {
   key: SheetChoice;
   icon: keyof typeof Ionicons.glyphMap;
   tone: Wash;
-  title: (s: { locked: boolean }) => string;
-  body: string;
+  title: (s: { locked: boolean }) => TKey;
+  body: TKey;
   testID: string;
 }[] = [
   {
     key: 'lock',
     icon: 'lock-closed-outline',
     tone: 'accent',
-    title: (s) => (s.locked ? '1. Unlock this Conversation' : '1. Lock this Conversation'),
-    body: 'Protect this chat with a 4-digit PIN.',
+    title: (s) => (s.locked ? 'options.sheet.unlock' : 'options.sheet.lock'),
+    body: 'options.sheet.lockBody',
     testID: 'opt-lock',
   },
   {
     key: 'status',
     icon: 'moon-outline',
     tone: 'indigo',
-    title: () => '2. Chat Status',
-    body: 'Turn off or change your status for this conversation only.',
+    title: () => 'options.sheet.status',
+    body: 'options.sheet.statusBody',
     testID: 'opt-status',
   },
   {
     key: 'pause',
     icon: 'notifications-off-outline',
     tone: 'orange',
-    title: () => '3. Pause Notifications from this Mentor',
-    body: "You won't receive new messages from this conversation.",
+    title: () => 'options.sheet.pause',
+    body: 'options.sheet.pauseBody',
     testID: 'opt-pause',
   },
   {
     key: 'end',
     icon: 'leaf-outline',
     tone: 'green',
-    title: () => '4. End Conversation',
-    body: 'Close this conversation whenever you feel ready.',
+    title: () => 'options.sheet.end',
+    body: 'options.sheet.endBody',
     testID: 'opt-end',
   },
   {
     key: 'report',
     icon: 'alert-circle-outline',
     tone: 'danger',
-    title: () => '5. Report or Block',
-    body: 'Report inappropriate behavior or block this mentor.',
+    title: () => 'options.sheet.report',
+    body: 'options.sheet.reportBody',
     testID: 'opt-report',
   },
   {
     key: 'coffee',
     icon: 'cafe-outline',
     tone: 'accent',
-    title: () => '6. Buy the Mento Team a Coffee',
-    body: 'Support the Mento team and help us keep this space safe and free.',
+    title: () => 'options.sheet.coffee',
+    body: 'options.sheet.coffeeBody',
     testID: 'opt-coffee',
   },
 ];
@@ -77,6 +78,7 @@ export function OptionsSheet({
   onClose: () => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <View
       style={[styles.sheet, { backgroundColor: colors.surface }]}
@@ -87,17 +89,17 @@ export function OptionsSheet({
       <View style={styles.titleRow}>
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
-            Conversation Options
+            {t('options.sheet.title')}
           </Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            Manage your experience in this conversation.
+            {t('options.sheet.sub')}
           </Text>
         </View>
         <Pressable
           onPress={onClose}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Close options"
+          accessibilityLabel={t('options.sheet.closeA11y')}
           testID="options-close"
           style={[styles.closeBtn, { backgroundColor: colors.surfaceAlt }]}
         >
@@ -110,14 +112,14 @@ export function OptionsSheet({
           key={item.key}
           onPress={() => onChoose(item.key)}
           accessibilityRole="button"
-          accessibilityLabel={item.title({ locked })}
+          accessibilityLabel={t(item.title({ locked }))}
           testID={item.testID}
           style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }]}
         >
           <IconBadge icon={item.icon} tone={item.tone} size={44} />
           <View style={{ flex: 1 }}>
-            <Text style={[styles.cardTitle, { color: colors.ink }]}>{item.title({ locked })}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{item.body}</Text>
+            <Text style={[styles.cardTitle, { color: colors.ink }]}>{t(item.title({ locked }))}</Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{t(item.body)}</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
         </Pressable>
@@ -127,10 +129,10 @@ export function OptionsSheet({
         <IconBadge icon="heart-outline" size={36} />
         <View style={{ flex: 1 }}>
           <Text style={[type.label, { color: colors.ink }]}>
-            Your well-being and safety are our priority.
+            {t('options.sheet.footerTitle')}
           </Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            You're not alone. We're here for you.
+            {t('options.sheet.footerBody')}
           </Text>
         </View>
       </View>

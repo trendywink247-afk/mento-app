@@ -4,6 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
 import { ApiError, api } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, space, type } from '@/theme/tokens';
 
@@ -23,6 +24,7 @@ export function LockFlow({
   onChanged: (locked: boolean) => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +44,10 @@ export function LockFlow({
       setPin('');
       setError(
         e instanceof ApiError && e.status === 403
-          ? "That PIN doesn't look quite right. Please enter your current PIN."
+          ? t('options.lock.wrongPin')
           : e instanceof ApiError
             ? e.message
-            : 'Something went wrong. Please try again.',
+            : t('common.somethingWrong'),
       );
     } finally {
       setBusy(false);
@@ -54,32 +56,32 @@ export function LockFlow({
 
   return (
     <FlowScreen
-      title={locked ? 'Unlock this conversation' : 'Lock this Conversation'}
-      subtitle={locked ? 'Enter your PIN to unlock' : 'Protect this chat with a 4-digit PIN'}
+      title={locked ? t('options.lock.titleUnlock') : t('options.lock.titleLock')}
+      subtitle={locked ? t('options.lock.subUnlock') : t('options.lock.subLock')}
       icon="lock-closed-outline"
       onBack={onBack}
       footer={
         <>
           <PrimaryButton
-            label={locked ? 'Unlock' : 'Lock Conversation'}
+            label={locked ? t('options.lock.ctaUnlock') : t('options.lock.ctaLock')}
             onPress={() => void submit()}
             disabled={pin.length !== 4}
             loading={busy}
             testID="opt-confirm"
           />
-          <LockFootnote text="Only you can open this chat. The PIN never leaves hashed storage." />
+          <LockFootnote text={t('options.lock.footnote')} />
         </>
       }
     >
       <View style={styles.art}>
         <Panda pose={error ? 'sad' : 'shield'} size={120} />
         <Text style={[styles.lead, { color: colors.ink }]}>
-          {locked ? 'Enter your PIN' : 'Set a 4-digit PIN'}
+          {locked ? t('options.lock.leadUnlock') : t('options.lock.leadLock')}
         </Text>
         <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
           {locked
-            ? 'This conversation is locked.'
-            : "You'll need this PIN to open the conversation again."}
+            ? t('options.lock.bodyUnlock')
+            : t('options.lock.bodyLock')}
         </Text>
       </View>
       <PinPad value={pin} onChange={(v) => { setPin(v); setError(null); }} error={error} />
@@ -87,13 +89,13 @@ export function LockFlow({
       <ConfirmModal
         visible={done}
         art={<Panda pose="shield" size={110} />}
-        title={locked ? 'Conversation unlocked' : 'Conversation locked!'}
+        title={locked ? t('options.lock.doneTitleUnlock') : t('options.lock.doneTitleLock')}
         body={
           locked
-            ? 'Welcome back. This chat is open again.'
-            : 'This chat now asks for your PIN before it opens.'
+            ? t('options.lock.doneBodyUnlock')
+            : t('options.lock.doneBodyLock')
         }
-        cta="Got it"
+        cta={t('common.gotIt')}
         onDone={onBack}
       />
     </FlowScreen>

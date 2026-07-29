@@ -8,6 +8,7 @@ import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { LogoLockup } from '@/components/art/Logo';
 import { capture } from '@/lib/analytics';
+import { useI18n } from '@/lib/i18n';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -19,6 +20,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * transition so the crossfade never fights the keyboard. */
 export function EmailStep({ onNext }: { onNext: () => void }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [email, setEmail] = useState(() => getDraft().email ?? '');
   const valid = email.length === 0 || EMAIL_RE.test(email);
 
@@ -35,7 +37,7 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
       footer={
         <>
           <PrimaryButton
-            label="Continue"
+            label={t('common.continue')}
             tone="ink"
             trailing="arrow"
             onPress={() => next(true)}
@@ -44,10 +46,10 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
           />
           <View style={styles.orRow}>
             <View style={[styles.hairline, { backgroundColor: colors.border }]} />
-            <Text style={[type.caption, { color: colors.inkMuted }]}>or</Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('onboarding.email.or')}</Text>
             <View style={[styles.hairline, { backgroundColor: colors.border }]} />
           </View>
-          <PrimaryButton label="Skip for now" variant="link" onPress={() => next(false)} testID="skip" />
+          <PrimaryButton label={t('onboarding.email.skip')} variant="link" onPress={() => next(false)} testID="skip" />
         </>
       }
     >
@@ -59,11 +61,10 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
 
       <Entrance index={1}>
         <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-          Optional, but helpful.
+          {t('onboarding.email.headline')}
         </Text>
         <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-          Add an email only if you'd like a way to recover your space later. It's never required
-          and never shown to other users.
+          {t('onboarding.email.sub')}
         </Text>
       </Entrance>
 
@@ -83,27 +84,27 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
         <Ionicons name="mail-outline" size={20} color={colors.accentSoft} />
         <TextInput
           style={[styles.input, { color: colors.ink }]}
-          placeholder="Enter your email"
+          placeholder={t('onboarding.email.placeholder')}
           placeholderTextColor={colors.inkMuted}
           autoCapitalize="none"
           keyboardType="email-address"
           autoCorrect={false}
           value={email}
           onChangeText={setEmail}
-          accessibilityLabel="Email address (optional)"
+          accessibilityLabel={t('onboarding.email.inputA11y')}
           testID="email-input"
         />
       </View>
       {!valid ? (
         <Text style={[type.caption, styles.error, { color: colors.danger }]}>
-          That doesn't look like a valid email.
+          {t('onboarding.email.invalid')}
         </Text>
       ) : null}
 
       <View style={styles.lockRow}>
         <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
         <Text style={[type.caption, styles.lockText, { color: colors.inkMuted }]}>
-          We respect your privacy. Your email will never be shared with other users.
+          {t('onboarding.email.privacy')}
         </Text>
       </View>
       </Entrance>

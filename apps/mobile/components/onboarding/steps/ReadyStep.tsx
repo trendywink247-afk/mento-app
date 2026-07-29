@@ -10,22 +10,24 @@ import { useBreathing } from '@/components/motion/useBreathing';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { getDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLOR_LABELS } from '@/theme/companion';
 import type { CompanionColor } from '@/theme/companion';
 import { font, radius, space, type } from '@/theme/tokens';
 
-const AFFIRMATIONS: { icon: keyof typeof Ionicons.glyphMap; text: string }[] = [
-  { icon: 'trophy-outline', text: 'This is not a place for competition.' },
-  { icon: 'book-outline', text: 'Not a classroom session.' },
-  { icon: 'swap-horizontal-outline', text: 'Not a material exchange platform.' },
-  { icon: 'flag-outline', text: 'Not a race against others.' },
+const AFFIRMATIONS: { icon: keyof typeof Ionicons.glyphMap; text: TKey }[] = [
+  { icon: 'trophy-outline', text: 'onboarding.ready.affirm1' },
+  { icon: 'book-outline', text: 'onboarding.ready.affirm2' },
+  { icon: 'swap-horizontal-outline', text: 'onboarding.ready.affirm3' },
+  { icon: 'flag-outline', text: 'onboarding.ready.affirm4' },
 ];
 
 /** "Mento space ready!" confirmation (mockup #59; body unchanged from the old route). */
 export function ReadyStep({ onNext }: { onNext: () => void }) {
   const { colors, companionColor } = useTheme();
+  const { t } = useI18n();
   const draft = getDraft();
   // Companion is optional in the draft (Surprise Me edge / direct deep link): fall back
   // gracefully rather than blocking the path to a conversation.
@@ -40,7 +42,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
       footer={
         <>
           <PrimaryButton
-            label="Enter My Space"
+            label={t('onboarding.ready.enter')}
             trailing="chevron"
             onPress={onNext}
             testID="enter"
@@ -48,7 +50,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
           <View style={styles.lockRow}>
             <Ionicons name="lock-closed-outline" size={14} color={colors.inkMuted} />
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              You can change your companion and theme later from Profile.
+              {t('onboarding.ready.changeLater')}
             </Text>
           </View>
         </>
@@ -58,10 +60,10 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
         <View style={styles.head}>
           <IconBadge icon="checkmark" size={56} />
           <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-            Mento space ready!
+            {t('onboarding.ready.headline')}
           </Text>
           <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-            Your space is all set. Your journey{'\n'}begins now. 💜
+            {t('onboarding.ready.sub')}
           </Text>
         </View>
       </Entrance>
@@ -74,12 +76,12 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
             <Companion animal={animal} size={120} interactive />
           </Animated.View>
         </View>
-        <Text style={[type.bodySemi, styles.center, { color: colors.ink }]}>You chose</Text>
+        <Text style={[type.bodySemi, styles.center, { color: colors.ink }]}>{t('onboarding.ready.youChose')}</Text>
         <Text style={[styles.companionName, { color: colors.ink }]}>
           {colourLabel} {animal}
         </Text>
         <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          as your growth companion 💜
+          {t('onboarding.ready.asCompanion')}
         </Text>
       </View>
       </Entrance>
@@ -92,10 +94,10 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
       </View>
 
       <Text style={[styles.sectionTitle, { color: colors.ink }]}>
-        A gentle space for your growth
+        {t('onboarding.ready.gentleTitle')}
       </Text>
       <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-        Here, you can reflect, learn and grow with{'\n'}kindness towards yourself.
+        {t('onboarding.ready.gentleSub')}
       </Text>
       </Entrance>
 
@@ -103,7 +105,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <View style={styles.cardHead}>
           <Text style={[type.label, { color: colors.accent, flex: 1 }]}>
-            A few affirmations for your journey
+            {t('onboarding.ready.affirmTitle')}
           </Text>
           <Ionicons name="heart-outline" size={18} color={colors.accent} />
         </View>
@@ -112,7 +114,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
             {i > 0 ? <View style={[styles.rowDivider, { backgroundColor: colors.border }]} /> : null}
             <View style={styles.row}>
               <IconBadge icon={a.icon} size={40} />
-              <Text style={[type.body, { color: colors.ink, flex: 1 }]}>{a.text}</Text>
+              <Text style={[type.body, { color: colors.ink, flex: 1 }]}>{t(a.text)}</Text>
             </View>
           </Fragment>
         ))}

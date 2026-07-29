@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconBadge } from '@/components/IconBadge';
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, type Wash } from '@/theme/tokens';
 
@@ -27,10 +28,11 @@ export function FlowScreen({
   footer?: ReactNode;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <SafeAreaView style={[styles.flow, { backgroundColor: colors.bgLavender }]} edges={['top', 'bottom']}>
       <View style={styles.flowHeader}>
-        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel="Back" testID="opt-back">
+        <Pressable onPress={onBack} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('common.back')} testID="opt-back">
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
         {icon ? <IconBadge icon={icon} size={40} /> : null}
@@ -136,6 +138,7 @@ export function PinPad({
   error?: string | null;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
 
   const press = (k: (typeof KEYS)[number]) => {
     if (k === '') return;
@@ -145,7 +148,7 @@ export function PinPad({
 
   return (
     <View style={styles.pinWrap}>
-      <View style={styles.dots} accessible accessibilityLabel={`${value.length} of 4 digits entered`}>
+      <View style={styles.dots} accessible accessibilityLabel={t('options.pin.digitsA11y', { count: value.length })}>
         {[0, 1, 2, 3].map((i) => (
           <View
             key={i}
@@ -167,7 +170,7 @@ export function PinPad({
             onPress={() => press(k)}
             disabled={k === ''}
             accessibilityRole="button"
-            accessibilityLabel={k === 'back' ? 'Delete digit' : k}
+            accessibilityLabel={k === 'back' ? t('options.pin.deleteA11y') : k}
             testID={k === 'back' ? 'pin-back' : k ? `pin-${k}` : undefined}
             style={[styles.key, k !== '' && { backgroundColor: colors.surface }]}
           >

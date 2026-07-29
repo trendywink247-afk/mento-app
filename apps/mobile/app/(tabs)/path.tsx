@@ -10,6 +10,7 @@ import { Tilt3D } from '@/components/motion/Tilt3D';
 import { TiltCard } from '@/components/motion/TiltCard';
 import { capture } from '@/lib/analytics';
 import { ApiError, api, type PathNode, type PathState, type PathTree } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { getCompanionAnimal } from '@/lib/session';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import type { CompanionTrigger } from '@/components/art/Companion';
@@ -25,6 +26,7 @@ import { font, radius, space, type } from '@/theme/tokens';
 export default function PathTab() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState<PathState | null>(null);
   const [tree, setTree] = useState<PathTree | null>(null);
@@ -63,7 +65,7 @@ export default function PathTab() {
       setTree(t);
       setNodeId(t.root);
     } catch {
-      setNote('We had trouble loading the paths. Please try again.');
+      setNote(t('path.loadError'));
     }
   };
 
@@ -82,7 +84,7 @@ export default function PathTab() {
       // A path chosen is a small win — the companion wiggles, doesn't hop.
       setJoy((t) => ({ kind: 'joy', n: (t?.n ?? 0) + 1 }));
     } catch {
-      setNote('We had trouble saving your path. Please try again.');
+      setNote(t('path.saveError'));
     }
   };
 
@@ -104,8 +106,8 @@ export default function PathTab() {
     } catch (e) {
       setNote(
         e instanceof ApiError && e.status === 503
-          ? 'All listeners are busy right now. Please try again in a moment. 💜'
-          : 'We had trouble connecting. Please try again.',
+          ? t('common.allBusy')
+          : t('path.connectError'),
       );
     } finally {
       setMatching(false);
@@ -136,7 +138,7 @@ export default function PathTab() {
               {node.question}
             </Text>
             <Text style={[type.caption, styles.centerText, { color: colors.inkMuted }]}>
-              No wrong answers. You can change this anytime.
+              {t('path.hint')}
             </Text>
           </View>
         </Entrance>
@@ -174,11 +176,10 @@ export default function PathTab() {
                 <Companion animal={animal} size={96} />
               </Tilt3D>
               <Text style={[styles.heroTitle, { color: colors.ink }]} accessibilityRole="header">
-                Every road feels lighter{'\n'}with company
+                {t('path.inviteTitle')}
               </Text>
               <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
-                Answer a couple of gentle questions and we'll place you among people
-                walking the same road — UPSC, NEET, or just life.
+                {t('path.inviteBody')}
               </Text>
             </View>
           </Entrance>
@@ -189,7 +190,7 @@ export default function PathTab() {
               accessibilityRole="button"
               testID="path-start"
             >
-              <Text style={styles.ctaLabel}>Find my path</Text>
+              <Text style={styles.ctaLabel}>{t('path.findCta')}</Text>
             </Pressable>
           </Entrance>
           {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}
@@ -205,7 +206,7 @@ export default function PathTab() {
       <Entrance index={0}>
         <View style={styles.homeHead}>
           <View style={{ flex: 1 }}>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>Your path</Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('path.yourPath')}</Text>
             <Text style={[styles.homeTitle, { color: colors.ink }]} accessibilityRole="header">
               {community.name} · {stage.title}
             </Text>
@@ -228,9 +229,9 @@ export default function PathTab() {
       ) : null}
 
       <Entrance index={2}>
-        <Text style={[styles.section, { color: colors.ink }]}>Not sure how to start?</Text>
+        <Text style={[styles.section, { color: colors.ink }]}>{t('path.promptsTitle')}</Text>
         <Text style={[type.caption, { color: colors.inkMuted, marginBottom: space.sm }]}>
-          Tap one — it starts a conversation for you.
+          {t('path.promptsSub')}
         </Text>
         {state.prompts.map((p, i) => (
           <TiltCard
@@ -249,12 +250,14 @@ export default function PathTab() {
       <Entrance index={3}>
         <View style={[styles.talkCard, elevation.sm, { backgroundColor: colors.surface }]}>
           <Text style={[styles.cardTitle, { color: colors.ink }]}>
-            Talk to someone who's walked it
+            {t('path.talkTitle')}
           </Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
             {state.listeners_online > 0
-              ? `${state.listeners_online} listener${state.listeners_online === 1 ? '' : 's'} around right now`
-              : 'Listeners come online through the day'}
+              ? t(state.listeners_online === 1 ? 'path.listenersOne' : 'path.listenersOther', {
+                  count: state.listeners_online,
+                })
+              : t('path.listenersNone')}
           </Text>
           <View style={styles.talkRow}>
             <Pressable
@@ -267,7 +270,7 @@ export default function PathTab() {
               {matching ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.ctaLabel}>Talk now</Text>
+                <Text style={styles.ctaLabel}>{t('path.talkNow')}</Text>
               )}
             </Pressable>
             <Pressable
@@ -276,7 +279,7 @@ export default function PathTab() {
               accessibilityRole="button"
               testID="path-browse"
             >
-              <Text style={[styles.ghostLabel, { color: colors.accent }]}>Browse</Text>
+              <Text style={[styles.ghostLabel, { color: colors.accent }]}>{t('path.browse')}</Text>
             </Pressable>
           </View>
         </View>
@@ -292,7 +295,7 @@ export default function PathTab() {
           testID="path-change"
         >
           <Ionicons name="swap-horizontal-outline" size={14} color={colors.inkMuted} />
-          <Text style={[type.caption, { color: colors.inkMuted }]}>Change my path</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('path.change')}</Text>
         </Pressable>
       </Entrance>
     </Screen>

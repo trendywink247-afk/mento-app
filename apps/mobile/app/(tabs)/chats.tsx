@@ -18,6 +18,7 @@ import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
 import { PinPad } from '@/components/chat/options/bits';
 import { ApiError, api, type ConversationListItem } from '@/lib/api';
+import { useI18n, type TFunc } from '@/lib/i18n';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected } from '@/lib/streamClient';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -31,20 +32,21 @@ import { font, radius, space, type } from '@/theme/tokens';
 type Preview = { text: string; at: Date | null; unread: number };
 type Filter = 'all' | 'active' | 'completed';
 
-function timeLabel(d: Date | null): string {
+function timeLabel(d: Date | null, t: TFunc): string {
   if (!d) return '';
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
   if (d.toDateString() === today.toDateString())
     return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  if (d.toDateString() === yesterday.toDateString()) return t('chat.yesterday');
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
 export default function ChatsTab() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ConversationListItem[]>([]);
   const [previews, setPreviews] = useState<Record<string, Preview>>({});
@@ -104,10 +106,12 @@ export default function ChatsTab() {
     } catch {
       // The conversation list itself failed — show an honest note instead of
       // silently rendering an empty screen.
-      setLoadError("We couldn't load your conversations. Please check your connection.");
+      setLoadError(t('chats.loadError'));
     } finally {
       setLoading(false);
     }
+    // reason: `t` is intentionally not a trigger — a locale flip must not refetch the list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useFocusEffect(
@@ -148,8 +152,8 @@ export default function ChatsTab() {
       setPin('');
       setPinError(
         e instanceof ApiError && e.status === 403
-          ? "That PIN doesn't look quite right."
-          : 'Something went wrong. Please try again.',
+          ? t('chats.pinWrong')
+          : t('common.somethingWrong'),
       );
     } finally {
       setPinBusy(false);
@@ -173,8 +177,8 @@ export default function ChatsTab() {
     } catch (e) {
       setNote(
         e instanceof ApiError && e.status === 503
-          ? 'All listeners are busy right now. Please try again in a moment. 💜'
-          : 'We had trouble connecting. Please check your network and try again.',
+          ? t('common.allBusy')
+          : t('common.networkError'),
       );
     } finally {
       setMatching(false);
@@ -190,9 +194,9 @@ export default function ChatsTab() {
   });
 
   const chips: { key: Filter; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'active', label: 'Active' },
-    { key: 'completed', label: 'Completed' },
+    { key: 'all', label: t('chats.filterAll') },
+    { key: 'active', label: t('chats.filterActive') },
+    { key: 'completed', label: t('chats.filterCompleted') },
   ];
 
   // Search + filters earn their place only once there's something to sift through
@@ -202,10 +206,10 @@ export default function ChatsTab() {
   return (
     <Screen>
       <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
-        My Chats
+        {t('chats.title')}
       </Text>
       <Text style={[type.body, { color: colors.inkMuted, marginBottom: space.sm }]}>
-        Your conversations with mentors
+        {t('chats.sub')}
       </Text>
 
       {showTools ? (
@@ -214,11 +218,11 @@ export default function ChatsTab() {
             <Ionicons name="search-outline" size={18} color={colors.inkMuted} />
             <TextInput
               style={[styles.searchInput, { color: colors.ink }]}
-              placeholder="Search conversations…"
+              placeholder={t('chats.searchPlaceholder')}
               placeholderTextColor={colors.inkMuted}
               value={query}
               onChangeText={setQuery}
-              accessibilityLabel="Search conversations"
+              accessibilityLabel={t('chats.searchA11y')}
               testID="chats-search"
             />
           </View>
@@ -266,11 +270,11 @@ export default function ChatsTab() {
               void load();
             }}
             accessibilityRole="button"
-            accessibilityLabel="Retry loading conversations"
+            accessibilityLabel={t('chats.retryA11y')}
             testID="chats-load-retry"
             hitSlop={8}
           >
-            <Text style={[type.label, { color: colors.accent }]}>Retry</Text>
+            <Text style={[type.label, { color: colors.accent }]}>{t('chats.retry')}</Text>
           </Pressable>
         </View>
       ) : null}
@@ -282,14 +286,13 @@ export default function ChatsTab() {
       ) : rows.length === 0 ? (
         <View style={styles.center}>
           <LottieTile name="chatDots" fallback="chatsEmpty" size={140} />
-          <Text style={[styles.emptyTitle, { color: colors.ink }]}>No conversations yet</Text>
+          <Text style={[styles.emptyTitle, { color: colors.ink }]}>{t('chats.emptyTitle')}</Text>
           <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
-            When you start talking with a mentor, your conversations will live here — anonymous,
-            always.
+            {t('chats.emptyBody')}
           </Text>
           <View style={{ alignSelf: 'stretch', marginTop: space.sm }}>
             <PrimaryButton
-              label="Start a Conversation"
+              label={t('chats.startCta')}
               icon="chatbubble-ellipses"
               onPress={() => void newChat()}
               loading={matching}
@@ -307,7 +310,7 @@ export default function ChatsTab() {
             <View style={[styles.privacyCard, { backgroundColor: colors.surfaceAlt }]}>
               <Ionicons name="lock-closed-outline" size={18} color={colors.accentSoft} />
               <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
-                Your conversations are private and secure. We're here to support your journey.
+                {t('chats.privacyFooter')}
               </Text>
             </View>
           }
@@ -321,7 +324,7 @@ export default function ChatsTab() {
               <Pressable
                 onPress={() => open(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Conversation with ${item.listener_persona_name}`}
+                accessibilityLabel={t('chats.convoA11y', { name: item.listener_persona_name })}
                 testID={`convo-${item.id}`}
                 style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
               >
@@ -336,17 +339,17 @@ export default function ChatsTab() {
                   </Text>
                   <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={2}>
                     {item.status === 'wiped'
-                      ? 'Messages wiped — gone from both sides.'
-                      : (p?.text ?? "Say hello when you're ready.")}
+                      ? t('chats.wiped')
+                      : (p?.text ?? t('chats.sayHello'))}
                   </Text>
                   <Text style={[styles.statusLabel, { color: statusColor }]}>
-                    {item.status === 'active' ? 'Active' : 'Completed'}
+                    {item.status === 'active' ? t('chats.statusActive') : t('chats.statusCompleted')}
                     {item.is_locked ? '  ·  🔒' : ''}
                   </Text>
                 </View>
                 <View style={styles.rowRight}>
                   <Text style={[type.caption, { color: colors.inkMuted }]}>
-                    {timeLabel(p?.at ?? new Date(item.created_at))}
+                    {timeLabel(p?.at ?? new Date(item.created_at), t)}
                   </Text>
                   {p && p.unread > 0 ? (
                     <View style={[styles.unread, { backgroundColor: colors.accent }]}>
@@ -366,7 +369,7 @@ export default function ChatsTab() {
         <Pressable
           onPress={() => void newChat()}
           accessibilityRole="button"
-          accessibilityLabel="Start a new chat"
+          accessibilityLabel={t('chats.newChatA11y')}
           testID="new-chat-fab"
           style={[styles.fab, { backgroundColor: colors.accent }, elevation.md]}
         >
@@ -375,7 +378,7 @@ export default function ChatsTab() {
           ) : (
             <>
               <Ionicons name="chatbubble-ellipses" size={22} color={colors.onAccent} />
-              <Text style={[styles.fabText, { color: colors.onAccent }]}>New Chat</Text>
+              <Text style={[styles.fabText, { color: colors.onAccent }]}>{t('chats.newChat')}</Text>
             </>
           )}
         </Pressable>
@@ -384,19 +387,19 @@ export default function ChatsTab() {
       {gate ? (
         <View style={[styles.gateBackdrop, { backgroundColor: colors.scrim }]}>
           <View style={[styles.gateCard, { backgroundColor: colors.surface }, elevation.md]}>
-            <Text style={[styles.gateTitle, { color: colors.ink }]}>Enter your PIN</Text>
+            <Text style={[styles.gateTitle, { color: colors.ink }]}>{t('chats.gateTitle')}</Text>
             <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
-              This conversation is locked.
+              {t('chats.gateBody')}
             </Text>
             <PinPad value={pin} onChange={(v) => { setPin(v); setPinError(null); }} error={pinError} />
             <PrimaryButton
-              label="Open"
+              label={t('chats.open')}
               onPress={() => void submitPin()}
               disabled={pin.length !== 4}
               loading={pinBusy}
               testID="gate-open"
             />
-            <PrimaryButton label="Cancel" variant="link" onPress={() => setGate(null)} testID="gate-cancel" />
+            <PrimaryButton label={t('common.cancel')} variant="link" onPress={() => setGate(null)} testID="gate-cancel" />
           </View>
         </View>
       ) : null}

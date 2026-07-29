@@ -8,46 +8,47 @@ import { Screen } from '@/components/Screen';
 import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
 import { api } from '@/lib/api';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, type Wash } from '@/theme/tokens';
 
 const JOURNALS: {
   channel: string;
   route: string;
-  title: string;
-  body: string;
+  title: TKey;
+  body: TKey;
   icon: keyof typeof Ionicons.glyphMap;
   tone: Wash;
 }[] = [
   {
     channel: 'finance',
     route: 'finance',
-    title: 'Finance Journal',
-    body: 'Track your income, expenses and financial decisions.',
+    title: 'journals.financeTitle',
+    body: 'journals.financeBody',
     icon: 'wallet-outline',
     tone: 'green',
   },
   {
     channel: 'mood',
     route: 'mood',
-    title: 'Mood Journal',
-    body: 'Understand your emotions and patterns.',
+    title: 'journals.moodTitle',
+    body: 'journals.moodBody',
     icon: 'heart-outline',
     tone: 'danger',
   },
   {
     channel: 'mentor_notes',
     route: 'mentor-notes',
-    title: 'Mentor Notes',
-    body: 'Save wisdom and advice from your mentor.',
+    title: 'journals.mentorNotesTitle',
+    body: 'journals.mentorNotesBody',
     icon: 'book-outline',
     tone: 'accent',
   },
   {
     channel: 'gratitude',
     route: 'gratitude',
-    title: 'Gratitude Journal',
-    body: 'A daily reminder of the good things in life.',
+    title: 'journals.gratitudeTitle',
+    body: 'journals.gratitudeBody',
     icon: 'leaf-outline',
     tone: 'orange',
   },
@@ -59,6 +60,7 @@ const JOURNALS: {
 export default function JournalsTab() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const [counts, setCounts] = useState<Record<string, number>>({});
 
   useFocusEffect(
@@ -80,10 +82,10 @@ export default function JournalsTab() {
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.lg }}>
         <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
-          Journals
+          {t('journals.title')}
         </Text>
         <Text style={[type.body, { color: colors.inkMuted, marginBottom: space.md }]}>
-          A space for your thoughts, reflections and everything in between.
+          {t('journals.sub')}
         </Text>
 
         <View style={[styles.aiCard, { backgroundColor: colors.surfaceAlt }]}>
@@ -91,13 +93,13 @@ export default function JournalsTab() {
             <IconBadge icon="sparkles" size={40} />
             <View style={{ flex: 1 }}>
               <View style={styles.aiTitleRow}>
-                <Text style={[styles.aiTitle, { color: colors.ink }]}>AI Journal Assistant</Text>
+                <Text style={[styles.aiTitle, { color: colors.ink }]}>{t('journals.aiTitle')}</Text>
                 <View style={[styles.newBadge, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.newBadgeText, { color: colors.accent }]}>Coming soon</Text>
+                  <Text style={[styles.newBadgeText, { color: colors.accent }]}>{t('journals.comingSoon')}</Text>
                 </View>
               </View>
               <Text style={[type.caption, { color: colors.inkMuted }]}>
-                Chat with AI about anything. It will help you log it in the right journal.
+                {t('journals.aiBody')}
               </Text>
             </View>
           </View>
@@ -107,7 +109,7 @@ export default function JournalsTab() {
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={[styles.section, { color: colors.ink }]}>My Journals</Text>
+          <Text style={[styles.section, { color: colors.ink }]}>{t('journals.my')}</Text>
         </View>
 
         {JOURNALS.map((j) => (
@@ -115,14 +117,14 @@ export default function JournalsTab() {
             key={j.channel}
             onPress={() => router.push({ pathname: '/journal/[channel]', params: { channel: j.route } })}
             accessibilityRole="button"
-            accessibilityLabel={j.title}
+            accessibilityLabel={t(j.title)}
             testID={`journal-${j.route}`}
             style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
           >
             <IconBadge icon={j.icon} tone={j.tone} size={48} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.ink }]}>{j.title}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{j.body}</Text>
+              <Text style={[styles.rowTitle, { color: colors.ink }]}>{t(j.title)}</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>{t(j.body)}</Text>
             </View>
             {counts[j.channel] ? (
               <View style={[styles.count, { backgroundColor: colors.surfaceAlt }]}>
@@ -136,7 +138,7 @@ export default function JournalsTab() {
         <View style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
           <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
           <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
-            Journals are yours alone — readable offline soon, never shared.
+            {t('journals.privacy')}
           </Text>
         </View>
       </ScrollView>

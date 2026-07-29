@@ -20,6 +20,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { SceneTile } from '@/components/art/SceneTile';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import { useI18n, type TFunc } from '@/lib/i18n';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -47,13 +48,13 @@ function timeLabel(iso: string): string {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-function dayLabel(iso: string): string {
+function dayLabel(iso: string, t: TFunc): string {
   const d = new Date(iso);
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return 'Today';
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  if (d.toDateString() === today.toDateString()) return t('chat.today');
+  if (d.toDateString() === yesterday.toDateString()) return t('chat.yesterday');
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
@@ -89,6 +90,7 @@ const MessageRow = memo(function MessageRow({
   onCopy,
 }: MessageRowProps) {
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   return (
     <View>
       {dayText ? (
@@ -122,7 +124,7 @@ const MessageRow = memo(function MessageRow({
             <Pressable
               onPress={() => onToggleActions(item.id)}
               accessibilityRole="button"
-              accessibilityHint="Shows message actions like save to Mentor Notes"
+              accessibilityHint={t('chat.actionsHintA11y')}
               testID={`msg-${item.id}`}
               style={[styles.bubble, styles.theirs, { backgroundColor: colors.surface }, elevation.sm]}
             >
@@ -136,12 +138,12 @@ const MessageRow = memo(function MessageRow({
           {actionsOpen ? (
             <View style={styles.actionsZone}>
               <View style={[styles.actionsRow, { backgroundColor: colors.surface }, elevation.sm]}>
-                <Text style={[type.caption, { color: colors.inkMuted }]}>Was this helpful?</Text>
+                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('chat.wasHelpful')}</Text>
                 <Pressable
                   onPress={() => onToggleHelpful(item.id)}
                   hitSlop={6}
                   accessibilityRole="button"
-                  accessibilityLabel="Mark as helpful"
+                  accessibilityLabel={t('chat.helpfulA11y')}
                   style={[styles.heartWrap, { backgroundColor: colors.brandTint }]}
                 >
                   <Ionicons
@@ -154,7 +156,7 @@ const MessageRow = memo(function MessageRow({
                   onPress={() => onSave(item)}
                   hitSlop={6}
                   accessibilityRole="button"
-                  accessibilityLabel="Save to Mentor Notes"
+                  accessibilityLabel={t('chat.saveToNotes')}
                   testID={`save-${item.id}`}
                 >
                   <Ionicons
@@ -167,7 +169,7 @@ const MessageRow = memo(function MessageRow({
                   onPress={() => onCopy(item.text)}
                   hitSlop={6}
                   accessibilityRole="button"
-                  accessibilityLabel="Copy message"
+                  accessibilityLabel={t('chat.copyA11y')}
                 >
                   <Ionicons name="copy-outline" size={17} color={colors.inkMuted} />
                 </Pressable>
@@ -176,19 +178,19 @@ const MessageRow = memo(function MessageRow({
               <Pressable
                 onPress={() => onSave(item)}
                 accessibilityRole="button"
-                accessibilityLabel={isSaved ? 'Saved to Mentor Notes' : 'Save to Mentor Notes'}
+                accessibilityLabel={isSaved ? t('chat.savedA11y') : t('chat.saveToNotes')}
                 testID={`save-card-${item.id}`}
                 style={[styles.saveCard, { backgroundColor: colors.surfaceAlt }]}
               >
                 <IconBadge icon="book-outline" size={40} />
                 <View style={{ flex: 1 }}>
                   <Text style={[type.label, { color: colors.ink }]}>
-                    {isSaved ? 'Saved to Mentor Notes ✓' : 'Save to Mentor Notes'}
+                    {isSaved ? t('chat.savedToNotes') : t('chat.saveToNotes')}
                   </Text>
                   <Text style={[type.caption, { color: colors.inkMuted }]}>
                     {isSaved
-                      ? 'Find it in Journals → Mentor Notes.'
-                      : 'Add this to your journal under "Mentor Notes"'}
+                      ? t('chat.savedHint')
+                      : t('chat.saveHint')}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
@@ -214,6 +216,7 @@ type ComposerProps = {
  * only AFTER the send resolves; on failure it stays put with an honest retry line. */
 const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const [draft, setDraft] = useState(initialDraft ?? '');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
@@ -241,7 +244,7 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
           style={[type.caption, styles.sendErrorLine, { color: colors.danger }]}
           testID="composer-send-error"
         >
-          Not sent — check your connection and tap send to retry.
+          {t('chat.sendFailed')}
         </Text>
       ) : null}
       <View style={styles.composer}>
@@ -249,7 +252,7 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
           <Ionicons name="add-circle-outline" size={24} color={colors.inkMuted} />
           <TextInput
             style={[styles.input, { color: colors.ink }]}
-            placeholder="Type a message…"
+            placeholder={t('chat.placeholder')}
             placeholderTextColor={colors.inkMuted}
             value={draft}
             onChangeText={(text) => {
@@ -258,7 +261,7 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
             }}
             onSubmitEditing={() => void submit()}
             testID="composer-input"
-            accessibilityLabel="Message"
+            accessibilityLabel={t('chat.messageA11y')}
             multiline
           />
         </View>
@@ -268,7 +271,7 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
           disabled={sending}
           testID="composer-send"
           accessibilityRole="button"
-          accessibilityLabel="Send message"
+          accessibilityLabel={t('chat.sendA11y')}
         >
           <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
         </Pressable>
@@ -283,13 +286,14 @@ export default function ChatScreenWeb() {
   // 403 with only a small inline error — route back to landing instead.
   useSessionGuard();
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const { id: conversationId, listener, channel: channelId, starter } = useLocalSearchParams<{
     id: string;
     listener?: string;
     channel?: string;
     starter?: string;
   }>();
-  const listenerName = listener ?? 'Your listener';
+  const listenerName = listener ?? t('chat.yourListener');
   const [optionsOpen, setOptionsOpen] = useState(false);
 
   const [ready, setReady] = useState(false);
@@ -339,8 +343,8 @@ export default function ChatScreenWeb() {
     const setup = async () => {
       try {
         const [persona, token] = await Promise.all([getPersona(), getStreamToken()]);
-        if (!persona || !token) throw new Error('Missing session — please start again.');
-        if (!channelId) throw new Error('Missing channel.');
+        if (!persona || !token) throw new Error(t('chat.errMissingSession'));
+        if (!channelId) throw new Error(t('chat.errMissingChannel'));
 
         const client = await ensureConnected(
           { id: persona.id, name: persona.persona_name },
@@ -370,7 +374,7 @@ export default function ChatScreenWeb() {
         });
         setReady(true);
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not open the chat.');
+        if (!cancelled) setError(e instanceof Error ? e.message : t('chat.errOpen'));
       }
     };
 
@@ -378,6 +382,8 @@ export default function ChatScreenWeb() {
     return () => {
       cancelled = true;
     };
+    // reason: `t` is intentionally not a trigger — a locale flip must not re-run channel setup
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, appendMessage, surfaceCrisis, listenerName]);
 
   const send = useCallback(
@@ -467,7 +473,7 @@ export default function ChatScreenWeb() {
           onPress={() => router.replace('/chats')}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Leave conversation"
+          accessibilityLabel={t('chat.leaveA11y')}
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
@@ -479,13 +485,13 @@ export default function ChatScreenWeb() {
           <View style={styles.statusRow}>
             <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
             <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-              Here to listen and support
+              {t('chat.statusLine')}
             </Text>
           </View>
         </View>
         <View
           style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
-          accessibilityLabel="Connected"
+          accessibilityLabel={t('chat.connectedA11y')}
         >
           <View style={[styles.dot, { backgroundColor: colors.success }]} />
         </View>
@@ -494,7 +500,7 @@ export default function ChatScreenWeb() {
           hitSlop={12}
           testID="open-options"
           accessibilityRole="button"
-          accessibilityLabel="Conversation options"
+          accessibilityLabel={t('chat.optionsA11y')}
         >
           <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
         </Pressable>
@@ -505,13 +511,13 @@ export default function ChatScreenWeb() {
         <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
           <Ionicons name="lock-closed" size={13} color={colors.accent} />
           <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
-            This conversation is private. You're anonymous here.
+            {t('chat.privacy')}
           </Text>
           <Pressable
             onPress={() => setPrivacyNote(false)}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel="Dismiss privacy note"
+            accessibilityLabel={t('chat.privacyDismissA11y')}
           >
             <Ionicons name="close" size={16} color={colors.inkMuted} />
           </Pressable>
@@ -526,7 +532,7 @@ export default function ChatScreenWeb() {
       ) : !ready ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={[type.body, { color: colors.inkMuted }]}>Opening your conversation…</Text>
+          <Text style={[type.body, { color: colors.inkMuted }]}>{t('chat.opening')}</Text>
         </View>
       ) : (
         <View style={{ flex: 1 }} testID="chat-ready">
@@ -537,19 +543,19 @@ export default function ChatScreenWeb() {
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <SceneTile name="chatConnected" size={140} />
-                <Text style={[styles.emptyTitle, { color: colors.ink }]}>You're connected!</Text>
+                <Text style={[styles.emptyTitle, { color: colors.ink }]}>{t('chat.emptyTitle')}</Text>
                 <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-                  This is a safe space to share, reflect and grow. Take your time.
+                  {t('chat.emptyBody')}
                 </Text>
               </View>
             }
             renderItem={({ item, index }) => {
               const prev = index > 0 ? messages[index - 1] : null;
-              const showDay = !prev || dayLabel(prev.at) !== dayLabel(item.at);
+              const showDay = !prev || dayLabel(prev.at, t) !== dayLabel(item.at, t);
               return (
                 <MessageRow
                   item={item}
-                  dayText={showDay ? dayLabel(item.at) : null}
+                  dayText={showDay ? dayLabel(item.at, t) : null}
                   read={item.mine ? isRead(item) : false}
                   actionsOpen={actionsFor === item.id}
                   isHelpful={helpful.has(item.id)}
@@ -571,7 +577,7 @@ export default function ChatScreenWeb() {
               style={[type.caption, styles.typingLine, { color: colors.inkMuted }]}
               testID="typing-indicator"
             >
-              {typing} is typing…
+              {t('chat.typing', { name: typing })}
             </Text>
           ) : null}
 

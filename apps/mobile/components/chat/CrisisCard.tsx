@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -22,9 +23,10 @@ export function CrisisCard({
   onDismiss: () => void;
 }) {
   const { colors } = useTheme();
+  const { t } = useI18n();
   return (
     <View style={[styles.crisis, { backgroundColor: colors.brandTint }]} testID="crisis-card">
-      <Text style={[styles.crisisTitle, { color: colors.ink }]}>You matter. Support is here.</Text>
+      <Text style={[styles.crisisTitle, { color: colors.ink }]}>{t('crisis.title')}</Text>
       <Text style={[type.body, { color: colors.ink }]}>{crisis.support}</Text>
       <View style={{ gap: space.sm }}>
         {crisis.helplines.map((h) => (
@@ -33,7 +35,7 @@ export function CrisisCard({
             style={[styles.helpline, { backgroundColor: colors.surface }]}
             onPress={() => void Linking.openURL(`tel:${h.number}`)}
             accessibilityRole="button"
-            accessibilityLabel={`Call ${h.name} at ${h.number}, available ${h.hours}`}
+            accessibilityLabel={t('crisis.callA11y', { name: h.name, number: h.number, hours: h.hours })}
           >
             <IconBadge icon="call-outline" size={36} tone="green" />
             <View style={{ flex: 1 }}>
@@ -45,7 +47,7 @@ export function CrisisCard({
         ))}
       </View>
       <Pressable onPress={onDismiss} hitSlop={8} style={styles.crisisDismiss} accessibilityRole="button">
-        <Text style={[type.caption, { color: colors.accent }]}>Close</Text>
+        <Text style={[type.caption, { color: colors.accent }]}>{t('crisis.close')}</Text>
       </Pressable>
     </View>
   );

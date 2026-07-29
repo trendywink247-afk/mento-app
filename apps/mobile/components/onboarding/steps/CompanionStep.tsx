@@ -10,6 +10,7 @@ import { Companion, type CompanionTrigger } from '@/components/art/Companion';
 import { type CompanionAnimal } from '@/components/art/Companions';
 import { capture } from '@/lib/analytics';
 import { haptic } from '@/lib/haptics';
+import { useI18n } from '@/lib/i18n';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
@@ -37,6 +38,7 @@ export function CompanionStep({
   onAnimalPicked?: (animal: CompanionAnimal) => void;
 }) {
   const { colors, companionColor, setCompanionColor } = useTheme();
+  const { t } = useI18n();
   const draft = getDraft();
   const [animal, setAnimal] = useState<CompanionAnimal | null>(
     (draft.companionAnimal as CompanionAnimal | null) ?? null
@@ -85,7 +87,7 @@ export function CompanionStep({
       footer={
         <>
           <PrimaryButton
-            label="Continue"
+            label={t('common.continue')}
             trailing="chevron"
             onPress={onContinue}
             disabled={!animal || !colourPicked}
@@ -94,7 +96,7 @@ export function CompanionStep({
           <View style={styles.lockRow}>
             <Ionicons name="lock-closed-outline" size={14} color={colors.inkMuted} />
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              You can change your theme later from Profile.
+              {t('onboarding.companion.changeLater')}
             </Text>
           </View>
         </>
@@ -104,10 +106,10 @@ export function CompanionStep({
         <View style={styles.head}>
           <IconBadge icon="color-palette-outline" size={56} />
           <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
-            Your growth, your theme
+            {t('onboarding.companion.headline')}
           </Text>
           <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-            Your emotional growth will be represented{'\n'}by an animal and a colour.
+            {t('onboarding.companion.sub')}
           </Text>
         </View>
       </Entrance>
@@ -116,9 +118,9 @@ export function CompanionStep({
       <View style={styles.section}>
         <IconBadge icon="paw-outline" size={44} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.stepTitle, { color: colors.ink }]}>1. Choose an animal</Text>
+          <Text style={[styles.stepTitle, { color: colors.ink }]}>{t('onboarding.companion.step1')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            This will be your growth companion
+            {t('onboarding.companion.step1Sub')}
           </Text>
         </View>
       </View>
@@ -135,7 +137,7 @@ export function CompanionStep({
               onPress={() => chooseAnimal(a)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              accessibilityLabel={`${a} companion`}
+              accessibilityLabel={t('onboarding.companion.animalA11y', { animal: a })}
               testID={`animal-${a.toLowerCase()}`}
               style={styles.cell}
             >
@@ -168,9 +170,9 @@ export function CompanionStep({
       <View style={styles.section}>
         <IconBadge icon="water-outline" size={44} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.stepTitle, { color: colors.ink }]}>2. Choose a colour</Text>
+          <Text style={[styles.stepTitle, { color: colors.ink }]}>{t('onboarding.companion.step2')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            This will be your growth colour
+            {t('onboarding.companion.step2Sub')}
           </Text>
         </View>
       </View>
@@ -188,7 +190,7 @@ export function CompanionStep({
               onPress={() => chooseColour(key)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              accessibilityLabel={`${COMPANION_COLOR_LABELS[key]} theme`}
+              accessibilityLabel={t('onboarding.companion.themeA11y', { label: COMPANION_COLOR_LABELS[key] })}
               testID={`colour-${key}`}
               style={styles.cell}
             >
@@ -221,20 +223,20 @@ export function CompanionStep({
       <View style={[styles.decideCard, { backgroundColor: colors.surface }]}>
         <IconBadge icon="sparkles-outline" size={44} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.decideTitle, { color: colors.ink }]}>Can't decide?</Text>
+          <Text style={[styles.decideTitle, { color: colors.ink }]}>{t('onboarding.companion.decideTitle')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
-            Let us choose a random theme for you.
+            {t('onboarding.companion.decideSub')}
           </Text>
         </View>
         <Pressable
           onPress={surprise}
           accessibilityRole="button"
-          accessibilityLabel="Surprise me with a random theme"
+          accessibilityLabel={t('onboarding.companion.surpriseA11y')}
           testID="surprise"
           style={[styles.outlineBtn, { borderColor: colors.accent }]}
         >
           <Ionicons name="shuffle-outline" size={16} color={colors.accent} />
-          <Text style={[type.label, { color: colors.accent }]}>Surprise Me</Text>
+          <Text style={[type.label, { color: colors.accent }]}>{t('onboarding.companion.surprise')}</Text>
         </Pressable>
       </View>
       </Entrance>
