@@ -21,6 +21,7 @@ import { SkyMotes } from '@/components/motion/SkyMotes';
 import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
 import { useBreathing } from '@/components/motion/useBreathing';
+import { capture } from '@/lib/analytics';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -55,6 +56,12 @@ export default function Landing() {
       active = false;
     };
   }, [router]);
+
+  // Funnel head — only once the landing is actually shown (returning users
+  // redirect away before `checked` and never count).
+  useEffect(() => {
+    if (checked) capture('landing_viewed');
+  }, [checked]);
 
   // Mountains drift ±8px over ~40s. Drawn 24px wider than the screen so the drift
   // never exposes an edge.
@@ -98,6 +105,7 @@ export default function Landing() {
   );
 
   const begin = () => {
+    capture('onboarding_started');
     const go = () => router.push('/onboarding');
     setLeaving(true);
     if (reduced) {

@@ -8,6 +8,7 @@ import { Companion } from '@/components/art/Companion';
 import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
 import { TiltCard } from '@/components/motion/TiltCard';
+import { capture } from '@/lib/analytics';
 import { ApiError, api, type PathNode, type PathState, type PathTree } from '@/lib/api';
 import { getCompanionAnimal } from '@/lib/session';
 import type { CompanionAnimal } from '@/components/art/Companions';
@@ -74,6 +75,8 @@ export default function PathTab() {
     if (!opt.community || !opt.stage) return;
     try {
       const s = await api.choosePath(opt.community, opt.stage);
+      // Community only — the journey stage stays off analytics (coarse is coarse).
+      capture('path_chosen', { community: opt.community });
       setState(s);
       setNodeId(null);
       // A path chosen is a small win — the companion wiggles, doesn't hop.

@@ -7,6 +7,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { LogoLockup } from '@/components/art/Logo';
+import { capture } from '@/lib/analytics';
 import { haptic } from '@/lib/haptics';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -46,6 +47,7 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
   const onContinue = () => {
     if (!canContinue) return;
     setDraft({ dob: dobToISO(dob) });
+    capture('onboarding_age_passed');
     onNext();
   };
 

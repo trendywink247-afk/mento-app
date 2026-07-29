@@ -18,6 +18,7 @@ import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { SceneTile } from '@/components/art/SceneTile';
+import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
@@ -304,6 +305,8 @@ export default function ChatScreenWeb() {
   const [readTick, setReadTick] = useState(0); // bumps on message.read to refresh ✓✓
   const channelRef = useRef<ChannelType | null>(null);
   const shownRef = useRef<Set<string>>(new Set());
+  // Funnel: chat_first_message_sent fires once per screen mount.
+  const firstSentRef = useRef(false);
 
   const surfaceCrisis = useCallback((m: CrisisCarrier | undefined) => {
     if (m?.crisis && m.id && !shownRef.current.has(m.id)) {
@@ -383,6 +386,10 @@ export default function ChatScreenWeb() {
       // Server scans this in the before-send webhook and augments crisis messages; the
       // augmented message comes back on the response (no message.new fires for our own).
       const resp = await channelRef.current.sendMessage({ text: body });
+      if (!firstSentRef.current) {
+        firstSentRef.current = true;
+        capture('chat_first_message_sent'); // funnel tail — no content, ever
+      }
       appendMessage(resp.message as RawMsg);
       surfaceCrisis(resp.message as CrisisCarrier);
     },

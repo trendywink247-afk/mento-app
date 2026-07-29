@@ -15,6 +15,7 @@ import {
   type ConstellationState,
 } from '@/components/motion/ConnectionConstellation';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
+import { capture, waitBucket } from '@/lib/analytics';
 import { ApiError, api } from '@/lib/api';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { getSessionToken, saveCompanionAnimal, saveSession } from '@/lib/session';
@@ -124,6 +125,8 @@ export function ConnectingStep({
   // Onboard-once latch: retries must never mint another anonymous account — the
   // session from a previous attempt is reused and only the match call re-runs.
   const onboardedRef = useRef(false);
+  // One funnel event per journey — busy retries must not inflate the count.
+  const matchRequestedRef = useRef(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const later = useCallback((fn: () => void, ms: number) => {
@@ -153,10 +156,17 @@ export function ConnectingStep({
         });
         await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
         if (draft.companionAnimal) await saveCompanionAnimal(draft.companionAnimal);
+        capture('onboarding_completed');
       }
       onboardedRef.current = true;
 
+      if (!matchRequestedRef.current) {
+        matchRequestedRef.current = true;
+        capture('match_requested', { mode: 'general' });
+      }
       const match = await api.match({ kind: 'general' });
+      // The user's real wait (since the step went active), bucketed — never raw ms.
+      capture('match_found', { wait_bucket: waitBucket(Date.now() - activeAtRef.current) });
       clearDraft();
       const finish = () => {
         setFoundName(match.listener_persona_name);

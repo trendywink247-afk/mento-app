@@ -8,6 +8,7 @@ import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { Companion, type CompanionTrigger } from '@/components/art/Companion';
 import { type CompanionAnimal } from '@/components/art/Companions';
+import { capture } from '@/lib/analytics';
 import { haptic } from '@/lib/haptics';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -60,6 +61,7 @@ export function CompanionStep({
   const onContinue = () => {
     if (!animal || !colourPicked) return;
     setDraft({ companionAnimal: animal, companionColour: companionColor });
+    capture('onboarding_companion_chosen', { companion: animal });
     onNext();
   };
 

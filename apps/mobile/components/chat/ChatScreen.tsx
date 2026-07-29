@@ -14,6 +14,7 @@ type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 import { IconBadge } from '@/components/IconBadge';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
@@ -77,6 +78,8 @@ export default function ChatScreen() {
   const [privacyNote, setPrivacyNote] = useState(true);
   // Surface each crisis message once, so dismissing it isn't undone by later events.
   const shownRef = useRef<Set<string>>(new Set());
+  // Funnel: chat_first_message_sent fires once per screen mount.
+  const firstSentRef = useRef(false);
 
   // The core talk→action loop (SCOPE §7): long-press a mentor message → message menu →
   // "Save to Mentor Notes" persists it to the journal.
@@ -151,6 +154,10 @@ export default function ChatScreen() {
   const doSendMessageRequest = useCallback(
     async (_channelId: string, messageData: Parameters<ChannelType['sendMessage']>[0]) => {
       const resp = await channel!.sendMessage(messageData);
+      if (!firstSentRef.current) {
+        firstSentRef.current = true;
+        capture('chat_first_message_sent'); // funnel tail — no content, ever
+      }
       try {
         surfaceCrisis(resp.message as CrisisCarrier);
       } catch (err) {

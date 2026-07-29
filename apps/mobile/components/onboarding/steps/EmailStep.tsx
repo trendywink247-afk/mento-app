@@ -7,6 +7,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { LogoLockup } from '@/components/art/Logo';
+import { capture } from '@/lib/analytics';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -23,6 +24,8 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
 
   const next = (withEmail: boolean) => {
     setDraft({ email: withEmail && email ? email.trim() : null });
+    // Whether the step was skipped — never the address itself.
+    capture('onboarding_email_step', { skipped: !(withEmail && email) });
     Keyboard.dismiss();
     onNext();
   };

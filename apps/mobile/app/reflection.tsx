@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
+import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -37,6 +38,8 @@ export default function ReflectionScreen() {
     setBusy(true);
     try {
       if (conversation) await api.saveReflection(conversation, energy);
+      // That it happened, never the energy value — reflection is private.
+      capture('reflection_submitted');
     } catch {
       // The reflection is private and optional — never block leaving on it.
     }
