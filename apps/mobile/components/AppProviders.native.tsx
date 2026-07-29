@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OverlayProvider } from 'stream-chat-expo';
 
+import { LanguageProvider } from '@/lib/i18n';
+
 // Sentry, env-gated (H1-remainder B2): JS-error capture only this pass — native
 // crash symbolication is release-build work. Empty DSN = fully off; in Expo Go
 // the SDK degrades to JS-only by itself.
@@ -17,7 +19,9 @@ if (SENTRY_DSN) {
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <OverlayProvider>{children}</OverlayProvider>
+      <LanguageProvider>
+        <OverlayProvider>{children}</OverlayProvider>
+      </LanguageProvider>
     </GestureHandlerRootView>
   );
 }

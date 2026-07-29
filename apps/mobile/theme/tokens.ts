@@ -82,6 +82,11 @@ export const font = {
   sansHeavy: 'Nunito_800ExtraBold',
   serif: 'Lora_500Medium',
   serifBold: 'Lora_600SemiBold',
+  // Devanagari faces (loaded in app/_layout.tsx). Hindi body/labels render fine
+  // through the platform's per-glyph fallback; use these for any surface that
+  // must pin the face explicitly. Lora has no Devanagari — hi display maps here.
+  devanagari: 'NotoSansDevanagari_400Regular',
+  devanagariBold: 'NotoSansDevanagari_700Bold',
 } as const;
 
 export const type = {

@@ -22,6 +22,7 @@ import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { capture } from '@/lib/analytics';
+import { useI18n } from '@/lib/i18n';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -35,6 +36,7 @@ import { font, radius, space, type } from '@/theme/tokens';
 export default function Landing() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useI18n();
   const { width } = useWindowDimensions();
   const reduced = useReducedMotion();
   const breathing = useBreathing();
@@ -191,23 +193,23 @@ export default function Landing() {
             <View
               accessible
               accessibilityRole="header"
-              accessibilityLabel="A place to talk with a peer who understands."
+              accessibilityLabel={`${t('landing.headline1')} ${t('landing.headline2')} ${t('landing.headline3')}`}
               style={styles.headlineBlock}
             >
               <Entrance index={1}>
-                <Text style={[styles.headline, { color: colors.ink }]}>A place to talk</Text>
+                <Text style={[styles.headline, { color: colors.ink }]}>{t('landing.headline1')}</Text>
               </Entrance>
               <Entrance index={2}>
-                <Text style={[styles.headline, { color: colors.ink }]}>with a peer who</Text>
+                <Text style={[styles.headline, { color: colors.ink }]}>{t('landing.headline2')}</Text>
               </Entrance>
               <Entrance index={3}>
-                <Text style={[styles.headline, { color: colors.accentSoft }]}>understands.</Text>
+                <Text style={[styles.headline, { color: colors.accentSoft }]}>{t('landing.headline3')}</Text>
               </Entrance>
             </View>
             <Entrance index={5}>
               <Tilt3D maxTilt={0} depth={0.2} drift={false}>
                 <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-                  Anonymous. Judgment-free.{'\n'}Real conversations. When you need it most.
+                  {t('landing.sub')}
                 </Text>
               </Tilt3D>
             </Entrance>
@@ -218,7 +220,7 @@ export default function Landing() {
               <Tilt3D maxTilt={2} depth={0.45} drift={false}>
                 <View style={[styles.ctaGlow, { shadowColor: colors.accent }]}>
                 <PrimaryButton
-                  label="Start a Conversation"
+                  label={t('landing.cta')}
                   tone="ink"
                   icon="chatbubble-outline"
                   onPress={begin}

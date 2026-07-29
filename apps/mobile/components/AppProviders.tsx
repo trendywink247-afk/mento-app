@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { LanguageProvider } from '@/lib/i18n';
+
 // Sentry, env-gated (H1-remainder B2): JS-error capture only this pass. Empty
 // DSN = fully off — the branch is dead and the SDK never evaluates.
 const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN ?? '';
@@ -14,5 +16,5 @@ if (SENTRY_DSN) {
  * react-native-web). The web chat uses the stream-chat JS client + custom UI instead,
  * so no extra providers are needed here. Native = primary; web = best-effort (CLAUDE.md). */
 export function AppProviders({ children }: { children: ReactNode }) {
-  return <>{children}</>;
+  return <LanguageProvider>{children}</LanguageProvider>;
 }

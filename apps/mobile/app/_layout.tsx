@@ -3,6 +3,10 @@ import {
   Lora_600SemiBold,
 } from '@expo-google-fonts/lora';
 import {
+  NotoSansDevanagari_400Regular,
+  NotoSansDevanagari_700Bold,
+} from '@expo-google-fonts/noto-sans-devanagari';
+import {
   Nunito_400Regular,
   Nunito_600SemiBold,
   Nunito_700Bold,
@@ -26,6 +30,10 @@ export default function RootLayout() {
     Nunito_800ExtraBold,
     Lora_500Medium,
     Lora_600SemiBold,
+    // Hindi (Devanagari) faces — Lora has no Devanagari, so hi display text
+    // maps to the bold sans (logged in PROGRESS → Open decisions).
+    NotoSansDevanagari_400Regular,
+    NotoSansDevanagari_700Bold,
   });
   // Fonts are bundled locally (expo-google-fonts), so this resolves in a frame or two;
   // the Expo splash stays up meanwhile — no flash of fallback type.
