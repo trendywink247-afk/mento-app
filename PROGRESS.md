@@ -26,7 +26,7 @@
 
 **Next:** founder rules pilot D1–D7; then DO provisioning per DEPLOYMENT.md runbook, or founder phone re-test (now incl. Hindi toggle + the funnel fixes; Expo Go needs the CURRENT LAN IP re-pointed in `apps/mobile/.env`).
 
-**How to resume:** stack RUNNING (API :8000, Expo web :8081; `apps/mobile/.env` now points at **localhost** — the session-22 LAN IP went stale when DHCP re-leased .12→.10 and every browser API call ERR_ABORTED'd; mento-stack repair table has the row). Listeners seeded (3). E2E: 4 committed suites, reset Redis + capacity before EACH (mento-e2e), `NODE_PATH=C:\Users\khana\.claude\skills\playwright-skill\node_modules` — set it in the SAME shell invocation as `node` (fresh shells drop it). Gotcha: onboarding endpoint is `/api/v1/onboarding/start`, not `/onboarding`.
+**How to resume:** API :8000 + containers RUNNING; **Expo web is DOWN** (its dev-server process ended with the session) — restart with `cd apps/mobile; npx expo start --web --port 8081`. (`apps/mobile/.env` now points at **localhost** — the session-22 LAN IP went stale when DHCP re-leased .12→.10 and every browser API call ERR_ABORTED'd; mento-stack repair table has the row). Listeners seeded (3). E2E: 4 committed suites, reset Redis + capacity before EACH (mento-e2e), `NODE_PATH=C:\Users\khana\.claude\skills\playwright-skill\node_modules` — set it in the SAME shell invocation as `node` (fresh shells drop it). Gotcha: onboarding endpoint is `/api/v1/onboarding/start`, not `/onboarding`.
 
 ---
 
