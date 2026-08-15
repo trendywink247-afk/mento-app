@@ -281,6 +281,7 @@ Standing rules the skills assume: the founder's product calls get implemented th
 - `DECISIONS.md` needs the **listener-application ruling** (session 22, founder-approved): in-app funnel + Module B staging via `mentor_interest`; email provider choice pending.
 - Privacy policy (launch gate): safety-staff conversation access + community/stage data note.
 - Helplines: re-verify Tele-MANAS / KIRAN numbers before launch.
+- **Stack table needs a push-notifications / EAS-Update row** (session 25): `expo-notifications` + `expo-device` (device registration only, `services/api/app/routers/notifications.py` + `lib/pushNotifications.ts`) and `expo-updates` + `eas.json` (manual "Check for updates" in Profile) landed as a v1 test pass — no EAS project linked yet (`eas init` not run), no product send-trigger decided. Promote to a confirmed Stack row once the EAS project exists and a send-trigger is ruled on.
 Clear an item from this list when the underlying doc is updated — then delete the line.
 
 ---

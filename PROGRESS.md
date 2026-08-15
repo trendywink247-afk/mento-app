@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-08-15 (session 25) — Push notifications v1 test pass + EAS Update check-for-updates, mobile wiring completed ✅
+
+**Context:** resumed a session that was interrupted mid-feature — backend (push-token model/router/migration/script/tests) and mobile deps/config (`expo-notifications`, `expo-updates`, `expo-device`, `eas.json`, `app.json` plugins, `updates.*` locale strings) were already in the working tree, but nothing on the mobile client actually called the register-token endpoint or used the update strings.
+
+**Done:**
+- **Mobile push registration** (`lib/pushNotifications.ts`): native-only, best-effort — `Device.isDevice` + permission check → `Notifications.getExpoPushTokenAsync()` → `api.registerPushToken()`. Never throws to the caller: a denied permission, a simulator, or the still-unlinked EAS project (`extra.eas.projectId` unset pre-`eas init`) are all silent no-ops, not errors — this isn't a safety-critical path like the crisis scan. Fired once from `(tabs)/_layout.tsx` after `useSessionGuard` confirms a live session.
+- **`api.registerPushToken`** added to `lib/api.ts` (typed client, matches `PushTokenIn`).
+- **Manual "Check for updates" row** in Profile (`profile.tsx`), native-only (`Platform.OS !== 'web'` — `Updates.isEnabled` is false on web/dev-client anyway): checking → downloading → restarting → up-to-date/failed, using the `updates.*` strings that were already sitting unused in en.json. No auto-check-on-launch (would be a silent surprise mid-session).
+- **Hindi parity**: added `profile.updatesTitle/updatesBody` and the `updates.*` block to `hi.json` — it had zero Hindi translation for keys en.json already carried (fallback would have silently rendered English; fixed to keep the session-24 en/hi-parity discipline).
+- **Verified per mento-verify:** pytest **137 → 141** (4 new `test_notifications.py` cases, pre-existing but now confirmed passing), `alembic check` clean, listeners re-seeded, `tsc --noEmit` clean, API boots healthy with the new route live (`/api/v1/notifications/register-token` in the OpenAPI schema). Scratch Playwright probe (onboard → Profile, normal + reduced-motion): 0 page errors, confirms the updates row correctly stays hidden on web and push-registration's web no-op never throws. Re-ran the committed `e2e/listener-apply.e2e.js` (touches the same Profile screen) both motion modes: still 0 page errors.
+- **Gotcha re-hit and fixed:** `apps/mobile/.env` had drifted to a third stale LAN IP (`192.168.0.112`, gitignored so invisible to `git status`) — caused every onboarding API call to hang silently (`waitForURL('**/chat/**')` timeout, no request ever reached uvicorn). Same failure mode as the session-24 note; reset to `localhost` for web/e2e work per `mento-stack`'s repair table.
+
+**Open (founder) — new:**
+- **EAS project not yet linked** (`eas init` never run — `eas.json` has no `projectId`, `app.json` has no `extra.eas.projectId`). Push tokens will silently fail to register until it is; OTA updates similarly need an EAS project + `eas update` channel before "Check for updates" can ever find one. Low urgency — ships dark, same pattern as PostHog/Sentry/Razorpay creds.
+- Push notifications remain **registration-only** by design (router docstring): there's no product-triggered send yet, only the manual `scripts/send_test_push.py`. Deciding what actually triggers a push (new message while backgrounded? crisis follow-up?) is a future scope call, not decided here.
+- Carried: everything from session 24 (Hindi crisis-card native-speaker review, DO provisioning, email provider, DECISIONS §J + listener-application ruling, privacy policy, helpline re-verify, Razorpay creds, LLM decision, native perf gate).
+
+**Next:** founder decides push-send triggers and whether/when to run `eas init` + provision an EAS Update channel; otherwise unchanged from session 24 (pilot D1–D7, DO provisioning).
+
+**How to resume:** stack RUNNING (API :8000, Expo web :8081 restarted with `-c` this session, containers healthy, listeners seeded, Redis flushed). `apps/mobile/.env` reset to `localhost` (not the stale `192.168.0.112` this session found) — re-verify with `curl http://localhost:8000/api/v1/health` before assuming a "stuck" flow is a real bug.
+
+---
+
 ## 2026-07-30 (session 24) — Session-22 fixes + the whole H1-remainder PRD executed: analytics, Sentry, deploy spec, Hindi ✅
 
 **Context:** "continue where we left off" after the session-23 pilot review. The logged Next converged on the two session-22 open fixes plus `docs/superpowers/plans/2026-07-20-h1-remainder-prd.md` top-to-bottom (also the pilot plan's Week-0 prerequisites).
