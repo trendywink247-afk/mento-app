@@ -19,6 +19,7 @@ from app.routers import (
     listener_console,
     listeners,
     match,
+    notifications,
     onboarding,
     paths,
     safety,
@@ -132,3 +133,4 @@ app.include_router(listener_applications.router, prefix=API)
 app.include_router(listeners.router, prefix=API)
 app.include_router(listener_console.router, prefix=API)
 app.include_router(admin_console.router, prefix=API)
+app.include_router(notifications.router, prefix=API)

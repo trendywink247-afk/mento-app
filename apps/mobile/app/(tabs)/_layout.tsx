@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useI18n, type TKey } from '@/lib/i18n';
+import { registerForPushNotifications } from '@/lib/pushNotifications';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space } from '@/theme/tokens';
@@ -94,6 +96,12 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
 export default function TabsLayout() {
   useSessionGuard();
   const { t } = useI18n();
+
+  // Once per app-open, now that a session is confirmed live — fire-and-forget,
+  // never blocks the tab bar from rendering.
+  useEffect(() => {
+    void registerForPushNotifications();
+  }, []);
 
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
@@ -30,6 +31,9 @@ export default function ProfileTab() {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   const [application, setApplication] = useState<ListenerApplication | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<
+    'idle' | 'checking' | 'downloading' | 'restarting' | 'upToDate' | 'checkFailed'
+  >('idle');
 
   useFocusEffect(
     useCallback(() => {
@@ -59,6 +63,29 @@ export default function ProfileTab() {
     return () => {
       active = false;
     };
+  }, []);
+
+  // Manual EAS Update check — no auto-check-on-launch (that's a silent surprise
+  // mid-session); native-only, `Updates.isEnabled` is false on web/dev-client.
+  const handleCheckUpdates = useCallback(async () => {
+    if (!Updates.isEnabled) {
+      setUpdateStatus('upToDate');
+      return;
+    }
+    setUpdateStatus('checking');
+    try {
+      const check = await Updates.checkForUpdateAsync();
+      if (!check.isAvailable) {
+        setUpdateStatus('upToDate');
+        return;
+      }
+      setUpdateStatus('downloading');
+      await Updates.fetchUpdateAsync();
+      setUpdateStatus('restarting');
+      await Updates.reloadAsync();
+    } catch {
+      setUpdateStatus('checkFailed');
+    }
   }, []);
 
   return (
@@ -260,6 +287,34 @@ export default function ProfileTab() {
             </View>
           </View>
         )}
+
+        {Platform.OS !== 'web' ? (
+          <Pressable
+            onPress={() => void handleCheckUpdates()}
+            disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'restarting'}
+            accessibilityRole="button"
+            testID="profile-check-updates"
+            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+          >
+            <IconBadge icon="cloud-download-outline" size={44} />
+            <View style={{ flex: 1 }}>
+              <Text style={[type.label, { color: colors.ink }]}>{t('profile.updatesTitle')}</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>
+                {updateStatus === 'checking'
+                  ? t('updates.checking')
+                  : updateStatus === 'downloading'
+                    ? t('updates.downloading')
+                    : updateStatus === 'restarting'
+                      ? t('updates.restarting')
+                      : updateStatus === 'upToDate'
+                        ? t('updates.upToDate')
+                        : updateStatus === 'checkFailed'
+                          ? t('updates.checkFailed')
+                          : t('profile.updatesBody')}
+              </Text>
+            </View>
+          </Pressable>
+        ) : null}
 
         <Pressable
           onPress={() => router.push('/start-fresh')}

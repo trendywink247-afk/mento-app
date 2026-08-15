@@ -6,6 +6,7 @@ from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
+from app.models.push_token import PushToken
 from app.models.reflection import ConversationReflection
 from app.models.request import ConversationRequest
 from app.models.safety import SafetyFlag
@@ -22,6 +23,7 @@ __all__ = [
     "ListenerApplication",
     "ListenerProfile",
     "ModerationEvent",
+    "PushToken",
     "SafetyFlag",
     "User",
 ]

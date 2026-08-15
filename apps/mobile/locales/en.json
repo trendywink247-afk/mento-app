@@ -427,6 +427,15 @@
     "openConsole": "Open my listener console →",
     "startFreshTitle": "Start fresh",
     "startFreshBody": "Leave this persona behind and begin again as someone new.",
+    "updatesTitle": "Check for updates",
+    "updatesBody": "Get the latest fixes and improvements.",
     "version": "Mento · early access"
+  },
+  "updates": {
+    "checking": "Checking for update…",
+    "downloading": "Update found, downloading…",
+    "restarting": "Restarting…",
+    "upToDate": "You're up to date",
+    "checkFailed": "Couldn't check for updates"
   }
 }

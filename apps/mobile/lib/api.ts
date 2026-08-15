@@ -289,4 +289,12 @@ export const api = {
     request<ListenerApplication>('/listener-applications', { method: 'POST', body: JSON.stringify(payload) }, true),
 
   getListenerApplication: () => request<ListenerApplication | null>('/listener-applications/me', {}, true),
+
+  // --- Push notifications (device registration only, v1 test pass) ---
+  registerPushToken: (expo_push_token: string, platform: 'ios' | 'android') =>
+    request<{ status: string }>(
+      '/notifications/register-token',
+      { method: 'POST', body: JSON.stringify({ expo_push_token, platform }) },
+      true,
+    ),
 };

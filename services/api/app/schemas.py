@@ -344,6 +344,12 @@ class JournalEntryOut(BaseModel):
     created_at: str
 
 
+# --- Push notifications ---
+class PushTokenIn(BaseModel):
+    expo_push_token: str = Field(min_length=1, max_length=255)
+    platform: Literal["ios", "android"]
+
+
 # --- Paths (Communities) ---
 class PathTree(BaseModel):
     """Pathfinder question tree — the client walks it blindly (data-driven)."""
