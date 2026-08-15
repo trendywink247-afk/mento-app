@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import * as Updates from 'expo-updates';
 import { useCallback, useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -12,6 +11,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { api, type ListenerApplication } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
+import { checkAndApplyUpdate, type UpdateStatus } from '@/lib/updates';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
   COMPANION_COLOR_LABELS,
@@ -31,9 +31,7 @@ export default function ProfileTab() {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   const [application, setApplication] = useState<ListenerApplication | null>(null);
-  const [updateStatus, setUpdateStatus] = useState<
-    'idle' | 'checking' | 'downloading' | 'restarting' | 'upToDate' | 'checkFailed'
-  >('idle');
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | 'idle'>('idle');
 
   useFocusEffect(
     useCallback(() => {
@@ -65,27 +63,10 @@ export default function ProfileTab() {
     };
   }, []);
 
-  // Manual EAS Update check — no auto-check-on-launch (that's a silent surprise
-  // mid-session); native-only, `Updates.isEnabled` is false on web/dev-client.
+  // Manual EAS Update check — native-only, `Updates.isEnabled` is false on
+  // web/dev-client (checkAndApplyUpdate resolves 'upToDate' immediately there).
   const handleCheckUpdates = useCallback(async () => {
-    if (!Updates.isEnabled) {
-      setUpdateStatus('upToDate');
-      return;
-    }
-    setUpdateStatus('checking');
-    try {
-      const check = await Updates.checkForUpdateAsync();
-      if (!check.isAvailable) {
-        setUpdateStatus('upToDate');
-        return;
-      }
-      setUpdateStatus('downloading');
-      await Updates.fetchUpdateAsync();
-      setUpdateStatus('restarting');
-      await Updates.reloadAsync();
-    } catch {
-      setUpdateStatus('checkFailed');
-    }
+    await checkAndApplyUpdate(setUpdateStatus);
   }, []);
 
   return (

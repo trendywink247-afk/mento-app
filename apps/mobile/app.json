@@ -17,9 +17,14 @@
     },
     "android": {
       "package": "com.mento.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#F6F4FB"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -46,6 +51,15 @@
     },
     "runtimeVersion": {
       "policy": "appVersion"
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "47a19df2-eefe-482f-a160-42b615b6ff27"
+      }
+    },
+    "owner": "geekspace"
   }
 }

@@ -18,10 +18,15 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProviders } from '@/components/AppProviders';
+import { useShakeToUpdate } from '@/lib/useShakeToUpdate';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { colors } from '@/theme/tokens';
 
 export default function RootLayout() {
+  // Device-testing affordance: shake anywhere to check EAS Update. No-op in
+  // Expo Go/dev server (see lib/useShakeToUpdate.ts).
+  useShakeToUpdate();
+
   // Family names must match theme/tokens.ts `font`.
   const [fontsLoaded] = useFonts({
     Nunito_400Regular,

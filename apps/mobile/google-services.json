@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "124659214563",
+    "project_id": "mento-95456",
+    "storage_bucket": "mento-95456.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:124659214563:android:6154575d407cd92aa13dd6",
+        "android_client_info": {
+          "package_name": "com.mento.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDok7Qh7DQWRFZYGeeLYkY7fjGZ5ZNLEqM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

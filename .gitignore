@@ -26,6 +26,12 @@ venv/
 *.pem
 *.key
 
+# ---- Firebase / FCM (push notifications) ----
+# google-services.json is safe to commit (client identifiers, not a secret —
+# Google's own guidance). The FCM V1 service-account key is the real secret;
+# it's never a local file in this repo (uploaded once via `eas credentials`).
+*firebase-adminsdk*.json
+
 # ---- OS / editor ----
 .DS_Store
 Thumbs.db
