@@ -38,8 +38,10 @@ const BREATHE_AFTER_MS = 6000;
 /** Busy retry cadence + attempts: ~24s of honest patience before asking for help. */
 const RETRY_DELAY_MS = 8000;
 const MAX_RETRIES = 3;
-/** The found crescendo plays before the journey's own celebrate beat. */
-const FOUND_CRESCENDO_MS = 700;
+/** The found crescendo plays before the journey's own celebrate beat. Held long
+ * enough (with the journey's FOUND_BEAT ≈ 2.1s total) that "we found your listener"
+ * reads as one deliberate moment — never a sub-second flash into chat. */
+const FOUND_CRESCENDO_MS = 1100;
 
 const SEARCH_LINES: TKey[] = ['connecting.line1', 'connecting.line2', 'connecting.line3'];
 

@@ -35,8 +35,10 @@ import { duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
-/** The hard cap on the "found someone" beat — theatre never spends the <30s promise. */
-const FOUND_BEAT_MS = 900;
+/** The hard cap on the "found someone" beat — theatre never spends the <30s promise.
+ * Paired with ConnectingStep's FOUND_CRESCENDO (~1.1s) so the celebrate + hand-off is
+ * a clear, unhurried beat (~2.1s total), not a flicker. */
+const FOUND_BEAT_MS = 1000;
 
 type Step = 'age' | 'email' | 'companion' | 'ready' | 'connecting';
 const ORDER: Step[] = ['age', 'email', 'companion', 'ready', 'connecting'];
