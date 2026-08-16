@@ -344,6 +344,23 @@ class JournalEntryOut(BaseModel):
     created_at: str
 
 
+# Opt-in AI note-sorting. Only the user's own reflective channels — never mentor_notes.
+class OrganizeIn(BaseModel):
+    channel: str  # mood | finance | gratitude
+
+
+class OrganizeTheme(BaseModel):
+    title: str
+    summary: str
+    count: int
+
+
+class OrganizeOut(BaseModel):
+    overview: str
+    themes: list[OrganizeTheme]
+    entry_count: int
+
+
 # --- Push notifications ---
 class PushTokenIn(BaseModel):
     expo_push_token: str = Field(min_length=1, max_length=255)

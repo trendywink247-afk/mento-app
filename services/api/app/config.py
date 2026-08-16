@@ -93,6 +93,13 @@ class Settings(BaseSettings):
     # set — never performance traces, never request bodies (see app/main.py).
     sentry_dsn: str = ""
 
+    # Journal note-sorting (opt-in AI, app/services/notes_ai.py). Empty key = feature
+    # DARK: the endpoint returns 503 and the app shows "coming soon". Only the user's
+    # OWN entries (mood/finance/gratitude) are ever sent — never chat/mentor-notes,
+    # never crisis content. Cloud LLM (the one sanctioned content egress, opt-in).
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-1.5-flash"
+
     # Raw JSON string from env; parsed via `helplines`.
     crisis_helplines_json: str = (
         '[{"name":"Tele-MANAS","number":"14416","hours":"24x7"},'

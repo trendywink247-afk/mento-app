@@ -78,6 +78,12 @@ export type JournalEntry = {
   created_at: string;
 };
 
+export type OrganizeResult = {
+  overview: string;
+  themes: { title: string; summary: string; count: number }[];
+  entry_count: number;
+};
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -283,6 +289,10 @@ export const api = {
 
   listJournalEntries: (channel: string) =>
     request<JournalEntry[]>(`/journals/entries?channel=${encodeURIComponent(channel)}`, {}, true),
+
+  // Opt-in AI note-sorting. 503 when the assistant isn't enabled server-side.
+  organizeNotes: (channel: string) =>
+    request<OrganizeResult>('/journals/organize', { method: 'POST', body: JSON.stringify({ channel }) }, true),
 
   // --- Become a listener (spec 2026-07-24) ---
   submitListenerApplication: (payload: ListenerApplicationIn) =>

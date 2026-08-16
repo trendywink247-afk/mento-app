@@ -14,10 +14,22 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models.enums import JournalChannel
 from app.models.journal import JournalEntry
-from app.schemas import JournalEntryIn, JournalEntryOut, MentorNoteIn
+from app.schemas import (
+    JournalEntryIn,
+    JournalEntryOut,
+    MentorNoteIn,
+    OrganizeIn,
+    OrganizeOut,
+    OrganizeTheme,
+)
 from app.security import current_user_id
+from app.services import notes_ai
 
 router = APIRouter(prefix="/journals", tags=["journals"])
+
+# Only the user's OWN reflective channels may be sent to the note-sorting AI —
+# never mentor_notes (the other party's words), never chat content (T&S #6/#7).
+_ORGANIZABLE = {JournalChannel.mood, JournalChannel.finance, JournalChannel.gratitude}
 
 
 def _out(e: JournalEntry) -> JournalEntryOut:
@@ -134,6 +146,51 @@ def list_entries(
         .offset(offset)
     ).all()
     return [_out(e) for e in entries]
+
+
+@router.post("/organize", response_model=OrganizeOut)
+def organize_notes(
+    payload: OrganizeIn,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> OrganizeOut:
+    """Opt-in AI: group the user's OWN entries in one reflective channel into themes.
+
+    Dark until a Gemini key is set (503). Restricted to mood/finance/gratitude —
+    mentor_notes and any chat content are never sent to the model (T&S #6/#7).
+    """
+    if not notes_ai.is_enabled():
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "note-sorting AI is not enabled")
+    try:
+        ch = JournalChannel(payload.channel)
+    except ValueError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown journal channel")
+    if ch not in _ORGANIZABLE:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST,
+            "only your own mood/finance/gratitude entries can be organized",
+        )
+    bodies = db.scalars(
+        select(JournalEntry.body)
+        .where(JournalEntry.user_id == user_id, JournalEntry.channel == ch)
+        .order_by(JournalEntry.created_at.desc())
+        .limit(100)
+    ).all()
+    if len(bodies) < 2:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "need at least a couple of entries to organize"
+        )
+    try:
+        result = notes_ai.organize(list(bodies))
+    except notes_ai.NotesAiDisabled:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "note-sorting AI is not enabled")
+    except Exception:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "the note-sorting AI could not respond")
+    return OrganizeOut(
+        overview=result.overview,
+        themes=[OrganizeTheme(title=t.title, summary=t.summary, count=t.count) for t in result.themes],
+        entry_count=len(bodies),
+    )
 
 
 @router.get("/mentor-notes", response_model=list[JournalEntryOut])

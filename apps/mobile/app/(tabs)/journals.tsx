@@ -88,25 +88,35 @@ export default function JournalsTab() {
           {t('journals.sub')}
         </Text>
 
-        <View style={[styles.aiCard, { backgroundColor: colors.surfaceAlt }]}>
+        <Pressable
+          onPress={() => router.push('/journal/organize')}
+          accessibilityRole="button"
+          accessibilityLabel={t('journals.aiCta')}
+          testID="journal-ai-organize"
+          style={[styles.aiCard, { backgroundColor: colors.surfaceAlt }]}
+        >
           <View style={styles.aiHead}>
             <IconBadge icon="sparkles" size={40} />
             <View style={{ flex: 1 }}>
               <View style={styles.aiTitleRow}>
                 <Text style={[styles.aiTitle, { color: colors.ink }]}>{t('journals.aiTitle')}</Text>
                 <View style={[styles.newBadge, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.newBadgeText, { color: colors.accent }]}>{t('journals.comingSoon')}</Text>
+                  <Text style={[styles.newBadgeText, { color: colors.accent }]}>{t('journals.beta')}</Text>
                 </View>
               </View>
               <Text style={[type.caption, { color: colors.inkMuted }]}>
                 {t('journals.aiBody')}
               </Text>
+              <View style={styles.aiCtaRow}>
+                <Text style={[styles.aiCta, { color: colors.accent }]}>{t('journals.aiCta')}</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.accent} />
+              </View>
             </View>
           </View>
           <View style={styles.aiArt}>
             <LottieTile name="notebook" fallback="journalsAi" size={84} />
           </View>
-        </View>
+        </Pressable>
 
         <View style={styles.sectionRow}>
           <Text style={[styles.section, { color: colors.ink }]}>{t('journals.my')}</Text>
@@ -153,6 +163,8 @@ const styles = StyleSheet.create({
   aiTitle: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24 },
   newBadge: { borderRadius: radius.pill, paddingVertical: 2, paddingHorizontal: space.sm },
   newBadgeText: { fontFamily: font.sansBold, fontSize: 11, lineHeight: 16 },
+  aiCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: space.xs },
+  aiCta: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
   aiArt: { alignItems: 'flex-end' },
   sectionRow: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-"""Save-to-Mentor-Notes — the chat→journal core loop (SCOPE §7)."""
+"""Save-to-Mentor-Notes — the chat→journal core loop (SCOPE §7) + note-sorting AI."""
 from __future__ import annotations
 
 from datetime import date
@@ -7,8 +7,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.models.enums import JournalChannel
+from app.models.journal import JournalEntry
 from app.models.user import User
 from app.security import issue_session_token
+from app.services import notes_ai
 
 from .conftest import TestSession, requires_postgres
 
@@ -126,3 +129,74 @@ def test_notes_are_scoped_to_the_owner(client, db_session):
         headers=_auth(uid_a),
     )
     assert client.get("/api/v1/journals/mentor-notes", headers=_auth(uid_b)).json() == []
+
+
+# --- note-sorting AI (opt-in, dark by default) ---
+
+
+def _seed_mood_entries(uid: str, n: int) -> None:
+    with TestSession() as s:
+        for i in range(n):
+            s.add(
+                JournalEntry(
+                    user_id=uid, channel=JournalChannel.mood, body=f"felt something {i}", source="manual"
+                )
+            )
+        s.commit()
+
+
+@requires_postgres
+def test_organize_is_dark_by_default(client, db_session):
+    # No Gemini key configured → the feature is off (503), nothing is sent anywhere.
+    with TestSession() as s:
+        uid = _seed_user(s)
+        s.commit()
+    r = client.post("/api/v1/journals/organize", json={"channel": "mood"}, headers=_auth(uid))
+    assert r.status_code == 503
+
+
+@requires_postgres
+def test_organize_never_touches_mentor_notes(client, db_session, monkeypatch):
+    # Even enabled, mentor_notes (the other party's words) can never be organized.
+    monkeypatch.setattr(notes_ai, "is_enabled", lambda: True)
+    with TestSession() as s:
+        uid = _seed_user(s)
+        s.commit()
+    r = client.post(
+        "/api/v1/journals/organize", json={"channel": "mentor_notes"}, headers=_auth(uid)
+    )
+    assert r.status_code == 400
+
+
+@requires_postgres
+def test_organize_needs_a_couple_of_entries(client, db_session, monkeypatch):
+    monkeypatch.setattr(notes_ai, "is_enabled", lambda: True)
+    with TestSession() as s:
+        uid = _seed_user(s)
+        s.commit()
+    _seed_mood_entries(uid, 1)
+    r = client.post("/api/v1/journals/organize", json={"channel": "mood"}, headers=_auth(uid))
+    assert r.status_code == 400
+
+
+@requires_postgres
+def test_organize_returns_themes_when_enabled(client, db_session, monkeypatch):
+    monkeypatch.setattr(notes_ai, "is_enabled", lambda: True)
+    monkeypatch.setattr(
+        notes_ai,
+        "organize",
+        lambda bodies: notes_ai.OrganizeResult(
+            overview="You've been reflecting a lot.",
+            themes=[notes_ai.Theme(title="Exam stress", summary="Worry about results.", count=2)],
+        ),
+    )
+    with TestSession() as s:
+        uid = _seed_user(s)
+        s.commit()
+    _seed_mood_entries(uid, 3)
+    r = client.post("/api/v1/journals/organize", json={"channel": "mood"}, headers=_auth(uid))
+    assert r.status_code == 200
+    out = r.json()
+    assert out["entry_count"] == 3
+    assert out["themes"][0]["title"] == "Exam stress"
+    assert out["overview"]
