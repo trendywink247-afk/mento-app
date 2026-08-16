@@ -172,3 +172,167 @@ If the self-hosted server is more ops than you want right now, EAS Build + Updat
 tier** (30 builds/mo, 1,000 MAU) gets you the same shake-to-update with near-zero setup —
 `eas build -p preview` + `eas update --branch preview`, projectId `47a19df2-…` and owner
 `geekspace` are already set in `app.json`. You only pay if you outgrow the free tier.
+
+---
+
+## 8. Troubleshooting — gotchas hit in practice (session 27, Windows + local build)
+
+Every one of these cost real time getting a `release` APK onto a physical device. Read
+this before repeating the investigation.
+
+### 8a. Gradle fails with `Could not move temporary workspace ... to immutable location`
+
+**Symptom:** `java.io.UncheckedIOException` / underlying `AccessDeniedException`, 100%
+reproducible on the very first build inside a folder Windows Defender protects (Desktop is
+a default-protected folder).
+
+**Real cause:** Windows' **Controlled Folder Access** (ransomware protection), a *separate*
+feature from real-time-scan exclusions. `Add-MpPreference -ExclusionPath` does **not**
+disable it.
+
+**The trap:** on Windows 11 with Tamper Protection on, PowerShell/registry attempts to fix
+this (`Add-MpPreference -ControlledFolderAccessAllowedApplications`, `settings put global
+...`) **silently no-op** — no error, but no effect either. Only changes made through the
+**Windows Security GUI** actually apply.
+
+**Fix:** Windows Security → Virus & threat protection → Manage settings → **Exclusions**
+(add the project folder) **and** → Ransomware protection → Manage ransomware protection →
+Controlled folder access → **Allow an app** (add the JDK's `java.exe`, e.g.
+`C:\Program Files\Eclipse Adoptium\jdk-17.x\bin\java.exe`).
+
+### 8b. Build fails ~15–40 minutes in with "not enough space on the disk"
+
+Android Studio (~3.3GB) + SDK (~2.5GB) + Gradle's global cache (~4.4GB) is enough to push a
+nearly-full drive to 0 bytes free mid-build. Check `Get-PSDrive C` for real headroom
+(tens of GB) **before** starting a from-scratch build, not after a failure.
+
+### 8c. `react-native-reanimated`'s native build fails: `ninja: error: mkdir(...) No such file or directory`
+
+**Symptom:** `buildCMakeRelWithDebInfo[armeabi-v7a]` fails; the path in the error is the
+project's own absolute path mirrored a *second* time inside the CMake object-file
+directory — trivially exceeds Windows' 260-char `MAX_PATH` when the repo lives somewhere
+like `C:\Users\<you>\Desktop\Mento\apps\mobile\...`.
+
+**Dead ends (do not retry these):**
+- `LongPathsEnabled=1` registry key alone — legacy tools like `ninja.exe` aren't
+  manifested for long-path awareness and ignore it.
+- **NTFS directory junctions** (`mklink /J C:\m C:\...\Mento`) — the JVM that Gradle/CMake
+  run on transparently *canonicalizes* junctions back to the real path
+  (`File.getCanonicalPath()`), so `ninja`'s own "Entering directory" log still shows the
+  original long path even when you invoke `gradlew` from `C:\m\...`.
+- **`subst` drive letters** (`subst M: C:\...\Mento`) — same outcome, same reason. Proven
+  by direct inspection: CMake's *configure*-time warning showed the short `M:\...` path,
+  but the actual ninja *build* invocation still resolved back to the long path.
+
+**The only fix that actually works:** physically **copy the project to a short real path**
+(e.g. `C:\mento-build`), not a virtual alias of any kind, and build from there.
+`robocopy C:\Users\<you>\Desktop\Mento\apps\mobile C:\mento-build\mobile /E /XD ".cxx"`.
+
+### 8d. After relocating with robocopy: `Cannot find module '...\build\index.js'`
+
+**Cause:** an over-broad `/XD "build"` exclusion (meant to skip Android's
+`android/build` output) also deletes legitimate npm packages' own `build/` output
+directories anywhere in `node_modules` (e.g. `expo-modules-autolinking/build/index.js`) —
+`/XD` matches by directory name at *any* depth, not just the top level.
+
+**Fix:** only exclude `.cxx` at copy time (a CMake-specific name, safe everywhere). To
+also skip stale Android build output, filter *after* copying:
+```powershell
+Get-ChildItem C:\mento-build\mobile -Recurse -Directory |
+  Where-Object { $_.FullName -match '\\android\\(build|\.cxx)$' } |
+  Remove-Item -Recurse -Force
+```
+
+### 8e. Rebuild at the new path still uses the OLD long path — stale generated config
+
+If `android/build` (or any node_module's own `android/build`) gets copied over from a
+prior failed attempt, its generated `autolinking.json` / CMake config can carry a
+**hardcoded absolute path from the original project location**. Gradle may treat that
+generated file as up-to-date and silently build against the wrong path even when invoked
+from the new short one. **Always purge every `android/build` and `android/.cxx` under the
+copy** (the filter in 8d) before the first build there.
+
+### 8f. Release build: app falls back to `localhost` — `EXPO_PUBLIC_*` never got inlined
+
+**Symptom:** the compiled bundle contains the literal string `EXPO_PUBLIC_API_URL` (the
+variable *name*) instead of its real value — `process.env.EXPO_PUBLIC_API_URL` evaluates
+to `undefined` at runtime (Hermes has no real `process.env`), so the code falls through to
+whatever hardcoded default exists (`lib/api.ts`: `?? 'http://localhost:8000/api/v1'`) —
+meaning the app tries to reach **its own device's localhost**, not any real server. This
+reads exactly like a generic connectivity failure with no hint the URL is wrong.
+
+**Cause:** `eas build` sets `NODE_ENV=production` automatically, which
+`babel-preset-expo`'s inline-env-vars transform requires to substitute
+`process.env.EXPO_PUBLIC_*` with literal values at bundle time. Invoking `gradlew
+assembleRelease` directly does **not** set it.
+
+**Diagnostic:** `Select-String` the compiled bundle
+(`android/app/build/generated/assets/createBundleReleaseJsAndAssets/index.android.bundle`)
+for the expected literal value (e.g. your IP). If you find the bare variable **name**
+instead, the inline transform never fired.
+
+**Fix:** `$env:NODE_ENV = "production"` before `gradlew assembleRelease`.
+
+### 8g. Release build: OkHttp refuses `http://` even though `curl` succeeds
+
+**Symptom:** the app's own network stack times out / errors on plain-HTTP requests;
+`curl` (run via `adb shell`) reaches the exact same URL instantly. This is misleading —
+`curl` runs as a different process/UID, entirely unbound by the *app's* manifest-level
+Network Security Config.
+
+**Cause:** the stock React Native template ships `android:usesCleartextTraffic="true"`
+**only** in `android/app/src/debug/AndroidManifest.xml` (with `tools:replace`), so local
+dev can talk to Metro over HTTP. `app.json`'s `android.usesCleartextTraffic: true` did
+**not** propagate into the base manifest (`src/main/AndroidManifest.xml`) in this Expo SDK
+52 setup, so `release` inherits Android's default (block all cleartext for API 28+
+targets) with no override.
+
+**Diagnostic:** check the actual *packaged* manifest, not `app.json`:
+`android/app/build/intermediates/packaged_manifests/release/processReleaseManifestForPackage/AndroidManifest.xml`.
+
+**Fix (interim):** add `android:usesCleartextTraffic="true"` directly to the
+`<application>` tag in `android/app/src/main/AndroidManifest.xml` so every variant
+inherits it. **Not yet root-caused:** why the config-plugin doesn't honor `app.json` here
+for the base manifest — worth a proper fix, or just target HTTPS-only backends in
+production to sidestep the whole class of bug.
+
+### 8h. Diagnosing "the app times out but the network is fine" on a real device
+
+- **Never trust `adb shell curl`** as proof the app itself can connect — different
+  UID/process, unbound by the app's Network Security Config *and* unbound by per-app VPN
+  routing.
+- **Add temporary `console.error` logging** in the actual catch block if the app doesn't
+  already log network failures — `adb logcat -d --pid=$(adb shell pidof <pkg>)` only shows
+  what the app chooses to print. Silence is not proof of health.
+- **To watch raw sockets:** poll `/proc/net/tcp` / `/proc/net/tcp6` for the destination
+  (hex, byte-reversed IP + port) at high frequency, in **one** `adb shell` call with an
+  internal loop (`for i in $(seq 1 N); do cat /proc/net/tcp*; sleep 0.3; done`) — spawning
+  a fresh `adb.exe` process per sample has too much overhead (~0.5–1s) and will miss
+  short-lived connections.
+- TCP state `02` = `SYN_SENT` (sent, never acknowledged, retrying). Critically, the
+  **local address field of the socket reveals which physical interface it's actually
+  bound to** — comparing it against your VPN tunnel's own address vs. your plain WiFi
+  address is definitive proof of a routing problem, not a guess.
+
+### 8i. Split-tunnel VPNs (Tailscale, etc.) can silently exclude a newly-installed app
+
+`adb shell dumpsys connectivity` shows the VPN's `NetworkAgentInfo` with a literal
+`Uids: <{0-10260, 10262-10366, ...}>` allow-list — gaps in that range are excluded UIDs. A
+freshly-installed app's UID can land in a gap until the VPN fully reconnects (toggling an
+in-app "split tunneling" setting is often not enough to trigger a UID-range recompute).
+
+Even after confirming the UID was included, and after forcing Android's system-level
+**Always-on VPN + Block-connections-without-VPN** (lockdown) via
+`adb shell settings put global always_on_vpn_app <pkg>` /
+`always_on_vpn_lockdown 1`, one specific device+Tailscale combination in this session
+**still** routed the app's socket over plain WiFi instead of the tunnel (proven via 8h's
+socket-source check) — not fully root-caused, flag as unreliable on that device rather
+than re-litigating it every session.
+
+**Reliable fallback that sidesteps all of it:** a `cloudflared tunnel --url
+http://localhost:8000` quick tunnel (zero signup, real public HTTPS — also fixes 8g for
+free since it's HTTPS, not cleartext). Point `EXPO_PUBLIC_API_URL` at the printed
+`https://*.trycloudflare.com` URL and rebuild. **Ephemeral** — the URL changes every time
+the tunnel process restarts, and it only exists while that process is running. Fine to
+unblock a testing session; not a permanent answer. See also **mento-crisis-webhook**,
+which uses the same tool for a different purpose.
