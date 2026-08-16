@@ -1,0 +1,11 @@
+# OPTIONAL — stronger local PII name detection for app/services/moderation.py.
+# The regex layer (phone/email/age/name-introductions) works with zero extra deps;
+# installing these enables Presidio + spaCy NER to also catch bare person names.
+# The code auto-detects the install and silently degrades to regex-only when absent,
+# so CI and the default dev setup do NOT need these. All local — no data leaves the box.
+#
+#   pip install -r requirements-ml.txt
+#   python -m spacy download en_core_web_lg
+#
+presidio-analyzer==2.2.355
+spacy==3.7.5

@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     # shared anyio threadpool so slow sync handlers can't starve the safety scan.
     crisis_scan_threads: int = 8
 
+    # PII redaction on the outbound message path (app/services/moderation.py).
+    # On by default — anonymity is the product promise (T&S #7). Regex layer needs
+    # no extra deps; the optional Presidio/spaCy NER (pii_use_presidio) auto-detects
+    # its install and silently degrades to regex-only when absent (requirements-ml.txt).
+    pii_redaction_enabled: bool = True
+    pii_use_presidio: bool = True
+
     # Outbound Stream API budget; a slow Stream call must not pin threads for the
     # SDK's ~6s default.
     stream_timeout_seconds: float = 3.0

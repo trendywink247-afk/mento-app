@@ -82,6 +82,50 @@ def test_benign_message_passes_through(client, db_session, monkeypatch):
 
 
 @requires_postgres
+def test_pii_is_redacted_before_delivery(client, db_session, monkeypatch):
+    # Anonymity guard (T&S #7): disclosed name + number are masked in the delivered
+    # text before the recipient ever sees them. A PII-only message is NOT a crisis,
+    # so nothing is persisted.
+    monkeypatch.setattr(stream, "verify_webhook", lambda body, sig: True)
+    r = client.post(
+        BEFORE,
+        json={
+            "message": {"id": "m-pii", "text": "hey, my name is Rahul, call me at 9876543210"},
+            "user": {"id": "u-p"},
+        },
+    )
+    assert r.status_code == 200
+    out = r.json()["message"]
+    assert "Rahul" not in out["text"]
+    assert "9876543210" not in out["text"]
+    assert out["moderation"]["redacted"] is True
+    assert set(out["moderation"]["types"]) >= {"name", "phone"}
+    assert "crisis" not in out
+    assert _flag_count("m-pii") == 0  # PII is not a crisis — nothing persisted
+
+
+@requires_postgres
+def test_crisis_and_pii_compose(client, db_session, monkeypatch):
+    # A single message can carry both a crisis signal and PII. The crisis card fires
+    # (scan sees the original text) AND the PII is redacted from what's delivered.
+    monkeypatch.setattr(stream, "verify_webhook", lambda body, sig: True)
+    r = client.post(
+        BEFORE,
+        json={
+            "message": {"id": "m-both", "text": "i'm Rahul and i want to die, call 9876543210"},
+            "user": {"id": "u-b"},
+        },
+    )
+    assert r.status_code == 200
+    out = r.json()["message"]
+    assert out["crisis"]["signal"] == "suicidal"
+    assert out["moderation"]["redacted"] is True
+    assert "Rahul" not in out["text"] and "9876543210" not in out["text"]
+    assert "want to die" in out["text"]  # crisis words aren't PII — they stay
+    assert _flag_count("m-both") == 1  # the crisis signal IS flagged (signal only)
+
+
+@requires_postgres
 def test_same_message_is_not_double_flagged(client, db_session, monkeypatch):
     # The sync before-send hook and the async message.new safety net can both see the
     # same message id; it must be flagged exactly once.

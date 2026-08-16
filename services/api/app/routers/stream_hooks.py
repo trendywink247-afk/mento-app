@@ -41,8 +41,9 @@ import anyio.to_thread
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models.conversation import Conversation
-from app.services import safety, stream
+from app.services import moderation, safety, stream
 from app.services.crisis import CrisisResult
+from app.services.moderation import RedactionResult
 
 logger = logging.getLogger("mento.stream_hooks")
 router = APIRouter(prefix="/stream", tags=["stream"])
@@ -68,6 +69,29 @@ async def _run_scan(**kwargs) -> CrisisResult:
     return await anyio.to_thread.run_sync(
         lambda: _scan_event(**kwargs), limiter=_get_crisis_limiter()
     )
+
+
+async def _run_redact(text: str) -> RedactionResult:
+    """Run PII redaction off the event loop (optional NER can be non-trivial), under
+    the same isolated limiter so it can't starve behind unrelated sync traffic."""
+    return await anyio.to_thread.run_sync(
+        lambda: moderation.redact(text), limiter=_get_crisis_limiter()
+    )
+
+
+def _record_redaction(types: list[str]) -> None:
+    """Best-effort, signal-only telemetry for the admin health view. NEVER the body
+    or the redacted content (Trust & Safety #6) — just which categories fired."""
+    try:
+        from app import ratelimit
+
+        r = ratelimit._redis()
+        r.incr("mento:pii_redactions_total")
+        for t in types:
+            r.incr(f"mento:pii_redactions:{t}")
+    except Exception:
+        pass
+    logger.info("pii_redacted types=%s", ",".join(types))
 
 
 async def _verified_event(request: Request) -> dict:
@@ -138,23 +162,27 @@ async def before_message_send(request: Request) -> dict:
     user_id = (event.get("user") or message.get("user") or {}).get("id") or "unknown"
     channel_id = (event.get("channel") or {}).get("id")
 
+    # Crisis scan reads the ORIGINAL text (signals aren't PII; redaction must not blind
+    # it). Redaction rewrites what the recipient actually receives.
     result = await _run_scan(
         text=text, user_id=user_id, channel_id=channel_id, message_id=message_id
     )
+    redaction = await _run_redact(text)
 
-    if result.triggered:
-        # Augment the message with a crisis payload the client renders as the helpline
-        # card. Echo `text` so partial-update semantics can't drop the original body.
-        return {
-            "message": {
-                "text": text,
-                "crisis": {
-                    "support": safety.SUPPORT_COPY,
-                    "signal": result.signal.value,
-                    "helplines": result.helplines,
-                },
+    if result.triggered or redaction.redacted:
+        # Return the (possibly redacted) text so partial-update semantics can't drop
+        # the body; attach a crisis and/or moderation payload the client renders.
+        message_out: dict = {"text": redaction.text}
+        if result.triggered:
+            message_out["crisis"] = {
+                "support": safety.SUPPORT_COPY,
+                "signal": result.signal.value,
+                "helplines": result.helplines,
             }
-        }
+        if redaction.redacted:
+            message_out["moderation"] = {"redacted": True, "types": redaction.types}
+            _record_redaction(redaction.types)
+        return {"message": message_out}
     # Allow unchanged.
     return {}
 
