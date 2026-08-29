@@ -68,13 +68,15 @@ sudo apt install -y nginx certbot python3-certbot-nginx
 
 ### 4. Clone the repo
 
-Requires the private GitHub remote (see below) to be set up first.
-
 ```bash
 sudo mkdir -p /opt/mento && sudo chown mento-ops:mento-ops /opt/mento
-git clone git@github.com:<you>/mento.git /opt/mento
+git clone https://github.com/trendywink247-afk/mento-app.git /opt/mento
 cd /opt/mento
 ```
+
+Private repo — cloning over HTTPS on the VPS needs a credential (a fine-grained
+GitHub PAT with read-only access to this repo works well; `git clone` will prompt
+for it once, or use `git clone https://<token>@github.com/trendywink247-afk/mento-app.git`).
 
 ### 5. Fill in prod secrets
 
@@ -142,10 +144,10 @@ in 30 min, or Redis down) — not optional before real users touch this.
 
 1. Do the work locally against Test, verify per `mento-verify` (pytest, `alembic
    check`, `tsc --noEmit`, e2e for touched flows).
-2. Commit, push to `main` on the GitHub remote.
+2. Commit, push to `master` on the GitHub remote (`origin` = `github.com/trendywink247-afk/mento-app`, private).
 3. `ssh mento-ops@<vps-ip> 'cd /opt/mento && ./deploy/deploy.sh'`
 
-`deploy.sh` hard-resets the VPS checkout to `origin/main`, rebuilds the API image,
+`deploy.sh` hard-resets the VPS checkout to `origin/master`, rebuilds the API image,
 and brings the stack up — the container entrypoint runs `alembic upgrade head`
 automatically before serving, and refuses to serve if migrations fail. If a
 migration is destructive or backward-incompatible, run

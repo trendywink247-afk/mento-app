@@ -9,7 +9,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 echo "[deploy] fetching latest..."
 git fetch origin
-git reset --hard origin/main
+git reset --hard origin/master
 
 echo "[deploy] building api image..."
 docker compose -f deploy/docker-compose.prod.yml build api
