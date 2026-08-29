@@ -1,0 +1,68 @@
+# Mento — production stack for a self-managed VPS (Hostinger or any Ubuntu box).
+# Unlike services/api/docker-compose.yml (local dev infra only), this file also
+# builds and runs the API itself. Postgres/Redis here are self-managed containers
+# (no DO managed PITR in this setup) — see deploy/backup-postgres.sh for backups.
+#
+# Nginx is NOT containerized here — install it on the host (see docs/DEPLOYMENT_VPS.md)
+# so certbot's standard renewal path just works. This compose file only binds the
+# API to 127.0.0.1, so it's unreachable except through the host Nginx reverse proxy.
+#
+# Usage (from repo root on the VPS):
+#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mento-postgres-prod
+    restart: always
+    env_file:
+      - ../services/api/.env
+    environment:
+      POSTGRES_USER: mento
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in services/api/.env}
+      POSTGRES_DB: mento
+    volumes:
+      - mento_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mento -d mento"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Not published to the host at all — only the api container reaches it,
+    # over the compose-internal network.
+
+  redis:
+    image: redis:7-alpine
+    container_name: mento-redis-prod
+    restart: always
+    volumes:
+      - mento_redisdata_prod:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ../services/api
+      dockerfile: Dockerfile
+    container_name: mento-api-prod
+    restart: always
+    env_file:
+      - ../services/api/.env
+    environment:
+      DATABASE_URL: postgresql+psycopg://mento:${POSTGRES_PASSWORD}@postgres:5432/mento
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"   # host Nginx proxies to this; never expose publicly here
+
+volumes:
+  mento_pgdata_prod:
+  mento_redisdata_prod:
