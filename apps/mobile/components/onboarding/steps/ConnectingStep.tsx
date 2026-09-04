@@ -371,7 +371,7 @@ export function ConnectingStep({
                 {t('connecting.footerTitle')}
                 <Text style={{ color: colors.accent }}>{t('connecting.footerAccent')}</Text>
               </Text>
-              <Text style={[type.body, { color: colors.accent }]}>💜</Text>
+              <Text style={[type.body, { color: colors.accent }]}>🧡</Text>
             </View>
           </Entrance>
         </>

@@ -38,7 +38,7 @@ export default function CoffeeScreen() {
   const onMethod = () => {
     // Razorpay checkout lands with payment creds; stay transparent meanwhile.
     setNote(
-      'Payments are coming very soon. Thank you for wanting to support the team — it means a lot. 💜',
+      'Payments are coming very soon. Thank you for wanting to support the team — it means a lot. 🧡',
     );
   };
 
@@ -56,7 +56,7 @@ export default function CoffeeScreen() {
               Would you like to buy a coffee for the Mento team? ☕
             </Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              It keeps our pandas fueled up to build a safe space for more hearts. 💜
+              It keeps our pandas fueled up to build a safe space for more hearts. 🧡
             </Text>
           </View>
         </View>
@@ -170,7 +170,7 @@ export default function CoffeeScreen() {
         <Panda pose="shield" size={48} />
         <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
           Thank you! Your support goes to the Mento team — keeping this space safe, free, and
-          here for everyone. 💜
+          here for everyone. 🧡
         </Text>
       </EdgeSurface>
 

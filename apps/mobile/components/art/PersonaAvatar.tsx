@@ -14,11 +14,13 @@ type SceneKind = 'mountain' | 'lake' | 'forest' | 'night';
 
 const SCENES: SceneKind[] = ['mountain', 'lake', 'forest', 'night'];
 
+/** Persona landscapes — a small categorical set on the Clay and Sage family (not the
+ * companion accent: a persona's avatar must stay stable across the viewer's theme). */
 const PALETTES = [
-  { sky1: '#C9C2EE', sky2: '#F3D9D4', land: '#6F66B8', land2: '#8D84CC' },
-  { sky1: '#A9C4E8', sky2: '#EBD8E9', land: '#5C7AB8', land2: '#7B95CC' },
-  { sky1: '#B7D9C8', sky2: '#F2E8CF', land: '#4E8B6F', land2: '#6FA98C' },
-  { sky1: '#3D3A6E', sky2: '#7A6BB8', land: '#28254E', land2: '#3A3668' },
+  { sky1: '#F6D9CB', sky2: '#FBEFE4', land: '#A2533A', land2: '#C9744F' }, // terracotta dusk
+  { sky1: '#DCE6DD', sky2: '#F1F5EE', land: '#467054', land2: '#7F9C86' }, // sage hills
+  { sky1: '#DCE8F2', sky2: '#EEF3F7', land: '#3B6D8F', land2: '#6F95B5' }, // sky lake
+  { sky1: '#4D3765', sky2: '#6B4C8C', land: '#2F2140', land2: '#3E2D55' }, // plum night
 ];
 
 function hash(s: string): number {
