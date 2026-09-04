@@ -5,6 +5,7 @@ integrity). Unique on the token value (not user_id) so a device reinstall
 that lands on a new anonymous user re-points the same token instead of
 leaving stale duplicate rows.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import String, UniqueConstraint

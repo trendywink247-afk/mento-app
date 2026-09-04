@@ -6,6 +6,7 @@ through untouched (false positives mangle a struggling person's words). Pins the
 contract for any future detector swap. Presidio NER is optional and not required here;
 these all pass on the regex layer alone.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -47,9 +48,9 @@ def test_multiple_pii_in_one_message() -> None:
     [
         "thanks, that really helped a lot",
         "i feel so tired and alone today",
-        "I am afraid of failing my exam",   # "afraid" is not a name (lowercase + stoplist)
-        "I am Indian and proud of it",        # nationality, not a name (stoplist)
-        "see you at 5",                        # single digit — not a phone/age
+        "I am afraid of failing my exam",  # "afraid" is not a name (lowercase + stoplist)
+        "I am Indian and proud of it",  # nationality, not a name (stoplist)
+        "see you at 5",  # single digit — not a phone/age
         "I have 3 exams next week",
         "just wanted to say hi",
     ],

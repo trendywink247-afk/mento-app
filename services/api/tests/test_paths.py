@@ -1,4 +1,5 @@
 """Path (Communities): pathfinder tree, choose/clear, and matcher community preference."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -69,6 +70,7 @@ def _auth(user_id: str) -> dict:
 
 # --- config sanity -----------------------------------------------------------
 
+
 def test_every_tree_leaf_points_at_a_real_stage():
     for node in TREE.values():
         for opt in node["options"]:
@@ -87,6 +89,7 @@ def test_tree_endpoint_shape(client):
 
 
 # --- choose / read / clear ----------------------------------------------------
+
 
 @requires_postgres
 def test_choose_read_and_clear_path(client):
@@ -119,12 +122,15 @@ def test_choose_rejects_unknown_community_or_stage(client):
     with TestSession() as s:
         uid = _seed_user(s)
         s.commit()
-    for bad in ({"community": "hogwarts", "stage": "year_one"},
-                {"community": "upsc", "stage": "not_a_stage"}):
+    for bad in (
+        {"community": "hogwarts", "stage": "year_one"},
+        {"community": "upsc", "stage": "not_a_stage"},
+    ):
         assert client.put("/api/v1/paths/me", json=bad, headers=_auth(uid)).status_code == 422
 
 
 # --- matcher preference --------------------------------------------------------
+
 
 @requires_postgres
 def test_matcher_prefers_same_community_listener():

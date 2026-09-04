@@ -1,6 +1,7 @@
 """Alembic environment. Pulls the DB URL from app settings and the target
 metadata from the SQLAlchemy models, so autogenerate stays in sync with the app.
 """
+
 from __future__ import annotations
 
 from logging.config import fileConfig
@@ -8,11 +9,10 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from app.config import get_settings
-from app.db import Base
-
 # Importing the model registry registers every mapper on Base.metadata.
 import app.models  # noqa: F401
+from app.config import get_settings
+from app.db import Base
 
 config = context.config
 

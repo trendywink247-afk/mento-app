@@ -5,6 +5,7 @@ the Stream *before-message-send* webhook (see routers/stream_hooks.py) — that 
 enforcement point that can't be bypassed by a client. This endpoint remains for
 non-Stream callers and tests; it shares the same scan_and_flag code path.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status

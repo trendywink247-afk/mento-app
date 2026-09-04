@@ -1,6 +1,7 @@
 """Listener application (spec 2026-07-24). A member's ask to become a peer
 listener. Anonymous by design: tied to the persona/user id, no real names.
 `decline_reason` is admin-internal and must never appear in member payloads."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -26,9 +27,7 @@ class ListenerApplication(UUIDMixin, TimestampMixin, Base):
     # Module B staging: interest flag only, nothing else of Module B ships.
     mentor_interest: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    status: Mapped[ApplicationStatus] = mapped_column(
-        default=ApplicationStatus.pending, index=True
-    )
+    status: Mapped[ApplicationStatus] = mapped_column(default=ApplicationStatus.pending, index=True)
     decline_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Set on approval — the ListenerProfile this application became.
     listener_id: Mapped[str | None] = mapped_column(String(36), nullable=True)

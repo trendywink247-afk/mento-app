@@ -1,4 +1,5 @@
 """A new-chat request (general → match; personal → directed at a listener)."""
+
 from __future__ import annotations
 
 from sqlalchemy import String, Text

@@ -2,6 +2,7 @@
 console_base_url-derived fallback that keeps the web-only consoles working
 outside dev without extra config. Pure Settings tests — no app boot needed.
 """
+
 from __future__ import annotations
 
 from app.config import Settings, origin_of

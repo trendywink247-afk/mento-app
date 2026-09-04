@@ -1,4 +1,5 @@
 """New-chat routing. v1 implements General (next-available). Personal is scaffolded."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status

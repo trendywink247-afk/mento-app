@@ -1,4 +1,5 @@
 """Anonymous persona generation. Same generator for both sides of a conversation."""
+
 from __future__ import annotations
 
 import secrets

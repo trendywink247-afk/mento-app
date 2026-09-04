@@ -2,6 +2,7 @@
 
 Run from services/api:  python -m scripts.seed_listeners
 """
+
 from __future__ import annotations
 
 from app.db import SessionLocal, init_db

@@ -1,7 +1,8 @@
 """Listener applications: lifecycle, one-open constraint, cooldown, privacy."""
+
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -130,7 +131,10 @@ def test_invalid_email_rejected(client):
 def test_one_open_application(client):
     with TestSession() as s:
         uid = _user(s)
-    assert client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code == 200
+    assert (
+        client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code
+        == 200
+    )
     r = client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid))
     assert r.status_code == 409
 
@@ -138,20 +142,33 @@ def test_one_open_application(client):
 def test_declined_cooldown_then_reapply(client):
     with TestSession() as s:
         uid = _user(s)
-    assert client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code == 200
-    fresh_decline = datetime.now(timezone.utc)
+    assert (
+        client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code
+        == 200
+    )
+    fresh_decline = datetime.now(UTC)
     with TestSession() as s:
         s.query(ListenerApplication).update(
-            {"status": ApplicationStatus.declined, "decline_reason": "internal note", "updated_at": fresh_decline}
+            {
+                "status": ApplicationStatus.declined,
+                "decline_reason": "internal note",
+                "updated_at": fresh_decline,
+            }
         )
         s.commit()
     # Inside the 30-day cooldown → blocked.
-    assert client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code == 409
+    assert (
+        client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code
+        == 409
+    )
     # Age the decline past the cooldown → allowed again.
     with TestSession() as s:
         s.query(ListenerApplication).update({"updated_at": fresh_decline - timedelta(days=31)})
         s.commit()
-    assert client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code == 200
+    assert (
+        client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code
+        == 200
+    )
 
 
 def test_decline_reason_never_in_member_payload(client):
@@ -225,9 +242,7 @@ def test_admin_queue_approve_creates_listener(client, admin_headers):
     with TestSession() as s:
         li = s.query(ListenerProfile).filter_by(persona_name="Quiet Cove").one()
         assert li.vetting_status == VettingStatus.approved
-        assert "listener.application_approved" in [
-            a.action for a in s.query(AdminAuditLog).all()
-        ]
+        assert "listener.application_approved" in [a.action for a in s.query(AdminAuditLog).all()]
 
     # The member now sees an approved card with a working console link.
     me = client.get("/api/v1/listener-applications/me", headers=_auth(uid)).json()
@@ -235,18 +250,21 @@ def test_admin_queue_approve_creates_listener(client, admin_headers):
     assert me["console_url"] and "/listener#token=" in me["console_url"]
 
     # Approving again is a conflict.
-    assert client.post(
-        f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers
-    ).status_code == 409
+    assert (
+        client.post(
+            f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers
+        ).status_code
+        == 409
+    )
 
 
 def test_admin_decline_records_private_reason(client, admin_headers):
     with TestSession() as s:
         uid = _user(s)
     client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid))
-    app_id = client.get(
-        "/api/v1/admin/applications?status=pending", headers=admin_headers
-    ).json()[0]["id"]
+    app_id = client.get("/api/v1/admin/applications?status=pending", headers=admin_headers).json()[
+        0
+    ]["id"]
 
     r = client.post(
         f"/api/v1/admin/applications/{app_id}/decline",
@@ -255,9 +273,7 @@ def test_admin_decline_records_private_reason(client, admin_headers):
     )
     assert r.status_code == 200
     with TestSession() as s:
-        assert "listener.application_declined" in [
-            a.action for a in s.query(AdminAuditLog).all()
-        ]
+        assert "listener.application_declined" in [a.action for a in s.query(AdminAuditLog).all()]
     me = client.get("/api/v1/listener-applications/me", headers=_auth(uid)).json()
     assert me["status"] == "declined"
     assert "needs more lived experience" not in str(me)

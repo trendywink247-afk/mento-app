@@ -1,6 +1,7 @@
 """Conversation Options sheet — backend flows, with focus on the safety-adjacent ones:
 block prevents re-match, and report files a human-reviewable moderation event.
 """
+
 from __future__ import annotations
 
 from datetime import date
@@ -88,10 +89,14 @@ def test_lock_requires_correct_pin_to_unlock(client, db_session):
     assert r.status_code == 200 and r.json()["is_locked"] is True
 
     # Wrong PIN is rejected; the chat stays locked.
-    bad = client.post(f"/api/v1/conversations/{cid}/unlock", json={"pin": "9999"}, headers=_auth(uid))
+    bad = client.post(
+        f"/api/v1/conversations/{cid}/unlock", json={"pin": "9999"}, headers=_auth(uid)
+    )
     assert bad.status_code == 403
 
-    ok = client.post(f"/api/v1/conversations/{cid}/unlock", json={"pin": "1234"}, headers=_auth(uid))
+    ok = client.post(
+        f"/api/v1/conversations/{cid}/unlock", json={"pin": "1234"}, headers=_auth(uid)
+    )
     assert ok.status_code == 200 and ok.json()["is_locked"] is False
 
     # PIN is hashed, never stored raw.
@@ -106,8 +111,18 @@ def test_status_mask_and_pause(client, db_session):
         uid = _seed_user(s)
         cid = _seed_active_convo(s, uid, _seed_listener(s))
         s.commit()
-    assert client.post(f"/api/v1/conversations/{cid}/status-mask", json={"mask": "Away"}, headers=_auth(uid)).json()["status_mask"] == "Away"
-    assert client.post(f"/api/v1/conversations/{cid}/pause", json={"paused": True}, headers=_auth(uid)).json()["is_paused"] is True
+    assert (
+        client.post(
+            f"/api/v1/conversations/{cid}/status-mask", json={"mask": "Away"}, headers=_auth(uid)
+        ).json()["status_mask"]
+        == "Away"
+    )
+    assert (
+        client.post(
+            f"/api/v1/conversations/{cid}/pause", json={"paused": True}, headers=_auth(uid)
+        ).json()["is_paused"]
+        is True
+    )
 
 
 @requires_postgres
@@ -118,15 +133,23 @@ def test_report_ends_chat_and_lands_in_review_queue(client, db_session):
         cid = _seed_active_convo(s, uid, lid)
         s.commit()
 
-    r = client.post(f"/api/v1/conversations/{cid}/report", json={"reason": "made me uncomfortable"}, headers=_auth(uid))
+    r = client.post(
+        f"/api/v1/conversations/{cid}/report",
+        json={"reason": "made me uncomfortable"},
+        headers=_auth(uid),
+    )
     assert r.status_code == 200 and r.json()["status"] == "reported"
 
     # Chat is ended, and an UNREVIEWED moderation event exists (surfaced, not just stored).
     with TestSession() as s:
         convo = s.get(Conversation, cid)
         assert convo.status == ConversationStatus.ended
-        ev = s.execute(select(ModerationEvent).where(ModerationEvent.conversation_id == cid)).scalar_one()
-        assert ev.reviewed is False and ev.subject_id == lid and ev.reason == "made me uncomfortable"
+        ev = s.execute(
+            select(ModerationEvent).where(ModerationEvent.conversation_id == cid)
+        ).scalar_one()
+        assert (
+            ev.reviewed is False and ev.subject_id == lid and ev.reason == "made me uncomfortable"
+        )
 
     # It appears in the admin console review queue (JWT-authed, audit-logged).
     with TestSession() as s:
@@ -153,11 +176,15 @@ def test_block_prevents_rematch_to_that_listener(client, db_session):
         cid = _seed_active_convo(s, uid, lid)
         s.commit()
 
-    r = client.post(f"/api/v1/conversations/{cid}/block", json={"reason": "harassment"}, headers=_auth(uid))
+    r = client.post(
+        f"/api/v1/conversations/{cid}/block", json={"reason": "harassment"}, headers=_auth(uid)
+    )
     assert r.status_code == 200 and r.json()["status"] == "blocked"
 
     with TestSession() as s:
-        ev = s.execute(select(ModerationEvent).where(ModerationEvent.conversation_id == cid)).scalar_one()
+        ev = s.execute(
+            select(ModerationEvent).where(ModerationEvent.conversation_id == cid)
+        ).scalar_one()
         assert ev.blocked is True
         assert s.get(Conversation, cid).status == ConversationStatus.ended
 
@@ -167,7 +194,9 @@ def test_block_prevents_rematch_to_that_listener(client, db_session):
             match_general(s, user)
 
         # Sanity: a DIFFERENT user is still matched to that same listener.
-        other = User(persona_name="New Soul", persona_avatar="x", dob=date(1995, 1, 1), age_at_signup=31)
+        other = User(
+            persona_name="New Soul", persona_avatar="x", dob=date(1995, 1, 1), age_at_signup=31
+        )
         s.add(other)
         s.flush()
         convo = match_general(s, other)

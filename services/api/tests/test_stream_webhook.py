@@ -5,6 +5,7 @@ rejected; a crisis message is flagged server-side and the response carries the h
 payload; a benign message passes through untouched; and the same message id never
 double-flags (sync hook + async safety net dedupe).
 """
+
 from __future__ import annotations
 
 import pytest
@@ -73,9 +74,7 @@ def test_crisis_message_is_flagged_and_augmented(client, db_session, monkeypatch
 @requires_postgres
 def test_benign_message_passes_through(client, db_session, monkeypatch):
     monkeypatch.setattr(stream, "verify_webhook", lambda body, sig: True)
-    r = client.post(
-        BEFORE, json={"message": {"id": "m3", "text": "thanks, that helped a lot"}}
-    )
+    r = client.post(BEFORE, json={"message": {"id": "m3", "text": "thanks, that helped a lot"}})
     assert r.status_code == 200
     assert r.json() == {}  # allowed unchanged
     assert _flag_count("m3") == 0
@@ -132,7 +131,10 @@ def test_same_message_is_not_double_flagged(client, db_session, monkeypatch):
     monkeypatch.setattr(stream, "verify_webhook", lambda body, sig: True)
     msg = {"message": {"id": "m4", "text": "I want to die"}, "user": {"id": "u-9"}}
     assert client.post(BEFORE, json=msg).status_code == 200
-    push = {"type": "message.new", "message": {"id": "m4", "text": "I want to die", "user": {"id": "u-9"}}}
+    push = {
+        "type": "message.new",
+        "message": {"id": "m4", "text": "I want to die", "user": {"id": "u-9"}},
+    }
     assert client.post(PUSH, json=push).status_code == 200
     assert _flag_count("m4") == 1
 

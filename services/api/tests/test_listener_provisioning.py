@@ -7,9 +7,10 @@
    matcher, Browse list, and Personal-request path must never pair a user with
    their own listener profile.
 """
+
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -109,7 +110,7 @@ def _approved_application(s, user_id: str, listener_id: str) -> None:
             availability="most_evenings",
             status=ApplicationStatus.approved,
             listener_id=listener_id,
-            pledge_accepted_at=datetime.now(timezone.utc),
+            pledge_accepted_at=datetime.now(UTC),
         )
     )
     s.commit()
@@ -143,13 +144,16 @@ def test_approved_application_listener_is_upserted_to_stream(client, admin_heade
     with TestSession() as s:
         uid = _user(s)
     client.post("/api/v1/listener-applications", json=APPLY, headers=_auth(uid))
-    app_id = client.get(
-        "/api/v1/admin/applications?status=pending", headers=admin_headers
-    ).json()[0]["id"]
+    app_id = client.get("/api/v1/admin/applications?status=pending", headers=admin_headers).json()[
+        0
+    ]["id"]
 
-    assert client.post(
-        f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers
-    ).status_code == 200
+    assert (
+        client.post(
+            f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers
+        ).status_code
+        == 200
+    )
     with TestSession() as s:
         li = s.query(ListenerProfile).one()
         assert (li.id, li.persona_name, li.persona_avatar) in upserted
@@ -205,8 +209,8 @@ def test_browse_excludes_own_listener_profile(client):
         _approved_application(s, uid, own)
         _listener(s, "Hushed Grove")
 
-    names = [li["persona_name"] for li in client.get(
-        "/api/v1/listeners", headers=_auth(uid)
-    ).json()]
+    names = [
+        li["persona_name"] for li in client.get("/api/v1/listeners", headers=_auth(uid)).json()
+    ]
     assert "Hushed Grove" in names
     assert "Quiet Cove" not in names

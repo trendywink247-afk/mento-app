@@ -1,4 +1,5 @@
 """Save-to-Mentor-Notes — the chat→journal core loop (SCOPE §7) + note-sorting AI."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -87,7 +88,11 @@ def test_manual_entries_and_summary(client, db_session):
     assert r.status_code == 200 and r.json()["channel"] == "mood"
     client.post(
         "/api/v1/journals/entries",
-        json={"channel": "finance", "body": "Chai", "meta": {"amount_paise": 2000, "direction": "expense"}},
+        json={
+            "channel": "finance",
+            "body": "Chai",
+            "meta": {"amount_paise": 2000, "direction": "expense"},
+        },
         headers=_auth(uid),
     )
 
@@ -139,7 +144,10 @@ def _seed_mood_entries(uid: str, n: int) -> None:
         for i in range(n):
             s.add(
                 JournalEntry(
-                    user_id=uid, channel=JournalChannel.mood, body=f"felt something {i}", source="manual"
+                    user_id=uid,
+                    channel=JournalChannel.mood,
+                    body=f"felt something {i}",
+                    source="manual",
                 )
             )
         s.commit()

@@ -1,4 +1,5 @@
 """Journal entries. Fed by the AI Journal Assistant and save-to-journal from chat."""
+
 from __future__ import annotations
 
 from sqlalchemy import JSON, String, Text

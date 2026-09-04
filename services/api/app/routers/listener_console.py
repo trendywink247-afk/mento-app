@@ -8,6 +8,7 @@ suspended and every outstanding link dies instantly.
 Anonymity holds on both sides (T&S #7): the listener sees member PERSONAS only,
 and none of the member's privacy controls (lock/mask/PIN are the member's).
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -86,11 +87,15 @@ def _require_dev() -> None:
     dependencies=[Depends(_require_dev)],
 )
 def dev_roster(db: Session = Depends(get_db)) -> list[DevListenerItem]:
-    rows = db.execute(
-        select(ListenerProfile)
-        .where(ListenerProfile.vetting_status == VettingStatus.approved)
-        .order_by(ListenerProfile.persona_name.asc())
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(ListenerProfile)
+            .where(ListenerProfile.vetting_status == VettingStatus.approved)
+            .order_by(ListenerProfile.persona_name.asc())
+        )
+        .scalars()
+        .all()
+    )
     return [
         DevListenerItem(
             id=li.id,

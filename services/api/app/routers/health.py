@@ -9,10 +9,11 @@
     pager for the flagship safety guarantee. Wire a monitor to this URL before
     launch (PRELAUNCH_CHECKLIST).
 """
+
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import redis
 from fastapi import APIRouter, Response, status
@@ -58,7 +59,11 @@ def crisis_webhook_health(response: Response) -> dict:
 
     if last_raw is None:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-        return {"status": "stale", "detail": "no Stream webhook ever recorded", "last_webhook_at": None}
+        return {
+            "status": "stale",
+            "detail": "no Stream webhook ever recorded",
+            "last_webhook_at": None,
+        }
 
     try:
         last = datetime.fromisoformat(last_raw)
@@ -73,8 +78,8 @@ def crisis_webhook_health(response: Response) -> dict:
             "last_webhook_at": last_raw,
         }
     if last.tzinfo is None:
-        last = last.replace(tzinfo=timezone.utc)
-    age = datetime.now(timezone.utc) - last
+        last = last.replace(tzinfo=UTC)
+    age = datetime.now(UTC) - last
     if age > STALE_AFTER:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return {

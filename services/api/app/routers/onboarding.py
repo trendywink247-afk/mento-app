@@ -1,7 +1,8 @@
 """Anonymous onboarding + server-side age gate (Trust & Safety #3)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -40,7 +41,7 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
     settings = get_settings()
     # UTC, not server-local: a user a day either side of the min-age boundary must
     # not be admitted/denied by the server's timezone.
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
 
     if payload.dob > today:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "date of birth is in the future")

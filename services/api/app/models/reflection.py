@@ -11,6 +11,7 @@ per-conversation analytics. Trade-off recorded in PROGRESS.md → Open decisions
 until ratified, never describe reflections as unlinkable in user-facing copy, and
 keep them out of engagement dashboards (T&S #5/#10).
 """
+
 from __future__ import annotations
 
 from sqlalchemy import Integer, String, UniqueConstraint

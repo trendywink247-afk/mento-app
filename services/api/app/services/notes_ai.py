@@ -10,6 +10,7 @@ Raw HTTP against the Gemini API (no SDK — same posture as lib/analytics and th
 client): a closed request shape, a strict JSON response contract, and no PII beyond the
 entry bodies the user themselves chose to keep.
 """
+
 from __future__ import annotations
 
 import json

@@ -1,7 +1,8 @@
 """Path/community service: config validation + the current seasonal card."""
+
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from app.services.paths_data import COMMUNITIES, TREE, TREE_ROOT
 
@@ -32,7 +33,7 @@ def _md(day: date) -> str:
 def seasonal_card(community: str, today: date | None = None) -> dict | None:
     """The emotional-calendar card active right now, if any. Month-day ranges are
     year-agnostic; ranges never wrap the new year in v1 config."""
-    today_md = _md(today or datetime.now(timezone.utc).date())
+    today_md = _md(today or datetime.now(UTC).date())
     for card in COMMUNITIES[community].get("seasonal", []):
         if card["from"] <= today_md <= card["to"]:
             return {"title": card["title"], "body": card["body"]}

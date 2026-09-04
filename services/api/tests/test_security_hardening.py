@@ -2,10 +2,11 @@
 hard-delete call, /safety/scan conversation ownership, the PIN attempt cap, and
 JWT role/secret hygiene.
 """
+
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -83,11 +84,12 @@ def _auth(user_id: str) -> dict:
 
 
 def _dob_for_age(years: int) -> str:
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now(UTC).date()
     return (today - timedelta(days=years * 365 + 200)).isoformat()
 
 
 # --- Age gate (Trust & Safety #3) ---
+
 
 @requires_postgres
 def test_age_gate_blocks_under_min_age(client, db_session):
@@ -97,7 +99,7 @@ def test_age_gate_blocks_under_min_age(client, db_session):
 
 @requires_postgres
 def test_age_gate_rejects_future_dob(client, db_session):
-    future = (datetime.now(timezone.utc).date() + timedelta(days=30)).isoformat()
+    future = (datetime.now(UTC).date() + timedelta(days=30)).isoformat()
     resp = client.post("/api/v1/onboarding/start", json={"dob": future})
     assert resp.status_code == 422
 
@@ -114,6 +116,7 @@ def test_age_gate_admits_adult_with_anonymous_persona(client, db_session):
 
 
 # --- Panda Wipe (Trust & Safety #8) ---
+
 
 @requires_postgres
 def test_wipe_hard_deletes_and_requires_ownership(client, db_session, monkeypatch):
@@ -143,6 +146,7 @@ def test_wipe_hard_deletes_and_requires_ownership(client, db_session, monkeypatc
 
 # --- /safety/scan ownership (flag planting) ---
 
+
 @requires_postgres
 def test_scan_rejects_someone_elses_conversation_id(client, db_session):
     owner_id = _seed_user(db_session)
@@ -158,13 +162,12 @@ def test_scan_rejects_someone_elses_conversation_id(client, db_session):
     )
     assert resp.status_code == 404
     with TestSession() as s:
-        flags = s.scalars(
-            select(SafetyFlag).where(SafetyFlag.conversation_id == convo_id)
-        ).all()
+        flags = s.scalars(select(SafetyFlag).where(SafetyFlag.conversation_id == convo_id)).all()
         assert flags == []
 
 
 # --- Safety flags store the signal, never message fragments (T&S #6) ---
+
 
 @requires_postgres
 def test_safety_flag_never_stores_message_text(client, db_session):
@@ -172,9 +175,7 @@ def test_safety_flag_never_stores_message_text(client, db_session):
     db_session.commit()
 
     secret_phrase = "I want to end my life because of zzz-unique-marker"
-    resp = client.post(
-        "/api/v1/safety/scan", json={"text": secret_phrase}, headers=_auth(user_id)
-    )
+    resp = client.post("/api/v1/safety/scan", json={"text": secret_phrase}, headers=_auth(user_id))
     assert resp.status_code == 200 and resp.json()["triggered"]
     with TestSession() as s:
         flag = s.scalars(select(SafetyFlag).where(SafetyFlag.user_id == user_id)).one()
@@ -183,6 +184,7 @@ def test_safety_flag_never_stores_message_text(client, db_session):
 
 
 # --- PIN attempt cap (brute-force lockout) ---
+
 
 @requires_postgres
 def test_pin_attempts_are_rate_limited(client, db_session):
@@ -225,12 +227,13 @@ def test_pin_attempts_are_rate_limited(client, db_session):
 
 # --- JWT role + secret hygiene ---
 
+
 def _creds(token: str) -> HTTPAuthorizationCredentials:
     return HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
 
 
 def _raw_token(payload: dict, secret: str) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     base = {"iat": int(now.timestamp()), "exp": int((now + timedelta(days=1)).timestamp())}
     return jwt.encode({**base, **payload}, secret, algorithm="HS256")
 
@@ -283,7 +286,5 @@ def test_role_isolation_on_user_endpoint(client, db_session):
     db_session.commit()
     assert client.get("/api/v1/journals/summary", headers=_auth(user_id)).status_code == 200
     for token in (issue_listener_token("l1"), issue_admin_token("a1")):
-        resp = client.get(
-            "/api/v1/journals/summary", headers={"Authorization": f"Bearer {token}"}
-        )
+        resp = client.get("/api/v1/journals/summary", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 401

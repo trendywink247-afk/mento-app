@@ -6,6 +6,7 @@
 Looks up the most recently registered push_tokens row for --user-id, or sends
 straight to --token. Requires network access to https://exp.host. Sound is
 always off (no audio anywhere in Mento — T&S #11)."""
+
 from __future__ import annotations
 
 import argparse

@@ -1,5 +1,6 @@
 """Minimal listener console (DECISIONS §I.6): auth scoping, revocation, presence
 gating, conversation/request scoping, accept lifecycle + capacity under concurrency."""
+
 from __future__ import annotations
 
 import threading
@@ -169,23 +170,13 @@ def test_conversation_scoping_and_member_persona(client, db_session):
         uid = _seed_user(s, name="Misty Vale")
         lid_a = _seed_listener(s, name="Open River")
         lid_b = _seed_listener(s, name="Calm Grove")
-        s.add(
-            Conversation(user_id=uid, listener_id=lid_a, status=ConversationStatus.active)
-        )
-        s.add(
-            Conversation(user_id=uid, listener_id=lid_a, status=ConversationStatus.ended)
-        )
-        s.add(
-            Conversation(user_id=uid, listener_id=lid_b, status=ConversationStatus.active)
-        )
+        s.add(Conversation(user_id=uid, listener_id=lid_a, status=ConversationStatus.active))
+        s.add(Conversation(user_id=uid, listener_id=lid_a, status=ConversationStatus.ended))
+        s.add(Conversation(user_id=uid, listener_id=lid_b, status=ConversationStatus.active))
         s.commit()
 
-    rows_a = client.get(
-        "/api/v1/listener/me/conversations", headers=_listener_auth(lid_a)
-    ).json()
-    rows_b = client.get(
-        "/api/v1/listener/me/conversations", headers=_listener_auth(lid_b)
-    ).json()
+    rows_a = client.get("/api/v1/listener/me/conversations", headers=_listener_auth(lid_a)).json()
+    rows_b = client.get("/api/v1/listener/me/conversations", headers=_listener_auth(lid_b)).json()
     assert len(rows_a) == 2 and len(rows_b) == 1
     assert [r["status"] for r in rows_a] == ["active", "ended"]  # active first
     assert rows_a[0]["user_persona_name"] == "Misty Vale"
@@ -223,9 +214,7 @@ def test_request_scoping_accept_decline_and_capacity(client, db_session):
     assert convos[0]["id"] == accepted.json()["conversation_id"]
 
     # Capacity 1 is now full → 409 on the second accept.
-    full = client.post(
-        f"/api/v1/listener/me/requests/{req2}/accept", headers=_listener_auth(lid)
-    )
+    full = client.post(f"/api/v1/listener/me/requests/{req2}/accept", headers=_listener_auth(lid))
     assert full.status_code == 409
 
     declined = client.post(

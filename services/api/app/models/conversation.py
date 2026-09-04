@@ -1,4 +1,5 @@
 """A 1:1 conversation. Message bodies live in Stream Chat, not here (metadata only)."""
+
 from __future__ import annotations
 
 from datetime import datetime

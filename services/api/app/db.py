@@ -1,4 +1,5 @@
 """Database engine, session factory, and Base."""
+
 from __future__ import annotations
 
 from collections.abc import Iterator

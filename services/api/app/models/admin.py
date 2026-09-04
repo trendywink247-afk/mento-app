@@ -1,6 +1,7 @@
 """Admin accounts + an append-only audit log. Admins are the founder and a few
 trusted helpers; every mutating action AND every conversation view writes an audit
 row. Auth is a role-claimed JWT link (see security.py), revocable per-request."""
+
 from __future__ import annotations
 
 from sqlalchemy import JSON, String

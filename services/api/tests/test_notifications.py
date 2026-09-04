@@ -1,4 +1,5 @@
 """Push-token registration — device-testing prerequisite, not a product feature yet."""
+
 from __future__ import annotations
 
 from datetime import date

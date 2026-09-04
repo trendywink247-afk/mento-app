@@ -1,4 +1,5 @@
 """Listener/mentor profile. In v1 chat, listeners appear as anonymous personas."""
+
 from __future__ import annotations
 
 from sqlalchemy import JSON, Integer, String

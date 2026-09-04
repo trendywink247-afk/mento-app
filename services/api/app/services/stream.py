@@ -4,6 +4,7 @@
 on-device-only storage. In dev with no Stream creds, methods degrade to a safe
 local stub so the onboarding/match slice runs without external credentials.
 """
+
 from __future__ import annotations
 
 import logging

@@ -1,4 +1,5 @@
 """Model registry — importing this module registers all mappers."""
+
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation

@@ -1,5 +1,6 @@
 """Admin auth: role isolation (user/listener/admin mutually reject) + per-request
 revocation (status=revoked kills outstanding links immediately)."""
+
 from __future__ import annotations
 
 import pytest

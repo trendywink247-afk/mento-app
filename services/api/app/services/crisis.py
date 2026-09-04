@@ -7,6 +7,7 @@ safeguard. Replace/augment with a trained model and human review (see Trust & Sa
 Contract is intentionally stable so the implementation can be swapped without touching
 callers: `scan(text) -> CrisisResult`.
 """
+
 from __future__ import annotations
 
 import re
@@ -26,43 +27,73 @@ _PATTERNS: list[tuple[SafetySignal, list[str]]] = [
         SafetySignal.suicidal,
         [
             # English
-            r"kill myself", r"end my life", r"want to die", r"suicid", r"better off dead",
-            r"no reason to live", r"take my (own )?life", r"don'?t want to (be here|live)",
+            r"kill myself",
+            r"end my life",
+            r"want to die",
+            r"suicid",
+            r"better off dead",
+            r"no reason to live",
+            r"take my (own )?life",
+            r"don'?t want to (be here|live)",
             # Hinglish (romanized Hindi)
-            r"\bmar+na (?:chah?t[ai]|hai|h[ai])\b",          # marna chahta/chahti, marna hai
-            r"\bmar (?:jaana|jana|jau[n]?|jaun)\b",          # mar jaana / mar jau
-            r"\bjeena nahi\b", r"\bjina nahi\b",             # jeena nahi (chahta)
+            r"\bmar+na (?:chah?t[ai]|hai|h[ai])\b",  # marna chahta/chahti, marna hai
+            r"\bmar (?:jaana|jana|jau[n]?|jaun)\b",  # mar jaana / mar jau
+            r"\bjeena nahi\b",
+            r"\bjina nahi\b",  # jeena nahi (chahta)
             r"\bzindagi (?:khatam|se (?:thak|pareshan))\b",  # zindagi khatam / se thak gaya
-            r"\bkhud ?kushi\b", r"\bkhudkhushi\b",           # khudkushi (suicide)
-            r"\baatma ?hatya\b",                             # aatmahatya (suicide)
-            r"\bjaan de (?:du|dena|dunga|dungi)\b",          # jaan de du / dena
+            r"\bkhud ?kushi\b",
+            r"\bkhudkhushi\b",  # khudkushi (suicide)
+            r"\baatma ?hatya\b",  # aatmahatya (suicide)
+            r"\bjaan de (?:du|dena|dunga|dungi)\b",  # jaan de du / dena
             r"\bmar jaana chahta\b",
             # Hindi (Devanagari)
-            r"मरना चाहत[ाी]", r"मर जाना", r"जीना नहीं", r"ख़?ुदकुशी", r"आत्म ?हत्या",
-            r"जान दे द[ूें]", r"ज़िंदगी ख़?त्म",
+            r"मरना चाहत[ाी]",
+            r"मर जाना",
+            r"जीना नहीं",
+            r"ख़?ुदकुशी",
+            r"आत्म ?हत्या",
+            r"जान दे द[ूें]",
+            r"ज़िंदगी ख़?त्म",
         ],
     ),
     (
         SafetySignal.self_harm,
         [
             # English
-            r"hurt myself", r"harm myself", r"cut myself", r"self[- ]?harm", r"cutting",
+            r"hurt myself",
+            r"harm myself",
+            r"cut myself",
+            r"self[- ]?harm",
+            r"cutting",
             # Hinglish
-            r"\bkhud ko (?:chot|nuksaan|nukasan|maar)", r"\bhaath kaat", r"\bkalai kaat",
+            r"\bkhud ko (?:chot|nuksaan|nukasan|maar)",
+            r"\bhaath kaat",
+            r"\bkalai kaat",
             # Hindi (Devanagari)
-            r"खुद को (?:चोट|नुकसान)", r"हाथ काट", r"कलाई काट",
+            r"खुद को (?:चोट|नुकसान)",
+            r"हाथ काट",
+            r"कलाई काट",
         ],
     ),
     (
         SafetySignal.abuse,
         [
             # English
-            r"being abused", r"he hits me", r"she hits me", r"they hurt me", r"assault", r"raped",
+            r"being abused",
+            r"he hits me",
+            r"she hits me",
+            r"they hurt me",
+            r"assault",
+            r"raped",
             # Hinglish
-            r"\b(?:mujhe|muje) (?:maart[ae]|pit+t[ae]) h[ai]", r"\bghar (?:pe|par) maar",
-            r"\bbalatkar\b", r"\bzabardasti\b",
+            r"\b(?:mujhe|muje) (?:maart[ae]|pit+t[ae]) h[ai]",
+            r"\bghar (?:pe|par) maar",
+            r"\bbalatkar\b",
+            r"\bzabardasti\b",
             # Hindi (Devanagari)
-            r"मुझे (?:मारत[ाे]|पीटत[ाे])", r"बलात्कार", r"ज़बरदस्ती",
+            r"मुझे (?:मारत[ाे]|पीटत[ाे])",
+            r"बलात्कार",
+            r"ज़बरदस्ती",
         ],
     ),
 ]

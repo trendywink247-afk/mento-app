@@ -20,6 +20,7 @@ Design posture (matches the crisis scan): FAIL-OPEN. If redaction raises, the ca
 delivers the original text — we never hard-block a support conversation on a PII scan.
 Nothing here is ever persisted: no body, no redacted content (Trust & Safety #6).
 """
+
 from __future__ import annotations
 
 import logging
@@ -47,7 +48,7 @@ _EMAIL_RE = re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")
 # and long digit runs (Aadhaar/card/landline). 1–3 digit ages never collide with these.
 _PHONE_RES = [
     re.compile(r"(?:\+?91[\s-]?)?\b[6-9]\d{4}[\s-]?\d{5}\b"),  # 10-digit mobile
-    re.compile(r"(?<!\d)\d{7,}(?!\d)"),                        # 7+ digit id / landline
+    re.compile(r"(?<!\d)\d{7,}(?!\d)"),  # 7+ digit id / landline
 ]
 
 # Age disclosures — the NUMBER is captured (group 1); only that span is masked.
@@ -68,9 +69,35 @@ _NAME_RES = [
     re.compile(r"(?:मेरा नाम|नाम है)\s+([ऀ-ॿ]+)"),  # Devanagari intro
 ]
 _NAME_STOPWORDS = {
-    "indian", "sorry", "fine", "okay", "ok", "good", "not", "so", "really", "here",
-    "done", "sure", "glad", "happy", "sad", "tired", "back", "trying", "feeling",
-    "just", "still", "also", "afraid", "scared", "alone", "lost", "done", "the", "a",
+    "indian",
+    "sorry",
+    "fine",
+    "okay",
+    "ok",
+    "good",
+    "not",
+    "so",
+    "really",
+    "here",
+    "done",
+    "sure",
+    "glad",
+    "happy",
+    "sad",
+    "tired",
+    "back",
+    "trying",
+    "feeling",
+    "just",
+    "still",
+    "also",
+    "afraid",
+    "scared",
+    "alone",
+    "lost",
+    "done",
+    "the",
+    "a",
 }
 
 # --- optional Presidio NER -------------------------------------------------------

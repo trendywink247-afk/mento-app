@@ -1,9 +1,10 @@
 """Admin dashboard API (spec 2026-07-13). Web-only console; token-link auth with
 per-request revocation; every mutation + conversation view is audit-logged.
 Anonymity holds: personas only, message bodies never stored."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -88,7 +89,7 @@ def overview(
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> AdminOverviewOut:
-    start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
 
     def count(stmt) -> int:
         return db.execute(stmt).scalar_one()
@@ -98,25 +99,25 @@ def overview(
         select(func.count()).select_from(Conversation).where(Conversation.created_at >= start)
     )
     active = count(
-        select(func.count()).select_from(Conversation).where(
-            Conversation.status == ConversationStatus.active
-        )
+        select(func.count())
+        .select_from(Conversation)
+        .where(Conversation.status == ConversationStatus.active)
     )
     online = count(
-        select(func.count()).select_from(ListenerProfile).where(
+        select(func.count())
+        .select_from(ListenerProfile)
+        .where(
             ListenerProfile.status == ListenerStatus.online,
             ListenerProfile.vetting_status == VettingStatus.approved,
         )
     )
     flags = count(
-        select(func.count()).select_from(SafetyFlag).where(
-            SafetyFlag.reviewed.is_(False), SafetyFlag.signal != SafetySignal.none
-        )
+        select(func.count())
+        .select_from(SafetyFlag)
+        .where(SafetyFlag.reviewed.is_(False), SafetyFlag.signal != SafetySignal.none)
     )
     reports = count(
-        select(func.count()).select_from(ModerationEvent).where(
-            ModerationEvent.reviewed.is_(False)
-        )
+        select(func.count()).select_from(ModerationEvent).where(ModerationEvent.reviewed.is_(False))
     )
 
     attention: list[AttentionItem] = []
@@ -150,12 +151,16 @@ def safety_flags(
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> list[AdminFlagItem]:
-    rows = db.execute(
-        select(SafetyFlag)
-        .where(SafetyFlag.reviewed.is_(reviewed), SafetyFlag.signal != SafetySignal.none)
-        .order_by(SafetyFlag.created_at.desc())
-        .limit(200)
-    ).scalars().all()
+    rows = (
+        db.execute(
+            select(SafetyFlag)
+            .where(SafetyFlag.reviewed.is_(reviewed), SafetyFlag.signal != SafetySignal.none)
+            .order_by(SafetyFlag.created_at.desc())
+            .limit(200)
+        )
+        .scalars()
+        .all()
+    )
     out = []
     for f in rows:
         member = listener = None
@@ -194,7 +199,11 @@ def review_flag(
     flag.reviewed_by = admin.name
     flag.action = payload.action
     audit.record(
-        db, admin, "flag.reviewed", subject_type="safety_flag", subject_id=flag_id,
+        db,
+        admin,
+        "flag.reviewed",
+        subject_type="safety_flag",
+        subject_id=flag_id,
         meta={"action": payload.action},
     )
     db.commit()
@@ -212,9 +221,7 @@ def conversation_messages(
     convo = db.get(Conversation, convo_id)
     if convo is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
-    audit.record(
-        db, admin, "conversation.viewed", subject_type="conversation", subject_id=convo_id
-    )
+    audit.record(db, admin, "conversation.viewed", subject_type="conversation", subject_id=convo_id)
     db.commit()
     msgs = stream.fetch_channel_messages(convo.stream_channel_id or "")
     return [AdminMessageItem(**m) for m in msgs]
@@ -228,12 +235,16 @@ def moderation_queue(
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> list[ModerationItem]:
-    events = db.execute(
-        select(ModerationEvent)
-        .where(ModerationEvent.reviewed.is_(False))
-        .order_by(ModerationEvent.created_at.desc())
-        .limit(200)
-    ).scalars().all()
+    events = (
+        db.execute(
+            select(ModerationEvent)
+            .where(ModerationEvent.reviewed.is_(False))
+            .order_by(ModerationEvent.created_at.desc())
+            .limit(200)
+        )
+        .scalars()
+        .all()
+    )
     return [
         ModerationItem(
             id=e.id,
@@ -333,9 +344,11 @@ def admin_listeners(
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> list[AdminListenerItem]:
-    rows = db.execute(
-        select(ListenerProfile).order_by(ListenerProfile.persona_name.asc())
-    ).scalars().all()
+    rows = (
+        db.execute(select(ListenerProfile).order_by(ListenerProfile.persona_name.asc()))
+        .scalars()
+        .all()
+    )
     return [_listener_item(li) for li in rows]
 
 
@@ -567,9 +580,11 @@ def admin_contributions(
     # Razorpay not wired yet — the table schema is ready; ships empty until then.
     from app.models.contribution import Contribution
 
-    rows = db.execute(
-        select(Contribution).order_by(Contribution.created_at.desc()).limit(200)
-    ).scalars().all()
+    rows = (
+        db.execute(select(Contribution).order_by(Contribution.created_at.desc()).limit(200))
+        .scalars()
+        .all()
+    )
     return [
         AdminContributionItem(
             id=c.id,
@@ -586,9 +601,7 @@ def admin_contributions(
 
 @router.get("/admins", response_model=list[AdminAccountItem], dependencies=[Depends(require_owner)])
 def list_admins(db: Session = Depends(get_db)) -> list[AdminAccountItem]:
-    rows = db.execute(
-        select(AdminAccount).order_by(AdminAccount.created_at.asc())
-    ).scalars().all()
+    rows = db.execute(select(AdminAccount).order_by(AdminAccount.created_at.asc())).scalars().all()
     return [
         AdminAccountItem(
             id=a.id,
@@ -639,9 +652,11 @@ def audit_log(
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> list[AdminAuditItem]:
-    rows = db.execute(
-        select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(200)
-    ).scalars().all()
+    rows = (
+        db.execute(select(AdminAuditLog).order_by(AdminAuditLog.created_at.desc()).limit(200))
+        .scalars()
+        .all()
+    )
     return [
         AdminAuditItem(
             id=a.id,

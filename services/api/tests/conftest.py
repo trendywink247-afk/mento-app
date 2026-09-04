@@ -4,6 +4,7 @@ These tests prove that General matching cannot double-assign a listener under
 concurrency. That guarantee depends on `SELECT ... FOR UPDATE SKIP LOCKED`,
 which is a *no-op on SQLite* — so the suite only runs against Postgres.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

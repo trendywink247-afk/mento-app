@@ -1,4 +1,5 @@
 """My Chats backing endpoints: owner-scoped list + the verify-pin open gate."""
+
 from __future__ import annotations
 
 import uuid
@@ -93,9 +94,13 @@ def test_verify_pin_gates_without_unlocking(client, db_session):
 
     client.post(f"/api/v1/conversations/{cid}/lock", json={"pin": "4321"}, headers=_auth(uid))
 
-    wrong = client.post(f"/api/v1/conversations/{cid}/verify-pin", json={"pin": "1111"}, headers=_auth(uid))
+    wrong = client.post(
+        f"/api/v1/conversations/{cid}/verify-pin", json={"pin": "1111"}, headers=_auth(uid)
+    )
     assert wrong.status_code == 403
-    right = client.post(f"/api/v1/conversations/{cid}/verify-pin", json={"pin": "4321"}, headers=_auth(uid))
+    right = client.post(
+        f"/api/v1/conversations/{cid}/verify-pin", json={"pin": "4321"}, headers=_auth(uid)
+    )
     assert right.status_code == 200
 
     # Still locked afterwards — verify is a gate, not an unlock.

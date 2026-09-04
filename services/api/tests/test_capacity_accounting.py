@@ -1,9 +1,10 @@
 """Listener capacity accounting: release is idempotent and race-safe, and the admin
 reconcile action heals both counter drift and leaked slots from stale conversations.
 """
+
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -135,7 +136,7 @@ def test_reconcile_ends_stale_conversations_and_frees_slots(client, db_session):
     with TestSession() as s:
         uid = _seed_user(s)
         lid = _seed_listener(s, active=1)
-        stale_created = datetime.now(timezone.utc) - timedelta(hours=25)
+        stale_created = datetime.now(UTC) - timedelta(hours=25)
         cid = _seed_active_convo(s, uid, lid, created_at=stale_created)
         admin_h = _admin_auth(s)
         s.commit()

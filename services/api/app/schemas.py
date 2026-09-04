@@ -1,4 +1,5 @@
 """Request/response models (Pydantic v2)."""
+
 from __future__ import annotations
 
 import json
@@ -25,8 +26,8 @@ class PersonaOut(BaseModel):
 
 
 class OnboardingResult(BaseModel):
-    session_token: str   # Mento anonymous JWT
-    stream_token: str    # Stream Chat client token
+    session_token: str  # Mento anonymous JWT
+    stream_token: str  # Stream Chat client token
     user: PersonaOut
 
 
@@ -48,6 +49,7 @@ class MatchResult(BaseModel):
 # --- Listener discovery + personal requests ---
 class ListenerOut(BaseModel):
     """Anonymous persona card — no real names/photos/star ratings in v1 (T&S #7)."""
+
     id: str
     persona_name: str
     persona_avatar: str
@@ -74,6 +76,7 @@ class RequestOut(BaseModel):
 # --- Listener console (minimal, DECISIONS §I.6) ---
 class ListenerMeOut(BaseModel):
     """The authenticated listener's own profile + a Stream token to join channels."""
+
     id: str
     persona_name: str
     persona_avatar: str
@@ -157,6 +160,7 @@ class AdminConsoleLinkOut(BaseModel):
 
 class AdminReconcileOut(BaseModel):
     """Result of the capacity reconcile action: stale chats ended + counters fixed."""
+
     stale_ended: int
     listeners_corrected: int
 
@@ -204,6 +208,7 @@ class AdminAuditItem(BaseModel):
 
 class DevListenerItem(BaseModel):
     """Dev-only roster row for the /listener no-token picker (never served in prod)."""
+
     id: str
     persona_name: str
     persona_avatar: str
@@ -212,6 +217,7 @@ class DevListenerItem(BaseModel):
 
 class DevTokenOut(BaseModel):
     """Dev-only: a freshly minted console token for a picked listener."""
+
     token: str
 
 
@@ -225,6 +231,7 @@ class ListenerConversationItem(BaseModel):
     identity — and none of the member's privacy controls (lock/PIN are theirs).
     ``member_masked`` surfaces only THAT the member set a Panda Mask (so the
     listener sees "away" instead of silence), never the mask text itself."""
+
     id: str
     status: str
     user_persona_name: str
@@ -281,6 +288,7 @@ class ReportRequest(BaseModel):
 
 class ConversationListItem(BaseModel):
     """Row for My Chats (#54/55). Message previews come from Stream client-side."""
+
     id: str
     status: str
     listener_persona_name: str
@@ -297,6 +305,7 @@ class VerifyPinRequest(BaseModel):
 
 class ConversationState(BaseModel):
     """Echoed back so the client can reflect the options sheet without guessing."""
+
     id: str
     status: str
     is_locked: bool
@@ -370,6 +379,7 @@ class PushTokenIn(BaseModel):
 # --- Paths (Communities) ---
 class PathTree(BaseModel):
     """Pathfinder question tree — the client walks it blindly (data-driven)."""
+
     root: str
     nodes: dict
 
@@ -393,6 +403,7 @@ class PathStageOut(BaseModel):
 
 class PathSeasonalOut(BaseModel):
     """The emotional-calendar card active right now."""
+
     title: str
     body: str
 

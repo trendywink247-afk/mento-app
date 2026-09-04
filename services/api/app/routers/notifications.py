@@ -4,6 +4,7 @@ Sending is a one-off script (scripts/send_test_push.py), not a product
 feature yet; this router just owns the register-token loop so a device can
 be found by user id when we want to push to it.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
@@ -27,7 +28,10 @@ def register_token(
 ) -> dict:
     # Reinstall/re-onboard churn on one device, not abuse — generous window.
     ratelimit.enforce(
-        f"push-token:{user_id}", 20, 3600, detail="Too many token registrations — please wait a moment."
+        f"push-token:{user_id}",
+        20,
+        3600,
+        detail="Too many token registrations — please wait a moment.",
     )
     # Upsert by token value: a device that lands on a new anonymous user_id
     # (reinstall) re-points the existing row instead of leaving a stale duplicate.

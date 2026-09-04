@@ -6,6 +6,7 @@ A3: forged X-Forwarded-For can't mint fresh rate-limit identities by default.
 A4: the PIN guard fails CLOSED (503) on Redis outage instead of unlimited guesses.
 A6: outside dev the API refuses to boot with an empty/shared ADMIN_JWT_SECRET.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -18,12 +19,12 @@ from fastapi import HTTPException
 from app import ratelimit
 from app.config import Settings, get_settings
 
-
 # --- A1: dedicated crisis-scan limiter ---------------------------------------
 
 
 def test_crisis_scan_uses_dedicated_capacity_limiter():
     import anyio
+
     from app.routers import stream_hooks
 
     limiter = stream_hooks._get_crisis_limiter()
@@ -50,9 +51,7 @@ def test_crisis_scan_runs_under_the_limiter(monkeypatch):
         "_scan_event",
         lambda **kw: SimpleNamespace(triggered=False, signal=None, helplines=[]),
     )
-    asyncio.run(
-        stream_hooks._run_scan(text="hi", user_id="u", channel_id=None, message_id=None)
-    )
+    asyncio.run(stream_hooks._run_scan(text="hi", user_id="u", channel_id=None, message_id=None))
     assert seen["limiter"] is stream_hooks._get_crisis_limiter()
 
 
@@ -208,6 +207,4 @@ def test_prod_refuses_empty_admin_jwt_secret():
 
 
 def test_prod_refuses_admin_secret_equal_to_jwt_secret():
-    assert "ADMIN_JWT_SECRET" in _boot_problems(
-        admin_jwt_secret="a-real-long-random-secret"
-    )
+    assert "ADMIN_JWT_SECRET" in _boot_problems(admin_jwt_secret="a-real-long-random-secret")

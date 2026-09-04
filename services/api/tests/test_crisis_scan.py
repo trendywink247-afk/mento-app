@@ -5,6 +5,7 @@ the scan MUST fire on the register users actually type in, not just English
 (Trust & Safety #1). These tests pin the contract for every future lexicon or
 model swap: the phrases below must always trigger, the benign ones never.
 """
+
 from __future__ import annotations
 
 import pytest
@@ -62,7 +63,7 @@ def test_self_harm_and_abuse_signals_trigger(text: str, signal: SafetySignal) ->
         "thanks, that really helped a lot",
         "my exam is killing me lol",  # figurative but no first-person pattern
         # Benign Hinglish — must not false-positive on common words
-        "main market ja raha hun",       # "mar" inside "market" must not match
+        "main market ja raha hun",  # "mar" inside "market" must not match
         "marne ki baat mat karo, sab theek hai",
         "zindagi acchi chal rahi hai",
         "kal ka din accha tha",

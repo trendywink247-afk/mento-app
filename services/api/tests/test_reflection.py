@@ -1,4 +1,5 @@
 """End-of-conversation reflection — private, idempotent, no identity column."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -59,11 +60,15 @@ def test_reflection_saves_and_updates_idempotently(client, db_session):
         uid, cid = _seed(s)
         s.commit()
 
-    r = client.post(f"/api/v1/conversations/{cid}/reflection", json={"energy": 4}, headers=_auth(uid))
+    r = client.post(
+        f"/api/v1/conversations/{cid}/reflection", json={"energy": 4}, headers=_auth(uid)
+    )
     assert r.status_code == 200
 
     # Re-submitting updates the single row rather than adding another.
-    r = client.post(f"/api/v1/conversations/{cid}/reflection", json={"energy": 2}, headers=_auth(uid))
+    r = client.post(
+        f"/api/v1/conversations/{cid}/reflection", json={"energy": 2}, headers=_auth(uid)
+    )
     assert r.status_code == 200
     with TestSession() as s:
         rows = s.scalars(select(ConversationReflection)).all()
@@ -83,11 +88,15 @@ def test_reflection_rejects_out_of_range_and_strangers(client, db_session):
         s.commit()
 
     assert (
-        client.post(f"/api/v1/conversations/{cid}/reflection", json={"energy": 6}, headers=_auth(uid)).status_code
+        client.post(
+            f"/api/v1/conversations/{cid}/reflection", json={"energy": 6}, headers=_auth(uid)
+        ).status_code
         == 422
     )
     assert (
-        client.post(f"/api/v1/conversations/{cid}/reflection", json={"energy": 3}, headers=_auth(sid)).status_code
+        client.post(
+            f"/api/v1/conversations/{cid}/reflection", json={"energy": 3}, headers=_auth(sid)
+        ).status_code
         == 404
     )
 

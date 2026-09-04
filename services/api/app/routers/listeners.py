@@ -6,6 +6,7 @@ inbox; accept/decline is exposed behind the audited admin-console auth as the
 stand-in for the deferred Module B mentor portal, so the full request lifecycle is
 real and testable today without a mentor app.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -143,7 +144,9 @@ def accept_request(
         raise HTTPException(
             status.HTTP_409_CONFLICT, "listener has no capacity right now"
         ) from None
-    audit.record(db, admin, "personal_request.accept", subject_type="request", subject_id=request_id)
+    audit.record(
+        db, admin, "personal_request.accept", subject_type="request", subject_id=request_id
+    )
     db.commit()
     return _request_out(req)
 
@@ -158,6 +161,8 @@ def decline_request(
         decline_personal_request(db, request_id)
     except RequestNotPending:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found") from None
-    audit.record(db, admin, "personal_request.decline", subject_type="request", subject_id=request_id)
+    audit.record(
+        db, admin, "personal_request.decline", subject_type="request", subject_id=request_id
+    )
     db.commit()
     return OkResult(status="declined")

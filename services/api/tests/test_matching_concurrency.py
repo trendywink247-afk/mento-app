@@ -7,6 +7,7 @@ listener with capacity 1, exactly one request must win; the rest must get
 demonstrates both the *mechanism* (SKIP LOCKED skips a held row) and the
 *outcome* (a thundering-herd of requests yields exactly one assignment).
 """
+
 from __future__ import annotations
 
 import threading

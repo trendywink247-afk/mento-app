@@ -1,4 +1,5 @@
 """Safety flag raised by the crisis scan (PRD §10). Human review follows."""
+
 from __future__ import annotations
 
 from sqlalchemy import Boolean, String

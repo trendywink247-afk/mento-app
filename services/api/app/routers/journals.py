@@ -5,6 +5,7 @@ belong to the anonymous user only; the body is the message text the user chose t
 keep (their own data), with the conversation/message ids tucked into meta for
 dedupe — never analytics.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -59,8 +60,7 @@ def save_mentor_note(
             .where(
                 JournalEntry.user_id == user_id,
                 JournalEntry.channel == JournalChannel.mentor_notes,
-                JournalEntry.meta["stream_message_id"].as_string()
-                == payload.stream_message_id,
+                JournalEntry.meta["stream_message_id"].as_string() == payload.stream_message_id,
             )
             .limit(1)
         ).first()
@@ -188,7 +188,9 @@ def organize_notes(
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "the note-sorting AI could not respond")
     return OrganizeOut(
         overview=result.overview,
-        themes=[OrganizeTheme(title=t.title, summary=t.summary, count=t.count) for t in result.themes],
+        themes=[
+            OrganizeTheme(title=t.title, summary=t.summary, count=t.count) for t in result.themes
+        ],
         entry_count=len(bodies),
     )
 

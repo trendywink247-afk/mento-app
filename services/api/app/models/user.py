@@ -1,4 +1,5 @@
 """Anonymous user. Minimal PII by design (Trust & Safety #6)."""
+
 from __future__ import annotations
 
 from datetime import date

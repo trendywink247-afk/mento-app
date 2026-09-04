@@ -5,9 +5,10 @@ end, Panda Wipe (real server delete), report, block. Report and block both END t
 conversation and file a moderation event; block additionally prevents that listener
 from ever being re-matched to this user (see services/matching).
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, update
@@ -108,21 +109,19 @@ def list_conversations(
     listeners = {
         li.id: li
         for li in db.scalars(
-            select(ListenerProfile).where(
-                ListenerProfile.id.in_({c.listener_id for c in convos})
-            )
+            select(ListenerProfile).where(ListenerProfile.id.in_({c.listener_id for c in convos}))
         ).all()
     }
     return [
         ConversationListItem(
             id=c.id,
             status=c.status.value,
-            listener_persona_name=listeners[c.listener_id].persona_name
-            if c.listener_id in listeners
-            else "Listener",
-            listener_persona_avatar=listeners[c.listener_id].persona_avatar
-            if c.listener_id in listeners
-            else "",
+            listener_persona_name=(
+                listeners[c.listener_id].persona_name if c.listener_id in listeners else "Listener"
+            ),
+            listener_persona_avatar=(
+                listeners[c.listener_id].persona_avatar if c.listener_id in listeners else ""
+            ),
             stream_channel_id=c.stream_channel_id,
             is_locked=c.is_locked,
             created_at=c.created_at.isoformat(),
@@ -225,7 +224,7 @@ def end_conversation(
     convo = _owned(db, convo_id, user_id)
     if convo.status == ConversationStatus.active:
         convo.status = ConversationStatus.ended
-        convo.ended_at = datetime.now(timezone.utc)
+        convo.ended_at = datetime.now(UTC)
         _release_listener(db, convo)
     db.commit()
     return OkResult(status="ended")
@@ -246,7 +245,7 @@ def wipe_conversation(
         stream.wipe_channel(convo.stream_channel_id)
     convo.status = ConversationStatus.wiped
     if convo.ended_at is None:
-        convo.ended_at = datetime.now(timezone.utc)
+        convo.ended_at = datetime.now(UTC)
     if was_active:
         _release_listener(db, convo)
     db.commit()
@@ -297,7 +296,7 @@ def _file_moderation_and_end(
     )
     if convo.status == ConversationStatus.active:
         convo.status = ConversationStatus.ended
-        convo.ended_at = datetime.now(timezone.utc)
+        convo.ended_at = datetime.now(UTC)
         _release_listener(db, convo)
 
 

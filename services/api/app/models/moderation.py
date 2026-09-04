@@ -1,4 +1,5 @@
 """Moderation events (PRD §11). Report/Block files one of these."""
+
 from __future__ import annotations
 
 from sqlalchemy import Boolean, Index, String, Text

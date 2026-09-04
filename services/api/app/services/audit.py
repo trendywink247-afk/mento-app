@@ -1,5 +1,6 @@
 """One writer for the admin audit trail. Called by every mutating admin endpoint
 AND every conversation view (reads are logged). Never stores message content."""
+
 from __future__ import annotations
 
 from sqlalchemy.orm import Session

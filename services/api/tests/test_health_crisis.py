@@ -2,9 +2,10 @@
 
 Unit tests with monkeypatched Redis/stream state; no live services needed.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -31,8 +32,10 @@ def _patch(monkeypatch, *, configured: bool, last: str | None | Exception):
     from app import ratelimit
 
     if isinstance(last, Exception):
+
         def boom():
             raise last
+
         monkeypatch.setattr(ratelimit, "_redis", boom)
     else:
         monkeypatch.setattr(ratelimit, "_redis", lambda: _FakeRedis(last))
@@ -46,7 +49,7 @@ def test_stub_mode_is_ok(client, monkeypatch):
 
 
 def test_recent_webhook_is_ok(client, monkeypatch):
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
     _patch(monkeypatch, configured=True, last=now)
     r = client.get("/api/v1/health/crisis")
     assert r.status_code == 200
@@ -54,7 +57,7 @@ def test_recent_webhook_is_ok(client, monkeypatch):
 
 
 def test_stale_webhook_is_503(client, monkeypatch):
-    stale = (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat()
+    stale = (datetime.now(UTC) - timedelta(hours=2)).isoformat()
     _patch(monkeypatch, configured=True, last=stale)
     r = client.get("/api/v1/health/crisis")
     assert r.status_code == 503

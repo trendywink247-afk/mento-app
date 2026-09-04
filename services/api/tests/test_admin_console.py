@@ -1,5 +1,6 @@
 """Admin dashboard endpoints: overview counts, safety review + live view + audit,
 moderation resolve + suspend, listener CRUD, health, admins + audit."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -100,8 +101,11 @@ def test_safety_flag_review_writes_audit(client, db_session):
     uid = _user(db_session)
     lid = _listener(db_session)
     c = Conversation(
-        type="anon", status=ConversationStatus.active, user_id=uid,
-        listener_id=lid, stream_channel_id="c-x1",
+        type="anon",
+        status=ConversationStatus.active,
+        user_id=uid,
+        listener_id=lid,
+        stream_channel_id="c-x1",
     )
     db_session.add(c)
     db_session.flush()
@@ -116,7 +120,8 @@ def test_safety_flag_review_writes_audit(client, db_session):
 
     rev = client.post(
         f"/api/v1/admin/safety/flags/{fid}/review",
-        json={"action": "helpline_shown"}, headers=_auth(admin_id),
+        json={"action": "helpline_shown"},
+        headers=_auth(admin_id),
     )
     assert rev.status_code == 200
     with TestSession() as s:
@@ -130,7 +135,8 @@ def test_safety_flag_review_writes_audit(client, db_session):
 @requires_postgres
 def test_live_conversation_view_is_audited(client, db_session, monkeypatch):
     monkeypatch.setattr(
-        stream, "fetch_channel_messages",
+        stream,
+        "fetch_channel_messages",
         lambda cid: [
             {"id": "m1", "text": "hi", "user_persona": "Quiet Cove", "at": "2026-07-13T00:00:00Z"}
         ],
@@ -139,8 +145,11 @@ def test_live_conversation_view_is_audited(client, db_session, monkeypatch):
     uid = _user(db_session)
     lid = _listener(db_session)
     c = Conversation(
-        type="anon", status=ConversationStatus.active, user_id=uid,
-        listener_id=lid, stream_channel_id="c-x2",
+        type="anon",
+        status=ConversationStatus.active,
+        user_id=uid,
+        listener_id=lid,
+        stream_channel_id="c-x2",
     )
     db_session.add(c)
     db_session.commit()
@@ -178,7 +187,8 @@ def test_listener_roster_and_create_and_link(client, db_session):
 
     created = client.post(
         "/api/v1/admin/listeners",
-        json={"categories": ["anxiety"], "max_concurrent": 4}, headers=_auth(admin_id),
+        json={"categories": ["anxiety"], "max_concurrent": 4},
+        headers=_auth(admin_id),
     )
     assert created.status_code == 200
     new_id = created.json()["id"]

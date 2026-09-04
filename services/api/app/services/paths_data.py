@@ -6,6 +6,7 @@ router so the app stays data-driven. Moves to a DB table only when admins need t
 edit it live. A community is a LENS (matching preference + tuned copy) — never a
 feed; anonymity rails are untouched.
 """
+
 from __future__ import annotations
 
 # ---------------------------------------------------------------------------
@@ -76,14 +77,30 @@ COMMUNITIES: dict[str, dict] = {
         },
         # Emotional calendar (month-day ranges, year-agnostic). Founder's 7 timings.
         "seasonal": [
-            {"from": "05-24", "to": "06-07", "title": "Prelims just happened.",
-             "body": "However it went, you're welcome here. A lot of people are sitting with the same feeling."},
-            {"from": "06-08", "to": "07-05", "title": "The result wait.",
-             "body": "The space between paper and result is heavy for everyone. You don't have to carry it alone."},
-            {"from": "09-15", "to": "10-05", "title": "Mains season.",
-             "body": "Writing mains is a feat. Whatever stage you're at — someone here has walked it."},
-            {"from": "12-01", "to": "12-20", "title": "Interview months.",
-             "body": "The last mile has its own weight. Talk it out with someone who's been in that room."},
+            {
+                "from": "05-24",
+                "to": "06-07",
+                "title": "Prelims just happened.",
+                "body": "However it went, you're welcome here. A lot of people are sitting with the same feeling.",
+            },
+            {
+                "from": "06-08",
+                "to": "07-05",
+                "title": "The result wait.",
+                "body": "The space between paper and result is heavy for everyone. You don't have to carry it alone.",
+            },
+            {
+                "from": "09-15",
+                "to": "10-05",
+                "title": "Mains season.",
+                "body": "Writing mains is a feat. Whatever stage you're at — someone here has walked it.",
+            },
+            {
+                "from": "12-01",
+                "to": "12-20",
+                "title": "Interview months.",
+                "body": "The last mile has its own weight. Talk it out with someone who's been in that room.",
+            },
         ],
     },
     "neet": {
@@ -118,10 +135,18 @@ COMMUNITIES: dict[str, dict] = {
             },
         },
         "seasonal": [
-            {"from": "05-01", "to": "05-15", "title": "Exam week energy.",
-             "body": "NEET days are heavy days. Whatever happens in that hall, you're more than a rank."},
-            {"from": "06-01", "to": "06-20", "title": "Results season.",
-             "body": "Ranks are loud right now. Your worth isn't. Talk to someone who gets it."},
+            {
+                "from": "05-01",
+                "to": "05-15",
+                "title": "Exam week energy.",
+                "body": "NEET days are heavy days. Whatever happens in that hall, you're more than a rank.",
+            },
+            {
+                "from": "06-01",
+                "to": "06-20",
+                "title": "Results season.",
+                "body": "Ranks are loud right now. Your worth isn't. Talk to someone who gets it.",
+            },
         ],
     },
     "jee": {
@@ -147,10 +172,18 @@ COMMUNITIES: dict[str, dict] = {
             },
         },
         "seasonal": [
-            {"from": "01-20", "to": "02-05", "title": "Mains season.",
-             "body": "Attempt one is done or near. Breathe. You have people here."},
-            {"from": "05-15", "to": "06-10", "title": "Advanced and after.",
-             "body": "However the paper went, the pressure is real and so is the support here."},
+            {
+                "from": "01-20",
+                "to": "02-05",
+                "title": "Mains season.",
+                "body": "Attempt one is done or near. Breathe. You have people here.",
+            },
+            {
+                "from": "05-15",
+                "to": "06-10",
+                "title": "Advanced and after.",
+                "body": "However the paper went, the pressure is real and so is the support here.",
+            },
         ],
     },
     "exams": {
@@ -224,12 +257,24 @@ TREE: dict[str, dict] = {
         "question": "What brings you here these days?",
         "options": [
             {"label": "I'm preparing for an exam", "icon": "school-outline", "next": "q_exam"},
-            {"label": "Life feels heavy right now", "icon": "cloudy-outline",
-             "community": "life", "stage": "heavy_days"},
-            {"label": "I'm at a crossroads about my direction", "icon": "git-branch-outline",
-             "community": "life", "stage": "crossroads"},
-            {"label": "I just want someone to talk to", "icon": "chatbubble-ellipses-outline",
-             "community": "life", "stage": "open_door"},
+            {
+                "label": "Life feels heavy right now",
+                "icon": "cloudy-outline",
+                "community": "life",
+                "stage": "heavy_days",
+            },
+            {
+                "label": "I'm at a crossroads about my direction",
+                "icon": "git-branch-outline",
+                "community": "life",
+                "stage": "crossroads",
+            },
+            {
+                "label": "I just want someone to talk to",
+                "icon": "chatbubble-ellipses-outline",
+                "community": "life",
+                "stage": "open_door",
+            },
         ],
     },
     "q_exam": {

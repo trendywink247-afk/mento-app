@@ -6,6 +6,7 @@
 
 Prints /admin#token=... (a URL fragment — never in server logs). Revoke from the
 Admins tab, or by flipping status=revoked."""
+
 from __future__ import annotations
 
 import argparse

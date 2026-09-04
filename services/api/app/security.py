@@ -1,9 +1,10 @@
 """Anonymous session tokens (JWT). No passwords, no PII in the token."""
+
 from __future__ import annotations
 
 import hashlib
 import hmac
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -40,7 +41,7 @@ def verify_pin(pin: str, salt: str, pin_hash: str | None) -> bool:
 def issue_session_token(user_id: str) -> str:
     """Mint an anonymous session JWT carrying the opaque user id and an explicit
     user role claim."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": user_id,
         "role": "user",
@@ -53,7 +54,7 @@ def issue_session_token(user_id: str) -> str:
 def issue_listener_token(listener_id: str) -> str:
     """Mint a listener-console JWT (role claim distinguishes it from user sessions;
     revocation is the per-request vetting_status check, not the token itself)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": listener_id,
         "role": "listener",
@@ -65,7 +66,7 @@ def issue_listener_token(listener_id: str) -> str:
 
 def issue_admin_token(admin_id: str) -> str:
     """Mint an admin-console JWT (role claim; revocation = per-request status check)."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": admin_id,
         "role": "admin",

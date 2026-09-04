@@ -1,9 +1,10 @@
 """Listener matching. General → next-available; Personal → directed (deferred accept)."""
+
 from __future__ import annotations
 
 import uuid
 from collections.abc import Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
@@ -39,24 +40,32 @@ class ListenerAtCapacity(Exception):
 
 def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
     """Listeners this user has blocked — never re-match them (Trust & Safety #9)."""
-    rows = db.execute(
-        select(ModerationEvent.subject_id).where(
-            ModerationEvent.reporter_id == user_id,
-            ModerationEvent.blocked.is_(True),
+    rows = (
+        db.execute(
+            select(ModerationEvent.subject_id).where(
+                ModerationEvent.reporter_id == user_id,
+                ModerationEvent.blocked.is_(True),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return set(rows)
 
 
 def _own_listener_ids(db: Session, user_id: str) -> set[str]:
     """Listener profiles minted from this user's own applications (session 22
     funnel) — a member who became a listener must never be paired with themself."""
-    rows = db.execute(
-        select(ListenerApplication.listener_id).where(
-            ListenerApplication.user_id == user_id,
-            ListenerApplication.listener_id.is_not(None),
+    rows = (
+        db.execute(
+            select(ListenerApplication.listener_id).where(
+                ListenerApplication.user_id == user_id,
+                ListenerApplication.listener_id.is_not(None),
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return set(rows)
 
 
@@ -77,19 +86,16 @@ def _pick_available_listener(
     be stale). Locking all 10 made competitors skip every locked candidate and 503
     spuriously, and (worse) the lock used to be held across the Stream HTTP call.
     """
-    preview = (
-        db.execute(
-            select(ListenerProfile.id, ListenerProfile.categories, ListenerProfile.community_slug)
-            .where(
-                ListenerProfile.vetting_status == VettingStatus.approved,
-                ListenerProfile.status == ListenerStatus.online,
-                ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
-            )
-            .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
-            .limit(10)
+    preview = db.execute(
+        select(ListenerProfile.id, ListenerProfile.categories, ListenerProfile.community_slug)
+        .where(
+            ListenerProfile.vetting_status == VettingStatus.approved,
+            ListenerProfile.status == ListenerStatus.online,
+            ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
         )
-        .all()
-    )
+        .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
+        .limit(10)
+    ).all()
     ranked = [(lid, cats, comm) for lid, cats, comm in preview if lid not in blocked_ids]
 
     def _tier(cats: list[str] | None, comm: str | None) -> int:
@@ -257,14 +263,14 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
     Returns counts for the admin console: {"stale_ended": n, "listeners_corrected": n}.
     """
     max_age = timedelta(hours=get_settings().conversation_max_age_hours)
-    cutoff = datetime.now(timezone.utc) - max_age
+    cutoff = datetime.now(UTC) - max_age
     stale = db.execute(
         update(Conversation)
         .where(
             Conversation.status == ConversationStatus.active,
             Conversation.created_at < cutoff,
         )
-        .values(status=ConversationStatus.ended, ended_at=datetime.now(timezone.utc))
+        .values(status=ConversationStatus.ended, ended_at=datetime.now(UTC))
     )
 
     # True per-listener load, computed in SQL. COUNT over zero rows is 0, so

@@ -1,4 +1,5 @@
 """Listener discovery + Personal request lifecycle (request → accept/decline)."""
+
 from __future__ import annotations
 
 from datetime import date
@@ -105,9 +106,7 @@ def test_personal_request_lifecycle_accept(client, db_session):
     )
     assert again.json()["id"] == req_id
 
-    accepted = client.post(
-        f"/api/v1/listeners/requests/{req_id}/accept", headers=_admin_auth(aid)
-    )
+    accepted = client.post(f"/api/v1/listeners/requests/{req_id}/accept", headers=_admin_auth(aid))
     assert accepted.status_code == 200
     assert accepted.json()["status"] == "matched"
     assert accepted.json()["conversation_id"]

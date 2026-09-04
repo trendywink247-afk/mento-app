@@ -3,9 +3,10 @@
 Member-facing half of the funnel: apply + poll status. Approval/decline live in
 the admin console router. `decline_reason` is deliberately absent from every
 response here (T&S: no wound-poking)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -62,7 +63,9 @@ def apply(
     db: Session = Depends(get_db),
 ) -> ListenerApplicationOut:
     ratelimit.enforce(
-        f"listener-apply:{user_id}", 3, 24 * 3600,
+        f"listener-apply:{user_id}",
+        3,
+        24 * 3600,
         detail="Too many attempts today — please try again tomorrow.",
     )
     if not payload.pledge_accepted:
@@ -71,7 +74,9 @@ def apply(
         )
     unknown = [c for c in payload.communities if c not in COMMUNITIES]
     if unknown:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, f"Unknown community: {unknown[0]}")
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, f"Unknown community: {unknown[0]}"
+        )
 
     # Serialize per-user apply: the check-then-insert below must not race itself
     # (two concurrent POSTs would create two pending rows). Row lock on the user,
@@ -87,8 +92,8 @@ def apply(
         # column is the precise fix if that ever matters).
         declined_at = latest.updated_at
         if declined_at.tzinfo is None:
-            declined_at = declined_at.replace(tzinfo=timezone.utc)
-        if datetime.now(timezone.utc) - declined_at < REAPPLY_COOLDOWN:
+            declined_at = declined_at.replace(tzinfo=UTC)
+        if datetime.now(UTC) - declined_at < REAPPLY_COOLDOWN:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
                 "Please wait a little before applying again — we'd love to hear from you later.",
@@ -101,7 +106,7 @@ def apply(
         availability=payload.availability,
         email=payload.email,
         mentor_interest=payload.mentor_interest,
-        pledge_accepted_at=datetime.now(timezone.utc),
+        pledge_accepted_at=datetime.now(UTC),
     )
     db.add(row)
     db.commit()

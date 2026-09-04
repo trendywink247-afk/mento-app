@@ -7,6 +7,7 @@ Sets:
   before_message_send_hook_url -> <base>/api/v1/stream/before-message-send  (sync enforcement)
   webhook_url                  -> <base>/api/v1/stream/webhook              (async safety net)
 """
+
 from __future__ import annotations
 
 import sys

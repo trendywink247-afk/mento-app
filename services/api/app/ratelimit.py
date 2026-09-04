@@ -17,6 +17,7 @@ is a support app — an infra hiccup must degrade to "no throttle", never to
 Exception: call sites guarding secrets (the conversation PIN) pass
 ``fail_closed=True`` and get a 503 instead — see routers/conversation.py.
 """
+
 from __future__ import annotations
 
 import logging

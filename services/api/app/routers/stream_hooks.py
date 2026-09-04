@@ -26,17 +26,17 @@ safety_flags.stream_message_id race-proofs) any message id already flagged, so a
 replayed identical webhook can never double-flag. Proven by
 tests/test_stream_webhook.py::test_replayed_webhook_does_not_double_flag.
 """
+
 from __future__ import annotations
 
 import gzip
 import json
 import logging
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, HTTPException, Request, Response, status
-from sqlalchemy import select
+from datetime import UTC, datetime
 
 import anyio.to_thread
+from fastapi import APIRouter, HTTPException, Request, Response, status
+from sqlalchemy import select
 
 from app.config import get_settings
 from app.db import SessionLocal
@@ -132,9 +132,7 @@ def _scan_event(
     try:
         from app import ratelimit
 
-        ratelimit._redis().set(
-            "mento:last_webhook_at", datetime.now(timezone.utc).isoformat()
-        )
+        ratelimit._redis().set("mento:last_webhook_at", datetime.now(UTC).isoformat())
     except Exception:
         pass
     with SessionLocal() as db:

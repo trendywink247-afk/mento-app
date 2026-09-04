@@ -4,6 +4,7 @@ A community is a lens (matching preference, tuned prompts, seasonal support copy
 never a feed. No new PII: community + journey stage are coarse, self-declared, and
 clearable; nothing here links to identity beyond the existing anonymous user row.
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status

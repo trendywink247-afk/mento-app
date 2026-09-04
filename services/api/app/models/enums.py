@@ -1,4 +1,5 @@
 """Enumerations used across models and schemas."""
+
 from __future__ import annotations
 
 import enum
@@ -12,18 +13,18 @@ class Gender(str, enum.Enum):
 
 
 class ConversationType(str, enum.Enum):
-    anon = "anon"          # Module A — anonymous emotional support
+    anon = "anon"  # Module A — anonymous emotional support
     mentoring = "mentoring"  # Module B — deferred
 
 
 class ConversationStatus(str, enum.Enum):
     active = "active"
     ended = "ended"
-    wiped = "wiped"        # messages deleted on both sides (server + device)
+    wiped = "wiped"  # messages deleted on both sides (server + device)
 
 
 class RequestKind(str, enum.Enum):
-    general = "general"    # match to next-available listener
+    general = "general"  # match to next-available listener
     personal = "personal"  # directed at a specific listener
 
 

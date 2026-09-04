@@ -6,6 +6,7 @@ can't drift between them. Persists the SIGNAL only — never the message body
 (Trust & Safety #6). Deduped by Stream message id so the sync hook and the async
 safety net don't double-flag the same message.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import select

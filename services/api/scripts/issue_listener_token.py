@@ -9,6 +9,7 @@ never reaches server or proxy logs). The token expires after
 LISTENER_JWT_TTL_DAYS (30 by default); suspending the listener (vetting_status)
 revokes every outstanding link immediately.
 """
+
 from __future__ import annotations
 
 import argparse

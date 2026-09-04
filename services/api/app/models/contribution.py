@@ -1,4 +1,5 @@
 """Contribution ("coffee"). Transparent, opt-in. Supports the TEAM, not the listener."""
+
 from __future__ import annotations
 
 from sqlalchemy import Integer, String
