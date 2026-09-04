@@ -162,9 +162,10 @@ Verify from OUTSIDE the box: `curl https://api.agentin.chat/api/v1/health`.
 ### 9. Backups
 
 ```bash
+sudo mkdir -p /opt/mento-backups && sudo chown mento-ops:mento-ops /opt/mento-backups
 crontab -e
-# add:
-0 3 * * * /opt/mento/deploy/backup-postgres.sh >> /var/log/mento-backup.log 2>&1
+# add (NOT /var/log — mento-ops can't write there; the script's own output dir works):
+0 3 * * * /opt/mento/deploy/backup-postgres.sh >> /opt/mento-backups/backup.log 2>&1
 ```
 
 `deploy/backup-postgres.sh` dumps + gzips nightly, keeps 14 days locally. Wire the
@@ -177,6 +178,46 @@ Point an external monitor (UptimeRobot / Better Stack) at
 `https://api.agentin.chat/api/v1/health/crisis`, alerting on 503. This is the
 signal that the crisis-scan pipeline itself died (Stream configured but no webhook
 in 30 min, or Redis down) — not optional before real users touch this.
+
+### 11. Admin dashboard + listener console (web)
+
+These are the SAME Expo app as the member mobile app (`apps/mobile`), just two
+web-only routes (`/admin`, `/listener`) — CLAUDE.md's stack table already notes
+native gets `WebOnlyNotice` for both. Unlike the API, **build locally, not on
+the VPS** — this box's 1-2GB RAM can't reliably run the Expo/Metro toolchain.
+
+```bash
+# One-time: create apps/mobile/.env.production (gitignored) with:
+#   EXPO_PUBLIC_API_URL=https://api.agentin.chat/api/v1
+#   EXPO_PUBLIC_STREAM_API_KEY=<the PROD Stream app's publishable key>
+# `expo export` defaults NODE_ENV to production, so this file auto-loads —
+# no need to touch the dev .env or pass inline env vars.
+
+./deploy/deploy-console.sh
+```
+
+This builds (`expo export --platform web`), uploads to `/opt/mento-console/` on
+the VPS, and atomically swaps it into `current`. One-time Nginx + TLS setup (do
+once, before the first `deploy-console.sh` run):
+
+```bash
+scp deploy/nginx/mento-console.conf mento-ops@<vps-ip>:/tmp/
+ssh mento-ops@<vps-ip> 'sudo mkdir -p /opt/mento-console && sudo chown mento-ops:mento-ops /opt/mento-console'
+ssh mento-ops@<vps-ip> 'sudo cp /tmp/mento-console.conf /etc/nginx/sites-available/ && sudo nginx -t'
+sudo certbot --nginx -d console.agentin.chat --non-interactive --agree-tos -m <you>@example.com --redirect
+# certbot rewrites the file with real cert paths matching what's already in
+# deploy/nginx/mento-console.conf — deploy-console.sh assumes that's done once.
+```
+
+**Deliberately locked down** (learned live, session 28 — `console.agentin.chat/onboarding`
+was reachable and ran real matching against prod before this existed): since
+`web.output` is `"single"` (one SPA bundle, per `apps/mobile/app.json`), *every*
+app route — including the anonymous-chat onboarding/matching flow, which is
+mobile-only by design (web is dev/test-only, CLAUDE.md) — is technically present
+in the JS and reachable unless Nginx blocks it. `deploy/nginx/mento-console.conf`
+allow-lists only `/admin` and `/listener` (+ their static assets) and 404s
+everything else, including `/` itself. Don't loosen this without re-adding an
+equivalent guard.
 
 ---
 
@@ -192,6 +233,10 @@ and brings the stack up — the container entrypoint runs `alembic upgrade head`
 automatically before serving, and refuses to serve if migrations fail. If a
 migration is destructive or backward-incompatible, run
 `./deploy/backup-postgres.sh` manually right before deploying that one.
+
+**If the change touched `/admin` or `/listener` UI**, also run
+`./deploy/deploy-console.sh` (locally — see step 11) — the two deploys are
+independent; `deploy.sh` only ships the API.
 
 ### Rollback
 
@@ -214,12 +259,10 @@ Rotating `STREAM_API_SECRET` invalidates webhook signatures — re-run
 
 ## What's still missing (flag before real users depend on this)
 
-- **Admin dashboard / listener console have no production web build yet.** Today
-  they only run via `expo start --web` (explicitly a dev/test surface per
-  CLAUDE.md's stack table). For safety staff / listeners to use them against prod,
-  someone needs to add an `expo export --platform web` step and serve the static
-  output via Nginx (a new `location` block, likely `console.agentin.chat`) —
-  not yet built. Scope this before onboarding real listeners against prod.
+- ~~Admin dashboard / listener console have no production web build~~ **Resolved
+  session 28** — live at `console.agentin.chat` (step 11 above), locked down to
+  only `/admin` + `/listener`. Redeploy either UI with `./deploy/deploy-console.sh`.
+  Still manual/separate from `deploy.sh` — no CI wiring.
 - **Self-hosted OTA server** (for `expo-updates` shake-to-update, per
   `docs/ANDROID_BUILD.md`) is a natural fit to run on this same VPS
   (`updates.agentin.chat`) — not stood up yet; `app.json`'s `updates.url` block

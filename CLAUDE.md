@@ -125,8 +125,9 @@ mento/
                             hardening (age gate, wipe, PIN lockout, scan ownership), paths, admin, listener console
     docker-compose.yml      Postgres 16 + Redis 7
   deploy/                   do-app.yaml (DigitalOcean App Platform spec; runbook in docs/DEPLOYMENT.md) ·
-                            docker-compose.prod.yml + deploy.sh + backup-postgres.sh + nginx/mento-api.conf.template
-                            (self-managed VPS path — session 28 LIVE at api.agentin.chat; runbook docs/DEPLOYMENT_VPS.md)
+                            docker-compose.prod.yml + deploy.sh + deploy-console.sh + backup-postgres.sh +
+                            nginx/{mento-api.conf.template,mento-console.conf} (self-managed VPS path — session 28
+                            LIVE at api.agentin.chat + console.agentin.chat/{admin,listener}; runbook docs/DEPLOYMENT_VPS.md)
   scripts/                  repo-root: sample_mockup_colors.py · theme_lottie.py (Lottie → Mento palette)
   docs/                     PRD.md · DECISIONS.md (WINS) · ALIGNMENT.md · MOCKUP_INVENTORY.md · MASCOT_ASSETS.md
                             · UX_REVIEW_2026-07-13.md · DEPLOYMENT.md (DO App Platform) · DEPLOYMENT_VPS.md
