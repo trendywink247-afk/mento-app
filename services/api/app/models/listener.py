@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Integer, String
+from datetime import datetime
+
+from sqlalchemy import JSON, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -30,3 +32,8 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     rank: Mapped[int] = mapped_column(Integer, default=0)
     active_conversations: Mapped[int] = mapped_column(Integer, default=0)
     max_concurrent: Mapped[int] = mapped_column(Integer, default=3)
+
+    # Native-console presence (spec 2026-09-05 §6). Stamped ONLY by the heartbeat
+    # endpoint; reset to NULL when the listener sets themselves online, so a
+    # listener that never heartbeats (seeds, the web console) is never swept.
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

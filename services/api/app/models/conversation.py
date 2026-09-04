@@ -8,7 +8,7 @@ from sqlalchemy import Boolean, DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
-from app.models.enums import ConversationStatus, ConversationType
+from app.models.enums import ConversationEndedBy, ConversationStatus, ConversationType
 from app.models.mixins import TimestampMixin, UUIDMixin
 
 
@@ -36,3 +36,7 @@ class Conversation(UUIDMixin, TimestampMixin, Base):
     status_mask: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Who ended it: member (end/wipe/report/block), listener (mentor console End),
+    # system (reconcile sweep). NULL for rows ended before this column existed.
+    ended_by: Mapped[ConversationEndedBy | None] = mapped_column(nullable=True)

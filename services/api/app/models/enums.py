@@ -83,3 +83,21 @@ class ApplicationStatus(str, enum.Enum):
     pending = "pending"
     approved = "approved"
     declined = "declined"
+
+
+class ConversationEndedBy(str, enum.Enum):
+    member = "member"
+    listener = "listener"
+    system = "system"  # reconcile sweep (abandoned chats)
+
+
+class ReporterKind(str, enum.Enum):
+    member = "member"
+    listener = "listener"
+
+
+class ListenerReportReason(str, enum.Enum):
+    abuse = "abuse"
+    harassment = "harassment"
+    spam = "spam"
+    other = "other"
