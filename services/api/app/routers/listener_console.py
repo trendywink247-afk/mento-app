@@ -11,10 +11,13 @@ and none of the member's privacy controls (lock/mask/PIN are the member's).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import ratelimit
 from app.config import get_settings
 from app.db import get_db
 from app.models.conversation import Conversation
@@ -131,10 +134,34 @@ def set_status(
     db: Session = Depends(get_db),
 ) -> ListenerMeOut:
     """online/away — directly gates General matching (its query filters on online)."""
+    ratelimit.enforce(
+        f"listener-status:{listener.id}",
+        30,
+        600,
+        detail="Too many status changes — try again in a few minutes.",
+    )
     listener.status = ListenerStatus(payload.status)
+    if listener.status == ListenerStatus.online:
+        # Tracking (re)starts with the next heartbeat — see matching.sweep_stale_presence.
+        listener.last_seen_at = None
     db.commit()
     db.refresh(listener)
     return _me_out(listener)
+
+
+@router.post("/me/heartbeat", response_model=OkResult)
+def heartbeat(
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Native console presence pulse (every 5 min while focused + online). The
+    sweep in services/matching marks a listener away 15 min after the last one."""
+    ratelimit.enforce(
+        f"listener-heartbeat:{listener.id}", 30, 600, detail="Slow down — heartbeat limit reached."
+    )
+    listener.last_seen_at = datetime.now(UTC)
+    db.commit()
+    return OkResult(status="ok")
 
 
 @router.get("/me/conversations", response_model=list[ListenerConversationItem])

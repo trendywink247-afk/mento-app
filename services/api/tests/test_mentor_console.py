@@ -213,3 +213,81 @@ def test_suspension_revokes_a_live_console_session(client):
         ).status_code
         == 403
     )
+
+
+# --- presence ------------------------------------------------------------------
+
+
+def test_heartbeat_stamps_last_seen_at(client):
+    with TestSession() as s:
+        lid = _listener(s)
+        s.commit()
+    r = client.post("/api/v1/listener/me/heartbeat", headers=listener_auth(lid))
+    assert r.status_code == 200 and r.json()["status"] == "ok"
+    with TestSession() as s:
+        seen = s.get(ListenerProfile, lid).last_seen_at
+        assert seen is not None and datetime.now(UTC) - seen < timedelta(seconds=10)
+
+
+def test_setting_online_resets_tracking(client):
+    with TestSession() as s:
+        lid = _listener(s, status=ListenerStatus.away, seen=datetime.now(UTC) - timedelta(hours=2))
+        s.commit()
+    r = client.patch(
+        "/api/v1/listener/me/status", json={"status": "online"}, headers=listener_auth(lid)
+    )
+    assert r.status_code == 200
+    with TestSession() as s:
+        assert s.get(ListenerProfile, lid).last_seen_at is None
+
+
+def test_sweep_flips_only_stale_heartbeating_listeners():
+    now = datetime.now(UTC)
+    with TestSession() as s:
+        stale = _listener(s, seen=now - timedelta(minutes=16))
+        fresh = _listener(s, seen=now - timedelta(minutes=2))
+        untracked = _listener(s, seen=None)  # seeds / web console: never swept
+        away_old = _listener(s, status=ListenerStatus.away, seen=now - timedelta(hours=1))
+        s.commit()
+    with TestSession() as s:
+        assert matching.sweep_stale_presence(s) == 1
+        s.commit()
+    with TestSession() as s:
+        assert s.get(ListenerProfile, stale).status == ListenerStatus.away
+        assert s.get(ListenerProfile, fresh).status == ListenerStatus.online
+        assert s.get(ListenerProfile, untracked).status == ListenerStatus.online
+        assert s.get(ListenerProfile, away_old).status == ListenerStatus.away
+
+
+def test_general_matching_skips_swept_listeners():
+    now = datetime.now(UTC)
+    with TestSession() as s:
+        uid = _user(s)
+        _listener(s, seen=now - timedelta(minutes=30))  # the only listener, stale
+        s.commit()
+    with TestSession() as s:
+        user = s.get(User, uid)
+        with pytest.raises(matching.NoListenerAvailable):
+            matching.match_general(s, user)
+
+
+def test_admin_reconcile_reports_presence_sweep(client):
+    from app.models.admin import AdminAccount
+    from app.models.enums import AdminRole
+    from app.security import issue_admin_token
+
+    now = datetime.now(UTC)
+    with TestSession() as s:
+        s.execute(text("TRUNCATE admin_accounts, admin_audit_log CASCADE"))
+        a = AdminAccount(name="Founder", role=AdminRole.owner)
+        s.add(a)
+        s.flush()
+        admin_id = a.id
+        _listener(s, seen=now - timedelta(minutes=20))
+        s.commit()
+    r = client.post(
+        "/api/v1/admin/listeners/reconcile",
+        headers={"Authorization": f"Bearer {issue_admin_token(admin_id)}"},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["presence_swept"] == 1

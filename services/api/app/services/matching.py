@@ -199,8 +199,32 @@ def release_listener_slot(db: Session, convo: Conversation) -> None:
     )
 
 
+PRESENCE_STALE_AFTER = timedelta(minutes=15)
+
+
+def sweep_stale_presence(db: Session, *, now: datetime | None = None) -> int:
+    """Auto-away safety net (spec 2026-09-05 §6): an ONLINE listener whose native
+    console stopped heartbeating more than PRESENCE_STALE_AFTER ago is marked away,
+    so General matching never hands a member to someone who left. Rows with
+    last_seen_at IS NULL are untracked (seeds, the web console) and are left alone.
+    The CALLER commits. Returns the number of listeners flipped."""
+    cutoff = (now or datetime.now(UTC)) - PRESENCE_STALE_AFTER
+    result = db.execute(
+        update(ListenerProfile)
+        .where(
+            ListenerProfile.status == ListenerStatus.online,
+            ListenerProfile.last_seen_at.is_not(None),
+            ListenerProfile.last_seen_at < cutoff,
+        )
+        .values(status=ListenerStatus.away)
+    )
+    return result.rowcount
+
+
 def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
     """Match the user to the next available listener and open a Stream channel."""
+    sweep_stale_presence(db)
+    db.commit()
     blocked_ids = _blocked_listener_ids(db, user.id) | _own_listener_ids(db, user.id)
     listener = _pick_available_listener(db, category, blocked_ids, community=user.community_slug)
     if listener is None:
@@ -276,7 +300,11 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
        active Conversation rows — one atomic UPDATE with a correlated subquery, so
        a hand-drifted counter can't survive.
 
-    Returns counts for the admin console: {"stale_ended": n, "listeners_corrected": n}.
+    3. Sweep stale presence (see sweep_stale_presence) — a listener whose native
+       console stopped heartbeating over 15 minutes ago is marked away.
+
+    Returns counts for the admin console: {"stale_ended": n, "listeners_corrected": n,
+    "presence_swept": n}.
     """
     max_age = timedelta(hours=get_settings().conversation_max_age_hours)
     cutoff = datetime.now(UTC) - max_age
@@ -310,4 +338,9 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
         .where(ListenerProfile.active_conversations != active_count)
         .values(active_conversations=active_count)
     )
-    return {"stale_ended": stale.rowcount, "listeners_corrected": corrected.rowcount}
+    swept = sweep_stale_presence(db)
+    return {
+        "stale_ended": stale.rowcount,
+        "listeners_corrected": corrected.rowcount,
+        "presence_swept": swept,
+    }

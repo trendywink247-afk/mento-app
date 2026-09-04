@@ -163,6 +163,7 @@ class AdminReconcileOut(BaseModel):
 
     stale_ended: int
     listeners_corrected: int
+    presence_swept: int = 0
 
 
 class AdminHealthOut(BaseModel):
