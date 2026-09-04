@@ -179,12 +179,14 @@ Point an external monitor (UptimeRobot / Better Stack) at
 signal that the crisis-scan pipeline itself died (Stream configured but no webhook
 in 30 min, or Redis down) — not optional before real users touch this.
 
-### 11. Admin dashboard + listener console (web)
+### 11. Admin dashboard, listener console, public apply page (web)
 
-These are the SAME Expo app as the member mobile app (`apps/mobile`), just two
-web-only routes (`/admin`, `/listener`) — CLAUDE.md's stack table already notes
-native gets `WebOnlyNotice` for both. Unlike the API, **build locally, not on
-the VPS** — this box's 1-2GB RAM can't reliably run the Expo/Metro toolchain.
+These are the SAME Expo app as the member mobile app (`apps/mobile`), just
+three web-only routes (`/admin`, `/listener`, `/apply`) — CLAUDE.md's stack
+table already notes native gets `WebOnlyNotice` for the two consoles; `/apply`
+needs no such split since it's plain cross-platform UI, just unlinked on
+native. Unlike the API, **build locally, not on the VPS** — this box's 1-2GB
+RAM can't reliably run the Expo/Metro toolchain.
 
 ```bash
 # One-time: create apps/mobile/.env.production (gitignored) with:
@@ -215,9 +217,17 @@ was reachable and ran real matching against prod before this existed): since
 app route — including the anonymous-chat onboarding/matching flow, which is
 mobile-only by design (web is dev/test-only, CLAUDE.md) — is technically present
 in the JS and reachable unless Nginx blocks it. `deploy/nginx/mento-console.conf`
-allow-lists only `/admin` and `/listener` (+ their static assets) and 404s
-everything else, including `/` itself. Don't loosen this without re-adding an
-equivalent guard.
+allow-lists only `/admin`, `/listener`, and `/apply` (+ their static assets) and
+404s everything else, including `/` itself. Don't loosen this without re-adding
+an equivalent guard.
+
+**Adding a route to the allow-list later** (not just first-time setup): edit
+`deploy/nginx/mento-console.conf` locally, then push it live —
+```bash
+scp deploy/nginx/mento-console.conf mento-ops@<vps-ip>:/tmp/
+ssh mento-ops@<vps-ip> 'sudo cp /tmp/mento-console.conf /etc/nginx/sites-available/ && sudo nginx -t && sudo systemctl reload nginx'
+```
+No certbot re-run needed — TLS is provisioned for the domain, not per-route.
 
 ---
 

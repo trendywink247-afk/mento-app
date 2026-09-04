@@ -37,7 +37,7 @@ mv new current
 
 echo "[deploy-console] verifying..."
 sleep 1
-for path in /admin /listener; do
+for path in /admin /listener /apply; do
     code=$(curl -s -o /dev/null -w '%{http_code}' "https://console.agentin.chat${path}")
     if [ "$code" != "200" ]; then
         echo "[deploy-console] FAILED — https://console.agentin.chat${path} returned ${code} (expected 200)" >&2
