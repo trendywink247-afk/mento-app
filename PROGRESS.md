@@ -8,7 +8,7 @@
 
 **Context:** founder ruling `DECISIONS.md` §K.8 (fidelity pass, browser mockups): pillow-key depth language (visible bottom edge, collapses on press, medium impact haptic — rejected soft clay/quiet matte), painterly companion art direction (later, Plan 2), Focus-physics chat (rising bubbles, breathing typing dots, pressing send key — no ambient scene, no companion in-chat), build order foundation-first (tokens/type/PressKey/chat physics) then the companion asset pipeline. This branch is the foundation half, on top of `5cce83b`; spec `docs/superpowers/specs/2026-09-05-fidelity-pass-design.md`.
 
-**Done (18 commits, `git log --oneline master..feat/fidelity-foundation`, mobile-only):**
+**Done (20 commits, `git log --oneline master..feat/fidelity-foundation`, mobile-only):**
 - `518d4ca` Baloo 2 as the single type family (Latin + Devanagari); Nunito/Lora/Noto removed; `type.displayHeadline`.
 - `c877386` Clay and Sage palette + terracotta-default companion accents + `scripts/contrast_gate.py`; follow-ups `d636bac` (Devanagari headroom, Logo/Scenes read tokens not purple literals), `52320d2` (`inkMuted` cleared to AA on ritual screens, gate covers `bgLavender`, ink shadows, IconBadge glyphs from tokens).
 - `e18d5c2` `PressKey` + `EdgeSurface` depth primitives; fix `f12b90b` (disabled dims, edge shares face corners, sizing moved to `containerStyle`).
@@ -29,6 +29,8 @@
 - Persona-avatar palettes are a categorical set, not the companion accent.
 
 **Open (founder):**
+- **Native chat physics not applied** (spec §3 named both chat screens): `components/chat/ChatScreen.tsx` still renders stream-chat-expo's `MessageList`/`MessageComposer`, which expose no per-row animation hook — native gets the palette only (token-driven Stream theme). Rise-in, TypingDots and the pillow send key are web-only until the native chat is rebuilt (natural home: the native mentor console / custom message list work).
+- **Pillow key not yet on every screen**: `app/mentor/[id].tsx`, `app/apply.tsx`, `app/journal/organize.tsx`, `components/ApplicationForm.tsx` (pledge card) and the status cards in `app/mentor-home.tsx` still use `elevation.sm` cards — outside Plan 1's file list; mechanical follow-up with `EdgeSurface`/`PressKey`.
 - `TypingDots` accessibility label is a literal string, not an i18n key.
 - `chat.typing` locale key is now unused — the listener console hardcodes its own typing string (pre-existing i18n gap, not introduced this session).
 - `font.serif*` / `devanagari*` token names alias Baloo 2 now and should be renamed to match.
@@ -38,7 +40,7 @@
 
 **Next:** merge `feat/fidelity-foundation` into master (finishing-a-development-branch), then Plan 2 — the companion asset pipeline (one reference + six poses per animal, all six animals, ~52 credits approved) — then the native mentor console spec (DECISIONS §K.7).
 
-**How to resume:** branch `feat/fidelity-foundation` is complete; `git log --oneline master..feat/fidelity-foundation` lists the 18 commits above. Expo needs a `-c` restart after switching branches (font package changed). `python scripts/contrast_gate.py` is the palette gate — run after any token edit. The 42-screen screenshot-walk script used for review lives in the session scratchpad only (not committed).
+**How to resume:** branch `feat/fidelity-foundation` is complete; `git log --oneline master..feat/fidelity-foundation` lists the 20 commits above. Expo needs a `-c` restart after switching branches (font package changed). `python scripts/contrast_gate.py` is the palette gate — run after any token edit. The 42-screen screenshot-walk script used for review lives in the session scratchpad only (not committed).
 
 ---
 

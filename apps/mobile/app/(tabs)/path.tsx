@@ -147,6 +147,7 @@ export default function PathTab() {
           <Entrance key={opt.label} index={1 + i}>
             <TiltCard
               style={[styles.optionCard, { backgroundColor: colors.surface }]}
+              containerStyle={styles.cardSpacing}
               edge={colors.edgeSurface}
               onPress={() => void pick(opt)}
               testID={`path-option-${i}`}
@@ -320,13 +321,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: space.xs,
   },
+  cardSpacing: { marginBottom: space.sm },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
     borderRadius: radius.lg,
     padding: space.md,
-    marginBottom: space.sm,
   },
   optionLabel: { flex: 1, fontFamily: font.sansSemi, fontSize: 15, lineHeight: 21 },
   cta: {
@@ -368,7 +369,6 @@ const styles = StyleSheet.create({
     gap: space.sm,
     borderRadius: radius.lg,
     padding: space.md,
-    marginBottom: space.sm,
   },
   promptText: { flex: 1, fontFamily: font.sansSemi, fontSize: 14, lineHeight: 20 },
   talkCard: { borderRadius: radius.lg, padding: space.md, gap: space.xs },

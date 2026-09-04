@@ -61,6 +61,7 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
           accessibilityLabel={t('onboarding.role.talkTitle')}
           testID="role-talk"
           style={[styles.door, styles.doorBig, { backgroundColor: colors.accentTint }]}
+          containerStyle={styles.doorSpacing}
         >
           <IconBadge icon="chatbubble-ellipses-outline" tone="accent" size={52} />
           <View style={styles.doorText}>
@@ -79,6 +80,7 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
           accessibilityLabel={t('onboarding.role.listenTitle')}
           testID="role-listen"
           style={[styles.door, { backgroundColor: wash.green }]}
+          containerStyle={styles.doorSpacing}
         >
           <IconBadge icon="ear-outline" tone="green" size={44} />
           <View style={styles.doorText}>
@@ -101,8 +103,8 @@ const styles = StyleSheet.create({
     gap: space.md,
     borderRadius: radius.lg,
     padding: space.md,
-    marginBottom: space.md,
   },
+  doorSpacing: { marginBottom: space.md },
   doorBig: { paddingVertical: space.lg },
   doorText: { flex: 1, gap: 2 },
   doorTitle: { fontFamily: font.sansHeavy, fontSize: 20, lineHeight: 26 },

@@ -38,6 +38,7 @@ export function TiltCard({
   /** Pillow-key underside colour; when given the card draws an edge and travels 4px on press. */
   edge,
   radius = radiusTokens.lg,
+  containerStyle,
   accessibilityRole = 'button',
   accessibilityLabel,
   testID,
@@ -50,6 +51,9 @@ export function TiltCard({
   style?: StyleProp<ViewStyle>;
   edge?: string;
   radius?: number;
+  /** Outer box: margins / alignSelf / flex. Sizing and margins never go on `style`,
+   * or the edge would extend through the gap (same rule as PressKey). */
+  containerStyle?: StyleProp<ViewStyle>;
   accessibilityRole?: 'button' | 'none';
   accessibilityLabel?: string;
   testID?: string;
@@ -107,7 +111,7 @@ export function TiltCard({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       testID={testID}
-      style={edge ? { paddingBottom: 4 } : undefined}
+      style={[edge ? { paddingBottom: 4 } : undefined, containerStyle]}
     >
       {edge ? (
         <View
