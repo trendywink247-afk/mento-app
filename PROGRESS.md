@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-09-05 (session 31) — Role fork after landing + Mentor Home ✅ (branch `feat/role-fork`)
+
+**Context:** founder's new requirement (session 30): a screen after the landing that asks whether the person is here to talk or to listen, and takes each to their path. Brainstormed with browser mockups (two-doors layout chosen), spec `docs/superpowers/specs/2026-09-04-role-fork-design.md`, plan `docs/superpowers/plans/2026-09-04-role-fork.md`, ruling `DECISIONS.md` §K.7. Executed subagent-driven (Sonnet implementers + two-stage Sonnet reviews per task) on `feat/role-fork`, not yet merged to master.
+
+**Done (13 commits, zero backend changes):**
+- `fbed255` role preference (`lib/session.ts` `saveRole`/`getRole`, key `mento.role`, cleared by Start fresh; draft `role`; analytics `role_chosen`).
+- `6dca478` + `f9e9235` EN/HI strings for role / primer / handoff / Mentor Home (review fix: gender-neutral Hindi for "I'd rather talk today").
+- `7da4f79` `RoleStep` (two doors, `role-talk` / `role-listen`); `8ec002c` + `3245382` `PrimerStep` + `HandoffStep` (session minted once, no match, unmount-guarded).
+- `81b7604` + `a4a3777` journey wiring: role = step zero, `MENTEE_ORDER` byte-identical to the old order, `MENTOR_ORDER` = role → age → email → primer → handoff; deep links past `age` need a DOB **and** must belong to the draft role's order; review fixes: one haptic per role tap.
+- `62110bc` + `1956264` `app/mentor-home.tsx` (outside the tab shell; companion hero; inline `ApplicationForm` / pending / approved + console link / declined; "I'd rather talk today" assigns the default companion if none, sets role mentee, lands on Chats). Review fixes: switch wrapped in try/catch, identity reads best-effort, application fetch alone drives the error card.
+- `21a7268` landing redirect honours the role (`/` → `/mentor-home` for a stored mentor session).
+- `47c8920` all onboarding-driven e2e suites gain one tap (`role-talk`); `e5de82b` new `e2e/role-fork.e2e.js`.
+- **Proven:** `tsc` clean at every commit; `connecting-experience`, `path-communities`, `hindi-core-loop`, `member-screens`, `listener-apply`, `analytics-dark`, `journal-organize` PASS (0 page errors, normal + reduced-motion); `role-fork` PASS (listen door → primer → handoff → Mentor Home → submit → pending → switch to talk → Chats; returning mentor lands on Mentor Home from `/`; normal + reduced-motion). `two-party-chat` patched, not run (manual listener setup).
+
+**Spec deviations (decided in review, founder veto welcome):**
+- Role tap fires **one** haptic (the journey's `advance`), not select-then-advance — two in one gesture reads as a stutter.
+- **No client-side 30-day reapply gate on Mentor Home.** The server anchors the cooldown on decline time (`updated_at`), which the API doesn't return, and this feature is zero-backend-change — a declined mentor sees the declined card + the form, and the server's 409 (shown by the form's own error display) is the single source of truth, same as Profile → apply today.
+
+**Open (founder):**
+- Mentors get the default panda silently (no companion step on the mentor branch); alternative is two extra screens before the form.
+- The primer is one screen; the pledge stays on the form. If legal wants the full pledge text on the primer, it is a copy change only.
+- Native mentor console — own spec next (DECISIONS §K.7 reverses §I.6 for a later phase); Mentor Home is its future front door.
+- Minor review notes deferred: `HandoffStep` reuses `connecting.*` error copy; onboarding headline sizes are hand-rolled per step (a `type.*` token would unify them); a focus-refetch failure while typing in the inline form replaces it with the error card (edge case).
+- Carried from session 30: Baloo 2 typeface + Clay-and-Sage tokens (fidelity pass) not started; launch-copy promises ("readable offline soon", "early access"); Module B naming.
+
+**Next:** merge `feat/role-fork` into master (finishing-a-development-branch), then the fidelity pass (Baloo 2, Clay-and-Sage tokens, companion assets, haptics, immersive chat) with browser mockups, then the native mentor console spec.
+
+**How to resume:** branch `feat/role-fork` is complete and reviewed; `git log master..feat/role-fork` lists the 13 commits. Stack unchanged (mento-stack); Expo must be restarted (`-c`) after switching branches because `app/mentor-home.tsx` is a new route. Proof: `node e2e\role-fork.e2e.js` after the standard reset. The brainstorm visual-companion server (port 8765, `.superpowers/` gitignored) may still be running; harmless.
+
+---
+
 ## 2026-09-04 (session 30) — Full screen audit + v1 navigation finalised ✅
 
 **Context:** founder asked "how many screens do we have, how are we making the experience better — go through the app, check everything, then finalise UI navigation." Ran a screen-by-screen headless walk (scratchpad script, 390×844) that drove real onboarding → chat, every options sub-flow, all four tabs, the Pathfinder to path-home, every journal, coffee, apply, reflection, start-fresh, the legacy stubs, `/apply`, `/listener`, `/admin`, and a bogus URL: **45 rendered states, 0 page errors, 0 console errors.** Inventory: 24 route files (3 layouts) → 19 real routes (5 were redirect stubs); member app 15, public web 1, listener console 2, admin 1 (7 panels). Four decisions put to the founder via `AskUserQuestion`; all ratified in `docs/DECISIONS.md` §K.

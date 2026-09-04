@@ -90,7 +90,8 @@ E2E specs are plain Node scripts in `apps/mobile/e2e/` (not `@playwright/test` �
 mento/
   apps/mobile/
     app/                    expo-router: index (landing, live Lottie hero) · +not-found (branded unmatched-route)
-                            · onboarding/index (OnboardingJourney, ?step= deep-links) · chat/[id]
+                            · onboarding/index (OnboardingJourney, ?step= deep-links; role fork = step zero) · chat/[id]
+                            · mentor-home (mentor branch landing: inline application / status / console link / switch-to-talk)
                             · (tabs)/ chats|path|journals|profile (+ mentors: hidden-but-routable via Browse)
                             · journal/[channel] · mentor/[id] · reflection · coffee · start-fresh (transparentModal)
                             · listener-apply (become-a-listener form, member-flow) · apply (public
@@ -168,7 +169,7 @@ mento/
 ## SCOPE
 
 ### v1 — build now (Module A: anonymous emotional-support chat, polished light-mode)
-1. **Onboarding** — cinematic single-route journey (landing → DOB age-gate → optional email → growth-companion → ready → connecting → chat) over a persistent aurora sky + living companion. D/M/Y picker, age computed server-side, email truly skippable.
+1. **Onboarding** — cinematic single-route journey (landing → role fork "talk / listen" (DECISIONS §K.7) → DOB age-gate → optional email → growth-companion → ready → connecting → chat; the listen door branches after email to primer → handoff → Mentor Home) over a persistent aurora sky + living companion. D/M/Y picker, age computed server-side, email truly skippable.
 2. **Anonymous identity** — auto-assigned `[Evocative] [Nature]` persona for **both** sides. No real names/photos/"Verified" badges in v1 chat.
 3. **Real-time 1:1 chat** — text + emoji, instant send, typing indicator, read state. Clean/spare, not a busy messenger.
 4. **New-chat routing** — **General** (next-available match) + **Personal** (pick a mentor → intro → request → listener inbox). Topic chips lean life/emotional.
@@ -205,7 +206,7 @@ mento/
 4. Conventional commit made; `PROGRESS.md` updated before the session ends.
 
 **Per-feature:**
-- **Onboarding**: cold-launch → live chat ≤ 30s on mid Android (currently ~5s on web); journey deep-links guard on the draft; under-min-age blocked server-side; email truly skippable; companion choice persisted & themes the app live.
+- **Onboarding**: cold-launch → live chat ≤ 30s on mid Android (currently ~5s on web); journey deep-links guard on the draft; under-min-age blocked server-side; email truly skippable; companion choice persisted & themes the app live. Role choice persists on device (`mento.role`), is cleared by Start fresh, and a returning mentor lands on Mentor Home from the landing; `role-fork.e2e.js` is the proof.
 - **Motion**: every animation uses motion tokens, transform/opacity only, respects reduced motion (Playwright `reducedMotion: 'reduce'` run stays static and completes); first frame is always the static gradient; 0 console errors.
 - **Chat**: send→delivered p95 < 500ms; typing + read state correct; reconnect < 3s, no lost/dup messages; save-to-Mentor-Notes works; persona names render on both sides.
 - **Routing**: General matches an available listener; Personal lands in that listener's inbox with accept/decline; no double-assignment under concurrency (tested).
