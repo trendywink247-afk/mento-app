@@ -6,6 +6,7 @@
  * The dimensional counterpart of PrimaryButton's press physics, for card-shaped
  * surfaces (pathfinder options, prompt cards, listener cards). Reduced motion:
  * a plain Pressable with the caller's pressed-state styling untouched.
+ * Reduced motion: no tilt or travel; the edge stays drawn as a static design feature.
  */
 import { ReactNode, useRef } from 'react';
 import {
@@ -26,7 +27,7 @@ import Animated, {
 
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing, spring } from '@/theme/motion';
-import { radius } from '@/theme/tokens';
+import { radius as radiusTokens } from '@/theme/tokens';
 
 export function TiltCard({
   children,
@@ -36,6 +37,7 @@ export function TiltCard({
   style,
   /** Pillow-key underside colour; when given the card draws an edge and travels 4px on press. */
   edge,
+  radius = radiusTokens.lg,
   accessibilityRole = 'button',
   accessibilityLabel,
   testID,
@@ -47,6 +49,7 @@ export function TiltCard({
   /** Card visuals (background, radius, padding, elevation) live on this style. */
   style?: StyleProp<ViewStyle>;
   edge?: string;
+  radius?: number;
   accessibilityRole?: 'button' | 'none';
   accessibilityLabel?: string;
   testID?: string;
@@ -109,7 +112,7 @@ export function TiltCard({
       {edge ? (
         <View
           pointerEvents="none"
-          style={[StyleSheet.absoluteFill, { top: 4, borderRadius: radius.lg, backgroundColor: edge }]}
+          style={[StyleSheet.absoluteFill, { top: 4, borderRadius: radius, backgroundColor: edge }]}
         />
       ) : null}
       <Animated.View style={[style, anim]}>{children}</Animated.View>

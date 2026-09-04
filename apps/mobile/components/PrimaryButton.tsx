@@ -11,7 +11,7 @@ type Props = {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  /** primary = filled key. ghost = white key with accent text. link = plain accent text. */
+  /** primary = filled key. ghost = warm alt-surface key with accent text. link = plain accent text. */
   variant?: 'primary' | 'ghost' | 'link';
   /** accent = companion colour. ink = charcoal key (onboarding CTAs). */
   tone?: 'accent' | 'ink';
@@ -38,8 +38,8 @@ export function PrimaryButton({
   const { colors } = useTheme();
   const filled = variant === 'primary';
   const inactive = !!(disabled || loading);
-  const bg = filled ? (tone === 'ink' ? colors.ink : colors.accent) : colors.surface;
-  const edge = filled ? (tone === 'ink' ? colors.edgeInk : colors.accentEdge) : colors.edgeSurface;
+  const bg = filled ? (tone === 'ink' ? colors.ink : colors.accent) : colors.surfaceAlt;
+  const edge = filled ? (tone === 'ink' ? colors.edgeInk : colors.accentEdge) : colors.edgeAlt;
   const fg = filled ? colors.onAccent : colors.accent;
 
   const content = loading ? (
