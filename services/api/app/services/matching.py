@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.models.conversation import Conversation
 from app.models.enums import (
+    ConversationEndedBy,
     ConversationStatus,
     ConversationType,
     ListenerStatus,
@@ -183,6 +184,21 @@ def open_conversation(
     return convo
 
 
+def release_listener_slot(db: Session, convo: Conversation) -> None:
+    """Free the listener's slot with an atomic UPDATE (same pattern as the
+    compensation path above) — a Python read-modify-write would lose decrements
+    under concurrent end/wipe/report/block. Callers invoke this ONLY on the
+    active → ended/wiped transition, so a slot is never released twice."""
+    db.execute(
+        update(ListenerProfile)
+        .where(
+            ListenerProfile.id == convo.listener_id,
+            ListenerProfile.active_conversations > 0,
+        )
+        .values(active_conversations=ListenerProfile.active_conversations - 1)
+    )
+
+
 def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
     """Match the user to the next available listener and open a Stream channel."""
     blocked_ids = _blocked_listener_ids(db, user.id) | _own_listener_ids(db, user.id)
@@ -270,7 +286,11 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
             Conversation.status == ConversationStatus.active,
             Conversation.created_at < cutoff,
         )
-        .values(status=ConversationStatus.ended, ended_at=datetime.now(UTC))
+        .values(
+            status=ConversationStatus.ended,
+            ended_at=datetime.now(UTC),
+            ended_by=ConversationEndedBy.system,
+        )
     )
 
     # True per-listener load, computed in SQL. COUNT over zero rows is 0, so

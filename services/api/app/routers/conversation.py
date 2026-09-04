@@ -11,13 +11,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.db import get_db
 from app.models.conversation import Conversation
-from app.models.enums import ConversationStatus, ModerationLevel
+from app.models.enums import ConversationEndedBy, ConversationStatus, ModerationLevel
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.reflection import ConversationReflection
@@ -35,6 +35,7 @@ from app.schemas import (
 )
 from app.security import current_user_id, hash_pin, verify_pin
 from app.services import stream
+from app.services.matching import release_listener_slot
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -44,21 +45,6 @@ def _owned(db: Session, convo_id: str, user_id: str) -> Conversation:
     if convo is None or convo.user_id != user_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
     return convo
-
-
-def _release_listener(db: Session, convo: Conversation) -> None:
-    """Free the listener's slot with an atomic UPDATE (same pattern as matching.py's
-    compensation path) — a Python read-modify-write here would lose decrements under
-    concurrent end/wipe/report/block. Callers must only invoke this on the
-    active → ended/wiped transition, so a slot is never released twice."""
-    db.execute(
-        update(ListenerProfile)
-        .where(
-            ListenerProfile.id == convo.listener_id,
-            ListenerProfile.active_conversations > 0,
-        )
-        .values(active_conversations=ListenerProfile.active_conversations - 1)
-    )
 
 
 def _pin_attempt_guard(convo_id: str, user_id: str) -> None:
@@ -225,7 +211,8 @@ def end_conversation(
     if convo.status == ConversationStatus.active:
         convo.status = ConversationStatus.ended
         convo.ended_at = datetime.now(UTC)
-        _release_listener(db, convo)
+        convo.ended_by = ConversationEndedBy.member
+        release_listener_slot(db, convo)
     db.commit()
     return OkResult(status="ended")
 
@@ -246,8 +233,9 @@ def wipe_conversation(
     convo.status = ConversationStatus.wiped
     if convo.ended_at is None:
         convo.ended_at = datetime.now(UTC)
+        convo.ended_by = ConversationEndedBy.member
     if was_active:
-        _release_listener(db, convo)
+        release_listener_slot(db, convo)
     db.commit()
     return {"status": "wiped", "deleted_from": ["device", "servers"]}
 
@@ -297,7 +285,8 @@ def _file_moderation_and_end(
     if convo.status == ConversationStatus.active:
         convo.status = ConversationStatus.ended
         convo.ended_at = datetime.now(UTC)
-        _release_listener(db, convo)
+        convo.ended_by = ConversationEndedBy.member
+        release_listener_slot(db, convo)
 
 
 @router.post("/{convo_id}/report", response_model=OkResult)
