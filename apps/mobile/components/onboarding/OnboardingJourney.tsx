@@ -80,8 +80,11 @@ export function OnboardingJourney() {
     if (!requested || !ALL_STEPS.includes(requested) || requested === 'role') return 'role';
     if (requested === 'age') return 'age';
     // Anything past the age gate needs a DOB in the (in-memory) draft; a cold deep
-    // link has none, so it snaps to the very first step.
-    return getDraft().dob ? requested : 'role';
+    // link has none, so it snaps to the very first step. It also must belong to
+    // the order for the draft's role — a mentee deep-linking into 'handoff' (or
+    // vice versa) is not a valid resume point.
+    const requestedOrder = (getDraft().role ?? 'mentee') === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
+    return getDraft().dob && requestedOrder.includes(requested) ? requested : 'role';
   });
 
   // Mirror the step into the URL — replace semantics, so no history spam / remounts.

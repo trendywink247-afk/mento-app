@@ -6,7 +6,6 @@ import { Entrance } from '@/components/motion/Entrance';
 import { TiltCard } from '@/components/motion/TiltCard';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { capture } from '@/lib/analytics';
-import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { setDraft } from '@/lib/onboardingDraft';
 import { saveRole, type Role } from '@/lib/session';
@@ -16,13 +15,14 @@ import { font, radius, space, type, wash } from '@/theme/tokens';
 /** Step zero of the journey (DECISIONS §K.7, "two doors"): one tap picks a role
  * and advances — no Continue button, so a mentee spends exactly one tap here.
  * The talk door is larger and accent-tinted (the default-safe path); the listen
- * door is smaller and sage. Role is written to device + draft before advancing. */
+ * door is smaller and sage. Role is written to device + draft before advancing.
+ * No haptic fires here — this one tap is both the choice and the step forward,
+ * so the journey's own `advance` haptic (fired by `onPick`) is the only one. */
 export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
 
   const pick = (role: Role) => {
-    haptic.tick();
     setDraft({ role });
     void saveRole(role);
     capture('role_chosen', { role });
