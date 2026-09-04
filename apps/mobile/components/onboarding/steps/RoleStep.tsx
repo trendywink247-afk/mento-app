@@ -93,13 +93,7 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
 
 const styles = StyleSheet.create({
   logoZone: { alignItems: 'center', marginTop: space.md, marginBottom: space.xl },
-  headline: {
-    fontFamily: font.sansHeavy,
-    fontSize: 30,
-    lineHeight: 38,
-    textAlign: 'center',
-    marginBottom: space.sm,
-  },
+  headline: { ...type.displayHeadline, textAlign: 'center', marginBottom: space.sm },
   sub: { textAlign: 'center', marginBottom: space.xl, paddingHorizontal: space.sm },
   door: {
     flexDirection: 'row',

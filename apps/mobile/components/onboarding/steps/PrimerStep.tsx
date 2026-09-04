@@ -7,7 +7,7 @@ import { Entrance } from '@/components/motion/Entrance';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 
 const LINES: { icon: keyof typeof Ionicons.glyphMap; key: TKey }[] = [
   { icon: 'person-outline', key: 'onboarding.primer.line1' },
@@ -58,9 +58,7 @@ export function PrimerStep({ onNext }: { onNext: () => void }) {
 const styles = StyleSheet.create({
   badgeZone: { alignItems: 'center', marginTop: space.lg, marginBottom: space.md },
   headline: {
-    fontFamily: font.sansHeavy,
-    fontSize: 28,
-    lineHeight: 36,
+    ...type.displayHeadline,
     textAlign: 'center',
     marginBottom: space.xl,
     paddingHorizontal: space.sm,
