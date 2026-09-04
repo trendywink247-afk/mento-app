@@ -124,3 +124,19 @@ Context: shipped ahead of this document on direct founder instruction; ratifying
 **2. Bottom nav retires the 4-tab `Chats · Journals · Mentors · Profile` set (§C.7, superseded).** The shipped nav is **`Chats · Path · Journals · Profile`** — Path replaces the primary Mentors slot; Mentors/Browse becomes hidden-but-routable (reached from within Chats/Path flows), not a primary tab. This does not reopen the door to promoting UPSC self-assessment ("Mirror") to a tab — §D.8 defer ruling still stands.
 
 **3. In-app become-a-listener funnel (session 22).** Recruitment moves in-app: Profile → application (motivation, communities, availability, optional email, hard-gated "not therapists" pledge) → admin Applications queue (approve mints a real listener + audit row; decline stores an admin-private reason, 30-day server-enforced reapply cooldown) → in-app status card. A `mentor_interest` flag stages interest for the deferred Module B mentor portal without building any of Module B now. Application emails are **stored, not sent** — no email provider is wired yet; that choice stays open (tracked in `CLAUDE.md` → Docs drift until a provider is picked).
+
+---
+
+## K. Founder rulings — 2026-09-04 (session 30: v1 navigation finalised)
+
+Context: full screen audit (24 route files, 45 rendered states walked at 390×844, 0 page/console errors) ahead of finalising UI navigation. Four calls put to the founder via structured question; answers ratified here and shipped in `63534be`.
+
+**1. The user-facing word is "mentor".** The person on the other side of a v1 chat is a **mentor** in every member-facing string (EN + HI): landing, connecting, chat header, Path counter, Profile safety card ("Mentors, not therapists"), the become-a-mentor funnel and the public `/apply` page. "Listener" survives only as the **internal/code/ops term** — routes (`/listener-apply`, `/listener`), testIDs, API paths, DB tables, the listener console and admin panel names are unchanged. Trust & Safety rule #2 ("listeners are not therapists") keeps its meaning under the new word. Note: this reserves nothing for Module B's *paid* mentors — when Module B ships, its naming must be revisited (open).
+
+**2. New Chat never mints a conversation on its own.** The Chats FAB opens a two-option sheet — *talk to whoever's free now* (General match) or *choose a mentor* (Browse) — instead of instantly creating a second live conversation. Rejected: instant match with a confirm; FAB-to-browse only.
+
+**3. Legacy onboarding stub routes deleted; branded not-found added.** `onboarding/{age,email,companion,ready,connecting}` (redirect stubs from §I.2) are gone — `?step=` deep links on `/onboarding` remain the only deep-link surface. `app/+not-found.tsx` replaces expo-router's default black "Unmatched Route" page with a calm, companion-led screen and a single way back.
+
+**4. Landing hero stays the two-people illustration.** The companion becomes the star from the age step onward (§I.5 unchanged); the landing does not switch to a default panda. Rejected: companion-led landing.
+
+**Implemented without a founder question (Calm-register default, veto in PROGRESS → Open):** Conversation Options items are no longer numbered "1. … 6."; mentors.tsx busy/network notes moved to i18n keys.

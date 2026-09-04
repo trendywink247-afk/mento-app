@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-09-04 (session 30) — Full screen audit + v1 navigation finalised ✅
+
+**Context:** founder asked "how many screens do we have, how are we making the experience better — go through the app, check everything, then finalise UI navigation." Ran a screen-by-screen headless walk (scratchpad script, 390×844) that drove real onboarding → chat, every options sub-flow, all four tabs, the Pathfinder to path-home, every journal, coffee, apply, reflection, start-fresh, the legacy stubs, `/apply`, `/listener`, `/admin`, and a bogus URL: **45 rendered states, 0 page errors, 0 console errors.** Inventory: 24 route files (3 layouts) → 19 real routes (5 were redirect stubs); member app 15, public web 1, listener console 2, admin 1 (7 panels). Four decisions put to the founder via `AskUserQuestion`; all ratified in `docs/DECISIONS.md` §K.
+
+**Done:**
+- **`63534be`** — feat(mobile): finalise v1 navigation.
+  - **Wording → "mentor"** in every member-facing EN + HI string (landing "with a mentor who", connecting, chat header, Path "N mentors around", Profile "Mentors, not therapists", become-a-mentor funnel, `/apply` copy). Founder chose *mentor* over the recommended *listener*; "listener" stays the internal/code/console term — no route, testID, API or DB rename.
+  - **New Chat FAB → two-option sheet** (`chats.tsx`: "Talk to whoever's free now" / "Choose a mentor" → Browse / "Not right now"). Before: one tap silently minted a second live General conversation.
+  - **`app/+not-found.tsx`** — branded unmatched-route screen (member's companion, calm copy, "Take me back" → `/` → live session lands on `/chats`). Before: expo-router's black default page.
+  - **Deleted** `onboarding/{age,email,companion,ready,connecting}.tsx` stubs; README + CLAUDE.md layout updated.
+  - **Conversation Options un-numbered** ("Lock this Conversation", not "1. Lock…"); `mentors.tsx` busy/network notes now `t('common.allBusy')` / `t('common.networkError')`.
+  - **Proven:** `tsc --noEmit` clean; e2e `member-screens` (extended with `chats: new-chat sheet` + `not-found` visits), `path-communities` (assertion updated `text=listener` → `text=mentor`), `connecting-experience`, `listener-apply`, `apply`, `hindi-core-loop` — all PASS, 0 page errors, normal + reduced-motion. API untouched → no pytest/reseed.
+- Docs: `DECISIONS.md` §K (four rulings + the two Calm-default calls), `CLAUDE.md` vocabulary rule + Module-B-naming drift line.
+
+**Audit findings NOT acted on (carry):**
+- Journals footer promises "readable offline **soon**"; Profile footer says "Mento · early access" — both must be true or removed before launch.
+- `/reflection` and `/coffee` load standalone with no conversation context (direct URL) — harmless, low priority; guard if deep links ever get shared.
+- `start-fresh.tsx` still has hardcoded EN strings (pre-existing i18n violation) — fold into `locales/*` next time that file is touched.
+- Landing hero is a generic two-people illustration (founder: keep).
+
+**Open (founder):**
+- **Veto window:** un-numbered Options items; mentors.tsx i18n move (both Calm-register defaults, no question asked).
+- **Module B naming:** "mentor" is now taken by volunteer listeners in v1 copy; paid Module B mentors will need a distinct user-facing name — decide before Module B spec work (also on CLAUDE.md drift list).
+- Carried unchanged from session 29: console-deploy CI secrets, off-box backup, Stream secret rotation, `docs/PRIVACY.md` sign-off, old public `mento` GitHub repo, `/apply` link not shared, zero real listeners in prod.
+
+**Next:** founder's call — this was the "finalise navigation" checkpoint. Natural follow-ups: (a) the two launch-copy promises above, (b) rebuild + ship the consoles (`deploy/deploy-console.sh`) so `/apply` shows the new wording, (c) resume session 29's infra threads.
+
+**How to resume:** stack unchanged (`mento-stack`). Gotcha logged this session: `apps/mobile/.env` points `EXPO_PUBLIC_API_URL` at the PC's **Tailscale IP** (100.81.203.69) — for web/e2e that only works if uvicorn runs with `--host 0.0.0.0`; a localhost-only uvicorn makes every browser API call fail while `curl localhost:8000` looks healthy. New/deleted `app/` routes need an Expo restart (`-c`) before e2e sees them. The audit walk script lives only in the session scratchpad (one-off, per mento-e2e rules) — `e2e/member-screens.e2e.js` is the committed equivalent.
+
+---
+
 ## 2026-09-04 (session 29) — Stopped the `.env` churn; cleared the docs/CI backlog ✅
 
 **Context:** founder was tired of `apps/mobile/.env` getting hand-edited back and forth between local/dev and prod values, and asked for a full scan of the app to knock out as much of the remaining backlog as reasonably possible in one session. Root cause: `.env.production` already existed as the correct mechanism (Expo auto-loads it over `.env` when `NODE_ENV=production`), but `docs/DEPLOYMENT_VPS.md` step 8 literally instructed editing `.env` directly, and raw `gradlew assembleRelease` never sets `NODE_ENV` (already diagnosed in `ANDROID_BUILD.md` §8f) — so releases kept getting built by hand-flipping the dev file. Founder picked which backlog bundles to tackle via `AskUserQuestion`: privacy policy + helpline check, docs reconciliation, and code/CI hygiene — all done; production-infra was scoped down to console-deploy CI only (off-box backup and Stream-secret rotation explicitly deferred, needing a credential/decision the founder wants to make deliberately, not bolted onto this session).

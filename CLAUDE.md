@@ -12,6 +12,8 @@ An **anonymous, low-friction emotional-support app**. A person in a hard moment 
 
 Hero experience: **anonymous 1:1 chat** — "I just need to talk."
 
+**Vocabulary (DECISIONS §K.1, 2026-09-04):** the person on the other side of a chat is a **mentor** in every user-facing string (EN + HI). "Listener" is the internal/code/ops word only — routes, testIDs, API paths, tables, the listener console and admin panels keep it. Don't reintroduce "listener" or "peer" into member-facing copy.
+
 Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I) explicitly **beyond the mockups**: cinematic motion, depth, light and a living companion — in the Calm/Headspace register, never gamified, **no 3D engine, no audio**. **The user's chosen animal is the star** — after the pick, their companion (not a fixed panda) carries identity everywhere.
 
 **When a call isn't covered by DECISIONS/PRD:** make the choice a top-tier consumer app in the Calm register would make, implement it, and record it in `PROGRESS.md → Open decisions` for founder veto. Don't block waiting for an answer; don't silently decide either.
@@ -288,6 +290,7 @@ Standing rules the skills assume: the founder's product calls get implemented th
 - **Stack table needs a push-notifications / OTA row** (session 25–26): `expo-notifications` + `expo-device` (device registration only, `services/api/app/routers/notifications.py` + `lib/pushNotifications.ts`) and `expo-updates` (shake-to-update `lib/useShakeToUpdate.ts` + manual "Check for updates" in Profile). EAS `projectId`/`owner` **are** now set (`app.json` `extra.eas` + `owner: geekspace`), but the founder chose **local build + self-hosted OTA to avoid EAS cloud cost** — see `docs/ANDROID_BUILD.md`. The one gap for live shake-update is an `updates.url` block in `app.json` pointing at a self-hosted server (deferred to when the server exists; APK builds + installs fine without it, shake just inert). No product send-trigger decided.
 - **In-chat AI landed (session 26)** — add Stack rows: **local PII redaction** (`app/services/moderation.py`, regex + optional Presidio, on the before-send message path, `pii_redaction_enabled`) and **opt-in journal note-sorting** (`app/services/notes_ai.py` Gemini Flash, `gemini_api_key`, dark by default, `POST /journals/organize` + `/journal/organize` screen). New env vars: `GEMINI_API_KEY`; optional `requirements-ml.txt` for Presidio NER.
 - **Prod is now live (session 28)** — self-managed Hostinger VPS, `https://api.agentin.chat`, full runbook in `docs/DEPLOYMENT_VPS.md`. Stack table's Backend/DB/Cache/Messaging rows describe *what* runs but not *where* — needs a Hosting/Deployment row (or a pointer) once the DO-App-Platform-vs-VPS story is settled as more than "two parallel docs." Mobile still points at localhost by default; `EXPO_PUBLIC_API_URL=https://api.agentin.chat/api/v1` is the prod value once the app is built against it.
+- **Module B naming (session 30):** "mentor" is now the v1 word for a volunteer listener; when paid Module B mentors arrive, the two need distinct user-facing names — decide before Module B spec work.
 Clear an item from this list when the underlying doc is updated — then delete the line.
 
 ---
