@@ -13,13 +13,15 @@
  * for the trigger's character duration + a short tail, then released back to rest).
  * Rest is `sleepy` during the companion's local night window (theme/motion.ts
  * `character.sleepy`), else `idle`. Pose changes crossfade (opacity only, manual
- * shared value) — instant under reduced motion.
+ * shared value) — instant under reduced motion. The crossfade tracks the resolved
+ * ART (animal + pose), not just the pose key, so an animal change crossfades too
+ * instead of hard-cutting.
  *
  * State vocabulary (all animals): idle micro-sway (+ host breathing), greet,
  * celebrate, comfort, tap-react (`interactive`).
  */
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type ImageSourcePropType } from 'react-native';
 import LottieView from 'lottie-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SvgXml } from 'react-native-svg';
@@ -28,7 +30,7 @@ import { COMPANION_FLUENT } from '@/assets/companions/fluent';
 import { COMPANION_GENERATED, type CompanionPose } from '@/assets/companions/generated';
 import { COMPANION_LOTTIE } from '@/assets/companions/registry';
 import { type CompanionAnimal } from '@/components/art/Companions';
-import { ReactiveCompanion, type CompanionTrigger } from '@/components/art/ReactiveCompanion';
+import { ReactiveCompanion, isSleepyHour, type CompanionTrigger } from '@/components/art/ReactiveCompanion';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { character, duration, easing } from '@/theme/motion';
 
@@ -53,11 +55,12 @@ const TRIGGER_TAIL: Record<NonNullable<CompanionTrigger>['kind'], number> = {
   curious: 0,
 };
 
-/** Rest pose: sleepy during the companion's local night window, else idle. */
+/** Rest pose: sleepy during the companion's local night window, else idle.
+ * Shares `isSleepyHour` with ReactiveCompanion's idle sway — but where that rig
+ * checks once per mount (a screen alive across the boundary stays in its opening
+ * state), this re-evaluates on every render, so the pose can flip live. */
 function restingPose(): CompanionPose {
-  const h = new Date().getHours();
-  const { startHour, endHour } = character.sleepy;
-  return h >= startHour || h < endHour ? 'sleepy' : 'idle';
+  return isSleepyHour() ? 'sleepy' : 'idle';
 }
 
 export function Companion({
@@ -89,7 +92,7 @@ export function Companion({
   // degrade to the brand guide, not crash the screen with fluent === undefined.
   const requested = animal ?? 'Panda';
   const resolved: CompanionAnimal = requested in COMPANION_FLUENT ? requested : 'Panda';
-  const source = COMPANION_LOTTIE[resolved];
+  const lottieSource = COMPANION_LOTTIE[resolved];
   const set = COMPANION_GENERATED[resolved];
   const fluent = COMPANION_FLUENT[resolved];
 
@@ -97,46 +100,60 @@ export function Companion({
   const [triggerPose, setTriggerPose] = useState<CompanionPose | null>(null);
   const tailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (tailTimer.current) clearTimeout(tailTimer.current);
     if (!trigger) {
-      setTriggerPose(null);
+      // A caller stopping the trigger mid-hold (e.g. CompanionStep passes
+      // trigger=null the instant a thumbnail is deselected) must NOT cut the
+      // gesture short — the tail timer already scheduled below releases it.
       return;
     }
+    if (tailTimer.current) clearTimeout(tailTimer.current);
     setTriggerPose(TRIGGER_POSE[trigger.kind]);
     const hold = character[trigger.kind].duration + TRIGGER_TAIL[trigger.kind];
     tailTimer.current = setTimeout(() => setTriggerPose(null), hold);
-    return () => {
-      if (tailTimer.current) clearTimeout(tailTimer.current);
-    };
     // reason: trigger.n is the replay signal for the same kind
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger?.kind, trigger?.n]);
+  // Unmount-only cleanup — the effect above deliberately does not return a cleanup
+  // (that would fire on every dependency change, including the null one above).
+  useEffect(
+    () => () => {
+      if (tailTimer.current) clearTimeout(tailTimer.current);
+    },
+    []
+  );
 
   const wanted = pose ?? triggerPose ?? restingPose();
   const effective: CompanionPose = set.poses[wanted] ? wanted : 'idle';
+  const artSource = set.poses[effective] ?? set.poses.idle;
+  const artKey = `${resolved}/${effective}`;
 
-  // Crossfade between poses — opacity only, manual shared value (never entering=/exiting=).
+  // Crossfade between resolved art — opacity only, manual shared value (never
+  // entering=/exiting=). Keyed on animal+pose together so switching the companion
+  // itself crossfades too, instead of the new animal's set hard-cutting in.
   const fade = useSharedValue(1);
-  const [shown, setShown] = useState<CompanionPose>(effective);
-  const [previous, setPrevious] = useState<CompanionPose | null>(null);
+  const [shown, setShown] = useState<{ key: string; source: ImageSourcePropType }>({
+    key: artKey,
+    source: artSource,
+  });
+  const [previous, setPrevious] = useState<ImageSourcePropType | null>(null);
   const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (effective === shown) return;
+    if (artKey === shown.key) return;
     if (clearTimer.current) clearTimeout(clearTimer.current);
     if (reduced) {
-      setShown(effective);
+      setShown({ key: artKey, source: artSource });
       setPrevious(null);
       fade.value = 1;
       return;
     }
-    setPrevious(shown);
-    setShown(effective);
+    setPrevious(shown.source);
+    setShown({ key: artKey, source: artSource });
     fade.value = 0;
     fade.value = withTiming(1, { duration: duration.base, easing: easing.settle });
     clearTimer.current = setTimeout(() => setPrevious(null), duration.base + 50);
     // reason: fade is a stable shared-value ref
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [effective, reduced]);
+  }, [artKey, reduced]);
   useEffect(
     () => () => {
       if (clearTimer.current) clearTimeout(clearTimer.current);
@@ -158,9 +175,9 @@ export function Companion({
   // animal shipped without art yet.
   const hasGenerated = Boolean(set.poses.idle);
 
-  const art = source ? (
+  const art = lottieSource ? (
     <LottieView
-      source={source}
+      source={lottieSource}
       autoPlay={!reduced}
       loop={!reduced}
       style={{ width: size, height: size }}
@@ -176,14 +193,14 @@ export function Companion({
     >
       {previous && (
         <Animated.Image
-          source={set.poses[previous] ?? set.poses.idle}
+          source={previous}
           resizeMode="contain"
           accessibilityIgnoresInvertColors
           style={[styles.layer, { width: box, height: box }, previousStyle]}
         />
       )}
       <Animated.Image
-        source={set.poses[shown] ?? set.poses.idle}
+        source={shown.source}
         resizeMode="contain"
         accessibilityIgnoresInvertColors
         style={[styles.layer, { width: box, height: box }, currentStyle]}

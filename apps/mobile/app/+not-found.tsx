@@ -22,7 +22,7 @@ export default function NotFound() {
   return (
     <Screen bg="lavender">
       <View style={styles.center} testID="not-found">
-        <Companion animal={animal} size={120} />
+        <Companion animal={animal ?? null} size={120} />
         <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
           {t('notFound.title')}
         </Text>
