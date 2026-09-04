@@ -27,7 +27,13 @@ export function HandoffStep({
   const { colors } = useTheme();
   const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
+  // Gates only the automatic mount-triggered run — the Retry button calls
+  // run() directly on purpose, bypassing this latch.
   const startedRef = useRef(false);
+  // Unmount guard: a late network resolution must never navigate or set state
+  // on an instance the user has already backed out of.
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
 
   const run = useCallback(async () => {
     setError(null);
@@ -42,9 +48,11 @@ export function HandoffStep({
         await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
         capture('onboarding_completed');
       }
+      if (!mountedRef.current) return;
       clearDraft();
       onDone();
     } catch (e) {
+      if (!mountedRef.current) return;
       setError(e instanceof ApiError ? e.message : t('common.networkError'));
     }
   }, [onInvalidDraft, onDone, t]);
