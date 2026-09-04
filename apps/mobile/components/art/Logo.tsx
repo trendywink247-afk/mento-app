@@ -3,14 +3,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { useTheme } from '@/theme/ThemeProvider';
-import { font } from '@/theme/tokens';
+import { colors as staticColors, font } from '@/theme/tokens';
 
 /**
  * Mento logo: a chat bubble holding a heart — "talking that cares" in one glyph.
- * Indigo→lavender gradient (brand tokens by VALUE — SVG gradients can't consume
- * useTheme, and the mark must not re-tint with the user accent; it's the brand).
- * Chosen 2026-07-13 (founder-approved "enhance modestly"; concept B of four —
- * see docs/superpowers/specs/2026-07-13-landing-enhance-design.md).
+ * Fixed brand gradient (theme/tokens `colors.brand`/`colors.accentSoft` — a static
+ * import, not useTheme(), because the mark must not re-tint with the user's chosen
+ * companion accent; it's the brand). Chosen 2026-07-13 (founder-approved "enhance
+ * modestly"; concept B of four — see docs/superpowers/specs/2026-07-13-landing-enhance-design.md).
+ * Clay and Sage repaint (DECISIONS §K.5): gradient now runs brand terracotta → accentSoft.
  */
 export function LogoMark({ size = 72 }: { size?: number }) {
   // Unique per instance: multiple lockups can be in the DOM at once (the journey
@@ -21,8 +22,8 @@ export function LogoMark({ size = 72 }: { size?: number }) {
     <Svg width={size} height={size} viewBox="0 0 48 56" accessibilityLabel="Mento">
       <Defs>
         <LinearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#5847D6" />
-          <Stop offset="1" stopColor="#8177C9" />
+          <Stop offset="0" stopColor={staticColors.brand} />
+          <Stop offset="1" stopColor={staticColors.accentSoft} />
         </LinearGradient>
       </Defs>
       {/* bubble with a soft tail, bottom-left */}

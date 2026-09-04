@@ -1,5 +1,7 @@
 import Svg, { Circle, Ellipse, G, Path, Rect } from 'react-native-svg';
 
+import { colors } from '@/theme/tokens';
+
 /**
  * Soft scene illustrations matching the mockups' style: lavender washes, rounded
  * shapes, sparkles + leaves. All flat vector so they stay crisp and theme-friendly.
@@ -9,7 +11,7 @@ const LAV_1 = '#CFCAE6';
 const LAV_2 = '#E2DEF3';
 const LAV_3 = '#B7AEDF';
 const PURPLE = '#8B7FD6';
-const INK = '#1D2142';
+const INK = colors.ink;
 const SKIN = '#E8B89B';
 
 /** Sparkle four-point star. */

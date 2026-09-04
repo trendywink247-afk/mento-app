@@ -90,9 +90,9 @@ export const type = {
   /** Big onboarding headlines (sans, heavy) — "A place to talk with a peer…" */
   display: { fontSize: 30, fontFamily: font.sansHeavy, lineHeight: 40 },
   /** Serif display — hub titles + celebratory headlines ("My Chats"). */
-  displaySerif: { fontSize: 30, fontFamily: font.serifBold, lineHeight: 40 },
+  displaySerif: { fontSize: 30, fontFamily: font.serifBold, lineHeight: 42 },
   /** Onboarding / Mentor Home headlines — replaces the per-step hand-rolled 28–30px styles. */
-  displayHeadline: { fontSize: 28, fontFamily: font.sansHeavy, lineHeight: 36 },
+  displayHeadline: { fontSize: 28, fontFamily: font.sansHeavy, lineHeight: 40 },
   title: { fontSize: 22, fontFamily: font.sansBold, lineHeight: 28 },
   titleSerif: { fontSize: 22, fontFamily: font.serifBold, lineHeight: 28 },
   body: { fontSize: 16, fontFamily: font.sans, lineHeight: 24 },
