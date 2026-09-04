@@ -8,6 +8,12 @@ const STREAM_KEY = 'mento.stream_token';
 const PERSONA_KEY = 'mento.persona';
 const COMPANION_COLOR_KEY = 'mento.companion_colour';
 const COMPANION_ANIMAL_KEY = 'mento.companion_animal';
+const ROLE_KEY = 'mento.role';
+
+/** Local-only preference chosen on the role step. Never sent to the server, never
+ * part of the persona — a missing key reads as mentee so every existing install
+ * behaves exactly as before the fork existed. */
+export type Role = 'mentee' | 'mentor';
 
 type Store = {
   setItemAsync(key: string, value: string): Promise<void>;
@@ -70,6 +76,15 @@ export async function getCompanionAnimal(): Promise<string | null> {
   return store.getItemAsync(COMPANION_ANIMAL_KEY);
 }
 
+export async function saveRole(role: Role): Promise<void> {
+  await store.setItemAsync(ROLE_KEY, role);
+}
+
+export async function getRole(): Promise<Role> {
+  const raw = await store.getItemAsync(ROLE_KEY);
+  return raw === 'mentor' ? 'mentor' : 'mentee';
+}
+
 export async function clearSession(): Promise<void> {
   // Tear down the Stream websocket too — otherwise the singleton keeps the old
   // identity connected and the next persona's first chat fails.
@@ -86,5 +101,6 @@ export async function clearSession(): Promise<void> {
     store.deleteItemAsync(PERSONA_KEY),
     store.deleteItemAsync(COMPANION_COLOR_KEY),
     store.deleteItemAsync(COMPANION_ANIMAL_KEY),
+    store.deleteItemAsync(ROLE_KEY),
   ]);
 }

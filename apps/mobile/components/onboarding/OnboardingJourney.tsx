@@ -1,6 +1,7 @@
 /**
  * OnboardingJourney — the whole onboarding as ONE route: an internal step machine
- * (age → email → companion → ready → connecting) rendered over a stage that never
+ * (role → age → email → companion → ready → connecting, or role → age → email →
+ * primer → handoff for mentors) rendered over a stage that never
  * unmounts. This is what makes filmic continuity possible: shared-element transitions
  * are not production-viable on SDK 52 + expo-router, so instead of five route
  * mounts the ambient background (and later the mascot) persist across every step.
@@ -26,10 +27,14 @@ import { AgeStep } from '@/components/onboarding/steps/AgeStep';
 import { CompanionStep } from '@/components/onboarding/steps/CompanionStep';
 import { ConnectingStep, type MatchParams } from '@/components/onboarding/steps/ConnectingStep';
 import { EmailStep } from '@/components/onboarding/steps/EmailStep';
+import { HandoffStep } from '@/components/onboarding/steps/HandoffStep';
+import { PrimerStep } from '@/components/onboarding/steps/PrimerStep';
 import { ReadyStep } from '@/components/onboarding/steps/ReadyStep';
+import { RoleStep } from '@/components/onboarding/steps/RoleStep';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { getDraft } from '@/lib/onboardingDraft';
+import type { Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -40,12 +45,16 @@ import { space } from '@/theme/tokens';
  * a clear, unhurried beat (~2.1s total), not a flicker. */
 const FOUND_BEAT_MS = 1000;
 
-type Step = 'age' | 'email' | 'companion' | 'ready' | 'connecting';
-const ORDER: Step[] = ['age', 'email', 'companion', 'ready', 'connecting'];
+type Step = 'role' | 'age' | 'email' | 'companion' | 'ready' | 'connecting' | 'primer' | 'handoff';
 
-/** Steps that show the back chevron (parity with the old routes: ready and
- * connecting had none — those are forward-only moments). */
-const BACKABLE: Step[] = ['age', 'email', 'companion'];
+/** Two orders, one machine (DECISIONS §K.7). The role step is shared; the mentee
+ * branch is byte-identical to the pre-fork journey. */
+const MENTEE_ORDER: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'connecting'];
+const MENTOR_ORDER: Step[] = ['role', 'age', 'email', 'primer', 'handoff'];
+const ALL_STEPS: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'connecting', 'primer', 'handoff'];
+
+/** Steps that show the back chevron. ready / connecting / handoff are forward-only. */
+const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'primer'];
 
 /** The mockups' "ritual" steps (companion + ready) keep their white-circle chevron
  * styling; the background mood itself is now carried by the ambient aurora. */
@@ -63,10 +72,19 @@ export function OnboardingJourney() {
     () => (getDraft().companionAnimal as CompanionAnimal | null) ?? null
   );
 
+  const [role, setRole] = useState<Role>(() => getDraft().role ?? 'mentee');
+  const order = role === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
+
   const [step, setStep] = useState<Step>(() => {
     const requested = params.step as Step | undefined;
-    if (!requested || !ORDER.includes(requested) || requested === 'age') return 'age';
-    return getDraft().dob ? requested : 'age';
+    if (!requested || !ALL_STEPS.includes(requested) || requested === 'role') return 'role';
+    if (requested === 'age') return 'age';
+    // Anything past the age gate needs a DOB in the (in-memory) draft; a cold deep
+    // link has none, so it snaps to the very first step. It also must belong to
+    // the order for the draft's role — a mentee deep-linking into 'handoff' (or
+    // vice versa) is not a valid resume point.
+    const requestedOrder = (getDraft().role ?? 'mentee') === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
+    return getDraft().dob && requestedOrder.includes(requested) ? requested : 'role';
   });
 
   // Mirror the step into the URL — replace semantics, so no history spam / remounts.
@@ -85,14 +103,28 @@ export function OnboardingJourney() {
 
   const goNext = useCallback(() => {
     haptic.advance();
-    setStep((s) => ORDER[Math.min(ORDER.indexOf(s) + 1, ORDER.length - 1)]);
-  }, []);
+    setStep((s) => order[Math.min(order.indexOf(s) + 1, order.length - 1)]);
+  }, [order]);
 
   const goBack = useCallback(() => {
-    const i = ORDER.indexOf(step);
-    if (i === 0) router.back();
-    else setStep(ORDER[i - 1]);
-  }, [step, router]);
+    const i = order.indexOf(step);
+    if (i <= 0) router.back();
+    else setStep(order[i - 1]);
+  }, [step, router, order]);
+
+  // The fork: remember the branch, then advance to the age gate (shared by both).
+  const onRolePicked = useCallback((r: Role) => {
+    haptic.advance();
+    setRole(r);
+    setStep('age');
+  }, []);
+
+  // Mentor hand-off: the session exists, no match was made — Mentor Home replaces
+  // the landing so hardware back never returns to a pre-session screen.
+  const onMentorReady = useCallback(() => {
+    router.dismissAll();
+    router.replace('/mentor-home');
+  }, [router]);
 
   // The matched moment: success haptic, panda celebrates, the sky lifts toward the
   // accent for a hard-capped beat — then the route crossfade carries us into chat.
@@ -134,17 +166,19 @@ export function OnboardingJourney() {
   // popped the previous route); on the first step it pops to the landing as usual.
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      const i = ORDER.indexOf(step);
-      if (i === 0) return false;
-      setStep(ORDER[i - 1]);
+      const i = order.indexOf(step);
+      if (i <= 0) return false;
+      setStep(order[i - 1]);
       return true;
     });
     return () => sub.remove();
-  }, [step]);
+  }, [step, order]);
 
   const renderStep = useCallback(
     (key: Step) => {
       switch (key) {
+        case 'role':
+          return <RoleStep onPick={onRolePicked} />;
         case 'age':
           return <AgeStep onNext={goNext} />;
         case 'email':
@@ -157,13 +191,23 @@ export function OnboardingJourney() {
           return (
             <ConnectingStep
               active={key === step}
-              onInvalidDraft={() => setStep('age')}
+              onInvalidDraft={() => setStep('role')}
               onMatched={onMatched}
+            />
+          );
+        case 'primer':
+          return <PrimerStep onNext={goNext} />;
+        case 'handoff':
+          return (
+            <HandoffStep
+              active={key === step}
+              onInvalidDraft={() => setStep('role')}
+              onDone={onMentorReady}
             />
           );
       }
     },
-    [goNext, step, onMatched]
+    [goNext, step, onMatched, onRolePicked, onMentorReady]
   );
 
   const lavender = LAVENDER.includes(step);

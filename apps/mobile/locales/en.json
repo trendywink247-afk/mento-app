@@ -11,6 +11,13 @@
     "body": "The link you followed isn't a place in Mento. Your space is still here, exactly as you left it.",
     "cta": "Take me back"
   },
+  "mentorHome": {
+    "title": "Mentor Home",
+    "appearAs": "You appear as %{name}",
+    "applyIntro": "Tell us a little about you. We read every application.",
+    "loadError": "We couldn't load your mentor status.",
+    "switchTalk": "I'd rather talk today"
+  },
   "common": {
     "continue": "Continue",
     "cancel": "Cancel",
@@ -90,6 +97,26 @@
       "affirm2": "Not a classroom session.",
       "affirm3": "Not a material exchange platform.",
       "affirm4": "Not a race against others."
+    },
+    "role": {
+      "headline": "What brings you here today?",
+      "sub": "No wrong answer. You can change this later.",
+      "talkTitle": "I need to talk",
+      "talkBody": "Someone real, anonymous, in under a minute.",
+      "listenTitle": "I'm here to listen",
+      "listenBody": "Be the steady voice for someone else.",
+      "footer": "Mentors are real people, not therapists."
+    },
+    "primer": {
+      "headline": "Listening here, in plain words.",
+      "line1": "You're a real person, not a therapist.",
+      "line2": "You sit with someone in a hard moment so they feel less alone.",
+      "line3": "You never diagnose. When it matters, Mento shows them the helplines.",
+      "cta": "Continue to apply"
+    },
+    "handoff": {
+      "headline": "Setting up your space…",
+      "sub": "Your identity stays yours — mentors are anonymous too."
     }
   },
   "connecting": {

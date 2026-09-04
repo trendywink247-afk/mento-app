@@ -24,7 +24,7 @@ import { useBreathing } from '@/components/motion/useBreathing';
 import { capture } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
 import { useReducedMotion } from '@/lib/useReducedMotion';
-import { getSessionToken } from '@/lib/session';
+import { getRole, getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import { duration, easing } from '@/theme/motion';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -49,10 +49,12 @@ export default function Landing() {
 
   useEffect(() => {
     let active = true;
-    void getSessionToken().then((token) => {
+    void getSessionToken().then(async (token) => {
       if (!active) return;
-      if (token) router.replace('/chats');
-      else setChecked(true);
+      if (token) {
+        const role = await getRole();
+        if (active) router.replace(role === 'mentor' ? '/mentor-home' : '/chats');
+      } else setChecked(true);
     });
     return () => {
       active = false;
@@ -97,8 +99,10 @@ export default function Landing() {
       exit.value = 0;
       setLeaving(false);
       let active = true;
-      void getSessionToken().then((token) => {
-        if (active && token) router.replace('/chats');
+      void getSessionToken().then(async (token) => {
+        if (!active || !token) return;
+        const role = await getRole();
+        if (active) router.replace(role === 'mentor' ? '/mentor-home' : '/chats');
       });
       return () => {
         active = false;

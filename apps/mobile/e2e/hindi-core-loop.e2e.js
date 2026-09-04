@@ -16,6 +16,7 @@ async function walk(ctx, { assertConnecting }) {
   await page.waitForSelector('text=बातचीत शुरू करें', { timeout: 60000 }); // landing CTA
   console.log('OK hi landing');
   await tid('start').click();
+  await tid('role-talk').click();
 
   await page.waitForSelector('text=आपकी उम्र क्या है?', { timeout: 60000 }); // age
   console.log('OK hi age step');

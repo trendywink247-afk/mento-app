@@ -62,6 +62,8 @@ export default function RootLayout() {
                 shot; everything else keeps the default push. */}
             <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
             <Stack.Screen name="chat/[id]" options={{ animation: 'fade' }} />
+            {/* Mentor branch hand-off crossfades in like the chat does (DECISIONS §K.7). */}
+            <Stack.Screen name="mentor-home" options={{ animation: 'fade' }} />
             {/* Confirm dialog as a screens-backed transparent modal (see app/start-fresh.tsx). */}
             <Stack.Screen
               name="start-fresh"
