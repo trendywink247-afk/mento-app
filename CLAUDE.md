@@ -26,7 +26,7 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 |---|---|---|
 | Mobile | **Expo SDK 52** (RN 0.76, TS 5.3) + expo-router 4 | iOS + Android primary; **web = dev/test surface** (Playwright), best-effort UX. |
 | Motion | **Reanimated 3.16** + **@shopify/react-native-skia 1.5** + expo-haptics | Skia 1.5 is the SDK 52 pin (v2 needs SDK 53+). Ambient SkSL aurora + motion tokens (`theme/motion.ts`). Web lazy-loads CanvasKit, falls back to a static gradient. |
-| Character art | In-house SVG rig + AI-generated webp + 2.5D `Tilt3D` parallax | **PERMANENT v1 route** (DECISIONS §I.4, amended 2026-07-13 — Rive retired, no commission budget). Assets in `apps/mobile/assets/companions/`. |
+| Character art | In-house rig + painterly generated pose set (6 animals × 6 poses, `scripts/companions/`) + 2.5D `Tilt3D` parallax | **PERMANENT v1 route** (DECISIONS §I.4, amended 2026-07-13 — Rive retired, no commission budget; §K.8 painterly set 2026-09-05). Assets in `apps/mobile/assets/companions/generated/<Animal>/<pose>.webp`; regenerate via `scripts/companions/recipe.md` + `manifest.json`, cut with `cutout.py`. |
 | Scene art | **Lottie** — `lottie-react-native` 7.1 (native) + `@lottiefiles/dotlottie-react` (web) | Free LottieFiles assets, palette **baked** by `scripts/theme_lottie.py` (repo root). Licenses tracked in `apps/mobile/assets/lottie/README.md`. See Lottie rules below. |
 | Backend | **FastAPI** (Python 3.12) | async; Pydantic v2. |
 | DB | **Postgres 16** (compose locally → DigitalOcean managed) | SQLAlchemy 2.0 + Alembic migrations; matcher relies on row locks (`FOR UPDATE SKIP LOCKED`). |
@@ -110,8 +110,8 @@ mento/
     lib/                    api.ts, adminApi.ts, listenerApi.ts (typed clients) · session/adminSession/listenerSession
                             · streamClient/listenerStreamClient · haptics · useReducedMotion(.web) · onboardingDraft
                             · useSessionGuard · format
-    assets/                 lottie/ (5 themed animations + license README) · companions/ (fluent/ SVG sources +
-                            convert.js, generated/ webp incl. panda-poses, registry.ts) · scenes/ (webp empty-states)
+    assets/                 lottie/ (5 themed animations + license README) · companions/ (generated/<Animal>/<pose>.webp
+                            painterly set + registry.ts; fluent/ SVG fallback + convert.js) · scenes/ (webp empty-states)
     locales/                en.json · hi.json (typed keys via lib/i18n.tsx; EN is canonical)
     e2e/                    connecting-experience.e2e.js · path-communities.e2e.js · listener-apply.e2e.js
                             · analytics-dark.e2e.js · hindi-core-loop.e2e.js · README.md
@@ -148,6 +148,7 @@ mento/
 - **TypeScript** everywhere in mobile; `strict: true`. No `any` without a `// reason:` comment — the same `// reason:` convention documents *any* intentional rule-break (there is no linter to suppress; the comment is for humans).
 - **Python**: type hints required; `ruff` + `black` style; functions do one thing.
 - Components: function components + hooks. One component per file. Co-locate styles.
+- **Companion art**: never hand-edit a cutout — regenerate from the recipe with the animal's reference (`scripts/companions/recipe.md`, `manifest.json`), re-cut with `cutout.py`. Render companions only through `components/art/Companion` (the legacy `Panda` is an adapter onto it).
 - **Design tokens, never raw hex** in components — consume via `useTheme()`. Never raw durations — consume `theme/motion.ts`.
 - **Tappable = PressKey.** Buttons, cards, rows, chips, doors and the tab pill render through `PressKey` (face visuals in `style`, every sizing/margin constraint in `containerStyle`, per-corner radii via `faceRadiusStyle`); non-tappable cards use `EdgeSurface`. No new `elevation.*` on cards.
 - **Typed API clients only** — extend `lib/api.ts` (member), `lib/listenerApi.ts` (console), `lib/adminApi.ts` (dashboard). Never hand-write `fetch` in a component. Server side: Pydantic models in/out. (`lib/analytics.ts`'s fire-and-forget fetch is the sanctioned third-party exception.)

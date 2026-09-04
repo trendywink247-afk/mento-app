@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-09-05 (session 31c) — Companion pipeline: painterly pose set for all six animals ✅ (branch `feat/companion-pipeline`)
+
+**Context:** Plan 2 of the fidelity pass (`docs/superpowers/plans/2026-09-05-companion-pipeline.md`, DECISIONS §K.8 "painterly" ruling, budget "all six animals" approved). Replaces the flat one-pose-per-animal set + panda-only pose set with a reference-locked painterly set, and makes the legacy `Panda` component render the user's chosen animal (closes the §I.5 "fixed panda" exception from the session-30 audit).
+
+**Done (branch `git log --oneline master..feat/companion-pipeline`):**
+- `0d00f3a` `scripts/companions/`: `recipe.md` (locked prompt recipe), `poses.json`, `cutout.py`, `sheet.py`, `manifest.json`.
+- Renders (controller, Higgsfield `nano_banana`, 1:1): 6 references → accepted on a contact sheet; 38 poses (`idle, greet, joy, comfort, curious, sleepy` × 6 + panda `coffee`, `shield`) with the animal's reference as `image_references`; 2 elephant re-rolls (background smudges). **46 credits** (approved ceiling 52). 429 rate limits on ~1 in 12 batch items — resubmitted, no loss.
+- `e5d3b43` `cutout.py` rewritten: a plain colour-distance matte punched holes through the owl's cream face, pale elephant skin and panda fur → now a **border flood-fill matte** (enclosed light regions stay opaque) + the baked contact shadow kept as a **soft translucent ramp** (a hard rule to delete it could not be separated from a pale belly). Proven on dark-ground contact sheets, all 45 renders. Manifest lists every job id.
+- `d9c4494` `generated/<Animal>/<pose>.webp` (38 files, 1.2 MB total, ~30 KB each); registry `CompanionArtSet { poses, scale }`; `lib/useCompanionAnimal.ts`; `Companion` gains `pose?` + trigger→pose hold + sleepy hour (22–06) resting pose + opacity-only crossfade (instant under reduced motion); `Panda` is a thin adapter (`wave→greet, sleep→sleepy, excited→joy, sad→comfort, coffee→coffee|joy, shield→shield|comfort`); `panda-poses/` and old top-level webp deleted; `+not-found` uses the hook. tsc clean.
+- `9cf0e38` fix: crossfade layers rendered unbounded on web (inline shared-value style dropped the absolute-fill inset) → explicit `width/height` + `useAnimatedStyle`; caught by the browser proof, not by tsc.
+- `da232e2` review fixes: releasing a trigger no longer cuts the pose hold short; `Panda` adapter reserves its box until the stored animal is read (no panda→fox flash on ~15 screens); crossfade keys on animal+pose and stores the previous *source*; one shared `isSleepyHour()`. Walk + the three e2e re-run green.
+- Proof: `connecting-experience`, `role-fork`, `member-screens` e2e PASS, 0 page errors (normal + reduced). Scratch walk with **Fox** chosen: onboarding picker (six thumbnails), ready, chat Lock/Status/Pause/End/Report flows, coffee, reflection, profile, not-found, start-fresh — the fox appears everywhere in the mapped pose, 0 page errors in both motion modes.
+- Docs: CLAUDE.md character-art row + layout + "Companion art" convention; DECISIONS §K.8 note; `docs/mascot-candidates/README.md` + `companions-2026-09/` (7 review sheets as JPEG, ~440 KB — full-res PNGs re-downloadable by job id).
+
+**Deviations / accepted trade-offs:** scarf is painted terracotta and does not follow the companion accent (same trade-off the old set had). Shadow kept (soft, translucent) rather than removed. Turtle `joy` is a mid-hop rather than a seated bounce — accepted. The Fluent SVG fallback branch in `Companion` is unreachable now that every animal has `idle` (kept, documented).
+
+**Open (founder):**
+- **Copy still says "panda" while the user's animal is on screen**: "Panda Pause", "Panda Mask", "Panda Wipe" (feature names) and coffee copy "keeps our pandas fueled up". Proposal: keep the feature names as brand nouns but drop "pandas" from body copy → "keeps the team fueled up". Needs a ruling before EN/HI copy edits.
+- Sleepy-hour resting pose (22:00–06:00) applies to the onboarding *ready* screen too — the companion greets with eyes closed late at night. Calm-register defensible; flag if it should be idle during onboarding.
+- Carried: 5 screens still on `elevation.sm` cards; `chat.typing` key unused; serif token names alias Baloo; scene raster tiles; `mentors.tsx` hardcoded English.
+
+**Next:** merge `feat/companion-pipeline` (founder chooses merge / PR / keep / discard). Then the agreed next spec: native mentor console via browser mockups.
+
+**How to resume:** stack as in session 31b (API `--host 0.0.0.0`, Expo web `-c` after asset changes — Metro started with `CI=1` disables reloads, don't). Regenerate art only via `scripts/companions/recipe.md` + `manifest.json` job ids; never hand-edit a cutout. Higgsfield gotchas: `jobs_wait` takes `jobs:[{index, job_id}]`; `generate_image` takes `params:{…}`; batch items 429 sporadically — resubmit singles. `cutout.py` is pure PIL (no numpy) and ~6 s/image; run big batches in the background.
+
 ## 2026-09-05 (session 31b) — Fidelity foundation: Clay and Sage tokens, Baloo 2, PressKey ✅ (branch `feat/fidelity-foundation`)
 
 **Context:** founder ruling `DECISIONS.md` §K.8 (fidelity pass, browser mockups): pillow-key depth language (visible bottom edge, collapses on press, medium impact haptic — rejected soft clay/quiet matte), painterly companion art direction (later, Plan 2), Focus-physics chat (rising bubbles, breathing typing dots, pressing send key — no ambient scene, no companion in-chat), build order foundation-first (tokens/type/PressKey/chat physics) then the companion asset pipeline. This branch is the foundation half, on top of `5cce83b`; spec `docs/superpowers/specs/2026-09-05-fidelity-pass-design.md`.
