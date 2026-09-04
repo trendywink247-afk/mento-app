@@ -9,7 +9,7 @@ import { Screen } from '@/components/Screen';
 import { useI18n } from '@/lib/i18n';
 import { getCompanionAnimal } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, space, type } from '@/theme/tokens';
+import { space, type } from '@/theme/tokens';
 
 /** Branded unmatched-route screen. Without this file expo-router renders its own
  * black "Unmatched Route" page — a stale share link or a typo would drop a
@@ -49,7 +49,7 @@ export default function NotFound() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm },
-  title: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 32, textAlign: 'center', marginTop: space.sm },
+  title: { ...type.displayHeadline, textAlign: 'center', marginTop: space.sm },
   body: { textAlign: 'center' },
   cta: { alignSelf: 'stretch', marginTop: space.md },
 });

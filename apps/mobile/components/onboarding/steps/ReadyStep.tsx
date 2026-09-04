@@ -126,7 +126,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
 
 const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: space.sm, marginTop: space.sm, marginBottom: space.md },
-  headline: { fontFamily: font.serifBold, fontSize: 30, lineHeight: 38, textAlign: 'center' },
+  headline: { ...type.displayHeadline, textAlign: 'center' },
   center: { textAlign: 'center' },
   companionZone: { alignItems: 'center', gap: space.xs, marginBottom: space.md },
   arch: {

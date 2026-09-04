@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/theme/ThemeProvider';
+import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, wash, type Wash } from '@/theme/tokens';
 
 /**
@@ -19,11 +20,12 @@ export function IconBadge({
   size?: number;
 }) {
   const { colors } = useTheme();
+  // Wash tones keep their legacy names; glyph inks come from the matching clay accents.
   const fg: Record<Wash, string> = {
     accent: colors.accent,
-    indigo: '#4E56C0',
-    orange: '#D88A2D',
-    green: '#3B9A66',
+    indigo: COMPANION_COLORS.plum.accent,
+    orange: COMPANION_COLORS.mustard.accent,
+    green: COMPANION_COLORS.sage.accent,
     danger: colors.danger,
   };
   const bg = tone === 'accent' ? colors.accentTint : wash[tone];

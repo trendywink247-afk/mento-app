@@ -4,10 +4,10 @@ Usage:  python scripts/theme_lottie.py <in.lottie|in.json> <out.json>
 
 Remaps every color property — static fills/strokes, animated keyframes, and
 gradient stops — onto Mento tokens by HSL role:
-  dark inks        -> #1D2142 / #2A2F55 (two tiers preserve layering)
+  dark inks        -> #2B2B2B / #4A4540 (two tiers preserve layering)
   grays            -> muted ink family
-  saturated colors -> indigo family by lightness (accent / accentSoft / pale)
-  near-white       -> kept (crisp on lavender)
+  saturated colors -> terracotta family by lightness (accent / accentSoft / pale)
+  near-white       -> kept (crisp on clay)
 
 The goal: any free Lottie reads as if drawn for Mento. Licences stay documented
 in apps/mobile/assets/lottie/README.md.
@@ -22,13 +22,13 @@ import sys
 import zipfile
 from pathlib import Path
 
-INK = (0x1D / 255, 0x21 / 255, 0x42 / 255)          # #1D2142
-INK2 = (0x2A / 255, 0x2F / 255, 0x55 / 255)         # #2A2F55
-INK_MUTED = (0x6E / 255, 0x71 / 255, 0x91 / 255)    # #6E7191
-ACCENT = (0x58 / 255, 0x47 / 255, 0xD6 / 255)       # #5847D6
-ACCENT_SOFT = (0x81 / 255, 0x77 / 255, 0xC9 / 255)  # #8177C9
-PALE = (0xDD / 255, 0xD6 / 255, 0xF3 / 255)         # #DDD6F3
-LIGHT_GRAY = (0xE9 / 255, 0xE5 / 255, 0xF5 / 255)   # lavender-gray
+INK = (0x2B / 255, 0x2B / 255, 0x2B / 255)          # #2B2B2B charcoal
+INK2 = (0x4A / 255, 0x45 / 255, 0x40 / 255)         # #4A4540
+INK_MUTED = (0x6E / 255, 0x6A / 255, 0x64 / 255)    # #6E6A64
+ACCENT = (0xA2 / 255, 0x53 / 255, 0x3A / 255)       # #A2533A terracotta
+ACCENT_SOFT = (0xC9 / 255, 0x74 / 255, 0x4F / 255)  # #C9744F
+PALE = (0xF6 / 255, 0xD9 / 255, 0xCB / 255)         # #F6D9CB
+LIGHT_GRAY = (0xE6 / 255, 0xDF / 255, 0xD3 / 255)   # #E6DFD3 clay border
 
 
 def remap_rgb(r: float, g: float, b: float) -> tuple[float, float, float]:
@@ -45,7 +45,7 @@ def remap_rgb(r: float, g: float, b: float) -> tuple[float, float, float]:
         return LIGHT_GRAY
     # saturated colors -> indigo family by lightness
     if l < 0.28:
-        return INK2 if s < 0.5 else (0x33 / 255, 0x2D / 255, 0x5C / 255)  # deep indigo
+        return INK2 if s < 0.5 else (0x7E / 255, 0x3F / 255, 0x2B / 255)  # terracotta edge
     if l < 0.52:
         return ACCENT
     if l < 0.74:

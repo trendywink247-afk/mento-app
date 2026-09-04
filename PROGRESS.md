@@ -4,6 +4,46 @@
 
 ---
 
+## 2026-09-05 (session 31b) — Fidelity foundation: Clay and Sage tokens, Baloo 2, PressKey ✅ (branch `feat/fidelity-foundation`)
+
+**Context:** founder ruling `DECISIONS.md` §K.8 (fidelity pass, browser mockups): pillow-key depth language (visible bottom edge, collapses on press, medium impact haptic — rejected soft clay/quiet matte), painterly companion art direction (later, Plan 2), Focus-physics chat (rising bubbles, breathing typing dots, pressing send key — no ambient scene, no companion in-chat), build order foundation-first (tokens/type/PressKey/chat physics) then the companion asset pipeline. This branch is the foundation half, on top of `5cce83b`; spec `docs/superpowers/specs/2026-09-05-fidelity-pass-design.md`.
+
+**Done (20 commits, `git log --oneline master..feat/fidelity-foundation`, mobile-only):**
+- `518d4ca` Baloo 2 as the single type family (Latin + Devanagari); Nunito/Lora/Noto removed; `type.displayHeadline`.
+- `c877386` Clay and Sage palette + terracotta-default companion accents + `scripts/contrast_gate.py`; follow-ups `d636bac` (Devanagari headroom, Logo/Scenes read tokens not purple literals), `52320d2` (`inkMuted` cleared to AA on ritual screens, gate covers `bgLavender`, ink shadows, IconBadge glyphs from tokens).
+- `e18d5c2` `PressKey` + `EdgeSurface` depth primitives; fix `f12b90b` (disabled dims, edge shares face corners, sizing moved to `containerStyle`).
+- `7d1100a` PrimaryButton / TiltCard / Card on the key; fix `634d2d5` (ghost keys never vanish on white — moved to `surfaceAlt`; TiltCard takes a radius for its edge).
+- `ebfcdb8` tab pill, conversation/journal/mentor/profile rows, New Chat sheet on the key; fix `877dbf0` (no doubled spacing on Chats rows/sheet rows/companion card, drop dead imports).
+- `da435ad` chips, payment rows, Path talk card on the key; fix `443a319` (margins on containers not faces, income chip edge, dead radius).
+- `589b861` Focus chat physics — rise-in messages, breathing `TypingDots`, pillow send key, receive haptic; fix `a7362c9` (rise-in plays once per message — prune `freshIds` after the first animation).
+- `d8e896a` + `f6b0d13` Lottie re-bake onto Clay and Sage (dedupe `(Mento themed)` suffix from the re-bake).
+- `9b73bec` onboarding + Mentor Home headlines on `type.displayHeadline`; `4c6893f` scene art waves/mountains + ConnectingStep headline read tokens.
+- `2ec5355` persona avatar landscapes on the clay family; 🧡 replaces 💜 in copy.
+- **Proven:** `npx tsc --noEmit` clean at every commit; contrast gate 51/51 (`python scripts/contrast_gate.py`); all nine e2e suites PASS with 0 page errors, normal + reduced motion — `connecting-experience`, `path-communities`, `hindi-core-loop`, `member-screens`, `listener-apply`, `apply`, `analytics-dark`, `journal-organize`, `role-fork`; a 42-screen screenshot walk at 390×844 reviewed against the concept gallery.
+
+**Spec deviations (decided in review, founder veto welcome):**
+- Accent values deepened from the concept renders so white labels and accent text pass WCAG AA on white, oat, **and** the ritual oat (`bgLavender`) — the light concept terracotta survives as `accentSoft`/tints.
+- Ghost buttons sit on `surfaceAlt`, not white.
+- The Logo stays a fixed brand mark (static tokens, not the per-user companion accent).
+- `wash.*` token names kept (values now Clay and Sage) — rename optional, not done.
+- Persona-avatar palettes are a categorical set, not the companion accent.
+
+**Open (founder):**
+- **Native chat physics not applied** (spec §3 named both chat screens): `components/chat/ChatScreen.tsx` still renders stream-chat-expo's `MessageList`/`MessageComposer`, which expose no per-row animation hook — native gets the palette only (token-driven Stream theme). Rise-in, TypingDots and the pillow send key are web-only until the native chat is rebuilt (natural home: the native mentor console / custom message list work).
+- **Pillow key not yet on every screen**: `app/mentor/[id].tsx`, `app/apply.tsx`, `app/journal/organize.tsx`, `components/ApplicationForm.tsx` (pledge card) and the status cards in `app/mentor-home.tsx` still use `elevation.sm` cards — outside Plan 1's file list; mechanical follow-up with `EdgeSurface`/`PressKey`.
+- `TypingDots` accessibility label is a literal string, not an i18n key.
+- `chat.typing` locale key is now unused — the listener console hardcodes its own typing string (pre-existing i18n gap, not introduced this session).
+- `font.serif*` / `devanagari*` token names alias Baloo 2 now and should be renamed to match.
+- Raster art still on the old palette: `assets/scenes/*.webp` scene tiles, journal empty-state art, companion webp poses (purple scarf) — companion art is Plan 2 (the asset pipeline), scene rasters are a later art pass.
+- `mentors.tsx` has hardcoded English strings (pre-existing, not introduced this session).
+- If the pillow edge on message bubbles reads heavy on-device, dropping it is a one-token change.
+
+**Next:** merge `feat/fidelity-foundation` into master (finishing-a-development-branch), then Plan 2 — the companion asset pipeline (one reference + six poses per animal, all six animals, ~52 credits approved) — then the native mentor console spec (DECISIONS §K.7).
+
+**How to resume:** branch `feat/fidelity-foundation` is complete; `git log --oneline master..feat/fidelity-foundation` lists the 20 commits above. Expo needs a `-c` restart after switching branches (font package changed). `python scripts/contrast_gate.py` is the palette gate — run after any token edit. The 42-screen screenshot-walk script used for review lives in the session scratchpad only (not committed).
+
+---
+
 ## 2026-09-05 (session 31) — Role fork after landing + Mentor Home ✅ (branch `feat/role-fork`)
 
 **Context:** founder's new requirement (session 30): a screen after the landing that asks whether the person is here to talk or to listen, and takes each to their path. Brainstormed with browser mockups (two-doors layout chosen), spec `docs/superpowers/specs/2026-09-04-role-fork-design.md`, plan `docs/superpowers/plans/2026-09-04-role-fork.md`, ruling `DECISIONS.md` §K.7. Executed subagent-driven (Sonnet implementers + two-stage Sonnet reviews per task) on `feat/role-fork`, not yet merged to master.

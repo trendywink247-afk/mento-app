@@ -121,9 +121,7 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
 const styles = StyleSheet.create({
   logoZone: { alignItems: 'center', marginTop: space.md, marginBottom: space.lg },
   headline: {
-    fontFamily: font.sansHeavy,
-    fontSize: 28,
-    lineHeight: 38,
+    ...type.displayHeadline,
     textAlign: 'center',
     marginBottom: space.lg,
   },

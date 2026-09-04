@@ -4,18 +4,19 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
+import { PressKey } from '@/components/motion/PressKey';
 import { api, type JournalEntry } from '@/lib/api';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -97,7 +98,7 @@ const CONFIGS: Record<string, Config> = {
  * (Mentor Notes is read-only here — it's fed from chat). */
 export default function JournalScreen() {
   const router = useRouter();
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
   const { channel: route } = useLocalSearchParams<{ channel: string }>();
   const cfg = CONFIGS[route ?? ''] ?? CONFIGS['mentor-notes'];
@@ -173,7 +174,7 @@ export default function JournalScreen() {
       day: 'numeric',
     });
     return (
-      <View style={[styles.entry, { backgroundColor: colors.surface }, elevation.sm]}>
+      <EdgeSurface edge={colors.edgeSurface} style={[styles.entry, { backgroundColor: colors.surface }]}>
         {cfg.composer === 'finance' && item.meta.amount_paise ? (
           <View style={styles.financeRow}>
             <Text
@@ -208,7 +209,7 @@ export default function JournalScreen() {
         {cfg.composer === 'note' || (cfg.channel === 'mood' && !item.meta.mood) ? (
           <Text style={[type.caption, { color: colors.inkMuted, marginTop: space.xs }]}>{when}</Text>
         ) : null}
-      </View>
+      </EdgeSurface>
     );
   };
 
@@ -222,22 +223,27 @@ export default function JournalScreen() {
       </View>
 
       {cfg.composer === 'mood' ? (
-        <View style={[styles.composer, { backgroundColor: colors.surface }, elevation.sm]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.composer, { backgroundColor: colors.surface }]}
+          containerStyle={{ marginBottom: space.md }}
+        >
           <Text style={[type.label, { color: colors.ink }]}>{t('journals.howFeeling')}</Text>
           <View style={styles.chips}>
             {MOODS.map((m) => {
               const selected = mood === m;
               return (
-                <Pressable
+                <PressKey
                   key={m}
                   onPress={() => setMood(selected ? null : m)}
-                  accessibilityRole="button"
+                  edge={selected ? colors.accentEdge : colors.edgeAlt}
+                  travel={3}
+                  radius={radius.pill}
                   accessibilityState={{ selected }}
                   testID={`mood-${m.toLowerCase()}`}
                   style={[
                     styles.chip,
                     { backgroundColor: selected ? colors.accentTint : colors.surfaceAlt },
-                    selected && { borderWidth: 1, borderColor: colors.accent },
                   ]}
                 >
                   <Ionicons
@@ -248,7 +254,7 @@ export default function JournalScreen() {
                   <Text style={[styles.chipText, { color: selected ? colors.accent : colors.ink }]}>
                     {t(MOOD_LABELS[m])}
                   </Text>
-                </Pressable>
+                </PressKey>
               );
             })}
           </View>
@@ -261,11 +267,15 @@ export default function JournalScreen() {
             testID="journal-note"
           />
           <PrimaryButton label={t('journals.saveEntry')} onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
-        </View>
+        </EdgeSurface>
       ) : null}
 
       {cfg.composer === 'finance' ? (
-        <View style={[styles.composer, { backgroundColor: colors.surface }, elevation.sm]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.composer, { backgroundColor: colors.surface }]}
+          containerStyle={{ marginBottom: space.md }}
+        >
           <View style={styles.financeInputRow}>
             <TextInput
               style={[styles.input, styles.amountInput, { borderColor: colors.border, color: colors.ink }]}
@@ -281,23 +291,35 @@ export default function JournalScreen() {
               {(['expense', 'income'] as const).map((d) => {
                 const selected = direction === d;
                 return (
-                  <Pressable
+                  <PressKey
                     key={d}
                     onPress={() => setDirection(d)}
-                    accessibilityRole="button"
+                    edge={
+                      selected
+                        ? d === 'income'
+                          ? colors.edgeInk
+                          : colors.accentEdge
+                        : colors.edgeAlt
+                    }
+                    travel={3}
+                    radius={radius.pill}
                     accessibilityState={{ selected }}
                     testID={`direction-${d}`}
                     style={[
                       styles.chip,
-                      selected
-                        ? { backgroundColor: d === 'income' ? colors.success : colors.accent }
-                        : { borderWidth: 1, borderColor: colors.border },
+                      {
+                        backgroundColor: selected
+                          ? d === 'income'
+                            ? colors.success
+                            : colors.accent
+                          : colors.surfaceAlt,
+                      },
                     ]}
                   >
                     <Text style={[styles.chipText, { color: selected ? colors.onAccent : colors.inkMuted }]}>
                       {d === 'expense' ? t('journals.expense') : t('journals.income')}
                     </Text>
-                  </Pressable>
+                  </PressKey>
                 );
               })}
             </View>
@@ -306,22 +328,22 @@ export default function JournalScreen() {
             {FINANCE_CATEGORIES.map((c) => {
               const selected = category === c;
               return (
-                <Pressable
+                <PressKey
                   key={c}
                   onPress={() => setCategory(c)}
-                  accessibilityRole="button"
+                  edge={selected ? colors.accentEdge : colors.edgeAlt}
+                  travel={3}
+                  radius={radius.pill}
                   accessibilityState={{ selected }}
                   style={[
                     styles.chip,
-                    selected
-                      ? { backgroundColor: colors.surfaceAlt }
-                      : { borderWidth: 1, borderColor: colors.border },
+                    { backgroundColor: selected ? colors.accentTint : colors.surfaceAlt },
                   ]}
                 >
                   <Text style={[styles.chipText, { color: selected ? colors.accent : colors.inkMuted }]}>
                     {t(CATEGORY_LABELS[c])}
                   </Text>
-                </Pressable>
+                </PressKey>
               );
             })}
           </View>
@@ -334,11 +356,15 @@ export default function JournalScreen() {
             testID="journal-note"
           />
           <PrimaryButton label={t('journals.saveEntry')} onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
-        </View>
+        </EdgeSurface>
       ) : null}
 
       {cfg.composer === 'note' ? (
-        <View style={[styles.composer, { backgroundColor: colors.surface }, elevation.sm]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.composer, { backgroundColor: colors.surface }]}
+          containerStyle={{ marginBottom: space.md }}
+        >
           <TextInput
             style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
             placeholder={t('journals.gratitudePlaceholder')}
@@ -348,7 +374,7 @@ export default function JournalScreen() {
             testID="journal-note"
           />
           <PrimaryButton label={t('journals.saveEntry')} onPress={() => void save()} disabled={!canSave} loading={busy} testID="journal-save" />
-        </View>
+        </EdgeSurface>
       ) : null}
 
       {loading ? (

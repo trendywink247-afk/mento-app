@@ -246,7 +246,7 @@ export function CompanionStep({
 
 const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: space.sm, marginBottom: space.md },
-  headline: { fontFamily: font.serifBold, fontSize: 28, lineHeight: 36, textAlign: 'center' },
+  headline: { ...type.displayHeadline, textAlign: 'center' },
   center: { textAlign: 'center' },
   section: {
     flexDirection: 'row',

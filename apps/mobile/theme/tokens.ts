@@ -3,51 +3,52 @@
  * and elevation, consumed by BOTH web and native (react-native + react-native-web).
  * Light-mode v1 only. Components consume these — never raw hex.
  *
- * Colour values are CALIBRATED against the mockup pixels (docs/Mockups) via
- * scripts/sample_mockup_colors.py — see the sample labels referenced in comments.
+ * Values follow DECISIONS §K.5 (Clay and Sage) and pass scripts/contrast_gate.py.
  *
  * The user's growth-companion COLOUR is layered on top as a per-user *accent* (see
- * theme/companion.ts + ThemeProvider). `brand*` below is the DEFAULT accent (purple);
+ * theme/companion.ts + ThemeProvider). `brand*` below is the DEFAULT accent (terracotta);
  * at runtime, accent colours come from useTheme() so they reflect the chosen companion.
  */
 export const colors = {
-  // Neutral light base (fixed, never themed)
-  bg: '#FDF8F5', // warm cream — landing/age/email/connecting/mentors bg (≈#FDF8F5)
-  bgLavender: '#F6F2FA', // "ritual" screens: companion picker, reflection, coffee, PIN
+  // Neutral light base (fixed, never themed) — Clay and Sage (DECISIONS §K.5)
+  bg: '#F4EFE6', // oat ground
+  bgLavender: '#EFE9DF', // "ritual" screens keep a slightly deeper oat (companion picker, reflection, coffee, PIN)
   surface: '#FFFFFF',
-  surfaceAlt: '#F3EFFA',
-  ink: '#1D2142', // headline + navy CTA (sampled #1C213F–#1D2242)
-  inkMuted: '#6E6B84',
-  border: '#EDE7F0',
+  surfaceAlt: '#FBF8F2',
+  ink: '#2B2B2B', // charcoal
+  inkMuted: '#6B675F', // darkened from #6E6A64 to clear 4.5:1 on bgLavender too
+  border: '#E6DFD3',
   onBrand: '#FFFFFF',
-  scrim: 'rgba(29,33,66,0.4)', // modal/sheet backdrop
+  scrim: 'rgba(43,43,43,0.4)',
 
-  // Default accent (purple companion). Prefer useTheme().colors.accent in components.
-  brand: '#5847D6', // companion CTA core #4C34C3 / swatch #6148D8
-  brandPress: '#4736B8',
-  brandTint: '#ECE6F8', // sent-bubble tint (sampled #ECE6F5)
+  /** Pillow-key edges (DECISIONS §K.8): the darker "underside" drawn beneath a face. */
+  edgeSurface: '#E3DCCF', // under white / oat faces
+  edgeAlt: '#D9D1C2', // under surfaceAlt faces
+  edgeInk: '#141414', // under ink-toned pills
 
-  /** Soft brand lavender — headline accent words ("understands.", "anonymous.") and
-   * illustration washes. Fixed (not the companion accent); sampled #7E79AF–#827BCB. */
-  accentSoft: '#8177C9',
+  // Default accent (terracotta companion). Prefer useTheme().colors.accent in components.
+  brand: '#A2533A',
+  brandPress: '#984E33',
+  brandTint: '#F6D9CB',
 
-  // Semantic (fixed)
-  accentWarm: '#F2A65A',
-  success: '#3FB97A',
-  warning: '#E6A23C',
-  danger: '#E5534B',
+  /** Light clay terracotta — display accent words and decorative icon tints only
+   * (3.0:1 on oat = large text only, never body copy). */
+  accentSoft: '#C9744F',
+
+  // Semantic (fixed) — each passes 4.5:1 on white and on oat as text.
+  accentWarm: '#8F6318',
+  success: '#38734B',
+  warning: '#895F17', // darkened 4% from #8F6318 to clear 4.5:1 on bgLavender too
+  danger: '#B8413A',
 } as const;
 
-/**
- * Pastel icon washes for IconBadge (sampled from the Conversation Options sheet's
- * tinted icon circles). Fixed — not themed by the companion accent.
- */
+/** Pastel clay washes for IconBadge — fixed, not themed by the companion accent. */
 export const wash = {
-  accent: '#EFE9F8',
-  indigo: '#E6E7F8',
-  orange: '#FBEEDC',
-  green: '#E2F0E6',
-  danger: '#FBE7E6',
+  accent: '#F6D9CB',
+  indigo: '#E8DFF0',
+  orange: '#F5E8C4',
+  green: '#DCE6DD',
+  danger: '#F8DEDC',
 } as const;
 export type Wash = keyof typeof wash;
 
@@ -68,32 +69,30 @@ export const radius = {
 } as const;
 
 /**
- * Typography. Two families (loaded in app/_layout.tsx via expo-font):
- *  - Nunito (rounded humanist sans) — body/UI and the big onboarding headlines.
- *  - Lora (serif) — hub titles, persona names, celebratory headlines
- *    ("My Chats", "Mento space ready!", "Purple Valley").
- * Each weight is its own family name (expo-google-fonts convention) — do not add
- * fontWeight next to fontFamily or Android will ignore the custom face.
+ * Typography — ONE family, Baloo 2 (DECISIONS §K.6), loaded in app/_layout.tsx.
+ * Each weight is its own family name (expo-google-fonts convention) — never add
+ * fontWeight next to fontFamily or Android ignores the custom face.
+ * `serif*` / `devanagari*` names are kept so no call site changes; they now map to
+ * Baloo weights (renaming to display- and hindi-prefixed names is a follow-up).
  */
 export const font = {
-  sans: 'Nunito_400Regular',
-  sansSemi: 'Nunito_600SemiBold',
-  sansBold: 'Nunito_700Bold',
-  sansHeavy: 'Nunito_800ExtraBold',
-  serif: 'Lora_500Medium',
-  serifBold: 'Lora_600SemiBold',
-  // Devanagari faces (loaded in app/_layout.tsx). Hindi body/labels render fine
-  // through the platform's per-glyph fallback; use these for any surface that
-  // must pin the face explicitly. Lora has no Devanagari — hi display maps here.
-  devanagari: 'NotoSansDevanagari_400Regular',
-  devanagariBold: 'NotoSansDevanagari_700Bold',
+  sans: 'Baloo2_400Regular',
+  sansSemi: 'Baloo2_600SemiBold',
+  sansBold: 'Baloo2_700Bold',
+  sansHeavy: 'Baloo2_800ExtraBold',
+  serif: 'Baloo2_600SemiBold',
+  serifBold: 'Baloo2_700Bold',
+  devanagari: 'Baloo2_400Regular',
+  devanagariBold: 'Baloo2_700Bold',
 } as const;
 
 export const type = {
   /** Big onboarding headlines (sans, heavy) — "A place to talk with a peer…" */
   display: { fontSize: 30, fontFamily: font.sansHeavy, lineHeight: 40 },
   /** Serif display — hub titles + celebratory headlines ("My Chats"). */
-  displaySerif: { fontSize: 30, fontFamily: font.serifBold, lineHeight: 38 },
+  displaySerif: { fontSize: 30, fontFamily: font.serifBold, lineHeight: 42 },
+  /** Onboarding / Mentor Home headlines — replaces the per-step hand-rolled 28–30px styles. */
+  displayHeadline: { fontSize: 28, fontFamily: font.sansHeavy, lineHeight: 40 },
   title: { fontSize: 22, fontFamily: font.sansBold, lineHeight: 28 },
   titleSerif: { fontSize: 22, fontFamily: font.serifBold, lineHeight: 28 },
   body: { fontSize: 16, fontFamily: font.sans, lineHeight: 24 },
@@ -107,28 +106,28 @@ export const type = {
 } as const;
 
 /**
- * Elevation as RN shadow style objects (react-native-web maps these to box-shadow,
- * Android uses `elevation`). Use sparingly — the mockups favour soft, low shadows
- * on borderless cards.
+ * Shadows are now reserved for FLOATING layers (tab bar, sheets, FAB). Cards and
+ * buttons use the pillow-key edge (components/motion/PressKey.tsx,
+ * components/EdgeSurface.tsx) instead.
  */
 export const elevation = {
   none: {},
   sm: {
-    shadowColor: '#1D2142',
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
   md: {
-    shadowColor: '#1D2142',
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 18,
     elevation: 6,
   },
   lg: {
-    shadowColor: '#1D2142',
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
     shadowRadius: 24,

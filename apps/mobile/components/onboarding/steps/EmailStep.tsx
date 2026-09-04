@@ -11,7 +11,7 @@ import { capture } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -115,9 +115,7 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
 const styles = StyleSheet.create({
   logoZone: { alignItems: 'center', marginTop: space.md, marginBottom: space.xl },
   headline: {
-    fontFamily: font.sansHeavy,
-    fontSize: 30,
-    lineHeight: 38,
+    ...type.displayHeadline,
     textAlign: 'center',
     marginBottom: space.md,
   },

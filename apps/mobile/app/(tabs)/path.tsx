@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
 import { Entrance } from '@/components/motion/Entrance';
@@ -25,7 +26,7 @@ import { font, radius, space, type } from '@/theme/tokens';
  */
 export default function PathTab() {
   const router = useRouter();
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState<PathState | null>(null);
@@ -145,7 +146,9 @@ export default function PathTab() {
         {node.options.map((opt, i) => (
           <Entrance key={opt.label} index={1 + i}>
             <TiltCard
-              style={[styles.optionCard, elevation.sm, { backgroundColor: colors.surface }]}
+              style={[styles.optionCard, { backgroundColor: colors.surface }]}
+              containerStyle={styles.cardSpacing}
+              edge={colors.edgeSurface}
               onPress={() => void pick(opt)}
               testID={`path-option-${i}`}
             >
@@ -236,7 +239,8 @@ export default function PathTab() {
         {state.prompts.map((p, i) => (
           <TiltCard
             key={p}
-            style={[styles.promptCard, elevation.sm, { backgroundColor: colors.surface }]}
+            style={[styles.promptCard, { backgroundColor: colors.surface }]}
+            edge={colors.edgeSurface}
             onPress={() => void talk(p)}
             disabled={matching}
             testID={`path-prompt-${i}`}
@@ -248,7 +252,11 @@ export default function PathTab() {
       </Entrance>
 
       <Entrance index={3}>
-        <View style={[styles.talkCard, elevation.sm, { backgroundColor: colors.surface }]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.talkCard, { backgroundColor: colors.surface }]}
+          containerStyle={{ marginTop: space.md }}
+        >
           <Text style={[styles.cardTitle, { color: colors.ink }]}>
             {t('path.talkTitle')}
           </Text>
@@ -282,7 +290,7 @@ export default function PathTab() {
               <Text style={[styles.ghostLabel, { color: colors.accent }]}>{t('path.browse')}</Text>
             </Pressable>
           </View>
-        </View>
+        </EdgeSurface>
       </Entrance>
 
       {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}
@@ -313,13 +321,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: space.xs,
   },
+  cardSpacing: { marginBottom: space.sm },
   optionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
     borderRadius: radius.lg,
     padding: space.md,
-    marginBottom: space.sm,
   },
   optionLabel: { flex: 1, fontFamily: font.sansSemi, fontSize: 15, lineHeight: 21 },
   cta: {
@@ -361,10 +369,9 @@ const styles = StyleSheet.create({
     gap: space.sm,
     borderRadius: radius.lg,
     padding: space.md,
-    marginBottom: space.sm,
   },
   promptText: { flex: 1, fontFamily: font.sansSemi, fontSize: 14, lineHeight: 20 },
-  talkCard: { borderRadius: radius.lg, padding: space.md, gap: space.xs, marginTop: space.md },
+  talkCard: { borderRadius: radius.lg, padding: space.md, gap: space.xs },
   talkRow: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
   note: { textAlign: 'center', marginTop: space.sm },
   change: {

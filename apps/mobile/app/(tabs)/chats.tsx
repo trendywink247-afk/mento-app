@@ -11,8 +11,10 @@ import {
   View,
 } from 'react-native';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
+import { PressKey } from '@/components/motion/PressKey';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
@@ -259,13 +261,27 @@ export default function ChatsTab() {
       ) : null}
 
       {note ? (
-        <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]} testID="chats-note">
+        <EdgeSurface
+          edge={colors.edgeAlt}
+          travel={2}
+          radius={radius.md}
+          style={[styles.note, { backgroundColor: colors.surfaceAlt }]}
+          containerStyle={{ marginBottom: space.sm }}
+          testID="chats-note"
+        >
           <Text style={[type.caption, { color: colors.ink }]}>{note}</Text>
-        </View>
+        </EdgeSurface>
       ) : null}
 
       {loadError ? (
-        <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]} testID="chats-load-error">
+        <EdgeSurface
+          edge={colors.edgeAlt}
+          travel={2}
+          radius={radius.md}
+          style={[styles.note, { backgroundColor: colors.surfaceAlt }]}
+          containerStyle={{ marginBottom: space.sm }}
+          testID="chats-load-error"
+        >
           <Text style={[type.caption, { color: colors.ink }]}>{loadError}</Text>
           <Pressable
             onPress={() => {
@@ -280,7 +296,7 @@ export default function ChatsTab() {
           >
             <Text style={[type.label, { color: colors.accent }]}>{t('chats.retry')}</Text>
           </Pressable>
-        </View>
+        </EdgeSurface>
       ) : null}
 
       {loading ? (
@@ -325,12 +341,13 @@ export default function ChatsTab() {
                 ? colors.success
                 : colors.accentSoft;
             return (
-              <Pressable
+              <PressKey
                 onPress={() => open(item)}
+                edge={colors.edgeSurface}
                 accessibilityRole="button"
                 accessibilityLabel={t('chats.convoA11y', { name: item.listener_persona_name })}
                 testID={`convo-${item.id}`}
-                style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+                style={[styles.row, { backgroundColor: colors.surface }]}
               >
                 <PersonaAvatar
                   name={item.listener_persona_name}
@@ -363,7 +380,7 @@ export default function ChatsTab() {
                     <Ionicons name="chevron-forward" size={16} color={colors.accentSoft} />
                   )}
                 </View>
-              </Pressable>
+              </PressKey>
             );
           }}
         />
@@ -407,16 +424,15 @@ export default function ChatsTab() {
                 { key: 'pick', icon: 'people-outline', title: 'chats.newChatPick', sub: 'chats.newChatPickSub', go: () => { setPicker(false); router.push('/(tabs)/mentors'); } },
               ] as const
             ).map((o) => (
-              <Pressable
+              <PressKey
                 key={o.key}
                 onPress={o.go}
-                accessibilityRole="button"
+                edge={colors.edgeAlt}
+                travel={3}
+                radius={radius.md}
                 accessibilityLabel={t(o.title)}
                 testID={`new-chat-${o.key}`}
-                style={({ pressed }) => [
-                  styles.pickRow,
-                  { backgroundColor: colors.surfaceAlt, opacity: pressed ? 0.85 : 1 },
-                ]}
+                style={[styles.pickRow, { backgroundColor: colors.surfaceAlt }]}
               >
                 <View style={[styles.pickIcon, { backgroundColor: colors.accentTint }]}>
                   <Ionicons name={o.icon} size={20} color={colors.accent} />
@@ -426,7 +442,7 @@ export default function ChatsTab() {
                   <Text style={[type.caption, { color: colors.inkMuted }]}>{t(o.sub)}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={16} color={colors.accentSoft} />
-              </Pressable>
+              </PressKey>
             ))}
             <PrimaryButton
               label={t('chats.newChatCancel')}
@@ -479,7 +495,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
   },
-  note: { borderRadius: radius.md, padding: space.sm, marginBottom: space.sm },
+  note: { borderRadius: radius.md, padding: space.sm },
   privacyCard: {
     flexDirection: 'row',
     alignItems: 'center',

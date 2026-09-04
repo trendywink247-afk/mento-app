@@ -25,7 +25,7 @@ import {
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { DEFAULT_COMPANION_COLOR } from '@/theme/companion';
-import { font, radius, space, type } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 
 /** Mentor Home (DECISIONS §K.7): the mentor branch's landing until the native
  * console exists. Outside the tab shell. Hosts the shared ApplicationForm inline
@@ -200,7 +200,7 @@ export default function MentorHome() {
 
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: space.xs, marginTop: space.lg, marginBottom: space.xl },
-  title: { fontFamily: font.sansHeavy, fontSize: 30, lineHeight: 38, textAlign: 'center' },
+  title: { ...type.displayHeadline, textAlign: 'center' },
   center: { alignItems: 'center', paddingVertical: space.xl },
   card: { borderRadius: radius.lg, padding: space.md, gap: space.xs, marginBottom: space.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },

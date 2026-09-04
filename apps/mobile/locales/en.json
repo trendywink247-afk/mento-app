@@ -26,7 +26,7 @@
     "goBack": "Go back",
     "somethingWrong": "Something went wrong. Please try again.",
     "networkError": "We had trouble connecting. Please check your network and try again.",
-    "allBusy": "All mentors are busy right now. Please try again in a moment. 💜"
+    "allBusy": "All mentors are busy right now. Please try again in a moment. 🧡"
   },
   "onboarding": {
     "age": {
@@ -85,9 +85,9 @@
     },
     "ready": {
       "headline": "Mento space ready!",
-      "sub": "Your space is all set. Your journey\nbegins now. 💜",
+      "sub": "Your space is all set. Your journey\nbegins now. 🧡",
       "youChose": "You chose",
-      "asCompanion": "as your growth companion 💜",
+      "asCompanion": "as your growth companion 🧡",
       "enter": "Enter My Space",
       "changeLater": "You can change your companion and theme later from Profile.",
       "gentleTitle": "A gentle space for your growth",
@@ -125,7 +125,7 @@
     "line3": "Finding someone right for this moment…",
     "headlineSearching": "Connecting you to an\navailable mentor…",
     "headlineBusy": "It's a busy moment —\nyou're next in line",
-    "headlineFound": "Found someone\nfor you 💜",
+    "headlineFound": "Found someone\nfor you 🧡",
     "headlineError": "We couldn't connect just yet",
     "subFound": "Taking you to your conversation…",
     "subBusy": "Everyone's with someone right now. We're holding your place and retrying.",
@@ -272,7 +272,7 @@
       "toggleTitle": "Pause this conversation",
       "toggleBody": "You won't receive any messages until you resume.",
       "lostTitle": "Nothing will be lost.",
-      "lostBody": "We'll keep every message safe until you come back. 💜",
+      "lostBody": "We'll keep every message safe until you come back. 🧡",
       "doneTitle": "Panda Pause is on.",
       "doneBody": "Take all the time you need. We'll quietly hold new messages from this mentor until you're ready to continue.",
       "row1Title": "Notifications paused",
@@ -331,7 +331,7 @@
     "headline": "Conversation ended",
     "sub": "You've taken a thoughtful step today.\nWe hope this space brought you some clarity and comfort.",
     "question": "How do you feel right now?",
-    "checkin": "One quiet check-in before you go —\nno right answers. 💜",
+    "checkin": "One quiet check-in before you go —\nno right answers. 🧡",
     "energyA11y": "Energy level %{n} of 5",
     "drained": "Left drained",
     "energized": "Left energized",

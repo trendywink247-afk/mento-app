@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { registerForPushNotifications } from '@/lib/pushNotifications';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -70,13 +71,18 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
             accessibilityLabel={t(tab.label)}
             testID={`tab-${tab.name}`}
           >
-            <View style={[styles.pill, focused && { backgroundColor: colors.accentTint }]}>
+            <EdgeSurface
+              edge={focused ? colors.accentEdge : 'transparent'}
+              travel={2}
+              radius={radius.md}
+              style={[styles.pill, focused && { backgroundColor: colors.accentTint }]}
+            >
               <Ionicons
                 name={focused ? tab.active : tab.idle}
                 size={22}
                 color={focused ? colors.accent : colors.inkMuted}
               />
-            </View>
+            </EdgeSurface>
             <Text
               style={[
                 styles.label,

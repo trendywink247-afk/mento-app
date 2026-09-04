@@ -19,7 +19,7 @@ import { font, radius, space, type, wash } from '@/theme/tokens';
  * No haptic fires here — this one tap is both the choice and the step forward,
  * so the journey's own `advance` haptic (fired by `onPick`) is the only one. */
 export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
 
   const pick = (role: Role) => {
@@ -56,15 +56,12 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
         <TiltCard
           onPress={() => pick('mentee')}
           maxTilt={5}
+          edge={colors.accentEdge}
           accessibilityRole="button"
           accessibilityLabel={t('onboarding.role.talkTitle')}
           testID="role-talk"
-          style={[
-            styles.door,
-            styles.doorBig,
-            elevation.md,
-            { backgroundColor: colors.accentTint, borderColor: colors.accent },
-          ]}
+          style={[styles.door, styles.doorBig, { backgroundColor: colors.accentTint }]}
+          containerStyle={styles.doorSpacing}
         >
           <IconBadge icon="chatbubble-ellipses-outline" tone="accent" size={52} />
           <View style={styles.doorText}>
@@ -78,10 +75,12 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
         <TiltCard
           onPress={() => pick('mentor')}
           maxTilt={3}
+          edge={colors.edgeSurface}
           accessibilityRole="button"
           accessibilityLabel={t('onboarding.role.listenTitle')}
           testID="role-listen"
-          style={[styles.door, elevation.sm, { backgroundColor: wash.green, borderColor: 'transparent' }]}
+          style={[styles.door, { backgroundColor: wash.green }]}
+          containerStyle={styles.doorSpacing}
         >
           <IconBadge icon="ear-outline" tone="green" size={44} />
           <View style={styles.doorText}>
@@ -96,23 +95,16 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
 
 const styles = StyleSheet.create({
   logoZone: { alignItems: 'center', marginTop: space.md, marginBottom: space.xl },
-  headline: {
-    fontFamily: font.sansHeavy,
-    fontSize: 30,
-    lineHeight: 38,
-    textAlign: 'center',
-    marginBottom: space.sm,
-  },
+  headline: { ...type.displayHeadline, textAlign: 'center', marginBottom: space.sm },
   sub: { textAlign: 'center', marginBottom: space.xl, paddingHorizontal: space.sm },
   door: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
     borderRadius: radius.lg,
-    borderWidth: 2,
     padding: space.md,
-    marginBottom: space.md,
   },
+  doorSpacing: { marginBottom: space.md },
   doorBig: { paddingVertical: space.lg },
   doorText: { flex: 1, gap: 2 },
   doorTitle: { fontFamily: font.sansHeavy, fontSize: 20, lineHeight: 26 },

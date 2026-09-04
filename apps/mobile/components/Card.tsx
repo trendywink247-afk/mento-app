@@ -1,35 +1,31 @@
 import { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space } from '@/theme/tokens';
 
-/**
- * The mockups' card language: borderless white (or tinted) surface, large radius,
- * soft shadow. Replaces the old 1px-bordered cards.
- */
+/** The clay card: white (or tinted) face on a pillow edge. Replaces the shadow card. */
 export function Card({
   children,
   tinted = false,
   style,
 }: {
   children: ReactNode;
-  /** Lavender-tinted variant (footer/info cards in the mockups). */
+  /** Accent-tinted variant (info/footer cards). */
   tinted?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: tinted ? colors.accentTint : colors.surface },
-        !tinted && elevation.sm,
-        style,
-      ]}
+    <EdgeSurface
+      edge={tinted ? colors.accentEdge : colors.edgeSurface}
+      radius={radius.lg}
+      style={[styles.card, { backgroundColor: tinted ? colors.accentTint : colors.surface }]}
+      containerStyle={style}
     >
       {children}
-    </View>
+    </EdgeSurface>
   );
 }
 

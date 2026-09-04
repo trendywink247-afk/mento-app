@@ -122,8 +122,8 @@ export default function ChatScreen() {
     [conversationId, listenerName, t],
   );
 
-  // Theme the Stream kit (v9 semantics tokens) to the mockup chat language: cream app
-  // bg, white incoming bubbles, lavender-tint outgoing bubbles with ink text, and the
+  // Theme the Stream kit (v9 semantics tokens) to the mockup chat language: oat app
+  // bg, white incoming bubbles, accent-tint outgoing bubbles with ink text, and the
   // companion accent on primary controls (send button, links).
   const streamTheme = useMemo<StreamChatStyle>(
     () => ({

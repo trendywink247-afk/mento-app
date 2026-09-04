@@ -29,7 +29,7 @@ async function walk(ctx, { assertConnecting }) {
   await page.waitForSelector('text=आपकी ग्रोथ, आपकी थीम', { timeout: 30000 }); // companion
   console.log('OK hi companion step');
   await tid('animal-panda').click();
-  await tid('colour-purple').click();
+  await tid('colour-terracotta').click();
   await tid('continue').click();
 
   await page.waitForSelector('text=आपका Mento स्पेस तैयार!', { timeout: 30000 }); // ready

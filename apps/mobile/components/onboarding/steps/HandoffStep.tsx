@@ -10,7 +10,7 @@ import { useI18n } from '@/lib/i18n';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { getSessionToken, saveSession } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, space, type } from '@/theme/tokens';
+import { space, type } from '@/theme/tokens';
 
 /** Mentor branch terminal step: mint the anonymous session (no companion, NO
  * match), then hand off to Mentor Home. Onboards at most once — a session left
@@ -90,9 +90,7 @@ export function HandoffStep({
 const styles = StyleSheet.create({
   zone: { alignItems: 'center', marginTop: space.xl * 2, paddingHorizontal: space.sm },
   headline: {
-    fontFamily: font.sansHeavy,
-    fontSize: 28,
-    lineHeight: 36,
+    ...type.displayHeadline,
     textAlign: 'center',
     marginBottom: space.md,
   },
