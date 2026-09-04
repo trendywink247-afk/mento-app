@@ -1,5 +1,8 @@
+import type { Role } from '@/lib/session';
+
 /** Ephemeral, in-memory onboarding draft (pre-account). Never persisted to disk. */
 export type OnboardingDraft = {
+  role?: Role;
   dob?: string; // YYYY-MM-DD
   email?: string | null;
   companionAnimal?: string | null;

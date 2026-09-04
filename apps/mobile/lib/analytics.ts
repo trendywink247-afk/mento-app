@@ -17,6 +17,7 @@ const ID_KEY = 'mento.analytics_id';
 type EventMap = {
   landing_viewed: undefined;
   onboarding_started: undefined;
+  role_chosen: { role: 'mentee' | 'mentor' }; // the fork choice only — never identity
   onboarding_age_passed: undefined;
   onboarding_email_step: { skipped: boolean };
   onboarding_companion_chosen: { companion: string };
