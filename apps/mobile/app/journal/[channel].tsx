@@ -294,7 +294,13 @@ export default function JournalScreen() {
                   <PressKey
                     key={d}
                     onPress={() => setDirection(d)}
-                    edge={selected ? colors.accentEdge : colors.edgeAlt}
+                    edge={
+                      selected
+                        ? d === 'income'
+                          ? colors.edgeInk
+                          : colors.accentEdge
+                        : colors.edgeAlt
+                    }
                     travel={3}
                     radius={radius.pill}
                     accessibilityState={{ selected }}

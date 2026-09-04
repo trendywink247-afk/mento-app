@@ -251,7 +251,11 @@ export default function PathTab() {
       </Entrance>
 
       <Entrance index={3}>
-        <EdgeSurface edge={colors.edgeSurface} style={[styles.talkCard, { backgroundColor: colors.surface }]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.talkCard, { backgroundColor: colors.surface }]}
+          containerStyle={{ marginTop: space.md }}
+        >
           <Text style={[styles.cardTitle, { color: colors.ink }]}>
             {t('path.talkTitle')}
           </Text>
@@ -367,7 +371,7 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
   },
   promptText: { flex: 1, fontFamily: font.sansSemi, fontSize: 14, lineHeight: 20 },
-  talkCard: { borderRadius: radius.lg, padding: space.md, gap: space.xs, marginTop: space.md },
+  talkCard: { borderRadius: radius.lg, padding: space.md, gap: space.xs },
   talkRow: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
   note: { textAlign: 'center', marginTop: space.sm },
   change: {

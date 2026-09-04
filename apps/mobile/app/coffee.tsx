@@ -154,6 +154,7 @@ export default function CoffeeScreen() {
         <EdgeSurface
           edge={colors.edgeSurface}
           style={[styles.noteCard, { backgroundColor: colors.surfaceAlt }]}
+          containerStyle={{ marginTop: space.sm }}
           testID="payments-note"
         >
           <IconBadge icon="time-outline" tone="orange" size={34} />
@@ -161,7 +162,11 @@ export default function CoffeeScreen() {
         </EdgeSurface>
       ) : null}
 
-      <EdgeSurface edge={colors.edgeSurface} style={[styles.noteCard, { backgroundColor: colors.surfaceAlt }]}>
+      <EdgeSurface
+        edge={colors.edgeSurface}
+        style={[styles.noteCard, { backgroundColor: colors.surfaceAlt }]}
+        containerStyle={{ marginTop: space.sm }}
+      >
         <Panda pose="shield" size={48} />
         <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
           Thank you! Your support goes to the Mento team — keeping this space safe, free, and
@@ -195,7 +200,6 @@ const styles = StyleSheet.create({
   section: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22, marginTop: space.md, marginBottom: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
-    borderRadius: radius.md,
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
   },
@@ -220,7 +224,6 @@ const styles = StyleSheet.create({
     gap: space.sm,
     borderRadius: radius.md,
     padding: space.sm,
-    marginTop: space.sm,
   },
   soonTag: {
     borderRadius: radius.pill,
