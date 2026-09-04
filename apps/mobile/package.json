@@ -11,9 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@expo-google-fonts/lora": "^0.4.2",
-    "@expo-google-fonts/noto-sans-devanagari": "^0.4.1",
-    "@expo-google-fonts/nunito": "^0.4.2",
+    "@expo-google-fonts/baloo-2": "^0.4.2",
     "@expo/metro-runtime": "~4.0.1",
     "@expo/vector-icons": "~14.0.4",
     "@lottiefiles/dotlottie-react": "^0.6.5",

@@ -1,17 +1,10 @@
 import {
-  Lora_500Medium,
-  Lora_600SemiBold,
-} from '@expo-google-fonts/lora';
-import {
-  NotoSansDevanagari_400Regular,
-  NotoSansDevanagari_700Bold,
-} from '@expo-google-fonts/noto-sans-devanagari';
-import {
-  Nunito_400Regular,
-  Nunito_600SemiBold,
-  Nunito_700Bold,
-  Nunito_800ExtraBold,
-} from '@expo-google-fonts/nunito';
+  Baloo2_400Regular,
+  Baloo2_500Medium,
+  Baloo2_600SemiBold,
+  Baloo2_700Bold,
+  Baloo2_800ExtraBold,
+} from '@expo-google-fonts/baloo-2';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -27,18 +20,14 @@ export default function RootLayout() {
   // Expo Go/dev server (see lib/useShakeToUpdate.ts).
   useShakeToUpdate();
 
-  // Family names must match theme/tokens.ts `font`.
+  // Family names must match theme/tokens.ts `font`. One family (DECISIONS §K.6):
+  // Baloo 2 carries Latin AND Devanagari, so the Lora/Noto pairing is retired.
   const [fontsLoaded] = useFonts({
-    Nunito_400Regular,
-    Nunito_600SemiBold,
-    Nunito_700Bold,
-    Nunito_800ExtraBold,
-    Lora_500Medium,
-    Lora_600SemiBold,
-    // Hindi (Devanagari) faces — Lora has no Devanagari, so hi display text
-    // maps to the bold sans (logged in PROGRESS → Open decisions).
-    NotoSansDevanagari_400Regular,
-    NotoSansDevanagari_700Bold,
+    Baloo2_400Regular,
+    Baloo2_500Medium,
+    Baloo2_600SemiBold,
+    Baloo2_700Bold,
+    Baloo2_800ExtraBold,
   });
   // Fonts are bundled locally (expo-google-fonts), so this resolves in a frame or two;
   // the Expo splash stays up meanwhile — no flash of fallback type.

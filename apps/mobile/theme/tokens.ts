@@ -68,32 +68,30 @@ export const radius = {
 } as const;
 
 /**
- * Typography. Two families (loaded in app/_layout.tsx via expo-font):
- *  - Nunito (rounded humanist sans) — body/UI and the big onboarding headlines.
- *  - Lora (serif) — hub titles, persona names, celebratory headlines
- *    ("My Chats", "Mento space ready!", "Purple Valley").
- * Each weight is its own family name (expo-google-fonts convention) — do not add
- * fontWeight next to fontFamily or Android will ignore the custom face.
+ * Typography — ONE family, Baloo 2 (DECISIONS §K.6), loaded in app/_layout.tsx.
+ * Each weight is its own family name (expo-google-fonts convention) — never add
+ * fontWeight next to fontFamily or Android ignores the custom face.
+ * `serif*` / `devanagari*` names are kept so no call site changes; they now map to
+ * Baloo weights (renaming to display- and hindi-prefixed names is a follow-up).
  */
 export const font = {
-  sans: 'Nunito_400Regular',
-  sansSemi: 'Nunito_600SemiBold',
-  sansBold: 'Nunito_700Bold',
-  sansHeavy: 'Nunito_800ExtraBold',
-  serif: 'Lora_500Medium',
-  serifBold: 'Lora_600SemiBold',
-  // Devanagari faces (loaded in app/_layout.tsx). Hindi body/labels render fine
-  // through the platform's per-glyph fallback; use these for any surface that
-  // must pin the face explicitly. Lora has no Devanagari — hi display maps here.
-  devanagari: 'NotoSansDevanagari_400Regular',
-  devanagariBold: 'NotoSansDevanagari_700Bold',
+  sans: 'Baloo2_400Regular',
+  sansSemi: 'Baloo2_600SemiBold',
+  sansBold: 'Baloo2_700Bold',
+  sansHeavy: 'Baloo2_800ExtraBold',
+  serif: 'Baloo2_600SemiBold',
+  serifBold: 'Baloo2_700Bold',
+  devanagari: 'Baloo2_400Regular',
+  devanagariBold: 'Baloo2_700Bold',
 } as const;
 
 export const type = {
   /** Big onboarding headlines (sans, heavy) — "A place to talk with a peer…" */
   display: { fontSize: 30, fontFamily: font.sansHeavy, lineHeight: 40 },
   /** Serif display — hub titles + celebratory headlines ("My Chats"). */
-  displaySerif: { fontSize: 30, fontFamily: font.serifBold, lineHeight: 38 },
+  displaySerif: { fontSize: 30, fontFamily: font.serifBold, lineHeight: 40 },
+  /** Onboarding / Mentor Home headlines — replaces the per-step hand-rolled 28–30px styles. */
+  displayHeadline: { fontSize: 28, fontFamily: font.sansHeavy, lineHeight: 36 },
   title: { fontSize: 22, fontFamily: font.sansBold, lineHeight: 28 },
   titleSerif: { fontSize: 22, fontFamily: font.serifBold, lineHeight: 28 },
   body: { fontSize: 16, fontFamily: font.sans, lineHeight: 24 },
