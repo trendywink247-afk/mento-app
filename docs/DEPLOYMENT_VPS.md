@@ -1,7 +1,7 @@
 # Mento — Test/Prod on a self-managed VPS (Hostinger)
 
 > Companion to `docs/DEPLOYMENT.md` (the DigitalOcean App Platform path). This doc
-> is for a **raw VPS** (Hostinger, or any Ubuntu box) instead of a managed PaaS —
+> is for a **raw VPS** (Hostinger, or any Debian/Ubuntu box) instead of a managed PaaS —
 > the difference is Postgres/Redis are self-managed containers here, not a
 > managed database, and Nginx + certbot replace DO's built-in load balancer/TLS.
 
@@ -32,27 +32,42 @@ npx expo start --web --port 8081
 
 ## One-time VPS setup
 
-### 1. Order the VPS
+### 1. The VPS (provisioned)
 
-Resource target for this stack at pilot scale (FastAPI + Postgres + Redis + Nginx,
-a few hundred concurrent users): **2 vCPU / 4 GB RAM / 80 GB NVMe**, matched against
-whichever current Hostinger VPS tier meets that (their plan names/specs change —
-match the numbers, not a label). **Ubuntu 24.04 LTS** — best Docker support, longest
-support window, most documented. You'll also need a **domain** pointed at the VPS's
-IP (an A record) — buy/use one via Hostinger or any registrar; this doc uses
-`api.yourdomain.com` as a placeholder throughout.
+Actual box in use: Hostinger VPS, **Debian 12 (bookworm), 1–2 GB RAM, 30 GB disk,
+2000 GB bandwidth**, IP `87.232.72.79`. This is below the original 4 GB / 80 GB
+target for this stack (FastAPI + Postgres + Redis + Nginx) — workable at pilot
+scale but tight, so step 2 adds a swap file and step 5 tunes worker/pool counts
+down accordingly. Domain: **`api.agentin.chat`** for the live API — point an A
+record for `api` at `87.232.72.79` before step 7. (`geekspace.space` is the other
+domain on hand — free for a separate project; not used here.)
+
+The runbook below targets **Debian 12**, not Ubuntu — the commands differ slightly
+from earlier drafts of this doc (`ufw` isn't preinstalled on Debian's minimal
+image; ordinary user accounts aren't in the `sudo` group by default the way
+Ubuntu's cloud image sets them up).
 
 ### 2. Base server hardening
 
 SSH in as root once, then:
 
 ```bash
+apt update && apt install -y sudo ufw
 adduser mento-ops
 usermod -aG sudo mento-ops
 # copy your SSH public key into /home/mento-ops/.ssh/authorized_keys, then:
 ufw allow OpenSSH
 ufw allow 80,443/tcp
 ufw enable
+
+# Swap — this box has only 1-2 GB RAM; without swap, `docker compose build`
+# (pip installs) or a Postgres/Redis memory spike can OOM-kill the SSH daemon
+# itself, locking you out. 2 GB swap is cheap insurance on a box this size.
+fallocate -l 2G /swapfile
+chmod 600 /swapfile
+mkswap /swapfile
+swapon /swapfile
+echo '/swapfile none swap sw 0 0' >> /etc/fstab
 ```
 
 From here on, SSH in as `mento-ops`, not root.
@@ -66,17 +81,37 @@ sudo apt update
 sudo apt install -y nginx certbot python3-certbot-nginx
 ```
 
-### 4. Clone the repo
+### 4. Clone the repo (SSH deploy key)
+
+Private repo — clone over SSH using a **deploy key** (repo-scoped, read-only,
+never expires) rather than a PAT:
+
+```bash
+# As mento-ops, generate a dedicated key (no passphrase — deploy.sh needs
+# non-interactive git):
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+ssh-keygen -t ed25519 -f ~/.ssh/mento_deploy_key -N "" -C "mento-vps-deploy"
+cat >> ~/.ssh/config <<'CFG'
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/mento_deploy_key
+    IdentitiesOnly yes
+CFG
+chmod 600 ~/.ssh/config
+ssh-keyscan -H github.com >> ~/.ssh/known_hosts 2>/dev/null
+cat ~/.ssh/mento_deploy_key.pub
+```
+
+Add the printed public key at **github.com/trendywink247-afk/mento-app →
+Settings → Deploy keys → Add deploy key** — leave "Allow write access"
+unchecked (pull-only). Then clone:
 
 ```bash
 sudo mkdir -p /opt/mento && sudo chown mento-ops:mento-ops /opt/mento
-git clone https://github.com/trendywink247-afk/mento-app.git /opt/mento
+git clone git@github.com:trendywink247-afk/mento-app.git /opt/mento
 cd /opt/mento
 ```
-
-Private repo — cloning over HTTPS on the VPS needs a credential (a fine-grained
-GitHub PAT with read-only access to this repo works well; `git clone` will prompt
-for it once, or use `git clone https://<token>@github.com/trendywink247-afk/mento-app.git`).
 
 ### 5. Fill in prod secrets
 
@@ -92,6 +127,11 @@ overridden by `deploy/docker-compose.prod.yml`), `CORS_ORIGINS`, `CONSOLE_BASE_U
 Leave Razorpay/PostHog/Sentry/Gemini blank until those are ready — every one of
 those integrations ships dark by design (CLAUDE.md).
 
+**Low-RAM tuning (this box):** uncomment and set `UVICORN_WORKERS=1`,
+`DB_POOL_SIZE=3`, `DB_MAX_OVERFLOW=2` in the `.env` you just created — the
+Dockerfile defaults (2 workers × (5+5)) assume more headroom than 1–2 GB gives
+you. One worker is fine at pilot scale; raise these later if you upgrade the box.
+
 ### 6. First deploy
 
 ```bash
@@ -103,18 +143,18 @@ curl http://127.0.0.1:8000/api/v1/health   # expect {"status":"ok"}
 ### 7. Nginx + TLS
 
 ```bash
-sed "s/API_DOMAIN/api.yourdomain.com/g" deploy/nginx/mento-api.conf.template \
+sed "s/API_DOMAIN/api.agentin.chat/g" deploy/nginx/mento-api.conf.template \
   | sudo tee /etc/nginx/sites-available/mento-api.conf
 sudo ln -s /etc/nginx/sites-available/mento-api.conf /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d api.yourdomain.com   # provisions TLS, rewrites the server block, sets up auto-renewal
+sudo certbot --nginx -d api.agentin.chat   # provisions TLS, rewrites the server block, sets up auto-renewal
 ```
 
-Verify from OUTSIDE the box: `curl https://api.yourdomain.com/api/v1/health`.
+Verify from OUTSIDE the box: `curl https://api.agentin.chat/api/v1/health`.
 
 ### 8. Point the mobile app + Stream at prod
 
-- Mobile `.env` / build config: `EXPO_PUBLIC_API_URL=https://api.yourdomain.com/api/v1`.
+- Mobile `.env` / build config: `EXPO_PUBLIC_API_URL=https://api.agentin.chat/api/v1`.
 - Re-run `python -m scripts.configure_stream` with the prod URL so Stream's
   before-send webhook targets it (the crisis scan is dead until this runs).
 - Prove it live per the **mento-crisis-webhook** skill before trusting it.
@@ -134,7 +174,7 @@ this as a real backup — a local-only dump doesn't survive the VPS dying.
 ### 10. Uptime monitor (launch gate — same as the DO path)
 
 Point an external monitor (UptimeRobot / Better Stack) at
-`https://api.yourdomain.com/api/v1/health/crisis`, alerting on 503. This is the
+`https://api.agentin.chat/api/v1/health/crisis`, alerting on 503. This is the
 signal that the crisis-scan pipeline itself died (Stream configured but no webhook
 in 30 min, or Redis down) — not optional before real users touch this.
 
@@ -178,11 +218,11 @@ Rotating `STREAM_API_SECRET` invalidates webhook signatures — re-run
   they only run via `expo start --web` (explicitly a dev/test surface per
   CLAUDE.md's stack table). For safety staff / listeners to use them against prod,
   someone needs to add an `expo export --platform web` step and serve the static
-  output via Nginx (a new `location` block, likely `console.yourdomain.com`) —
+  output via Nginx (a new `location` block, likely `console.agentin.chat`) —
   not yet built. Scope this before onboarding real listeners against prod.
 - **Self-hosted OTA server** (for `expo-updates` shake-to-update, per
   `docs/ANDROID_BUILD.md`) is a natural fit to run on this same VPS
-  (`updates.yourdomain.com`) — not stood up yet; `app.json`'s `updates.url` block
+  (`updates.agentin.chat`) — not stood up yet; `app.json`'s `updates.url` block
   is the one remaining config once it exists.
 - **No off-box backup destination configured** — the `rclone` line in
   `backup-postgres.sh` is a placeholder. A VPS disk failure currently means data

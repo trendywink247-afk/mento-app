@@ -12,10 +12,10 @@ git fetch origin
 git reset --hard origin/master
 
 echo "[deploy] building api image..."
-docker compose -f deploy/docker-compose.prod.yml build api
+docker compose -f deploy/docker-compose.prod.yml --env-file services/api/.env build api
 
 echo "[deploy] starting stack (migrations run automatically on api boot)..."
-docker compose -f deploy/docker-compose.prod.yml up -d
+docker compose -f deploy/docker-compose.prod.yml --env-file services/api/.env up -d
 
 echo "[deploy] waiting for health..."
 for i in $(seq 1 30); do
