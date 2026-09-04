@@ -16,7 +16,7 @@ export const colors = {
   surface: '#FFFFFF',
   surfaceAlt: '#FBF8F2',
   ink: '#2B2B2B', // charcoal
-  inkMuted: '#6E6A64',
+  inkMuted: '#6B675F', // darkened from #6E6A64 to clear 4.5:1 on bgLavender too
   border: '#E6DFD3',
   onBrand: '#FFFFFF',
   scrim: 'rgba(43,43,43,0.4)',
@@ -38,7 +38,7 @@ export const colors = {
   // Semantic (fixed) — each passes 4.5:1 on white and on oat as text.
   accentWarm: '#8F6318',
   success: '#38734B',
-  warning: '#8F6318',
+  warning: '#895F17', // darkened 4% from #8F6318 to clear 4.5:1 on bgLavender too
   danger: '#B8413A',
 } as const;
 
@@ -113,21 +113,21 @@ export const type = {
 export const elevation = {
   none: {},
   sm: {
-    shadowColor: '#1D2142',
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
     elevation: 2,
   },
   md: {
-    shadowColor: '#1D2142',
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.1,
     shadowRadius: 18,
     elevation: 6,
   },
   lg: {
-    shadowColor: '#1D2142',
+    shadowColor: colors.ink,
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.12,
     shadowRadius: 24,

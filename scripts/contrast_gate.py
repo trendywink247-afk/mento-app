@@ -1,6 +1,7 @@
 """WCAG AA gate for Mento's tokens. Fails (exit 1) if any text/surface pair is below
-4.5:1 (normal text) — the accent set on white AND on the oat ground, the semantic
-colours, muted ink, and ink on every tint. Run from the repo root:
+4.5:1 (normal text) — the accent set on white, the oat ground, AND the lavender
+"ritual" surface, the semantic colours, muted ink, and ink on every tint. Run from
+the repo root:
 
     python scripts/contrast_gate.py
 """
@@ -16,7 +17,8 @@ def hexes(name: str, text: str) -> dict[str, str]:
     block = re.search(rf"export const {name}[\s\S]*?\n}} as const;", text)
     if not block:
         sys.exit(f"const {name} not found")
-    return dict(re.findall(r"(\w+): '(#[0-9A-Fa-f]{6})'", block.group(0)))
+    block_text = re.sub(r'//[^\n]*', '', block.group(0))
+    return dict(re.findall(r"(\w+): '(#[0-9A-Fa-f]{6})'", block_text))
 
 
 def lum(h: str) -> float:
@@ -36,16 +38,19 @@ def main() -> int:
     companion = (ROOT / "companion.ts").read_text(encoding="utf-8")
     colors = hexes("colors", tokens)
     white, oat, ink = colors["surface"], colors["bg"], colors["ink"]
+    ritual = colors["bgLavender"]
     pairs: list[tuple[str, str, str, float]] = []  # (label, fg, bg, min)
     for key in ("ink", "inkMuted", "success", "warning", "danger"):
         pairs.append((f"{key} on white", colors[key], white, 4.5))
         pairs.append((f"{key} on oat", colors[key], oat, 4.5))
+        pairs.append((f"{key} on ritual", colors[key], ritual, 4.5))
     pairs.append(("accentSoft on oat (large text only)", colors["accentSoft"], oat, 3.0))
     for name, block in re.findall(r"(\w+): \{ (accent: '#[^}]*) \}", companion):
         vals = dict(re.findall(r"(\w+): '(#[0-9A-Fa-f]{6})'", block))
         pairs.append((f"{name}: white on accent", vals["onAccent"], vals["accent"], 4.5))
         pairs.append((f"{name}: accent on white", vals["accent"], white, 4.5))
         pairs.append((f"{name}: accent on oat", vals["accent"], oat, 4.5))
+        pairs.append((f"{name}: accent on ritual", vals["accent"], ritual, 4.5))
         pairs.append((f"{name}: ink on tint", ink, vals["accentTint"], 4.5))
     failed = 0
     for label, fg, bg, minimum in pairs:
