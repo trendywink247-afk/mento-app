@@ -1,13 +1,11 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
-import type { CompanionAnimal } from '@/components/art/Companions';
 import { Screen } from '@/components/Screen';
 import { useI18n } from '@/lib/i18n';
-import { getCompanionAnimal } from '@/lib/session';
+import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type } from '@/theme/tokens';
 
@@ -19,17 +17,7 @@ export default function NotFound() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void getCompanionAnimal().then((a) => {
-      if (active) setAnimal(a as CompanionAnimal | null);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const animal = useCompanionAnimal();
 
   return (
     <Screen bg="lavender">

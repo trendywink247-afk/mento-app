@@ -1,35 +1,71 @@
 /**
  * Companion — THE single entry point for rendering the growth companion anywhere
  * (onboarding stage, ready arch, profile). Asset strategy is hidden inside
- * (DECISIONS §I.4 amended): the founder-approved generated set (one consistent
- * soft-shaded style, assets/companions/generated) on the in-house
- * ReactiveCompanion rig is the default; a Lottie file from
- * assets/companions/registry.ts overrides per-animal when dropped in; Fluent
- * Emoji art remains the fallback for any animal without a generated cutout;
- * a commissioned Rive set can replace the internals later — call sites never
- * change.
+ * (DECISIONS §I.4 amended, §K.8 2026-09-05): the founder-approved painterly pose set
+ * (six animals × idle/greet/joy/comfort/curious/sleepy, +coffee/shield for Panda,
+ * assets/companions/generated) on the in-house ReactiveCompanion rig is the default;
+ * a Lottie file from assets/companions/registry.ts overrides per-animal when dropped
+ * in; Fluent Emoji art remains the fallback for any animal without generated art;
+ * a commissioned Rive set can replace the internals later — call sites never change.
+ *
+ * Pose: callers may pin a pose directly (`pose`), or let it derive from the rig
+ * `trigger` (greet/celebrate/joy/comfort/curious → the matching painterly pose, held
+ * for the trigger's character duration + a short tail, then released back to rest).
+ * Rest is `sleepy` during the companion's local night window (theme/motion.ts
+ * `character.sleepy`), else `idle`. Pose changes crossfade (opacity only, manual
+ * shared value) — instant under reduced motion.
  *
  * State vocabulary (all animals): idle micro-sway (+ host breathing), greet,
  * celebrate, comfort, tap-react (`interactive`).
  */
+import { useEffect, useRef, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import LottieView from 'lottie-react-native';
-import { Image } from 'react-native';
+import Animated, { useSharedValue, withTiming } from 'react-native-reanimated';
 import { SvgXml } from 'react-native-svg';
 
 import { COMPANION_FLUENT } from '@/assets/companions/fluent';
-import { COMPANION_GENERATED } from '@/assets/companions/generated';
+import { COMPANION_GENERATED, type CompanionPose } from '@/assets/companions/generated';
 import { COMPANION_LOTTIE } from '@/assets/companions/registry';
 import { type CompanionAnimal } from '@/components/art/Companions';
 import { ReactiveCompanion, type CompanionTrigger } from '@/components/art/ReactiveCompanion';
 import { useReducedMotion } from '@/lib/useReducedMotion';
+import { character, duration, easing } from '@/theme/motion';
 
-export type { CompanionTrigger };
+export type { CompanionTrigger, CompanionPose };
+
+/** Rig trigger kind → the painterly pose it plays while the state animates. */
+const TRIGGER_POSE: Record<NonNullable<CompanionTrigger>['kind'], CompanionPose> = {
+  greet: 'greet',
+  celebrate: 'joy',
+  joy: 'joy',
+  comfort: 'comfort',
+  curious: 'curious',
+};
+
+/** How long (ms, on top of the character duration) the triggered pose lingers before
+ * releasing back to rest — a small tail so the pose doesn't cut out mid-gesture. */
+const TRIGGER_TAIL: Record<NonNullable<CompanionTrigger>['kind'], number> = {
+  greet: 400,
+  celebrate: 600,
+  joy: 400,
+  comfort: 0,
+  curious: 0,
+};
+
+/** Rest pose: sleepy during the companion's local night window, else idle. */
+function restingPose(): CompanionPose {
+  const h = new Date().getHours();
+  const { startHour, endHour } = character.sleepy;
+  return h >= startHour || h < endHour ? 'sleepy' : 'idle';
+}
 
 export function Companion({
   animal,
   size = 72,
   waveTrigger = 0,
   trigger = null,
+  pose,
   interactive = false,
   onPress,
 }: {
@@ -40,19 +76,81 @@ export function Companion({
   waveTrigger?: number;
   /** Play a state: {kind: 'greet'|'celebrate'|'comfort', n}. */
   trigger?: CompanionTrigger;
+  /** Pin a specific pose directly, overriding trigger-derived pose. */
+  pose?: CompanionPose;
   /** Tap-react acknowledgement (wraps in a Pressable). */
   interactive?: boolean;
   onPress?: () => void;
 }) {
   const reduced = useReducedMotion();
+  void waveTrigger; // kept in the API for a future rig that waves (Rive)
+
   // Unknown strings (corrupted/legacy stored value, e.g. lowercase 'panda') must
   // degrade to the brand guide, not crash the screen with fluent === undefined.
   const requested = animal ?? 'Panda';
   const resolved: CompanionAnimal = requested in COMPANION_FLUENT ? requested : 'Panda';
   const source = COMPANION_LOTTIE[resolved];
-  const generated = COMPANION_GENERATED[resolved];
+  const set = COMPANION_GENERATED[resolved];
   const fluent = COMPANION_FLUENT[resolved];
-  void waveTrigger; // kept in the API for a future rig that waves (Rive)
+
+  // Trigger-derived pose, held for the character duration + tail then released.
+  const [triggerPose, setTriggerPose] = useState<CompanionPose | null>(null);
+  const tailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (tailTimer.current) clearTimeout(tailTimer.current);
+    if (!trigger) {
+      setTriggerPose(null);
+      return;
+    }
+    setTriggerPose(TRIGGER_POSE[trigger.kind]);
+    const hold = character[trigger.kind].duration + TRIGGER_TAIL[trigger.kind];
+    tailTimer.current = setTimeout(() => setTriggerPose(null), hold);
+    return () => {
+      if (tailTimer.current) clearTimeout(tailTimer.current);
+    };
+    // reason: trigger.n is the replay signal for the same kind
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trigger?.kind, trigger?.n]);
+
+  const wanted = pose ?? triggerPose ?? restingPose();
+  const effective: CompanionPose = set.poses[wanted] ? wanted : 'idle';
+
+  // Crossfade between poses — opacity only, manual shared value (never entering=/exiting=).
+  const fade = useSharedValue(1);
+  const [shown, setShown] = useState<CompanionPose>(effective);
+  const [previous, setPrevious] = useState<CompanionPose | null>(null);
+  const clearTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (effective === shown) return;
+    if (clearTimer.current) clearTimeout(clearTimer.current);
+    if (reduced) {
+      setShown(effective);
+      setPrevious(null);
+      fade.value = 1;
+      return;
+    }
+    setPrevious(shown);
+    setShown(effective);
+    fade.value = 0;
+    fade.value = withTiming(1, { duration: duration.base, easing: easing.settle });
+    clearTimer.current = setTimeout(() => setPrevious(null), duration.base + 50);
+    // reason: fade is a stable shared-value ref
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effective, reduced]);
+  useEffect(
+    () => () => {
+      if (clearTimer.current) clearTimeout(clearTimer.current);
+    },
+    []
+  );
+
+  const fadeStyle = { opacity: fade };
+
+  // Every animal has at least an `idle` painterly pose, so the Fluent branch below is
+  // presently unreachable — kept as the documented fallback tier (matches the prior
+  // behaviour, where the generated set was also always fully populated) for any future
+  // animal shipped without art yet.
+  const hasGenerated = Boolean(set.poses.idle);
 
   const art = source ? (
     <LottieView
@@ -61,17 +159,29 @@ export function Companion({
       loop={!reduced}
       style={{ width: size, height: size }}
     />
-  ) : generated ? (
-    <Image
-      source={generated.source}
-      resizeMode="contain"
-      accessibilityIgnoresInvertColors
+  ) : hasGenerated ? (
+    <View
       style={{
-        width: size * generated.scale,
-        height: size * generated.scale,
-        margin: (size - size * generated.scale) / 2,
+        width: size * set.scale,
+        height: size * set.scale,
+        margin: (size - size * set.scale) / 2,
       }}
-    />
+    >
+      {previous && (
+        <Animated.Image
+          source={set.poses[previous] ?? set.poses.idle}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+          style={StyleSheet.absoluteFill}
+        />
+      )}
+      <Animated.Image
+        source={set.poses[shown] ?? set.poses.idle}
+        resizeMode="contain"
+        accessibilityIgnoresInvertColors
+        style={[StyleSheet.absoluteFill, fadeStyle]}
+      />
+    </View>
   ) : (
     <SvgXml
       xml={fluent.xml}
