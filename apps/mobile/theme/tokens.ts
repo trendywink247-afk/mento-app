@@ -3,51 +3,52 @@
  * and elevation, consumed by BOTH web and native (react-native + react-native-web).
  * Light-mode v1 only. Components consume these — never raw hex.
  *
- * Colour values are CALIBRATED against the mockup pixels (docs/Mockups) via
- * scripts/sample_mockup_colors.py — see the sample labels referenced in comments.
+ * Values follow DECISIONS §K.5 (Clay and Sage) and pass scripts/contrast_gate.py.
  *
  * The user's growth-companion COLOUR is layered on top as a per-user *accent* (see
- * theme/companion.ts + ThemeProvider). `brand*` below is the DEFAULT accent (purple);
+ * theme/companion.ts + ThemeProvider). `brand*` below is the DEFAULT accent (terracotta);
  * at runtime, accent colours come from useTheme() so they reflect the chosen companion.
  */
 export const colors = {
-  // Neutral light base (fixed, never themed)
-  bg: '#FDF8F5', // warm cream — landing/age/email/connecting/mentors bg (≈#FDF8F5)
-  bgLavender: '#F6F2FA', // "ritual" screens: companion picker, reflection, coffee, PIN
+  // Neutral light base (fixed, never themed) — Clay and Sage (DECISIONS §K.5)
+  bg: '#F4EFE6', // oat ground
+  bgLavender: '#EFE9DF', // "ritual" screens keep a slightly deeper oat (companion picker, reflection, coffee, PIN)
   surface: '#FFFFFF',
-  surfaceAlt: '#F3EFFA',
-  ink: '#1D2142', // headline + navy CTA (sampled #1C213F–#1D2242)
-  inkMuted: '#6E6B84',
-  border: '#EDE7F0',
+  surfaceAlt: '#FBF8F2',
+  ink: '#2B2B2B', // charcoal
+  inkMuted: '#6E6A64',
+  border: '#E6DFD3',
   onBrand: '#FFFFFF',
-  scrim: 'rgba(29,33,66,0.4)', // modal/sheet backdrop
+  scrim: 'rgba(43,43,43,0.4)',
 
-  // Default accent (purple companion). Prefer useTheme().colors.accent in components.
-  brand: '#5847D6', // companion CTA core #4C34C3 / swatch #6148D8
-  brandPress: '#4736B8',
-  brandTint: '#ECE6F8', // sent-bubble tint (sampled #ECE6F5)
+  /** Pillow-key edges (DECISIONS §K.8): the darker "underside" drawn beneath a face. */
+  edgeSurface: '#E3DCCF', // under white / oat faces
+  edgeAlt: '#D9D1C2', // under surfaceAlt faces
+  edgeInk: '#141414', // under ink-toned pills
 
-  /** Soft brand lavender — headline accent words ("understands.", "anonymous.") and
-   * illustration washes. Fixed (not the companion accent); sampled #7E79AF–#827BCB. */
-  accentSoft: '#8177C9',
+  // Default accent (terracotta companion). Prefer useTheme().colors.accent in components.
+  brand: '#A2533A',
+  brandPress: '#984E33',
+  brandTint: '#F6D9CB',
 
-  // Semantic (fixed)
-  accentWarm: '#F2A65A',
-  success: '#3FB97A',
-  warning: '#E6A23C',
-  danger: '#E5534B',
+  /** Light clay terracotta — display accent words and decorative icon tints only
+   * (3.0:1 on oat = large text only, never body copy). */
+  accentSoft: '#C9744F',
+
+  // Semantic (fixed) — each passes 4.5:1 on white and on oat as text.
+  accentWarm: '#8F6318',
+  success: '#38734B',
+  warning: '#8F6318',
+  danger: '#B8413A',
 } as const;
 
-/**
- * Pastel icon washes for IconBadge (sampled from the Conversation Options sheet's
- * tinted icon circles). Fixed — not themed by the companion accent.
- */
+/** Pastel clay washes for IconBadge — fixed, not themed by the companion accent. */
 export const wash = {
-  accent: '#EFE9F8',
-  indigo: '#E6E7F8',
-  orange: '#FBEEDC',
-  green: '#E2F0E6',
-  danger: '#FBE7E6',
+  accent: '#F6D9CB',
+  indigo: '#E8DFF0',
+  orange: '#F5E8C4',
+  green: '#DCE6DD',
+  danger: '#F8DEDC',
 } as const;
 export type Wash = keyof typeof wash;
 
@@ -105,9 +106,9 @@ export const type = {
 } as const;
 
 /**
- * Elevation as RN shadow style objects (react-native-web maps these to box-shadow,
- * Android uses `elevation`). Use sparingly — the mockups favour soft, low shadows
- * on borderless cards.
+ * Shadows are now reserved for FLOATING layers (tab bar, sheets, FAB). Cards and
+ * buttons use the pillow-key edge (components/motion/PressKey.tsx,
+ * components/EdgeSurface.tsx) instead.
  */
 export const elevation = {
   none: {},

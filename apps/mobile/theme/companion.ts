@@ -2,46 +2,48 @@
  * Growth-companion COLOUR → accent token set (DECISIONS §B.6: the companion colour is
  * a per-user theme layered over the neutral light base; it is NOT the chat handle).
  *
- * Each accent is chosen so white text on it meets WCAG AA (~4.5:1) for the CTA labels.
- * Mirrors the colour swatches in mockup #58 (Purple/Blue/Green/Pink/Orange/Teal/Indigo).
+ * Clay and Sage family (DECISIONS §K.5/§K.8). Every `accent` passes WCAG AA (≥4.5:1)
+ * with white text AND as text on the oat ground; `accentEdge` is the pillow-key
+ * underside; `accentTint` is the pale surface (ink text on it ≥10:1).
+ * Verified by scripts/contrast_gate.py — run it after changing any value.
  */
 export type CompanionColor =
-  | 'purple'
-  | 'blue'
-  | 'green'
-  | 'pink'
-  | 'orange'
-  | 'teal'
-  | 'indigo';
+  | 'terracotta'
+  | 'sage'
+  | 'sky'
+  | 'rose'
+  | 'mustard'
+  | 'plum'
+  | 'teal';
 
 export type AccentSet = {
   accent: string;
   accentPress: string;
+  accentEdge: string;
   accentTint: string;
   onAccent: string;
 };
 
 export const COMPANION_COLORS: Record<CompanionColor, AccentSet> = {
-  // Purple is calibrated against the mockup CTA/swatch pixels (scripts/sample_mockup_colors.py).
-  purple: { accent: '#5847D6', accentPress: '#4736B8', accentTint: '#ECE6F8', onAccent: '#FFFFFF' },
-  blue: { accent: '#2657C7', accentPress: '#1F49A8', accentTint: '#E4ECFE', onAccent: '#FFFFFF' },
-  green: { accent: '#0B7A4F', accentPress: '#096540', accentTint: '#DCF1E7', onAccent: '#FFFFFF' },
-  pink: { accent: '#C13B72', accentPress: '#A6315F', accentTint: '#FBE6EF', onAccent: '#FFFFFF' },
-  orange: { accent: '#B85C12', accentPress: '#9C4D0E', accentTint: '#FBE9D8', onAccent: '#FFFFFF' },
-  teal: { accent: '#0C7B7B', accentPress: '#096666', accentTint: '#DCF0F0', onAccent: '#FFFFFF' },
-  indigo: { accent: '#4338CA', accentPress: '#372EA8', accentTint: '#E6E4FA', onAccent: '#FFFFFF' },
+  terracotta: { accent: '#A2533A', accentPress: '#984E33', accentEdge: '#7E3F2B', accentTint: '#F6D9CB', onAccent: '#FFFFFF' },
+  sage: { accent: '#467054', accentPress: '#3F6549', accentEdge: '#33513C', accentTint: '#DCE6DD', onAccent: '#FFFFFF' },
+  sky: { accent: '#3B6D8F', accentPress: '#356282', accentEdge: '#2A4F69', accentTint: '#DCE8F2', onAccent: '#FFFFFF' },
+  rose: { accent: '#A94F65', accentPress: '#9A485C', accentEdge: '#7D3A4A', accentTint: '#F5DFE4', onAccent: '#FFFFFF' },
+  mustard: { accent: '#8F6318', accentPress: '#825A16', accentEdge: '#674711', accentTint: '#F5E8C4', onAccent: '#FFFFFF' },
+  plum: { accent: '#6B4C8C', accentPress: '#61457F', accentEdge: '#4D3765', accentTint: '#E8DFF0', onAccent: '#FFFFFF' },
+  teal: { accent: '#286F6B', accentPress: '#246561', accentEdge: '#1C4F4C', accentTint: '#D8ECEA', onAccent: '#FFFFFF' },
 };
 
-export const DEFAULT_COMPANION_COLOR: CompanionColor = 'purple';
+export const DEFAULT_COMPANION_COLOR: CompanionColor = 'terracotta';
 
 export const COMPANION_COLOR_LABELS: Record<CompanionColor, string> = {
-  purple: 'Purple',
-  blue: 'Blue',
-  green: 'Green',
-  pink: 'Pink',
-  orange: 'Orange',
+  terracotta: 'Terracotta',
+  sage: 'Sage',
+  sky: 'Sky',
+  rose: 'Rose',
+  mustard: 'Mustard',
+  plum: 'Plum',
   teal: 'Teal',
-  indigo: 'Indigo',
 };
 
 export function accentFor(color: CompanionColor | string | null | undefined): AccentSet {
