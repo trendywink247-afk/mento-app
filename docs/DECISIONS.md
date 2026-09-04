@@ -112,3 +112,15 @@ Context: v1 Module A was fully built (see `PROGRESS.md` sessions 2–10); the fo
 **6. Minimal listener console ships in v1.** A real human must be able to answer chats before Module B. Scope: **web-only console, per-listener token-link auth (no password), see own conversations, reply in real time, accept/decline own Personal requests, toggle online/away.** Explicitly NOT: mentor profiles, payments, MSG91 verification, profile editing, push — those remain Module B. Anonymity holds on both sides (listeners see member *personas* only), and the crisis card renders listener-side so the listener knows what helplines the member was shown. The global-admin-token accept/decline stays for moderation/ops.
 
 **7. Sensory scope: visual + haptics, NO audio.** A designed haptic vocabulary (selection tick on choices, light impact on step advance, success on match — `apps/mobile/lib/haptics.ts`) and nothing audible: someone opening a support app in public must never fear sound. All motion respects reduce-motion (system setting on native, `prefers-reduced-motion` on web) — the flow must be fully usable with every animation stripped.
+
+---
+
+## J. Founder rulings — sessions 17 & 22 (communities-as-lens, listener-application funnel)
+
+Context: shipped ahead of this document on direct founder instruction; ratifying here so DECISIONS.md matches what's actually live (per `CLAUDE.md` SCOPE §15–16 and `PROGRESS.md`).
+
+**1. Communities are a lens, never a gate (session 17).** The UPSC-first framing from earlier sections (Positioning decision, §A–I) is superseded for navigation: a **Pathfinder → community lens** picker (upsc/neet/jee/exams/life) replaces any single-community assumption. Community + journey stage are server-driven (`GET /paths/tree`, `GET/PUT/DELETE /paths/me`), deliberately **coarse, optional, and clearable** — never a hard gate, and it must never strand a user unmatched (community is the strongest **soft** matcher preference only). Starter prompts pre-fill the composer via `?starter=` and **never auto-send**.
+
+**2. Bottom nav retires the 4-tab `Chats · Journals · Mentors · Profile` set (§C.7, superseded).** The shipped nav is **`Chats · Path · Journals · Profile`** — Path replaces the primary Mentors slot; Mentors/Browse becomes hidden-but-routable (reached from within Chats/Path flows), not a primary tab. This does not reopen the door to promoting UPSC self-assessment ("Mirror") to a tab — §D.8 defer ruling still stands.
+
+**3. In-app become-a-listener funnel (session 22).** Recruitment moves in-app: Profile → application (motivation, communities, availability, optional email, hard-gated "not therapists" pledge) → admin Applications queue (approve mints a real listener + audit row; decline stores an admin-private reason, 30-day server-enforced reapply cooldown) → in-app status card. A `mentor_interest` flag stages interest for the deferred Module B mentor portal without building any of Module B now. Application emails are **stored, not sent** — no email provider is wired yet; that choice stays open (tracked in `CLAUDE.md` → Docs drift until a provider is picked).
