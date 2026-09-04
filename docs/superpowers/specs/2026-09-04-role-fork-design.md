@@ -1,6 +1,6 @@
 # Role fork after landing — design
 
-**Date:** 2026-09-04 · **Status:** approved by founder in session 30 (sections 1–6) · **Ruling:** `docs/DECISIONS.md` §K.6
+**Date:** 2026-09-04 · **Status:** approved by founder in session 30 (sections 1–6) · **Ruling:** `docs/DECISIONS.md` §K.7 (typeface: §K.6)
 
 ## Why
 
