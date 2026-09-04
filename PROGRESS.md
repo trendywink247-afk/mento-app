@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-09-04 (session 28) — Repo consolidated, GitHub remote live, first production VPS deploy (Hostinger) ✅
+
+**Context:** founder moving from local-host-only dev toward production. Two duplicate project folders existed on the machine (`Desktop\Mento` and `~\mento`) — needed a single source of truth before anything else. Founder's plan: keep **Test** (laptop/localhost, unchanged) and **Prod** (a self-managed Hostinger VPS, not a PaaS) as the two permanent environments, with a repeatable Test→Prod deploy process. Infra-only session — no app code touched, so verification here means live end-to-end proof (health checks, a real crisis-webhook round-trip, a real backup dump) rather than pytest/tsc.
+
+**Done:**
+- **Source-of-truth consolidation**: verified via `git merge-base --is-ancestor` that `Desktop\Mento` is the current, sole valid copy; archived `~\mento` to `~\mento-archive-2026-08-29` (git history intact, verified `git log -1` post-move). Windows gotcha: `.git` internals are read-only/system/hidden and silently fail a plain `Move-Item` — needs `attrib -R -S -H ... /S /D` first.
+- **Private GitHub remote**: created `github.com/trendywink247-afk/mento-app` (private) and pushed `master`. Found the account already had a repo literally named `mento` — investigated before touching it, confirmed it's an unrelated abandoned Next.js/NestJS/Prisma prototype (different stack, last pushed 2026-05-14, predates this project) and public — left it untouched; used `mento-app` instead per founder's call. `gh` CLI had to be invoked by full path (`C:\Program Files\GitHub CLI\gh.exe`) — PATH doesn't refresh in already-running shells post-winget-install.
+- **`docs/DEPLOYMENT_VPS.md` written and then fully executed against a real box** — Hostinger VPS, Debian 12 (bookworm), ~2GB RAM, 30GB disk, `87.232.72.79`, domain `api.agentin.chat` (owned via Namecheap; `geekspace.space` also on hand, unused). Every one-time-setup step done live over SSH from this machine:
+  - Base hardening: `mento-ops` user (passwordless, key-only — needed an explicit `NOPASSWD` sudoers rule since a keyless account can't do interactive-password sudo), UFW (22/80/443 only), 2GB swap file (RAM is below the original 4GB target).
+  - Docker 29.8, Nginx, certbot installed.
+  - Repo cloned via a dedicated **SSH deploy key** (pull-only, repo-scoped) generated on the VPS itself — chosen over a PAT.
+  - Prod secrets generated (`JWT_SECRET`/`ADMIN_JWT_SECRET`/`POSTGRES_PASSWORD`, all distinct random hex) and low-RAM tuning applied (`UVICORN_WORKERS=1`, `DB_POOL_SIZE=3`, `DB_MAX_OVERFLOW=2`). New Stream Chat app created for prod (separate from the dev app — a shared app would force the crisis webhook to point at only one environment).
+  - **First deploy succeeded** after fixing two real scaffolding bugs (see Gotchas): all 9 migrations ran clean, `/api/v1/health` → ok.
+  - Nginx reverse proxy + certbot TLS — `https://api.agentin.chat` live, HTTP→HTTPS redirect, cert to 2026-12-03, auto-renewal scheduled.
+  - Stream webhooks pointed at prod (`scripts.configure_stream`, run via `docker cp` into the container since `scripts/` is deliberately excluded from the prod image).
+  - **Crisis pipeline proven live in prod** (not just configured) via a throwaway script sent straight through the Stream server SDK, bypassing any app UI: benign message → no flag; crisis-phrased message → `SafetyFlag` written (signal-only, `matched_terms=suicidal`, never the body) + client payload correctly augmented with support copy/helplines. `/api/v1/health/crisis` confirmed `"ok"` with a fresh timestamp. All test data cleaned up after.
+  - Nightly Postgres backup cron installed (`0 3 * * *`, 14-day local retention) — test-ran manually first, verified valid gzip + 14 tables in the dump.
+  - UptimeRobot monitor added on `/api/v1/health/crisis`.
+- **Gotchas fixed in the deploy scaffolding itself** (commits `c14a229`, `e54a6c9`, pushed): (1) `docker compose`'s `${POSTGRES_PASSWORD}` YAML interpolation is NOT satisfied by a service's `env_file:` — it needs `--env-file` on the CLI invocation itself; added to `deploy.sh`. (2) Windows doesn't track the unix executable bit, so every `git reset --hard` on the VPS silently reset `deploy.sh` back to non-executable — fixed permanently with `git update-index --chmod=+x`. (3) `scripts.configure_stream`'s base-URL argument must NOT include `/api/v1` (the script appends the full path itself) — first attempt produced a doubled `/api/v1/api/v1/stream/...` URL, caught before trusting it. (4) Hostinger/Virtualizor's panel "SSH Keys" feature only injects into a running VPS on a full **stop/start**, not a warm reboot — cost two reboot cycles before falling back to a one-time password bootstrap (via a locally-installed `paramiko`, since neither `sshpass`/`plink`/`expect` were available) to seed the key manually.
+- `docs/DEPLOYMENT_VPS.md`, `deploy/docker-compose.prod.yml` (added `mem_limit` per service sized for the real 1-2GB box), `deploy/deploy.sh`, `deploy/nginx/mento-api.conf.template` all reconciled against the real VPS (Debian not Ubuntu, real domain throughout, deploy-key clone instructions, low-RAM tuning) — committed as `62aca35`, `8d24d62`, `c14a229`, `e54a6c9`.
+
+**Open (founder) — new:**
+- **Off-box backup destination not configured** — the `rclone` line in `backup-postgres.sh` is still a placeholder; a VPS disk failure loses everything past the 14-day local window. Explicitly deferred this session ("leave it for later").
+- **Prod Stream Chat secret was pasted in chat during setup** — flagged with an inline rotate-reminder comment in the VPS's `.env` itself (same convention as the pre-existing dev-secret note); not urgent, do whenever convenient.
+- **`/api/v1/health/crisis` will show "down" on UptimeRobot within ~30 min of this session ending** and stay down until real chat traffic exists — by design (it tracks live webhook traffic, not just liveness), not a bug. Founder should expect and ignore that first alert.
+- The old public GitHub `mento` repo (unrelated prototype) is still live and untouched on the account — no action taken, just flagging it still exists.
+- Carried, untouched this session: everything from session 27 (Tailscale VPN routing unreliable on the test device; ephemeral `cloudflared` tunnel; `usesCleartextTraffic` manifest patch; session 26's AI decisions, OTA server standup, pilot/DO provisioning, privacy policy, helpline re-verify).
+- **Higgsfield UI work requested this session, not started**: founder asked for both a marketing hero-shot pack (`docs/HERO_IMAGE_PROMPTS.md` is ready to run, blocked on a Higgsfield credit top-up — account currently at 0 credits/free plan) and an in-app companion-art refresh (bigger scope, not yet broken down) — resume when credits are topped up / scope is ready.
+
+**Next:** point the mobile app's `EXPO_PUBLIC_API_URL` at `https://api.agentin.chat/api/v1` when ready to build/test against prod; set up the `rclone` off-box backup target; then the still-open session 26/27 items (OTA server, pilot decisions) or the Higgsfield work.
+
+**How to resume:** Prod is live and healthy at `https://api.agentin.chat` — `ssh mento-ops@87.232.72.79` (key-based, this machine's `~/.ssh/id_ed25519` is already trusted; root SSH deliberately left open too as a fallback, per founder). Redeploy any future change with `ssh mento-ops@87.232.72.79 'cd /opt/mento && ./deploy/deploy.sh'` (idempotent — fetches `origin/master`, rebuilds, migrates, health-polls). Local git remote: `origin` = `github.com/trendywink247-afk/mento-app` (private), branch `master`, both in sync as of `e54a6c9`. Test environment (laptop/localhost) is completely unchanged by any of this.
+
+---
+
 ## 2026-08-16 (session 27) — First real-device standalone APK: local build + connectivity debugging saga ✅
 
 **Context:** direct continuation of session 26's WS-4 (standalone APK runbook). Founder asked to actually get a working APK onto their physical Android phone (wireless-adb, rooted/KernelSU device connected via Tailscale). This was the first time the local-build path (`docs/ANDROID_BUILD.md`) was exercised end-to-end against real hardware, and it surfaced a long chain of environment issues the runbook hadn't seen yet — each is now documented so it's a 5-minute fix next time, not a rediscovery.

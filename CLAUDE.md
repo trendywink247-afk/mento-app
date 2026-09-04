@@ -124,11 +124,14 @@ mento/
     tests/                  pytest — 12 files / 54 tests: matcher concurrency, crisis-webhook proofs, security
                             hardening (age gate, wipe, PIN lockout, scan ownership), paths, admin, listener console
     docker-compose.yml      Postgres 16 + Redis 7
-  deploy/                   do-app.yaml (DigitalOcean App Platform spec; runbook in docs/DEPLOYMENT.md)
+  deploy/                   do-app.yaml (DigitalOcean App Platform spec; runbook in docs/DEPLOYMENT.md) ·
+                            docker-compose.prod.yml + deploy.sh + backup-postgres.sh + nginx/mento-api.conf.template
+                            (self-managed VPS path — session 28 LIVE at api.agentin.chat; runbook docs/DEPLOYMENT_VPS.md)
   scripts/                  repo-root: sample_mockup_colors.py · theme_lottie.py (Lottie → Mento palette)
   docs/                     PRD.md · DECISIONS.md (WINS) · ALIGNMENT.md · MOCKUP_INVENTORY.md · MASCOT_ASSETS.md
-                            · UX_REVIEW_2026-07-13.md · Mockups/ · superpowers/{plans,specs}/ (admin dashboard,
-                            landing enhance, path communities)
+                            · UX_REVIEW_2026-07-13.md · DEPLOYMENT.md (DO App Platform) · DEPLOYMENT_VPS.md
+                            (Hostinger, self-managed — live prod) · Mockups/ · superpowers/{plans,specs}/
+                            (admin dashboard, landing enhance, path communities)
   .github/workflows/        api-ci.yml (compose → alembic upgrade+check → pytest; path-filtered to services/api)
   README.md  CLAUDE.md  AGENTS.md  PROGRESS.md
 ```
@@ -283,6 +286,7 @@ Standing rules the skills assume: the founder's product calls get implemented th
 - Helplines: re-verify Tele-MANAS / KIRAN numbers before launch.
 - **Stack table needs a push-notifications / OTA row** (session 25–26): `expo-notifications` + `expo-device` (device registration only, `services/api/app/routers/notifications.py` + `lib/pushNotifications.ts`) and `expo-updates` (shake-to-update `lib/useShakeToUpdate.ts` + manual "Check for updates" in Profile). EAS `projectId`/`owner` **are** now set (`app.json` `extra.eas` + `owner: geekspace`), but the founder chose **local build + self-hosted OTA to avoid EAS cloud cost** — see `docs/ANDROID_BUILD.md`. The one gap for live shake-update is an `updates.url` block in `app.json` pointing at a self-hosted server (deferred to when the server exists; APK builds + installs fine without it, shake just inert). No product send-trigger decided.
 - **In-chat AI landed (session 26)** — add Stack rows: **local PII redaction** (`app/services/moderation.py`, regex + optional Presidio, on the before-send message path, `pii_redaction_enabled`) and **opt-in journal note-sorting** (`app/services/notes_ai.py` Gemini Flash, `gemini_api_key`, dark by default, `POST /journals/organize` + `/journal/organize` screen). New env vars: `GEMINI_API_KEY`; optional `requirements-ml.txt` for Presidio NER.
+- **Prod is now live (session 28)** — self-managed Hostinger VPS, `https://api.agentin.chat`, full runbook in `docs/DEPLOYMENT_VPS.md`. Stack table's Backend/DB/Cache/Messaging rows describe *what* runs but not *where* — needs a Hosting/Deployment row (or a pointer) once the DO-App-Platform-vs-VPS story is settled as more than "two parallel docs." Mobile still points at localhost by default; `EXPO_PUBLIC_API_URL=https://api.agentin.chat/api/v1` is the prod value once the app is built against it.
 Clear an item from this list when the underlying doc is updated — then delete the line.
 
 ---
