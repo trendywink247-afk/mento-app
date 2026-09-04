@@ -3,6 +3,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
 import { Entrance } from '@/components/motion/Entrance';
@@ -25,7 +26,7 @@ import { font, radius, space, type } from '@/theme/tokens';
  */
 export default function PathTab() {
   const router = useRouter();
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [state, setState] = useState<PathState | null>(null);
@@ -250,7 +251,7 @@ export default function PathTab() {
       </Entrance>
 
       <Entrance index={3}>
-        <View style={[styles.talkCard, elevation.sm, { backgroundColor: colors.surface }]}>
+        <EdgeSurface edge={colors.edgeSurface} style={[styles.talkCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.cardTitle, { color: colors.ink }]}>
             {t('path.talkTitle')}
           </Text>
@@ -284,7 +285,7 @@ export default function PathTab() {
               <Text style={[styles.ghostLabel, { color: colors.accent }]}>{t('path.browse')}</Text>
             </Pressable>
           </View>
-        </View>
+        </EdgeSurface>
       </Entrance>
 
       {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}

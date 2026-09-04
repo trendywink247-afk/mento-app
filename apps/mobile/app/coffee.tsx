@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
 import { Panda } from '@/components/art/Panda';
+import { PressKey } from '@/components/motion/PressKey';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -77,38 +79,40 @@ export default function CoffeeScreen() {
         {AMOUNTS.map((a) => {
           const selected = !customOpen && amount === a;
           return (
-            <Pressable
+            <PressKey
               key={a}
               onPress={() => {
                 setAmount(a);
                 setCustomOpen(false);
               }}
-              accessibilityRole="button"
+              edge={selected ? colors.accentEdge : colors.edgeSurface}
+              travel={3}
+              radius={radius.pill}
               accessibilityState={{ selected }}
               testID={`amount-${a}`}
               style={[
                 styles.chip,
-                { borderColor: selected ? colors.accent : colors.border, backgroundColor: colors.surface },
-                selected && { borderWidth: 1.5 },
+                { backgroundColor: selected ? colors.accentTint : colors.surface },
               ]}
             >
               <Text style={[type.label, { color: selected ? colors.accent : colors.ink }]}>₹{a}</Text>
-            </Pressable>
+            </PressKey>
           );
         })}
-        <Pressable
+        <PressKey
           onPress={() => setCustomOpen(true)}
-          accessibilityRole="button"
+          edge={customOpen ? colors.accentEdge : colors.edgeSurface}
+          travel={3}
+          radius={radius.pill}
           accessibilityState={{ selected: customOpen }}
           testID="amount-custom"
           style={[
             styles.chip,
-            { borderColor: customOpen ? colors.accent : colors.border, backgroundColor: colors.surface },
-            customOpen && { borderWidth: 1.5 },
+            { backgroundColor: customOpen ? colors.accentTint : colors.surface },
           ]}
         >
           <Text style={[type.label, { color: customOpen ? colors.accent : colors.ink }]}>Custom</Text>
-        </Pressable>
+        </PressKey>
       </View>
       {customOpen ? (
         <TextInput
@@ -126,13 +130,14 @@ export default function CoffeeScreen() {
 
       <Text style={[styles.section, { color: colors.ink }]}>Choose a payment method</Text>
       {METHODS.map((m) => (
-        <Pressable
+        <PressKey
           key={m.key}
           onPress={onMethod}
-          accessibilityRole="button"
+          edge={colors.edgeSurface}
           accessibilityLabel={`${m.title} — coming soon`}
           testID={`method-${m.key}`}
-          style={[styles.method, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[styles.method, { backgroundColor: colors.surface }]}
+          containerStyle={{ marginBottom: space.sm }}
         >
           <IconBadge icon={m.icon} size={40} />
           <View style={{ flex: 1 }}>
@@ -143,22 +148,26 @@ export default function CoffeeScreen() {
           <View style={[styles.soonTag, { backgroundColor: colors.surfaceAlt }]}>
             <Text style={[styles.soonText, { color: colors.inkMuted }]}>Soon</Text>
           </View>
-        </Pressable>
+        </PressKey>
       ))}
       {note ? (
-        <View style={[styles.noteCard, { backgroundColor: colors.surfaceAlt }]} testID="payments-note">
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.noteCard, { backgroundColor: colors.surfaceAlt }]}
+          testID="payments-note"
+        >
           <IconBadge icon="time-outline" tone="orange" size={34} />
           <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>{note}</Text>
-        </View>
+        </EdgeSurface>
       ) : null}
 
-      <View style={[styles.noteCard, { backgroundColor: colors.surfaceAlt }]}>
+      <EdgeSurface edge={colors.edgeSurface} style={[styles.noteCard, { backgroundColor: colors.surfaceAlt }]}>
         <Panda pose="shield" size={48} />
         <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
           Thank you! Your support goes to the Mento team — keeping this space safe, free, and
           here for everyone. 💜
         </Text>
-      </View>
+      </EdgeSurface>
 
       <View style={styles.secureRow}>
         <Ionicons name="lock-closed-outline" size={13} color={colors.inkMuted} />
@@ -186,7 +195,6 @@ const styles = StyleSheet.create({
   section: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22, marginTop: space.md, marginBottom: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: {
-    borderWidth: 1,
     borderRadius: radius.md,
     paddingVertical: space.sm,
     paddingHorizontal: space.md,
@@ -203,10 +211,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    borderWidth: 1,
     borderRadius: radius.md,
     padding: space.sm,
-    marginBottom: space.sm,
   },
   noteCard: {
     flexDirection: 'row',
