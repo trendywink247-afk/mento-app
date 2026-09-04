@@ -54,3 +54,6 @@ htmlcov/
 .playwright-mcp/
 mento-crisis-card.png
 .superpowers/
+
+# brainstorming visual-companion sessions (local mockups, never shipped)
+.superpowers/
