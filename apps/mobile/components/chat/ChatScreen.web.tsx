@@ -81,6 +81,7 @@ type MessageRowProps = {
   onToggleHelpful: (id: string) => void;
   onSave: (m: Msg) => void;
   onCopy: (text: string) => void;
+  onRisen: (id: string) => void;
 };
 
 /** One transcript row, memoized so composer keystrokes and typing events never
@@ -99,6 +100,7 @@ const MessageRow = memo(function MessageRow({
   onToggleHelpful,
   onSave,
   onCopy,
+  onRisen,
 }: MessageRowProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -106,8 +108,11 @@ const MessageRow = memo(function MessageRow({
   // Rise-in for messages that arrive live; history renders still.
   const rise = useSharedValue(fresh && !reduced ? 1 : 0);
   useEffect(() => {
-    if (rise.value === 1) rise.value = withTiming(0, { duration: duration.gentle, easing: easing.settle });
-  }, [rise]);
+    if (rise.value === 1) {
+      rise.value = withTiming(0, { duration: duration.gentle, easing: easing.settle });
+      onRisen(item.id);
+    }
+  }, [rise, onRisen, item.id]);
   const riseStyle = useAnimatedStyle(() => ({
     opacity: 1 - rise.value,
     transform: [{ translateY: 10 * rise.value }],
@@ -354,6 +359,8 @@ export default function ChatScreenWeb() {
   // Timestamp the initial history load finished — anything appended after this
   // (live messages) rises in; history itself renders still.
   const loadedAtRef = useRef<number>(0);
+  // ids that arrived after load; pruned by the row once its rise-in has played, so a
+  // recycled row never replays it.
   const freshIds = useRef<Set<string>>(new Set());
 
   const surfaceCrisis = useCallback((m: CrisisCarrier | undefined) => {
@@ -512,6 +519,10 @@ export default function ChatScreenWeb() {
     void globalThis.navigator?.clipboard?.writeText(text);
   }, []);
 
+  const markRisen = useCallback((id: string) => {
+    freshIds.current.delete(id);
+  }, []);
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       {/* Mentor header card (mockup #7) */}
@@ -618,6 +629,7 @@ export default function ChatScreenWeb() {
                   onToggleHelpful={toggleHelpful}
                   onSave={saveToNotes}
                   onCopy={copyText}
+                  onRisen={markRisen}
                 />
               );
             }}
