@@ -27,8 +27,6 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { DEFAULT_COMPANION_COLOR } from '@/theme/companion';
 import { font, radius, space, type } from '@/theme/tokens';
 
-const REAPPLY_AFTER_MS = 30 * 24 * 60 * 60 * 1000; // mirrors the server's 30-day cooldown
-
 /** Mentor Home (DECISIONS §K.7): the mentor branch's landing until the native
  * console exists. Outside the tab shell. Hosts the shared ApplicationForm inline
  * (no application yet), the status card (pending / approved / declined) and the
@@ -46,17 +44,33 @@ export default function MentorHome() {
   const [switching, setSwitching] = useState(false);
   const approvedHapticFired = useRef(false);
 
-  const load = useCallback(async () => {
+  // Best-effort — a persona/animal fetch failure should never blank the hero or
+  // block the application status from loading.
+  const loadIdentity = useCallback(async () => {
     try {
-      const [p, a, app] = await Promise.all([getPersona(), getCompanionAnimal(), api.getListenerApplication()]);
+      const [p, a] = await Promise.all([getPersona(), getCompanionAnimal()]);
       setPersona(p);
       setAnimal(a as CompanionAnimal | null);
+    } catch {
+      // ignore — hero renders fine with a null persona/companion.
+    }
+  }, []);
+
+  const loadApplication = useCallback(async () => {
+    try {
+      const app = await api.getListenerApplication();
       setApplication(app);
       setLoadError(false);
     } catch {
+      // Leave `application` as-is (no spinner flash, no accidental form reveal —
+      // an unknown status must never show the form, that risks a duplicate apply).
       setLoadError(true);
     }
   }, []);
+
+  const load = useCallback(async () => {
+    await Promise.all([loadIdentity(), loadApplication()]);
+  }, [loadIdentity, loadApplication]);
 
   // Status can change while the app is backgrounded (admin approves) — refetch on focus.
   useFocusEffect(
@@ -76,19 +90,22 @@ export default function MentorHome() {
   const switchToTalk = async () => {
     if (switching) return;
     setSwitching(true);
-    // Mentors never chose a companion; the talking side needs one for theming.
-    if (!(await getCompanionAnimal())) {
-      await saveCompanionAnimal('Panda');
-      await saveCompanionColor(DEFAULT_COMPANION_COLOR);
-      setCompanionColor(DEFAULT_COMPANION_COLOR);
+    try {
+      // Mentors never chose a companion; the talking side needs one for theming.
+      if (!(await getCompanionAnimal())) {
+        await saveCompanionAnimal('Panda');
+        await saveCompanionColor(DEFAULT_COMPANION_COLOR);
+        setCompanionColor(DEFAULT_COMPANION_COLOR);
+      }
+      await saveRole('mentee');
+      router.dismissAll();
+      router.replace('/chats');
+    } catch {
+      // Stay still and silent (T&S: no shaking/buzzing at a struggling user) —
+      // release the spinner so the button is tappable again.
+      setSwitching(false);
     }
-    await saveRole('mentee');
-    router.dismissAll();
-    router.replace('/chats');
   };
-
-  const canReapply =
-    application?.status === 'declined' && Date.now() - Date.parse(application.created_at) >= REAPPLY_AFTER_MS;
 
   return (
     <Screen scroll bg="lavender">
@@ -119,14 +136,21 @@ export default function MentorHome() {
         <View style={styles.center}>
           <ActivityIndicator color={colors.accent} />
         </View>
-      ) : application === null || canReapply ? (
+      ) : application === null ? (
         <Entrance index={1}>
-          {canReapply ? (
-            <View style={[styles.card, elevation.sm, { backgroundColor: colors.surface }]} testID="mentor-status">
-              <Text style={[type.label, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.declinedBody')}</Text>
-            </View>
-          ) : null}
+          <Text style={[type.body, styles.intro, { color: colors.inkMuted }]}>{t('mentorHome.applyIntro')}</Text>
+          <ApplicationForm onSuccess={(result) => setApplication(result)} />
+        </Entrance>
+      ) : application.status === 'declined' ? (
+        <Entrance index={1}>
+          <View style={[styles.card, elevation.sm, { backgroundColor: colors.surface }]} testID="mentor-status">
+            <Text style={[type.label, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.declinedBody')}</Text>
+          </View>
+          {/* The server owns the 30-day reapply cooldown (anchored on decline time,
+              which this client doesn't have) — always offer the form and let its
+              own error display surface a 409 if it's too soon, exactly like the
+              Profile → apply path already does. */}
           <Text style={[type.body, styles.intro, { color: colors.inkMuted }]}>{t('mentorHome.applyIntro')}</Text>
           <ApplicationForm onSuccess={(result) => setApplication(result)} />
         </Entrance>
@@ -140,18 +164,10 @@ export default function MentorHome() {
             />
             <View style={{ flex: 1 }}>
               <Text style={[type.label, { color: colors.ink }]}>
-                {application.status === 'approved'
-                  ? t('profile.approvedTitle')
-                  : application.status === 'declined'
-                    ? t('profile.declinedTitle')
-                    : t('profile.receivedTitle')}
+                {application.status === 'approved' ? t('profile.approvedTitle') : t('profile.receivedTitle')}
               </Text>
               <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {application.status === 'approved'
-                  ? t('profile.approvedBody')
-                  : application.status === 'declined'
-                    ? t('profile.declinedBody')
-                    : t('profile.receivedBody')}
+                {application.status === 'approved' ? t('profile.approvedBody') : t('profile.receivedBody')}
               </Text>
               {application.status === 'approved' && application.console_url ? (
                 <Pressable
