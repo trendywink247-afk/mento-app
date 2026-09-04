@@ -13,6 +13,7 @@ export function EdgeSurface({
   edge,
   travel = 3,
   radius = radiusTokens.lg,
+  faceRadiusStyle,
   style,
   containerStyle,
   testID,
@@ -21,18 +22,29 @@ export function EdgeSurface({
   edge: string;
   travel?: 4 | 3 | 2;
   radius?: number;
-  /** Face visuals (background, padding). */
+  /** Per-corner radii for asymmetric faces (chat-bubble tails). Applied to BOTH the
+   * face and the edge so they can never diverge. Overrides `radius` when given. */
+  faceRadiusStyle?: Pick<
+    ViewStyle,
+    'borderTopLeftRadius' | 'borderTopRightRadius' | 'borderBottomLeftRadius' | 'borderBottomRightRadius'
+  >;
+  /** Face visuals only: background, padding, inner layout. Never sizing constraints. */
   style?: StyleProp<ViewStyle>;
+  /** Outer box: margins, alignSelf, flex, maxWidth / flexShrink — every sizing
+   * constraint goes here, because percentage widths on the face resolve against
+   * PressKey's unsized wrapper and silently stop applying. */
   containerStyle?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
+  const cornerStyle = faceRadiusStyle ? { borderRadius: radius, ...faceRadiusStyle } : { borderRadius: radius };
+
   return (
     <View style={[{ paddingBottom: travel }, containerStyle]} testID={testID}>
       <View
         pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { top: travel, borderRadius: radius, backgroundColor: edge }]}
+        style={[StyleSheet.absoluteFill, { top: travel, backgroundColor: edge }, cornerStyle]}
       />
-      <View style={[style, { borderRadius: radius }]}>{children}</View>
+      <View style={[style, cornerStyle]}>{children}</View>
     </View>
   );
 }

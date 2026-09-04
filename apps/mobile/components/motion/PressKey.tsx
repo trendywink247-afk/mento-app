@@ -38,11 +38,19 @@ type Props = {
   /** Key travel in px: 4 buttons/cards, 3 chips, 2 the tab pill. */
   travel?: PressKeyTravel;
   radius?: number;
+  /** Per-corner radii for asymmetric faces (chat-bubble tails). Applied to BOTH the
+   * face and the edge so they can never diverge. Overrides `radius` when given. */
+  faceRadiusStyle?: Pick<
+    ViewStyle,
+    'borderTopLeftRadius' | 'borderTopRightRadius' | 'borderBottomLeftRadius' | 'borderBottomRightRadius'
+  >;
   haptic?: 'impact' | 'none';
   disabled?: boolean;
-  /** Face visuals: background, padding, layout. Radius is applied by PressKey. */
+  /** Face visuals only: background, padding, inner layout. Never sizing constraints. */
   style?: StyleProp<ViewStyle>;
-  /** Outer layout (margins, alignSelf, flex) — applies to the whole key. */
+  /** Outer box: margins, alignSelf, flex, maxWidth / flexShrink — every sizing
+   * constraint goes here, because percentage widths on the face resolve against
+   * PressKey's unsized wrapper and silently stop applying. */
   containerStyle?: StyleProp<ViewStyle>;
   accessibilityRole?: AccessibilityRole;
   accessibilityLabel?: string;
@@ -57,6 +65,7 @@ export function PressKey({
   edge,
   travel = 4,
   radius = radiusTokens.lg,
+  faceRadiusStyle,
   haptic: hapticMode = 'impact',
   disabled = false,
   style,
@@ -69,10 +78,11 @@ export function PressKey({
 }: Props) {
   const reduced = useReducedMotion();
   const press = useSharedValue(0);
+  const cornerStyle = faceRadiusStyle ? { borderRadius: radius, ...faceRadiusStyle } : { borderRadius: radius };
 
   const face = useAnimatedStyle(() => ({
-    transform: [{ translateY: reduced ? 0 : press.value * travel }],
-    opacity: reduced ? 1 - press.value * 0.15 : 1,
+    transform: [{ translateY: reduced || disabled ? 0 : press.value * travel }],
+    opacity: disabled ? 0.55 : reduced ? 1 - press.value * 0.15 : 1,
   }));
 
   const onPressIn = () => {
@@ -96,7 +106,7 @@ export function PressKey({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={{ disabled, ...accessibilityState }}
+      accessibilityState={{ ...accessibilityState, disabled }}
       testID={testID}
       style={[{ paddingBottom: travel }, containerStyle]}
     >
@@ -104,16 +114,11 @@ export function PressKey({
         pointerEvents="none"
         style={[
           StyleSheet.absoluteFill,
-          { top: travel, borderRadius: radius, backgroundColor: disabled ? 'transparent' : edge },
+          { top: travel, backgroundColor: disabled ? 'transparent' : edge },
+          cornerStyle,
         ]}
       />
-      <Animated.View style={[style, { borderRadius: radius }, disabled && styles.disabled, face]}>
-        {children}
-      </Animated.View>
+      <Animated.View style={[style, cornerStyle, face]}>{children}</Animated.View>
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  disabled: { opacity: 0.55 },
-});
