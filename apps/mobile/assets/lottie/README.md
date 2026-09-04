@@ -12,6 +12,8 @@ fills/strokes, animated keyframes, gradient stops, and embeds zip raster assets.
 | piggy-bank.json | "Piggy Bank" by Chris | Finance journal empty state |
 | breathing-calm.json | "Calm" by Nick | registered (LOTTIE_TILES.breathing), unwired |
 
+Re-baked 2026-09-05 onto the Clay and Sage palette (DECISIONS §K.5) with scripts/theme_lottie.py.
+
 Rejected in visual review: coffee-cup (white outline invisible on cream),
 no-data (raster-based, unthemable).
 
