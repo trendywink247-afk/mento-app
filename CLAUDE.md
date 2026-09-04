@@ -36,7 +36,7 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 | OTP | **MSG91** | **NOT in the v1 user path**. Reserved for mentor verification (deferred Module B). |
 | Analytics | **PostHog** | **wired (session 23):** anonymous client funnel via `lib/analytics.ts` (raw HTTP capture, no SDK, closed event union) — dark until `EXPO_PUBLIC_POSTHOG_KEY` is set. Never message content or PII; crisis sessions excluded from retention metrics. |
 | Errors | **Sentry** | env-gated both sides (empty DSN = off): API errors-only with request bodies stripped (`SENTRY_DSN`); mobile JS-error capture (`EXPO_PUBLIC_SENTRY_DSN`) — native crash symbolication is release-build work. |
-| i18n | **i18n-js** + expo-localization | EN + HI over `locales/{en,hi}.json`, typed keys (`lib/i18n.tsx`), persisted `mento.lang`, live Profile toggle; chat bodies/server Path content/personas stay untranslated. Devanagari via Noto Sans (loaded) + platform fallback. |
+| i18n | **i18n-js** + expo-localization | EN + HI over `locales/{en,hi}.json`, typed keys (`lib/i18n.tsx`), persisted `mento.lang`, live Profile toggle; chat bodies/server Path content/personas stay untranslated. Devanagari via Baloo 2 (single family). |
 
 **Key env vars** — API (`services/api/.env`, template `.env.example`): `ENV`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, `DATABASE_URL`, `REDIS_URL`, `STREAM_API_KEY`/`STREAM_API_SECRET`, `RAZORPAY_KEY_ID`/`_SECRET`, `POSTHOG_API_KEY`, `SENTRY_DSN`. Mobile (`apps/mobile/.env`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`, `EXPO_PUBLIC_SENTRY_DSN`.
 
@@ -101,7 +101,7 @@ mento/
       art/                  Logo, Panda, AnimatedPanda rig, Companion(s), ReactiveCompanion (idle states:
                             curious/joy/sleepy), Scenes, SceneTile, LottieTile, PersonaAvatar
       motion/               AmbientBackground(.web), AuroraCanvas (SkSL), PandaStage, Entrance, StepTransition,
-                            useBreathing, ambientLift, StaticAmbient, Tilt3D/TiltCard (2.5D), ConnectionConstellation, SkyMotes
+                            useBreathing, ambientLift, StaticAmbient, Tilt3D/TiltCard (2.5D), ConnectionConstellation, SkyMotes · PressKey (pillow key)
       onboarding/           OnboardingJourney (step machine) + steps/ + StepScaffold
       chat/                 ChatScreen(.web), CrisisCard, ConversationOptions + options/
       listener/             ListenerConsole(.web), ListenerChatScreen(.web), WebOnlyNotice
@@ -149,6 +149,7 @@ mento/
 - **Python**: type hints required; `ruff` + `black` style; functions do one thing.
 - Components: function components + hooks. One component per file. Co-locate styles.
 - **Design tokens, never raw hex** in components — consume via `useTheme()`. Never raw durations — consume `theme/motion.ts`.
+- **Tappable = PressKey.** Buttons, cards, rows, chips, doors and the tab pill render through `PressKey` (face visuals in `style`, every sizing/margin constraint in `containerStyle`, per-corner radii via `faceRadiusStyle`); non-tappable cards use `EdgeSurface`. No new `elevation.*` on cards.
 - **Typed API clients only** — extend `lib/api.ts` (member), `lib/listenerApi.ts` (console), `lib/adminApi.ts` (dashboard). Never hand-write `fetch` in a component. Server side: Pydantic models in/out. (`lib/analytics.ts`'s fire-and-forget fetch is the sanctioned third-party exception.)
 - **User-visible strings via `useI18n().t()`** — never hardcoded literals in components (EN canonical in `locales/en.json`, typed keys). **Analytics via `lib/analytics.ts` only** — allowlisted closed event union, no PII ever, no crisis events.
 - **Web/native splits** use the `.web.tsx` convention (`AppProviders*`, `ChatScreen*`, `ListenerConsole*`, `AdminConsole*`). Listener console and admin dashboard are web-only — native gets `WebOnlyNotice`.
@@ -257,7 +258,7 @@ mento/
 
 ## Design tokens
 
-**The code is the source of truth**: colours/type/space/elevation in `apps/mobile/theme/tokens.ts` (pixel-calibrated against the mockups via repo-root `scripts/sample_mockup_colors.py` — warm-cream `bg #FDF8F5`, ink `#1D2142`, default accent/brand `#5847D6`, `accentSoft #8177C9`, pastel `wash.*`; fonts Nunito + Lora). Per-user companion accents in `theme/companion.ts` — **7 colors** (purple/blue/green/pink/orange/teal/indigo), default `purple`, layered live over `brand*` by `ThemeProvider` (`useTheme()` exposes `companionColor`/`setCompanionColor`). **Motion tokens** in `theme/motion.ts`: `duration` 200/350/500/700, calm `easing`, `spring.calm`, 80ms `stagger` unit, 5.2s `breathe`, slow `drift`, and the `character` vocabulary (sway/greet/celebrate/comfort/tap/curious/joy/sleepy) that drives `ReactiveCompanion`. Components consume tokens — never raw hex, never raw durations.
+**The code is the source of truth**: colours/type/space/elevation in `apps/mobile/theme/tokens.ts` — **Clay and Sage** (DECISIONS §K.5/§K.8): oat ground `#F4EFE6`, charcoal ink `#2B2B2B`, default accent terracotta `#A2533A`; 7 companion accents in `theme/companion.ts` (terracotta default; each carries `accentEdge`), all WCAG AA via `python scripts/contrast_gate.py` (run it after any palette change — it also checks the ritual `bgLavender` surface). One type family, **Baloo 2** (Latin + Devanagari); `type.displayHeadline` for screen headlines. Depth is the **pillow key**: `components/motion/PressKey.tsx` for tappables (impact haptic on press-in, transform-only travel), `components/EdgeSurface.tsx` for static surfaces; `elevation.*` shadows are reserved for floating layers (tab bar, FAB, sheets). **Motion tokens** in `theme/motion.ts`: `duration` 200/350/500/700, calm `easing`, `spring.calm`, 80ms `stagger` unit, 5.2s `breathe`, slow `drift`, and the `character` vocabulary (sway/greet/celebrate/comfort/tap/curious/joy/sleepy) that drives `ReactiveCompanion`. Components consume tokens — never raw hex, never raw durations.
 
 Exception by design: Lottie scene art carries a build-time-baked palette (via `scripts/theme_lottie.py`) and does not re-tint with the companion accent.
 
