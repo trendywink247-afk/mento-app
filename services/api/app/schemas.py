@@ -435,6 +435,19 @@ class ListenerApplicationOut(BaseModel):
     console_url: str | None = None
 
 
+class ConsoleSessionOut(BaseModel):
+    """Native mentor console credential (spec 2026-09-05 §3): the listener JWT for
+    an approved member, plus what the console needs to connect to Stream. Issued
+    only while BOTH the application and the profile are approved."""
+
+    listener_token: str
+    listener_id: str
+    persona_name: str
+    persona_avatar: str
+    stream_token: str
+    expires_at: str
+
+
 # --- Moderation review queue (admin) ---
 class ModerationItem(BaseModel):
     id: str
