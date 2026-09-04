@@ -3,11 +3,13 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { PressKey } from '@/components/motion/PressKey';
 import { api, type ListenerApplication } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
@@ -26,7 +28,7 @@ const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
  * support & about. (Mirror/UPSC panels are deferred modules.) */
 export default function ProfileTab() {
   const router = useRouter();
-  const { colors, elevation, companionColor, setCompanionColor } = useTheme();
+  const { colors, companionColor, setCompanionColor } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
@@ -86,7 +88,11 @@ export default function ProfileTab() {
           </Text>
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.card, { backgroundColor: colors.surface }]}
+          containerStyle={styles.rowSpacing}
+        >
           <Text style={[styles.cardTitle, { color: colors.ink }]}>{t('profile.companionTitle')}</Text>
           {animal ? (
             <View style={styles.companionRow}>
@@ -122,11 +128,15 @@ export default function ProfileTab() {
               );
             })}
           </View>
-        </View>
+        </EdgeSurface>
 
         <Text style={[styles.section, { color: colors.ink }]}>{t('profile.section')}</Text>
 
-        <View style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.row, { backgroundColor: colors.surface }]}
+          containerStyle={styles.rowSpacing}
+        >
           <IconBadge icon="language-outline" size={44} />
           <View style={{ flex: 1 }}>
             <Text style={[type.label, { color: colors.ink }]}>{t('profile.language')}</Text>
@@ -160,13 +170,14 @@ export default function ProfileTab() {
               );
             })}
           </View>
-        </View>
+        </EdgeSurface>
 
-        <Pressable
+        <PressKey
           onPress={() => router.push('/coffee')}
-          accessibilityRole="button"
+          edge={colors.edgeSurface}
           testID="profile-coffee"
-          style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+          style={[styles.row, { backgroundColor: colors.surface }]}
+          containerStyle={styles.rowSpacing}
         >
           <IconBadge icon="cafe-outline" tone="orange" size={44} />
           <View style={{ flex: 1 }}>
@@ -176,9 +187,13 @@ export default function ProfileTab() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-        </Pressable>
+        </PressKey>
 
-        <View style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.row, { backgroundColor: colors.surface }]}
+          containerStyle={styles.rowSpacing}
+        >
           <IconBadge icon="heart-outline" size={44} />
           <View style={{ flex: 1 }}>
             <Text style={[type.label, { color: colors.ink }]}>{t('profile.listenersTitle')}</Text>
@@ -186,9 +201,13 @@ export default function ProfileTab() {
               {t('profile.listenersBody')}
             </Text>
           </View>
-        </View>
+        </EdgeSurface>
 
-        <View style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.row, { backgroundColor: colors.surface }]}
+          containerStyle={styles.rowSpacing}
+        >
           <IconBadge icon="shield-checkmark-outline" tone="green" size={44} />
           <View style={{ flex: 1 }}>
             <Text style={[type.label, { color: colors.ink }]}>{t('profile.privacyTitle')}</Text>
@@ -196,14 +215,15 @@ export default function ProfileTab() {
               {t('profile.privacyBody')}
             </Text>
           </View>
-        </View>
+        </EdgeSurface>
 
         {application === null ? (
-          <Pressable
+          <PressKey
             onPress={() => router.push('/listener-apply')}
-            accessibilityRole="button"
+            edge={colors.edgeSurface}
             testID="profile-become-listener"
-            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+            style={[styles.row, { backgroundColor: colors.surface }]}
+            containerStyle={styles.rowSpacing}
           >
             <IconBadge icon="ear-outline" tone="green" size={44} />
             <View style={{ flex: 1 }}>
@@ -213,15 +233,16 @@ export default function ProfileTab() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-          </Pressable>
+          </PressKey>
         ) : application.status === 'declined' ? (
           /* Declined members can reapply — the server enforces the cool-down (409
            * surfaces through the apply screen's error display). */
-          <Pressable
+          <PressKey
             onPress={() => router.push('/listener-apply')}
-            accessibilityRole="button"
+            edge={colors.edgeSurface}
             testID="profile-listener-status"
-            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+            style={[styles.row, { backgroundColor: colors.surface }]}
+            containerStyle={styles.rowSpacing}
           >
             <IconBadge icon="ear-outline" tone="accent" size={44} />
             <View style={{ flex: 1 }}>
@@ -231,10 +252,12 @@ export default function ProfileTab() {
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-          </Pressable>
+          </PressKey>
         ) : (
-          <View
-            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+          <EdgeSurface
+            edge={colors.edgeSurface}
+            style={[styles.row, { backgroundColor: colors.surface }]}
+            containerStyle={styles.rowSpacing}
             testID="profile-listener-status"
           >
             <IconBadge
@@ -266,16 +289,17 @@ export default function ProfileTab() {
                 </Pressable>
               ) : null}
             </View>
-          </View>
+          </EdgeSurface>
         )}
 
         {Platform.OS !== 'web' ? (
-          <Pressable
+          <PressKey
             onPress={() => void handleCheckUpdates()}
             disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'restarting'}
-            accessibilityRole="button"
+            edge={colors.edgeSurface}
             testID="profile-check-updates"
-            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+            style={[styles.row, { backgroundColor: colors.surface }]}
+            containerStyle={styles.rowSpacing}
           >
             <IconBadge icon="cloud-download-outline" size={44} />
             <View style={{ flex: 1 }}>
@@ -294,14 +318,15 @@ export default function ProfileTab() {
                           : t('profile.updatesBody')}
               </Text>
             </View>
-          </Pressable>
+          </PressKey>
         ) : null}
 
-        <Pressable
+        <PressKey
           onPress={() => router.push('/start-fresh')}
-          accessibilityRole="button"
+          edge={colors.edgeSurface}
           testID="profile-start-fresh"
-          style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+          style={[styles.row, { backgroundColor: colors.surface }]}
+          containerStyle={styles.rowSpacing}
         >
           <IconBadge icon="leaf-outline" tone="danger" size={44} />
           <View style={{ flex: 1 }}>
@@ -311,7 +336,7 @@ export default function ProfileTab() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-        </Pressable>
+        </PressKey>
 
         <Text style={[type.caption, styles.version, { color: colors.inkMuted }]}>
           {t('profile.version')}
@@ -362,8 +387,8 @@ const styles = StyleSheet.create({
     gap: space.sm,
     borderRadius: radius.lg,
     padding: space.sm + 2,
-    marginBottom: space.sm,
   },
+  rowSpacing: { marginBottom: space.sm },
   version: { textAlign: 'center', marginTop: space.md },
   langChips: { flexDirection: 'row', gap: space.xs },
   langChip: {

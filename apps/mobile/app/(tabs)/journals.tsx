@@ -3,10 +3,12 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
 import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
+import { PressKey } from '@/components/motion/PressKey';
 import { api } from '@/lib/api';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -59,7 +61,7 @@ const JOURNALS: {
  * present but honestly marked Coming soon. */
 export default function JournalsTab() {
   const router = useRouter();
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
   const [counts, setCounts] = useState<Record<string, number>>({});
 
@@ -88,9 +90,9 @@ export default function JournalsTab() {
           {t('journals.sub')}
         </Text>
 
-        <Pressable
+        <PressKey
           onPress={() => router.push('/journal/organize')}
-          accessibilityRole="button"
+          edge={colors.accentEdge}
           accessibilityLabel={t('journals.aiCta')}
           testID="journal-ai-organize"
           style={[styles.aiCard, { backgroundColor: colors.surfaceAlt }]}
@@ -116,20 +118,21 @@ export default function JournalsTab() {
           <View style={styles.aiArt}>
             <LottieTile name="notebook" fallback="journalsAi" size={84} />
           </View>
-        </Pressable>
+        </PressKey>
 
         <View style={styles.sectionRow}>
           <Text style={[styles.section, { color: colors.ink }]}>{t('journals.my')}</Text>
         </View>
 
         {JOURNALS.map((j) => (
-          <Pressable
+          <PressKey
             key={j.channel}
             onPress={() => router.push({ pathname: '/journal/[channel]', params: { channel: j.route } })}
-            accessibilityRole="button"
+            edge={colors.edgeSurface}
             accessibilityLabel={t(j.title)}
             testID={`journal-${j.route}`}
-            style={[styles.row, { backgroundColor: colors.surface }, elevation.sm]}
+            style={[styles.row, { backgroundColor: colors.surface }]}
+            containerStyle={styles.rowSpacing}
           >
             <IconBadge icon={j.icon} tone={j.tone} size={48} />
             <View style={{ flex: 1 }}>
@@ -142,15 +145,15 @@ export default function JournalsTab() {
               </View>
             ) : null}
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-          </Pressable>
+          </PressKey>
         ))}
 
-        <View style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
+        <EdgeSurface edge={colors.edgeAlt} travel={2} radius={radius.md} style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
           <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
           <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
             {t('journals.privacy')}
           </Text>
-        </View>
+        </EdgeSurface>
       </ScrollView>
     </Screen>
   );
@@ -180,8 +183,8 @@ const styles = StyleSheet.create({
     gap: space.sm,
     borderRadius: radius.lg,
     padding: space.sm + 2,
-    marginBottom: space.sm,
   },
+  rowSpacing: { marginBottom: space.sm },
   rowTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 23 },
   count: {
     minWidth: 30,

@@ -13,6 +13,7 @@ import {
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api, type Listener } from '@/lib/api';
 import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
@@ -23,7 +24,7 @@ import { font, radius, space, type } from '@/theme/tokens';
  * availability sections, no star ratings. Tap → profile + intro request. */
 export default function MentorsTab() {
   const router = useRouter();
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [listeners, setListeners] = useState<Listener[]>([]);
@@ -82,13 +83,13 @@ export default function MentorsTab() {
   const others = filtered.filter((l) => !l.available);
 
   const renderCard = (l: Listener) => (
-    <Pressable
+    <PressKey
       key={l.id}
       onPress={() => router.push({ pathname: '/mentor/[id]', params: { id: l.id } })}
-      accessibilityRole="button"
+      edge={colors.edgeSurface}
       accessibilityLabel={`Mentor ${l.persona_name}`}
       testID={`mentor-${l.id}`}
-      style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]}
+      style={[styles.card, { backgroundColor: colors.surface }]}
     >
       <PersonaAvatar name={l.persona_name} size={52} online={l.available} />
       <View style={{ flex: 1 }}>
@@ -107,7 +108,7 @@ export default function MentorsTab() {
         ) : null}
       </View>
       <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-    </Pressable>
+    </PressKey>
   );
 
   return (
@@ -131,9 +132,9 @@ export default function MentorsTab() {
           contentContainerStyle={{ paddingBottom: space.lg }}
           renderItem={() => (
             <View style={{ gap: space.sm }}>
-              <Pressable
+              <PressKey
                 onPress={() => void nextAvailable()}
-                accessibilityRole="button"
+                edge={colors.edgeAlt}
                 testID="next-available"
                 style={[styles.nextCard, { backgroundColor: colors.surfaceAlt }]}
               >
@@ -149,7 +150,7 @@ export default function MentorsTab() {
                 ) : (
                   <Ionicons name="chevron-forward" size={18} color={colors.accent} />
                 )}
-              </Pressable>
+              </PressKey>
 
               {note ? (
                 <View style={[styles.note, { backgroundColor: colors.surfaceAlt }]}>
@@ -159,9 +160,11 @@ export default function MentorsTab() {
 
               {categories.length ? (
                 <View style={styles.chips}>
-                  <Pressable
+                  <PressKey
                     onPress={() => setCategory(null)}
-                    accessibilityRole="button"
+                    edge={category === null ? colors.accentEdge : colors.edgeSurface}
+                    travel={3}
+                    radius={radius.pill}
                     style={[
                       styles.chip,
                       category === null
@@ -172,14 +175,16 @@ export default function MentorsTab() {
                     <Text style={[styles.chipText, { color: category === null ? colors.onAccent : colors.accent }]}>
                       All
                     </Text>
-                  </Pressable>
+                  </PressKey>
                   {categories.map((c) => {
                     const selected = category === c;
                     return (
-                      <Pressable
+                      <PressKey
                         key={c}
                         onPress={() => setCategory(selected ? null : c)}
-                        accessibilityRole="button"
+                        edge={selected ? colors.accentEdge : colors.edgeSurface}
+                        travel={3}
+                        radius={radius.pill}
                         accessibilityState={{ selected }}
                         style={[
                           styles.chip,
@@ -191,7 +196,7 @@ export default function MentorsTab() {
                         <Text style={[styles.chipText, { color: selected ? colors.onAccent : colors.accent }]}>
                           {formatTopic(c)}
                         </Text>
-                      </Pressable>
+                      </PressKey>
                     );
                   })}
                 </View>
