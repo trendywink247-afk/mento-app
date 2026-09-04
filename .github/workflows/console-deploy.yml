@@ -1,0 +1,49 @@
+name: Console Deploy
+
+# Rebuilds and ships the admin/listener/apply static web console to the VPS on
+# every push to master that touches the mobile app or the deploy script — the
+# same thing deploy/deploy-console.sh does by hand, just automatic. The BUILD
+# runs on this runner (not the VPS — see deploy-console.sh's own comment on
+# why: the box is a 1-2GB Debian VPS that can't reliably run Expo/Metro); the
+# runner only SSHs in to upload the already-built static output and swap it in.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "apps/mobile/**"
+      - "deploy/deploy-console.sh"
+      - ".github/workflows/console-deploy.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/mobile
+        run: npm ci
+
+      - name: Write prod env
+        working-directory: apps/mobile
+        run: printf '%s\n' "$MOBILE_ENV_PRODUCTION" > .env.production
+        env:
+          MOBILE_ENV_PRODUCTION: ${{ secrets.MOBILE_ENV_PRODUCTION }}
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$CONSOLE_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H 87.232.72.79 >> ~/.ssh/known_hosts
+        env:
+          CONSOLE_DEPLOY_SSH_KEY: ${{ secrets.CONSOLE_DEPLOY_SSH_KEY }}
+
+      - name: Deploy console
+        run: ./deploy/deploy-console.sh
