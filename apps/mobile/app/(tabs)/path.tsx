@@ -145,7 +145,8 @@ export default function PathTab() {
         {node.options.map((opt, i) => (
           <Entrance key={opt.label} index={1 + i}>
             <TiltCard
-              style={[styles.optionCard, elevation.sm, { backgroundColor: colors.surface }]}
+              style={[styles.optionCard, { backgroundColor: colors.surface }]}
+              edge={colors.edgeSurface}
               onPress={() => void pick(opt)}
               testID={`path-option-${i}`}
             >
@@ -236,7 +237,8 @@ export default function PathTab() {
         {state.prompts.map((p, i) => (
           <TiltCard
             key={p}
-            style={[styles.promptCard, elevation.sm, { backgroundColor: colors.surface }]}
+            style={[styles.promptCard, { backgroundColor: colors.surface }]}
+            edge={colors.edgeSurface}
             onPress={() => void talk(p)}
             disabled={matching}
             testID={`path-prompt-${i}`}

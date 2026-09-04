@@ -13,6 +13,8 @@ import {
   LayoutChangeEvent,
   Pressable,
   StyleProp,
+  StyleSheet,
+  View,
   ViewStyle,
 } from 'react-native';
 import Animated, {
@@ -24,6 +26,7 @@ import Animated, {
 
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing, spring } from '@/theme/motion';
+import { radius } from '@/theme/tokens';
 
 export function TiltCard({
   children,
@@ -31,6 +34,8 @@ export function TiltCard({
   maxTilt = 5,
   disabled = false,
   style,
+  /** Pillow-key underside colour; when given the card draws an edge and travels 4px on press. */
+  edge,
   accessibilityRole = 'button',
   accessibilityLabel,
   testID,
@@ -41,6 +46,7 @@ export function TiltCard({
   disabled?: boolean;
   /** Card visuals (background, radius, padding, elevation) live on this style. */
   style?: StyleProp<ViewStyle>;
+  edge?: string;
   accessibilityRole?: 'button' | 'none';
   accessibilityLabel?: string;
   testID?: string;
@@ -49,6 +55,7 @@ export function TiltCard({
   const rx = useSharedValue(0);
   const ry = useSharedValue(0);
   const scale = useSharedValue(1);
+  const ty = useSharedValue(0);
   const size = useRef({ w: 1, h: 1 });
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -66,6 +73,7 @@ export function TiltCard({
     ry.value = withTiming(nx * maxTilt, cfg);
     rx.value = withTiming(-ny * maxTilt, cfg);
     scale.value = withTiming(0.985, cfg);
+    ty.value = withTiming(edge ? 4 : 0, cfg);
   };
 
   const pressOut = () => {
@@ -73,10 +81,12 @@ export function TiltCard({
     rx.value = withSpring(0, spring.calm);
     ry.value = withSpring(0, spring.calm);
     scale.value = withSpring(1, spring.calm);
+    ty.value = withSpring(0, spring.calm);
   };
 
   const anim = useAnimatedStyle(() => ({
     transform: [
+      { translateY: ty.value },
       { perspective: 700 },
       { rotateX: `${rx.value}deg` },
       { rotateY: `${ry.value}deg` },
@@ -94,7 +104,14 @@ export function TiltCard({
       accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       testID={testID}
+      style={edge ? { paddingBottom: 4 } : undefined}
     >
+      {edge ? (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { top: 4, borderRadius: radius.lg, backgroundColor: edge }]}
+        />
+      ) : null}
       <Animated.View style={[style, anim]}>{children}</Animated.View>
     </Pressable>
   );
