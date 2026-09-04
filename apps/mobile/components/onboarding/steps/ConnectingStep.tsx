@@ -390,7 +390,7 @@ export function ConnectingStep({
 
 const styles = StyleSheet.create({
   head: { alignItems: 'center', gap: space.sm, marginTop: space.md, marginBottom: space.sm },
-  headline: { fontFamily: font.sansHeavy, fontSize: 27, lineHeight: 36, textAlign: 'center' },
+  headline: { ...type.displayHeadline, textAlign: 'center' },
   center: { textAlign: 'center' },
   scene: { alignItems: 'center', gap: space.xs, marginBottom: space.md },
   foundCard: {
