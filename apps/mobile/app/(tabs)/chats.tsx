@@ -348,7 +348,6 @@ export default function ChatsTab() {
                 accessibilityLabel={t('chats.convoA11y', { name: item.listener_persona_name })}
                 testID={`convo-${item.id}`}
                 style={[styles.row, { backgroundColor: colors.surface }]}
-                containerStyle={styles.rowSpacing}
               >
                 <PersonaAvatar
                   name={item.listener_persona_name}
@@ -434,7 +433,6 @@ export default function ChatsTab() {
                 accessibilityLabel={t(o.title)}
                 testID={`new-chat-${o.key}`}
                 style={[styles.pickRow, { backgroundColor: colors.surfaceAlt }]}
-                containerStyle={{ marginBottom: space.xs }}
               >
                 <View style={[styles.pickIcon, { backgroundColor: colors.accentTint }]}>
                   <Ionicons name={o.icon} size={20} color={colors.accent} />
@@ -516,7 +514,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: space.sm + 2,
   },
-  rowSpacing: { marginBottom: space.sm },
   rowName: { fontFamily: font.serifBold, fontSize: 18, lineHeight: 24 },
   statusLabel: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 18, marginTop: 2 },
   rowRight: { alignItems: 'flex-end', gap: space.xs },

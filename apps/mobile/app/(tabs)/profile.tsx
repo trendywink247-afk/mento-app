@@ -91,7 +91,6 @@ export default function ProfileTab() {
         <EdgeSurface
           edge={colors.edgeSurface}
           style={[styles.card, { backgroundColor: colors.surface }]}
-          containerStyle={styles.rowSpacing}
         >
           <Text style={[styles.cardTitle, { color: colors.ink }]}>{t('profile.companionTitle')}</Text>
           {animal ? (
