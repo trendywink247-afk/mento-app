@@ -10,20 +10,27 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
+import { PressKey } from '@/components/motion/PressKey';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
+import { TypingDots } from '@/components/chat/TypingDots';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { SceneTile } from '@/components/art/SceneTile';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import { haptic } from '@/lib/haptics';
 import { useI18n, type TFunc } from '@/lib/i18n';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useSessionGuard } from '@/lib/useSessionGuard';
+import { duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -63,6 +70,9 @@ type MessageRowProps = {
   /** Day-pill text when this row starts a new day, else null. */
   dayText: string | null;
   read: boolean;
+  /** True only for messages that arrived after the initial history load — these
+   * rise in; history renders still. */
+  fresh: boolean;
   actionsOpen: boolean;
   isHelpful: boolean;
   isSaved: boolean;
@@ -80,6 +90,7 @@ const MessageRow = memo(function MessageRow({
   item,
   dayText,
   read,
+  fresh,
   actionsOpen,
   isHelpful,
   isSaved,
@@ -89,10 +100,20 @@ const MessageRow = memo(function MessageRow({
   onSave,
   onCopy,
 }: MessageRowProps) {
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
+  const reduced = useReducedMotion();
+  // Rise-in for messages that arrive live; history renders still.
+  const rise = useSharedValue(fresh && !reduced ? 1 : 0);
+  useEffect(() => {
+    if (rise.value === 1) rise.value = withTiming(0, { duration: duration.gentle, easing: easing.settle });
+  }, [rise]);
+  const riseStyle = useAnimatedStyle(() => ({
+    opacity: 1 - rise.value,
+    transform: [{ translateY: 10 * rise.value }],
+  }));
   return (
-    <View>
+    <Animated.View style={riseStyle}>
       {dayText ? (
         <View style={styles.dayRow}>
           <View style={[styles.hairline, { backgroundColor: colors.border }]} />
@@ -105,9 +126,16 @@ const MessageRow = memo(function MessageRow({
 
       {item.mine ? (
         <View style={styles.mineWrap}>
-          <View style={[styles.bubble, styles.mine, { backgroundColor: colors.accentTint }]}>
+          <EdgeSurface
+            edge={colors.accentEdge}
+            travel={3}
+            radius={radius.lg}
+            faceRadiusStyle={{ borderBottomRightRadius: radius.sm }}
+            style={[styles.bubble, { backgroundColor: colors.accentTint }]}
+            containerStyle={styles.bubbleWrap}
+          >
             <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
-          </View>
+          </EdgeSurface>
           <View style={styles.metaRow}>
             <Text style={[type.caption, { color: colors.inkMuted }]}>{timeLabel(item.at)}</Text>
             <Ionicons
@@ -121,15 +149,20 @@ const MessageRow = memo(function MessageRow({
         <View style={styles.theirsWrap}>
           <View style={styles.theirsRow}>
             <PersonaAvatar name={listenerName} size={34} />
-            <Pressable
+            <PressKey
               onPress={() => onToggleActions(item.id)}
-              accessibilityRole="button"
+              edge={colors.edgeSurface}
+              travel={3}
+              radius={radius.lg}
+              haptic="none"
+              faceRadiusStyle={{ borderBottomLeftRadius: radius.sm }}
               accessibilityHint={t('chat.actionsHintA11y')}
               testID={`msg-${item.id}`}
-              style={[styles.bubble, styles.theirs, { backgroundColor: colors.surface }, elevation.sm]}
+              style={[styles.bubble, { backgroundColor: colors.surface }]}
+              containerStyle={styles.bubbleWrap}
             >
               <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
-            </Pressable>
+            </PressKey>
           </View>
           <Text style={[type.caption, styles.theirsTime, { color: colors.inkMuted }]}>
             {timeLabel(item.at)}
@@ -137,7 +170,12 @@ const MessageRow = memo(function MessageRow({
 
           {actionsOpen ? (
             <View style={styles.actionsZone}>
-              <View style={[styles.actionsRow, { backgroundColor: colors.surface }, elevation.sm]}>
+              <EdgeSurface
+                edge={colors.edgeSurface}
+                travel={2}
+                radius={radius.md}
+                style={[styles.actionsRow, { backgroundColor: colors.surface }]}
+              >
                 <Text style={[type.caption, { color: colors.inkMuted }]}>{t('chat.wasHelpful')}</Text>
                 <Pressable
                   onPress={() => onToggleHelpful(item.id)}
@@ -173,7 +211,7 @@ const MessageRow = memo(function MessageRow({
                 >
                   <Ionicons name="copy-outline" size={17} color={colors.inkMuted} />
                 </Pressable>
-              </View>
+              </EdgeSurface>
 
               <Pressable
                 onPress={() => onSave(item)}
@@ -199,7 +237,7 @@ const MessageRow = memo(function MessageRow({
           ) : null}
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 });
 
@@ -215,7 +253,7 @@ type ComposerProps = {
  * re-renders only this leaf — never the transcript above it. The draft is cleared
  * only AFTER the send resolves; on failure it stays put with an honest retry line. */
 const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
   const [draft, setDraft] = useState(initialDraft ?? '');
   const [sending, setSending] = useState(false);
@@ -248,7 +286,7 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
         </Text>
       ) : null}
       <View style={styles.composer}>
-        <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
+        <View style={[styles.inputPill, { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border }]}>
           <Ionicons name="add-circle-outline" size={24} color={colors.inkMuted} />
           <TextInput
             style={[styles.input, { color: colors.ink }]}
@@ -265,16 +303,18 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
             multiline
           />
         </View>
-        <Pressable
-          style={[styles.sendBtn, { backgroundColor: colors.accent }, elevation.sm]}
+        <PressKey
           onPress={() => void submit()}
+          edge={colors.accentEdge}
+          travel={4}
+          radius={radius.pill}
           disabled={sending}
           testID="composer-send"
-          accessibilityRole="button"
           accessibilityLabel={t('chat.sendA11y')}
+          style={[styles.sendBtn, { backgroundColor: colors.accent }]}
         >
           <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
-        </Pressable>
+        </PressKey>
       </View>
     </View>
   );
@@ -285,7 +325,7 @@ export default function ChatScreenWeb() {
   // If the session vanishes (Start-fresh elsewhere), every conversation option would
   // 403 with only a small inline error — route back to landing instead.
   useSessionGuard();
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
   const { id: conversationId, listener, channel: channelId, starter } = useLocalSearchParams<{
     id: string;
@@ -311,6 +351,10 @@ export default function ChatScreenWeb() {
   const shownRef = useRef<Set<string>>(new Set());
   // Funnel: chat_first_message_sent fires once per screen mount.
   const firstSentRef = useRef(false);
+  // Timestamp the initial history load finished — anything appended after this
+  // (live messages) rises in; history itself renders still.
+  const loadedAtRef = useRef<number>(0);
+  const freshIds = useRef<Set<string>>(new Set());
 
   const surfaceCrisis = useCallback((m: CrisisCarrier | undefined) => {
     if (m?.crisis && m.id && !shownRef.current.has(m.id)) {
@@ -332,6 +376,7 @@ export default function ChatScreenWeb() {
   const appendMessage = useCallback(
     (raw: RawMsg) => {
       const msg = toMsg(raw);
+      if (loadedAtRef.current) freshIds.current.add(msg.id);
       setMessages((prev) => (prev.some((p) => p.id === msg.id) ? prev : [...prev, msg]));
     },
     [toMsg],
@@ -359,11 +404,13 @@ export default function ChatScreenWeb() {
           appendMessage(m as RawMsg);
           surfaceCrisis(m as CrisisCarrier);
         });
+        loadedAtRef.current = Date.now();
         ch.on('message.new', (e: Event) => {
           if (e.message) {
             appendMessage(e.message as RawMsg);
             surfaceCrisis(e.message as CrisisCarrier);
           }
+          if (e.user && e.user.id !== client.userID) haptic.nudge();
         });
         ch.on('message.read', () => setReadTick((t) => t + 1));
         ch.on('typing.start', (e: Event) => {
@@ -468,7 +515,12 @@ export default function ChatScreenWeb() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       {/* Mentor header card (mockup #7) */}
-      <View style={[styles.header, { backgroundColor: colors.surface }, elevation.sm]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomWidth: 1.5, borderBottomColor: colors.border },
+        ]}
+      >
         <Pressable
           onPress={() => router.replace('/chats')}
           hitSlop={12}
@@ -557,6 +609,7 @@ export default function ChatScreenWeb() {
                   item={item}
                   dayText={showDay ? dayLabel(item.at, t) : null}
                   read={item.mine ? isRead(item) : false}
+                  fresh={freshIds.current.has(item.id)}
                   actionsOpen={actionsFor === item.id}
                   isHelpful={helpful.has(item.id)}
                   isSaved={saved.has(item.id)}
@@ -571,15 +624,8 @@ export default function ChatScreenWeb() {
           />
           {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
 
-          {/* Presence-only typing line — calm register, no animation needed. */}
-          {typing ? (
-            <Text
-              style={[type.caption, styles.typingLine, { color: colors.inkMuted }]}
-              testID="typing-indicator"
-            >
-              {t('chat.typing', { name: typing })}
-            </Text>
-          ) : null}
+          {/* Presence-only typing bubble — Focus physics: three dots breathing. */}
+          {typing ? <TypingDots testID="typing-indicator" /> : null}
 
           <Composer onSend={send} onTyping={onTyping} initialDraft={starter} />
         </View>
@@ -636,13 +682,12 @@ const styles = StyleSheet.create({
   },
   hairline: { flex: 1, height: 1 },
   dayPill: { borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: space.md },
-  bubble: { maxWidth: '80%', borderRadius: radius.lg, paddingHorizontal: space.md, paddingVertical: space.sm + 2 },
+  bubble: { borderRadius: radius.lg, paddingHorizontal: space.md, paddingVertical: space.sm + 2 },
+  bubbleWrap: { maxWidth: '80%', flexShrink: 1 },
   mineWrap: { alignItems: 'flex-end', marginVertical: space.xs },
-  mine: { borderBottomRightRadius: radius.sm },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: 3 },
   theirsWrap: { marginVertical: space.xs },
   theirsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },
-  theirs: { borderBottomLeftRadius: radius.sm },
   theirsTime: { marginLeft: 34 + space.sm + space.xs, marginTop: 3 },
   actionsZone: { marginLeft: 34 + space.sm, marginTop: space.sm, gap: space.sm, maxWidth: '85%' },
   actionsRow: {
@@ -668,7 +713,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     padding: space.sm,
   },
-  typingLine: { paddingHorizontal: space.md, paddingTop: space.xs },
   sendErrorLine: { paddingHorizontal: space.md, paddingTop: space.xs },
   composer: {
     flexDirection: 'row',
