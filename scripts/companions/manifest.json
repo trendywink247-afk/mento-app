@@ -1,0 +1,441 @@
+{
+  "generated": "2026-09-05",
+  "credits_spent": {
+    "references": 6,
+    "poses": 38,
+    "rerolls": 2,
+    "total": 46
+  },
+  "renders": [
+    {
+      "animal": "Panda",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true
+    },
+    {
+      "animal": "Panda",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "605d33d3-b617-49a5-bd0c-b21273194aad",
+      "reference_job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Panda/idle.webp"
+    },
+    {
+      "animal": "Panda",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "c554c8d7-9bba-42c2-8e6c-6572731dc0a1",
+      "reference_job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Panda/greet.webp"
+    },
+    {
+      "animal": "Panda",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "63b28ba2-a7c7-408f-a8ac-9f8ad4e6a6ca",
+      "reference_job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Panda/joy.webp"
+    },
+    {
+      "animal": "Panda",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "f821d7d7-d75d-486e-85e8-f28106b40134",
+      "reference_job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Panda/comfort.webp"
+    },
+    {
+      "animal": "Panda",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "d8a94f69-896d-4126-b200-7d7a637f9ae8",
+      "reference_job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Panda/curious.webp"
+    },
+    {
+      "animal": "Panda",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "e28a0cef-0c15-4f0f-971e-664fdc77759b",
+      "reference_job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Panda/sleepy.webp"
+    },
+    {
+      "animal": "Panda",
+      "pose": "coffee",
+      "model": "nano_banana",
+      "job_id": "53b77447-749f-4585-8ddf-0485ec16125d",
+      "reference_job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Panda/coffee.webp"
+    },
+    {
+      "animal": "Panda",
+      "pose": "shield",
+      "model": "nano_banana",
+      "job_id": "e672aa8d-4b7d-496e-947d-fe2080945ec5",
+      "reference_job_id": "d9791634-2e23-4297-8298-3a0edc2b923d",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Panda/shield.webp"
+    },
+    {
+      "animal": "Elephant",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "c4fdf649-5cad-44e9-af5d-7e6b04e2d09f",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true
+    },
+    {
+      "animal": "Elephant",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "fd6afd13-3733-44df-80af-9c2806eef41e",
+      "reference_job_id": "c4fdf649-5cad-44e9-af5d-7e6b04e2d09f",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Elephant/idle.webp"
+    },
+    {
+      "animal": "Elephant",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "ad8e21cc-fdd6-4d68-9461-503c65df38c0",
+      "reference_job_id": "c4fdf649-5cad-44e9-af5d-7e6b04e2d09f",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Elephant/greet.webp"
+    },
+    {
+      "animal": "Elephant",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "a3949980-c883-47a2-ad81-7141222d0222",
+      "reference_job_id": "c4fdf649-5cad-44e9-af5d-7e6b04e2d09f",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Elephant/joy.webp"
+    },
+    {
+      "animal": "Elephant",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "d2393cac-c7af-4ae2-9bae-ea5cdae1aa7a",
+      "reference_job_id": "c4fdf649-5cad-44e9-af5d-7e6b04e2d09f",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Elephant/comfort.webp",
+      "note": "re-rolled once: first take had background smudges"
+    },
+    {
+      "animal": "Elephant",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "5bea9beb-6038-49f5-94db-503a8d7d2aad",
+      "reference_job_id": "c4fdf649-5cad-44e9-af5d-7e6b04e2d09f",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Elephant/curious.webp",
+      "note": "re-rolled once: first take had background smudges"
+    },
+    {
+      "animal": "Elephant",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "3fc5f83d-777c-469d-8e4d-2b5a2e919e71",
+      "reference_job_id": "c4fdf649-5cad-44e9-af5d-7e6b04e2d09f",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Elephant/sleepy.webp"
+    },
+    {
+      "animal": "Fox",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true
+    },
+    {
+      "animal": "Fox",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "96d46775-a630-4329-857c-e5009a09d0ca",
+      "reference_job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Fox/idle.webp"
+    },
+    {
+      "animal": "Fox",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "e3a793a3-9dda-4921-84cb-e80d74f769cc",
+      "reference_job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Fox/greet.webp"
+    },
+    {
+      "animal": "Fox",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "a766946c-24d5-4779-9cb2-c83b25432968",
+      "reference_job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Fox/joy.webp"
+    },
+    {
+      "animal": "Fox",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "d93f4953-8823-4cf2-add8-7efe5a6551b7",
+      "reference_job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Fox/comfort.webp"
+    },
+    {
+      "animal": "Fox",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "e8e04e6b-5c1e-4f92-ab1a-283684d3c70a",
+      "reference_job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Fox/curious.webp"
+    },
+    {
+      "animal": "Fox",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "8bdd4082-cf09-4a8c-b618-e3f90d4b8161",
+      "reference_job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Fox/sleepy.webp"
+    },
+    {
+      "animal": "Turtle",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "ce4ab4b4-9520-43cd-9412-324b02ad87b7",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true
+    },
+    {
+      "animal": "Turtle",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "fabcd567-4b35-4569-9f68-11609ebfefd6",
+      "reference_job_id": "ce4ab4b4-9520-43cd-9412-324b02ad87b7",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Turtle/idle.webp"
+    },
+    {
+      "animal": "Turtle",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "bf759989-51f9-4ed0-af4c-ac0903d0db1e",
+      "reference_job_id": "ce4ab4b4-9520-43cd-9412-324b02ad87b7",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Turtle/greet.webp"
+    },
+    {
+      "animal": "Turtle",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "22496e14-2d1a-4690-bce4-d65a5078a080",
+      "reference_job_id": "ce4ab4b4-9520-43cd-9412-324b02ad87b7",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Turtle/joy.webp"
+    },
+    {
+      "animal": "Turtle",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "69099cf5-9f68-4a41-9b1b-9f1206e5394e",
+      "reference_job_id": "ce4ab4b4-9520-43cd-9412-324b02ad87b7",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Turtle/comfort.webp"
+    },
+    {
+      "animal": "Turtle",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "56a23f40-fd0f-4f3a-adb2-c408d7f7e64e",
+      "reference_job_id": "ce4ab4b4-9520-43cd-9412-324b02ad87b7",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Turtle/curious.webp"
+    },
+    {
+      "animal": "Turtle",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "1166f296-b785-4de8-a34e-26c899c65e5a",
+      "reference_job_id": "ce4ab4b4-9520-43cd-9412-324b02ad87b7",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Turtle/sleepy.webp"
+    },
+    {
+      "animal": "Deer",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "4c7b70c4-8932-4ccd-8eb8-d215fc215ec8",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true
+    },
+    {
+      "animal": "Deer",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "4faebbdd-53a3-4bb7-8774-1b6742880ea5",
+      "reference_job_id": "4c7b70c4-8932-4ccd-8eb8-d215fc215ec8",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Deer/idle.webp"
+    },
+    {
+      "animal": "Deer",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "c1a24abc-51c4-4ab5-ac4b-8db9aecd4dcb",
+      "reference_job_id": "4c7b70c4-8932-4ccd-8eb8-d215fc215ec8",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Deer/greet.webp"
+    },
+    {
+      "animal": "Deer",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "3688d8a8-7628-4223-9ff6-6da2d3c1cab7",
+      "reference_job_id": "4c7b70c4-8932-4ccd-8eb8-d215fc215ec8",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Deer/joy.webp"
+    },
+    {
+      "animal": "Deer",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "06aec831-9340-4a2a-9751-d659180aca6a",
+      "reference_job_id": "4c7b70c4-8932-4ccd-8eb8-d215fc215ec8",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Deer/comfort.webp"
+    },
+    {
+      "animal": "Deer",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "e38cd392-1274-4b04-8dd2-82d4671d90ae",
+      "reference_job_id": "4c7b70c4-8932-4ccd-8eb8-d215fc215ec8",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Deer/curious.webp"
+    },
+    {
+      "animal": "Deer",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "83268107-8e13-4595-a8ca-a8ea1ec8e798",
+      "reference_job_id": "4c7b70c4-8932-4ccd-8eb8-d215fc215ec8",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Deer/sleepy.webp"
+    },
+    {
+      "animal": "Owl",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "ecf96e98-2f66-4383-aa35-cfdbc03397a4",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true
+    },
+    {
+      "animal": "Owl",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "0397f378-5905-4e21-9ef9-858ef1097280",
+      "reference_job_id": "ecf96e98-2f66-4383-aa35-cfdbc03397a4",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Owl/idle.webp"
+    },
+    {
+      "animal": "Owl",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "002799f0-9842-4de0-bc6e-ed18de49e653",
+      "reference_job_id": "ecf96e98-2f66-4383-aa35-cfdbc03397a4",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Owl/greet.webp"
+    },
+    {
+      "animal": "Owl",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "8b7f6a7c-84a7-44a6-92a5-346168abb9e2",
+      "reference_job_id": "ecf96e98-2f66-4383-aa35-cfdbc03397a4",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Owl/joy.webp"
+    },
+    {
+      "animal": "Owl",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "0fe27c8e-a6e7-407a-b63d-f084408ad507",
+      "reference_job_id": "ecf96e98-2f66-4383-aa35-cfdbc03397a4",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Owl/comfort.webp"
+    },
+    {
+      "animal": "Owl",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "e5abaf99-fd8b-40ef-a1be-d05fc7cc8920",
+      "reference_job_id": "ecf96e98-2f66-4383-aa35-cfdbc03397a4",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Owl/curious.webp"
+    },
+    {
+      "animal": "Owl",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "131e7216-f8b7-4885-baad-4db043f3d062",
+      "reference_job_id": "ecf96e98-2f66-4383-aa35-cfdbc03397a4",
+      "prompt": "recipe.md \u00a7pose template + poses.json",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Owl/sleepy.webp"
+    }
+  ]
+}

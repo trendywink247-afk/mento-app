@@ -1,0 +1,17 @@
+{
+  "animals": ["Panda", "Elephant", "Fox", "Turtle", "Deer", "Owl"],
+  "poses": {
+    "idle": "sitting calmly facing the camera, soft neutral smile, paws resting in its lap",
+    "greet": "sitting, one paw raised beside its head in a small friendly wave, warm smile",
+    "joy": "sitting, eyes closed in a happy smile, both paws lifted slightly, a tiny joyful bounce in the posture",
+    "comfort": "sitting, one paw resting gently on its chest, leaning very slightly forward, soft caring expression",
+    "curious": "sitting, head tilted to one side, ears perked, eyes wide and interested",
+    "sleepy": "sitting, eyes closed, head drooped a little, curled up with the scarf snug, peaceful"
+  },
+  "extras": {
+    "Panda": {
+      "coffee": "sitting, holding a small round ceramic mug with both paws close to its chest, content smile, a wisp of steam",
+      "shield": "sitting, hugging a small rounded heart-shaped shield with both paws, calm protective expression"
+    }
+  }
+}

@@ -37,8 +37,10 @@ export type CompanionTrigger = {
   n: number;
 } | null;
 
-/** Sleepy window check — local device time, wraps midnight. */
-function isSleepyHour(): boolean {
+/** Sleepy window check — local device time, wraps midnight. Shared with
+ * Companion.tsx's `restingPose` (which re-checks per render; this rig checks once
+ * per mount, in the idle-sway effect below). */
+export function isSleepyHour(): boolean {
   const h = new Date().getHours();
   const { startHour, endHour } = character.sleepy;
   return h >= startHour || h < endHour;
