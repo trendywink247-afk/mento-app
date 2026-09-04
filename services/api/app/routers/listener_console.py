@@ -291,7 +291,7 @@ def report_conversation(
         detail="Too many reports — please try again later.",
     )
     convo = _owned_conversation(db, convo_id, listener)
-    reason = payload.reason if not payload.note else f"{payload.reason}: {payload.note}"
+    reason = payload.reason.value if not payload.note else f"{payload.reason.value}: {payload.note}"
     db.add(
         ModerationEvent(
             reporter_id=listener.id,

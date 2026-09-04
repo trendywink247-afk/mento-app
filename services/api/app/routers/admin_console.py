@@ -249,6 +249,7 @@ def moderation_queue(
         ModerationItem(
             id=e.id,
             reporter_id=e.reporter_id,
+            reporter_kind=e.reporter_kind.value,
             subject_id=e.subject_id,
             conversation_id=e.conversation_id,
             level=int(e.level.value),

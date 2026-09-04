@@ -8,7 +8,7 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.models.enums import RequestKind, SafetySignal
+from app.models.enums import ListenerReportReason, RequestKind, SafetySignal
 
 
 # --- Onboarding ---
@@ -252,10 +252,11 @@ class ListenerRequestItem(BaseModel):
 
 
 class ListenerReportIn(BaseModel):
-    """Mentor-side report (spec 2026-09-05 §5). Reason is a closed enum so the
-    moderation queue can group; the note is short and optional."""
+    """Mentor-side report (spec 2026-09-05 §5). Reason is the single-source-of-truth
+    `ListenerReportReason` enum (app/models/enums.py) so the moderation queue can
+    group; the note is short and optional."""
 
-    reason: Literal["abuse", "harassment", "spam", "other"]
+    reason: ListenerReportReason
     note: str | None = Field(default=None, max_length=300)
 
 
@@ -461,6 +462,7 @@ class ConsoleSessionOut(BaseModel):
 class ModerationItem(BaseModel):
     id: str
     reporter_id: str | None
+    reporter_kind: str
     subject_id: str
     conversation_id: str | None
     level: int

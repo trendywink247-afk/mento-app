@@ -40,8 +40,20 @@ from app.services.matching import release_listener_slot
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
 
-def _owned(db: Session, convo_id: str, user_id: str) -> Conversation:
-    convo = db.get(Conversation, convo_id)
+def _owned(db: Session, convo_id: str, user_id: str, *, lock: bool = False) -> Conversation:
+    """Only this member's conversation; anything else is opaquely 404.
+
+    lock=True row-locks the conversation (SELECT ... FOR UPDATE) for the end/wipe
+    paths, so a member end racing a mentor end (listener_console.end_conversation)
+    can't clobber ended_by/ended_at — the loser sees the already-ended row instead
+    of overwriting it.
+    """
+    if lock:
+        convo = db.execute(
+            select(Conversation).where(Conversation.id == convo_id).with_for_update()
+        ).scalar_one_or_none()
+    else:
+        convo = db.get(Conversation, convo_id)
     if convo is None or convo.user_id != user_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
     return convo
@@ -207,7 +219,7 @@ def end_conversation(
 ) -> OkResult:
     """End the chat. Messages are NOT deleted (this matches the in-app copy).
     Idempotent: ending an already-ended chat never double-releases the slot."""
-    convo = _owned(db, convo_id, user_id)
+    convo = _owned(db, convo_id, user_id, lock=True)
     if convo.status == ConversationStatus.active:
         convo.status = ConversationStatus.ended
         convo.ended_at = datetime.now(UTC)
@@ -226,7 +238,7 @@ def wipe_conversation(
     """Panda Wipe: delete messages from BOTH sides — device AND our servers (Stream).
     Wiping an already-ended chat still wipes, but only an ACTIVE chat releases the
     listener's slot (it was already released when the chat ended)."""
-    convo = _owned(db, convo_id, user_id)
+    convo = _owned(db, convo_id, user_id, lock=True)
     was_active = convo.status == ConversationStatus.active
     if convo.stream_channel_id:
         stream.wipe_channel(convo.stream_channel_id)
