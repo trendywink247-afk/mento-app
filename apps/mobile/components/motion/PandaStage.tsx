@@ -26,21 +26,32 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 
-export type StageStep = 'age' | 'email' | 'companion' | 'ready' | 'connecting';
+export type StageStep =
+  | 'role'
+  | 'age'
+  | 'email'
+  | 'companion'
+  | 'ready'
+  | 'connecting'
+  | 'primer'
+  | 'handoff';
 
 const BASE_SIZE = 64;
 
 /** Transform-only anchors from a fixed top-right base position. */
 const ANCHORS: Record<StageStep, { x: number; y: number; scale: number; opacity: number }> = {
+  role: { x: 0, y: 0, scale: 1, opacity: 1 },
   age: { x: 0, y: 0, scale: 1, opacity: 1 },
   email: { x: 0, y: 0, scale: 1, opacity: 1 },
   companion: { x: -2, y: 4, scale: 1.12, opacity: 1 },
   ready: { x: 0, y: 10, scale: 0.85, opacity: 0 }, // hands off to the in-arch companion
   connecting: { x: 0, y: 2, scale: 1, opacity: 1 },
+  primer: { x: 0, y: 0, scale: 1, opacity: 1 },
+  handoff: { x: 0, y: 2, scale: 1, opacity: 1 },
 };
 
 /** Steps where arriving deserves a small wave. */
-const GREETING_STEPS: StageStep[] = ['age', 'companion'];
+const GREETING_STEPS: StageStep[] = ['role', 'companion'];
 
 export function PandaStage({
   step,
