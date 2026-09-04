@@ -291,3 +291,116 @@ def test_admin_reconcile_reports_presence_sweep(client):
     )
     assert r.status_code == 200, r.text
     assert r.json()["presence_swept"] == 1
+
+
+# --- mentor-side report / end ------------------------------------------------------
+
+
+def test_listener_report_files_scoped_moderation_event(client):
+    with TestSession() as s:
+        uid, lid = _user(s), _listener(s)
+        cid = _convo(s, uid, lid)
+        s.commit()
+    r = client.post(
+        f"/api/v1/listener/me/conversations/{cid}/report",
+        json={"reason": "harassment", "note": "kept asking for my number"},
+        headers=listener_auth(lid),
+    )
+    assert r.status_code == 200 and r.json()["status"] == "reported"
+    with TestSession() as s:
+        ev = s.scalars(select(ModerationEvent)).one()
+        assert ev.reporter_kind == ReporterKind.listener
+        assert ev.reporter_id == lid
+        assert ev.subject_id == uid
+        assert ev.conversation_id == cid
+        assert ev.blocked is False and ev.reviewed is False
+        assert ev.reason == "harassment: kept asking for my number"
+        # Reporting does not end the chat — moderation decides.
+        assert s.get(Conversation, cid).status == ConversationStatus.active
+
+
+def test_listener_report_rejects_bad_reason_and_long_note(client):
+    with TestSession() as s:
+        uid, lid = _user(s), _listener(s)
+        cid = _convo(s, uid, lid)
+        s.commit()
+    h = listener_auth(lid)
+    assert (
+        client.post(
+            f"/api/v1/listener/me/conversations/{cid}/report", json={"reason": "meh"}, headers=h
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            f"/api/v1/listener/me/conversations/{cid}/report",
+            json={"reason": "other", "note": "x" * 301},
+            headers=h,
+        ).status_code
+        == 422
+    )
+
+
+def test_listener_cannot_report_or_end_another_listeners_conversation(client):
+    with TestSession() as s:
+        uid, mine, other = _user(s), _listener(s), _listener(s)
+        cid = _convo(s, uid, mine)
+        s.commit()
+    h = listener_auth(other)
+    assert (
+        client.post(
+            f"/api/v1/listener/me/conversations/{cid}/report", json={"reason": "spam"}, headers=h
+        ).status_code
+        == 404
+    )
+    assert client.post(f"/api/v1/listener/me/conversations/{cid}/end", headers=h).status_code == 404
+    with TestSession() as s:
+        assert s.get(Conversation, cid).status == ConversationStatus.active
+        assert s.get(ListenerProfile, mine).active_conversations == 1
+
+
+def test_listener_end_releases_seat_once_and_stamps_listener(client):
+    with TestSession() as s:
+        uid, lid = _user(s), _listener(s)
+        cid = _convo(s, uid, lid)
+        s.commit()
+    h = listener_auth(lid)
+    assert (
+        client.post(f"/api/v1/listener/me/conversations/{cid}/end", headers=h).json()["status"]
+        == "ended"
+    )
+    assert (
+        client.post(f"/api/v1/listener/me/conversations/{cid}/end", headers=h).json()["status"]
+        == "ended"
+    )
+    with TestSession() as s:
+        c = s.get(Conversation, cid)
+        assert c.status == ConversationStatus.ended
+        assert c.ended_by == ConversationEndedBy.listener
+        assert c.ended_at is not None
+        assert s.get(ListenerProfile, lid).active_conversations == 0
+
+
+def test_listener_end_under_concurrency_releases_exactly_once(client):
+    import threading
+
+    with TestSession() as s:
+        uid, lid = _user(s), _listener(s)
+        cid = _convo(s, uid, lid)
+        s.commit()
+    h = listener_auth(lid)
+    results: list[int] = []
+
+    def hit() -> None:
+        results.append(
+            client.post(f"/api/v1/listener/me/conversations/{cid}/end", headers=h).status_code
+        )
+
+    threads = [threading.Thread(target=hit) for _ in range(8)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert results.count(200) == 8
+    with TestSession() as s:
+        assert s.get(ListenerProfile, lid).active_conversations == 0

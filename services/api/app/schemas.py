@@ -251,6 +251,14 @@ class ListenerRequestItem(BaseModel):
     created_at: str
 
 
+class ListenerReportIn(BaseModel):
+    """Mentor-side report (spec 2026-09-05 §5). Reason is a closed enum so the
+    moderation queue can group; the note is short and optional."""
+
+    reason: Literal["abuse", "harassment", "spam", "other"]
+    note: str | None = Field(default=None, max_length=300)
+
+
 # --- Safety ---
 class ScanRequest(BaseModel):
     # Stream's max message length is 5000 — nothing legitimate is longer, and an
