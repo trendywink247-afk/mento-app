@@ -67,6 +67,20 @@ async function run(browser, reduced) {
     await page.waitForSelector('[data-testid="tab-chats"]', { timeout: 30000 });
   });
 
+  // New Chat FAB opens a two-option sheet — it must never mint a conversation by itself.
+  await visit('chats: new-chat sheet', async () => {
+    await tid('new-chat-fab').click();
+    await page.waitForSelector('[data-testid="new-chat-sheet"]', { timeout: 15000 });
+    const before = page.url();
+    await page.waitForTimeout(800);
+    if (page.url() !== before) throw new Error('FAB navigated without a choice');
+    await tid('new-chat-pick').click();
+    await page.waitForURL('**/mentors', { timeout: 30000 });
+    await page.waitForSelector('[data-testid="next-available"]', { timeout: 30000 });
+    await page.goto(`${WEB}/chats`, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.waitForSelector('[data-testid="tab-chats"]', { timeout: 30000 });
+  });
+
   await visit('tab: path', async () => {
     await tid('tab-path').click();
     await page.waitForSelector('[data-testid="path-start"],[data-testid="path-change"]', { timeout: 30000 });
@@ -115,6 +129,14 @@ async function run(browser, reduced) {
   await visit('reflection', async () => {
     await page.goto(`${WEB}/reflection`, { waitUntil: 'networkidle', timeout: 60000 });
     await page.waitForSelector('[data-testid="reflection-finish"],[data-testid="reflection-skip"]', { timeout: 30000 });
+  });
+
+  // Unmatched routes render the branded not-found screen, never expo-router's default.
+  await visit('not-found', async () => {
+    await page.goto(`${WEB}/this-road-does-not-exist`, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.waitForSelector('[data-testid="not-found"]', { timeout: 30000 });
+    await tid('not-found-home').click();
+    await page.waitForURL('**/chats', { timeout: 30000 });
   });
 
   await ctx.close();

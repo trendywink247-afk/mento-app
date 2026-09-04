@@ -87,8 +87,8 @@ E2E specs are plain Node scripts in `apps/mobile/e2e/` (not `@playwright/test` �
 ```
 mento/
   apps/mobile/
-    app/                    expo-router: index (landing, live Lottie hero) · onboarding/ (index = OnboardingJourney;
-                            age|email|companion|connecting|ready are legacy deep-link stubs) · chat/[id]
+    app/                    expo-router: index (landing, live Lottie hero) · +not-found (branded unmatched-route)
+                            · onboarding/index (OnboardingJourney, ?step= deep-links) · chat/[id]
                             · (tabs)/ chats|path|journals|profile (+ mentors: hidden-but-routable via Browse)
                             · journal/[channel] · mentor/[id] · reflection · coffee · start-fresh (transparentModal)
                             · listener-apply (become-a-listener form, member-flow) · apply (public

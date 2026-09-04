@@ -20,10 +20,10 @@ export default function ListenerApply() {
         contentContainerStyle={{ paddingBottom: space.xl }}
       >
         <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
-          Become a listener
+          Become a mentor
         </Text>
         <Text style={[type.body, { color: colors.inkMuted, marginTop: space.xs, marginBottom: space.md }]}>
-          Listeners are the heart of Mento — people who've been through hard seasons and
+          Mentors are the heart of Mento — people who've been through hard seasons and
           make time to sit with someone in theirs.
         </Text>
 

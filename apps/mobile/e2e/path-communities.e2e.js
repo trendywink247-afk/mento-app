@@ -54,7 +54,7 @@ async function onboard(page) {
   // ---------- Path home ----------
   await page.waitForSelector('text=UPSC · The wait after prelims', { timeout: 30000 });
   await page.waitForSelector('text=I keep recalculating my marks.', { timeout: 30000 });
-  await page.waitForSelector('text=listener', { timeout: 30000 }); // online counter line
+  await page.waitForSelector('text=mentor', { timeout: 30000 }); // online counter line
   console.log('OK path home: stage title + prompts + listeners line');
 
   // ---------- Prompt tap → chat with pre-filled composer, NOT auto-sent ----------

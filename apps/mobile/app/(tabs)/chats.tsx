@@ -55,6 +55,9 @@ export default function ChatsTab() {
   const [note, setNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [matching, setMatching] = useState(false);
+  // New-chat picker: the FAB never mints a conversation on its own — the member
+  // chooses "whoever's free" (General match) or "choose a mentor" (browse) first.
+  const [picker, setPicker] = useState(false);
   // Locked-chat gate: which row is awaiting a PIN.
   const [gate, setGate] = useState<ConversationListItem | null>(null);
   const [pin, setPin] = useState('');
@@ -162,6 +165,7 @@ export default function ChatsTab() {
 
   const newChat = async () => {
     if (matching) return;
+    setPicker(false);
     setMatching(true);
     setNote(null);
     try {
@@ -367,7 +371,7 @@ export default function ChatsTab() {
 
       {rows.length > 0 ? (
         <Pressable
-          onPress={() => void newChat()}
+          onPress={() => setPicker(true)}
           accessibilityRole="button"
           accessibilityLabel={t('chats.newChatA11y')}
           testID="new-chat-fab"
@@ -382,6 +386,56 @@ export default function ChatsTab() {
             </>
           )}
         </Pressable>
+      ) : null}
+
+      {picker ? (
+        <View style={[styles.gateBackdrop, { backgroundColor: colors.scrim }]}>
+          <Pressable
+            style={StyleSheet.absoluteFill}
+            onPress={() => setPicker(false)}
+            accessibilityLabel={t('chats.newChatCancel')}
+            testID="new-chat-backdrop"
+          />
+          <View style={[styles.gateCard, { backgroundColor: colors.surface }, elevation.md]} testID="new-chat-sheet">
+            <Text style={[styles.gateTitle, { color: colors.ink }]}>{t('chats.newChatTitle')}</Text>
+            <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
+              {t('chats.newChatBody')}
+            </Text>
+            {(
+              [
+                { key: 'now', icon: 'flash-outline', title: 'chats.newChatNow', sub: 'chats.newChatNowSub', go: () => void newChat() },
+                { key: 'pick', icon: 'people-outline', title: 'chats.newChatPick', sub: 'chats.newChatPickSub', go: () => { setPicker(false); router.push('/(tabs)/mentors'); } },
+              ] as const
+            ).map((o) => (
+              <Pressable
+                key={o.key}
+                onPress={o.go}
+                accessibilityRole="button"
+                accessibilityLabel={t(o.title)}
+                testID={`new-chat-${o.key}`}
+                style={({ pressed }) => [
+                  styles.pickRow,
+                  { backgroundColor: colors.surfaceAlt, opacity: pressed ? 0.85 : 1 },
+                ]}
+              >
+                <View style={[styles.pickIcon, { backgroundColor: colors.accentTint }]}>
+                  <Ionicons name={o.icon} size={20} color={colors.accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[type.label, { color: colors.ink }]}>{t(o.title)}</Text>
+                  <Text style={[type.caption, { color: colors.inkMuted }]}>{t(o.sub)}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={colors.accentSoft} />
+              </Pressable>
+            ))}
+            <PrimaryButton
+              label={t('chats.newChatCancel')}
+              variant="link"
+              onPress={() => setPicker(false)}
+              testID="new-chat-cancel"
+            />
+          </View>
+        </View>
       ) : null}
 
       {gate ? (
@@ -482,4 +536,18 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   gateTitle: { fontFamily: font.serifBold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
+  pickRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    borderRadius: radius.md,
+    padding: space.md,
+  },
+  pickIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

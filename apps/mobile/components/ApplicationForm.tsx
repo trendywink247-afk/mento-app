@@ -133,7 +133,7 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         autoCapitalize="none"
         autoCorrect={false}
         keyboardType="email-address"
-        placeholder="Only for sending your listener link"
+        placeholder="Only for sending your mentor link"
         placeholderTextColor={colors.inkMuted}
         style={[styles.input, styles.inputSingle, { backgroundColor: colors.surface, color: colors.ink, borderColor: colors.border }]}
         testID="apply-email"
@@ -169,7 +169,7 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
           color={pledged ? colors.accent : colors.inkMuted}
         />
         <Text style={[type.body, { color: colors.ink, flex: 1 }]}>
-          Listeners are not therapists. I'll listen, not diagnose — and when someone
+          Mentors are not therapists. I'll listen, not diagnose — and when someone
           needs clinical help, I'll point them toward it.
         </Text>
       </Pressable>

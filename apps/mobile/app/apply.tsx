@@ -74,7 +74,7 @@ export default function Apply() {
           </Text>
           <Text style={[type.body, styles.center, { color: colors.inkMuted, marginTop: space.sm }]}>
             Your application is in review. If it's a fit, we'll reach out at the email you
-            shared with your private listener link.
+            shared with your private mentor link.
           </Text>
         </View>
       </Screen>
@@ -90,7 +90,7 @@ export default function Apply() {
           </Text>
           <Text style={[type.body, { color: colors.inkMuted, marginTop: space.sm }]}>
             Mento connects people going through hard moments with real people who've been
-            there — anonymously, without judgment. Listeners are the heart of it.
+            there — anonymously, without judgment. Mentors are the heart of it.
           </Text>
         </Entrance>
 

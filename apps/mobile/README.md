@@ -16,10 +16,8 @@ Run the backend first (see `services/api/README.md`) and seed listeners so match
 app/                      Expo Router routes
   _layout.tsx             root stack
   index.tsx               landing
-  onboarding/age.tsx      DOB + client-side age hint (server enforces the gate)
-  onboarding/email.tsx    optional email (skippable)
-  onboarding/companion.tsx growth companion (animal + colour)
-  onboarding/connecting.tsx  calls /onboarding/start then /match
+  +not-found.tsx          branded unmatched-route screen (companion + one way back)
+  onboarding/index.tsx    the single onboarding journey (age → email → companion → ready → connecting; ?step= deep-links)
   chat/[id].tsx           chat shell + crisis-scan + helpline card
 components/                PrimaryButton, Screen
 lib/                       api client, secure session, onboarding draft

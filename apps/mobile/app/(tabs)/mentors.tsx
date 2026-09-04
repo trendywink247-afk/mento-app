@@ -15,6 +15,7 @@ import { Screen } from '@/components/Screen';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { ApiError, api, type Listener } from '@/lib/api';
 import { formatTopic } from '@/lib/format';
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -23,6 +24,7 @@ import { font, radius, space, type } from '@/theme/tokens';
 export default function MentorsTab() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [listeners, setListeners] = useState<Listener[]>([]);
   const [category, setCategory] = useState<string | null>(null);
@@ -64,8 +66,8 @@ export default function MentorsTab() {
     } catch (e) {
       setNote(
         e instanceof ApiError && e.status === 503
-          ? 'All listeners are busy right now. Please try again in a moment. 💜'
-          : 'We had trouble connecting. Please try again.',
+          ? t('common.allBusy')
+          : t('common.networkError'),
       );
     } finally {
       setMatching(false);
