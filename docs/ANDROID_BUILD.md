@@ -78,10 +78,14 @@ keytool -genkeypair -v -keystore mento-release.keystore -alias mento `
   -keyalg RSA -keysize 2048 -validity 10000
 # put its path/passwords in android/gradle.properties (MENTO_UPLOAD_STORE_FILE, etc.)
 # and wire signingConfigs.release in android/app/build.gradle, then:
-cd android
-./gradlew assembleRelease
+powershell -File scripts/build-android-release.ps1
 # → android/app/build/outputs/apk/release/app-release.apk
 ```
+
+The script sets `NODE_ENV=production` for you so the build reads `apps/mobile/.env.production`
+(never the dev `.env` — see §8f for why this matters) and re-runs `expo prebuild` so any
+`app.json` change is picked up. Create `.env.production` once (gitignored, shape in
+`.env.example`) and never hand-edit `.env` for a prod build again.
 
 **Install on a connected device:**
 

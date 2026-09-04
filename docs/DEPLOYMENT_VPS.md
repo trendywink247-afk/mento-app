@@ -154,7 +154,12 @@ Verify from OUTSIDE the box: `curl https://api.agentin.chat/api/v1/health`.
 
 ### 8. Point the mobile app + Stream at prod
 
-- Mobile `.env` / build config: `EXPO_PUBLIC_API_URL=https://api.agentin.chat/api/v1`.
+- **Never hand-edit `apps/mobile/.env`** — it's the permanent local/dev config and is
+  read every time you run `expo start`. Prod values live in `apps/mobile/.env.production`
+  (gitignored, create once from `.env.example`: `EXPO_PUBLIC_API_URL=https://api.agentin.chat/api/v1`
+  + the prod Stream key). It's picked up automatically wherever `NODE_ENV=production` is
+  set (Expo's built-in env-file precedence) — the release-build path already does this for
+  you via `apps/mobile/scripts/build-android-release.ps1` (see `ANDROID_BUILD.md` §3).
 - Re-run `python -m scripts.configure_stream` with the prod URL so Stream's
   before-send webhook targets it (the crisis scan is dead until this runs).
 - Prove it live per the **mento-crisis-webhook** skill before trusting it.
@@ -197,6 +202,24 @@ RAM can't reliably run the Expo/Metro toolchain.
 
 ./deploy/deploy-console.sh
 ```
+
+**Auto-deploy on push (session 29, `.github/workflows/console-deploy.yml`, not yet
+activated):** runs the same build+swap on every push to `master` touching
+`apps/mobile/**`. The workflow file is committed but needs two GitHub repo secrets
+before it will actually run (deliberately not created by an agent — these are live
+credentials):
+
+- `MOBILE_ENV_PRODUCTION` — the full contents of `apps/mobile/.env.production`.
+- `CONSOLE_DEPLOY_SSH_KEY` — a **dedicated** SSH private key (generate a fresh
+  `ssh-keygen -t ed25519 -f console-deploy` keypair; add the `.pub` half to
+  `~mento-ops/.ssh/authorized_keys` on the VPS; put the private half in this secret —
+  don't reuse your personal deploy key here). Restrict the VPS-side key to only what
+  `deploy-console.sh` needs if you want to harden further (e.g. a
+  `command="..."` forced-command restriction in `authorized_keys`).
+
+Until both secrets exist the workflow will fail loudly on push (missing env), not
+silently no-op — set them or leave the manual `./deploy/deploy-console.sh` as the only
+path.
 
 This builds (`expo export --platform web`), uploads to `/opt/mento-console/` on
 the VPS, and atomically swaps it into `current`. One-time Nginx + TLS setup (do
