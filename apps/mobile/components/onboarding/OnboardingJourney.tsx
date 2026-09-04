@@ -123,7 +123,7 @@ export function OnboardingJourney() {
   // the landing so hardware back never returns to a pre-session screen.
   const onMentorReady = useCallback(() => {
     router.dismissAll();
-    router.replace('/mentor-home' as never); // reason: route lands in the next commit (app/mentor-home.tsx); typed-routes regenerate on the next Expo start
+    router.replace('/mentor-home');
   }, [router]);
 
   // The matched moment: success haptic, panda celebrates, the sky lifts toward the
