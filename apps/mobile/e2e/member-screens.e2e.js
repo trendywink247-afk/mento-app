@@ -13,6 +13,7 @@ const WEB = 'http://localhost:8081';
 async function onboard(page, tid) {
   await page.goto(WEB, { waitUntil: 'networkidle', timeout: 180000 });
   await tid('start').click();
+  await tid('role-talk').click();
   await page.waitForSelector('text=How old are you?', { timeout: 60000 });
   await tid('continue').click();
   await page.waitForSelector('text=Optional, but helpful.', { timeout: 30000 });
