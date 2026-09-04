@@ -21,7 +21,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import LottieView from 'lottie-react-native';
-import Animated, { useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SvgXml } from 'react-native-svg';
 
 import { COMPANION_FLUENT } from '@/assets/companions/fluent';
@@ -144,7 +144,13 @@ export function Companion({
     []
   );
 
-  const fadeStyle = { opacity: fade };
+  // Explicit sizes for the two crossfade layers — on web, Reanimated's animated
+  // component does not preserve an absolute-fill inset when the style is driven by
+  // an inline shared value, so the images collapse to intrinsic size. Give each
+  // layer its own box instead of relying on absoluteFill alone.
+  const box = size * set.scale;
+  const currentStyle = useAnimatedStyle(() => ({ opacity: fade.value }));
+  const previousStyle = useAnimatedStyle(() => ({ opacity: 1 - fade.value }));
 
   // Every animal has at least an `idle` painterly pose, so the Fluent branch below is
   // presently unreachable — kept as the documented fallback tier (matches the prior
@@ -162,9 +168,10 @@ export function Companion({
   ) : hasGenerated ? (
     <View
       style={{
-        width: size * set.scale,
-        height: size * set.scale,
-        margin: (size - size * set.scale) / 2,
+        width: box,
+        height: box,
+        margin: (size - box) / 2,
+        overflow: 'hidden',
       }}
     >
       {previous && (
@@ -172,14 +179,14 @@ export function Companion({
           source={set.poses[previous] ?? set.poses.idle}
           resizeMode="contain"
           accessibilityIgnoresInvertColors
-          style={StyleSheet.absoluteFill}
+          style={[styles.layer, { width: box, height: box }, previousStyle]}
         />
       )}
       <Animated.Image
         source={set.poses[shown] ?? set.poses.idle}
         resizeMode="contain"
         accessibilityIgnoresInvertColors
-        style={[StyleSheet.absoluteFill, fadeStyle]}
+        style={[styles.layer, { width: box, height: box }, currentStyle]}
       />
     </View>
   ) : (
@@ -198,3 +205,7 @@ export function Companion({
     </ReactiveCompanion>
   );
 }
+
+const styles = StyleSheet.create({
+  layer: { position: 'absolute', top: 0, left: 0 },
+});
