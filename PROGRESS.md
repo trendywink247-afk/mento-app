@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-09-05 (session 31f) — Prod deploy, push notifications (both roles), release APK on device ✅ (branch `feat/push-notifications`)
+
+**Context:** founder: "push the current build to prod, start the push notifications spec for mentors, then push an APK to my device." Rulings DECISIONS §K.10 (terminal brainstorm): mentors **and** members; conversation events only; persona-only content; Stream-watcher suppression; Expo push from the webhook, no queue. Spec `docs/superpowers/specs/2026-09-05-push-notifications-design.md`, plan `…/plans/2026-09-05-push-notifications.md`, subagent-driven (Sonnet), every task spec- and quality-reviewed with fixes looped back.
+
+**Prod (done first, from master `26ea6c9`):** pushed 77 commits to origin; VPS backup taken (`mento-20260905-041501.sql.gz`), `deploy.sh` → API healthy at migration head `2788b34bd299`, `console-session` + `heartbeat` endpoints live at `api.agentin.chat`; web console rebuilt and shipped (`/admin`, `/listener`, `/apply` → 200). **Gotcha:** `deploy-console.sh`'s `scp -r` from Windows left a partial upload and the script's `| tail` masked the failure — replaced with a tar stream (`1b6133c`).
+
+**Push notifications (done):**
+- `09e191a` `push_tokens.owner_kind/owner_id` (rev `03397471ed9e`, backfill from `user_id`), `services/push.py` skeleton, member `DELETE /notifications/register-token`, `POST /listener/me/push-token`, `PUSH_ENABLED` + burst/watch-cache settings, tests.
+- `f16c1f9` + `1ef7aad` send path: closed templates ("Someone would like to talk with you" / "%persona is ready to talk" / "%persona sent a message" / "%persona replied"), `sound: null`, minimal data payloads; suppression no-token → suspended → not active → not party → **watching** (Stream channel query, 5 s Redis cache, fail-to-send) → paused (message only) → 60 s burst (Redis SET NX, fail-open); one retry; `DeviceNotRegistered` deletes the token; reason counters logged, never ids.
+- `3f9af15` triggers as FastAPI `BackgroundTasks` with own-session `_safe` wrappers (`services/push_tasks.py`): request created (non-idempotent path only), accepted (console + admin), `message.new` after the crisis scan — a push failure can never touch the scan or the 200. `scripts/send_test_push.py` now calls `push._send`.
+- `e5e5fdb` + `ccd9c71` mobile registration for both roles (`registerPush('member'|'listener')`, guard against re-registering an unchanged token), `unregisterPush()` on Start Fresh **without** prompting for permission.
+- `fb27f6c` + `795194a` notification handler (banner, no sound, no badge), pure `routeForNotification` (Node test `npm run test:route`), `useNotificationTaps` (cold start via `replace`, live via `push`, dedupe by identifier, `hasPendingTap()` gate so the landing's own redirect cannot clobber a cold-start deep link).
+- Proof: pytest **206 passed**, alembic check clean, ruff + black clean, tsc clean, route test green, web e2e regression below.
+
+**Device (done):** release APK built at `C:\mento-build\mobile` (44 min; launch the build script with **pwsh 7**, Windows PowerShell 5 chokes on its last line) with `api.agentin.chat` inlined and cleartext allowed; installed on the Nothing Phone 1 over wireless adb via Tailscale (pair on the dialog's port, connect on the main one — both change per session). Founder applied as a mentor from the phone; approved in prod via a temporary helper admin minted in-container (`scripts/` are not in the prod image — mint inline through `app.security.issue_admin_token`), then revoked. **This APK predates the push branch** — rebuild after merge for the device push proof.
+
+**Open (founder):** device push proof (spec §8) pending the rebuilt APK; member-side pushes need a second phone (the web member never receives pushes). Carried: web token-link console never heartbeats; web-thread privacy banner/empty state strings; "panda" copy on non-panda screens; sleepy-hour pose on the ready screen.
+
+**Next:** merge; deploy API (migration `03397471ed9e` runs on boot); rebuild + install the APK; device push proof together; then the open items.
+
+**How to resume:** prod deploy = push origin → `ssh mento-ops@87.232.72.79 'cd /opt/mento && ./deploy/backup-postgres.sh && ./deploy/deploy.sh'` → `./deploy/deploy-console.sh` locally when UI changed. APK = robocopy sync to `C:\mento-build\mobile` (`/XD .cxx`, purge `android/build` + `.cxx`), then `pwsh -File scripts\build-android-release.ps1` with `SENTRY_DISABLE_AUTO_UPLOAD=true`; `adb -s 100.102.23.1:41129 install -r …` (re-pair if the phone rebooted).
+
 ## 2026-09-05 (session 31e) — Native mentor console, mobile half ✅ (branch `feat/mentor-console-mobile`)
 
 **Context:** Plan 2 of DECISIONS §K.9 (`docs/superpowers/plans/2026-09-05-mentor-console-mobile.md`), on top of the merged server half (31d). Subagent-driven (Sonnet), spec + quality review per task, fixes looped back.

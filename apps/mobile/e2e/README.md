@@ -22,3 +22,5 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   onboards → sends a Personal request. Mentor: accept → chat → mentor rail → reply;
   member sees it; Report sheet files; End frees the seat (row shows Ended).
   Reduced-motion pass reopens the console. 0 page errors in every context.
+- notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
+  notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.

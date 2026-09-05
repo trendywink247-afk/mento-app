@@ -35,10 +35,11 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 | Payments | **Razorpay** | processor for **contributions** + later Module B session fees. **Not** membership tiers (DECISIONS §H.1). Awaiting creds — coffee screen ships transparently disabled. |
 | OTP | **MSG91** | **NOT in the v1 user path**. Reserved for mentor verification (deferred Module B). |
 | Analytics | **PostHog** | **wired (session 23):** anonymous client funnel via `lib/analytics.ts` (raw HTTP capture, no SDK, closed event union) — dark until `EXPO_PUBLIC_POSTHOG_KEY` is set. Never message content or PII; crisis sessions excluded from retention metrics. |
+| Push | **expo-notifications** + Expo push API | **live (session 31f):** device registration for members (`/notifications/register-token`) and mentors (`/listener/me/push-token`); sends for request created / accepted / new message from `app/services/push.py` — persona-only bodies, never message text, `sound: null`; suppressed when the recipient is watching the Stream channel, paused, or within a 60 s burst window; scheduled as FastAPI background tasks after the crisis scan. Taps route via `lib/notificationRoute.ts`. `PUSH_ENABLED` kills sends. |
 | Errors | **Sentry** | env-gated both sides (empty DSN = off): API errors-only with request bodies stripped (`SENTRY_DSN`); mobile JS-error capture (`EXPO_PUBLIC_SENTRY_DSN`) — native crash symbolication is release-build work. |
 | i18n | **i18n-js** + expo-localization | EN + HI over `locales/{en,hi}.json`, typed keys (`lib/i18n.tsx`), persisted `mento.lang`, live Profile toggle; chat bodies/server Path content/personas stay untranslated. Devanagari via Baloo 2 (single family). |
 
-**Key env vars** — API (`services/api/.env`, template `.env.example`): `ENV`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, `DATABASE_URL`, `REDIS_URL`, `STREAM_API_KEY`/`STREAM_API_SECRET`, `RAZORPAY_KEY_ID`/`_SECRET`, `POSTHOG_API_KEY`, `SENTRY_DSN`. Mobile (`apps/mobile/.env`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`, `EXPO_PUBLIC_SENTRY_DSN`.
+**Key env vars** — API (`services/api/.env`, template `.env.example`): `ENV`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, `DATABASE_URL`, `REDIS_URL`, `STREAM_API_KEY`/`STREAM_API_SECRET`, `RAZORPAY_KEY_ID`/`_SECRET`, `POSTHOG_API_KEY`, `SENTRY_DSN`, `PUSH_ENABLED`. Mobile (`apps/mobile/.env`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`, `EXPO_PUBLIC_SENTRY_DSN`.
 
 ---
 
