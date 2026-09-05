@@ -51,6 +51,18 @@ def _rate_limits_off():
     ratelimit.ENABLED = previous
 
 
+@pytest.fixture(autouse=True)
+def _push_off():
+    """Push is off by default in tests (no network); tests/test_push.py flips it on
+    per test and records sends."""
+    from app.services import push
+
+    previous = push.ENABLED
+    push.ENABLED = False
+    yield
+    push.ENABLED = previous
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _schema():
     """Build the schema from the Alembic migration (not metadata.create_all), so

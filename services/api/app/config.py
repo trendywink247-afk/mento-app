@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     # (e.g. 1 behind a single load balancer) to use the right-most untrusted hop.
     trusted_proxy_hops: int = 0
 
+    # Push (spec 2026-09-05): best-effort sends via Expo's push API.
+    push_enabled: bool = True
+    push_burst_seconds: int = 60
+    push_watch_cache_seconds: int = 5
+
     # Dedicated thread budget for the crisis-scan webhooks — isolated from the
     # shared anyio threadpool so slow sync handlers can't starve the safety scan.
     crisis_scan_threads: int = 8

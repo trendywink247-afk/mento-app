@@ -66,6 +66,9 @@ separate mentor-verification flow and does not apply to people seeking support).
   can **report** a conversation from their console; a report records only the
   conversation, a reason category and an optional short note — no new data about
   you is collected, and the report goes to the same human review as member reports.
+- **Push notifications** show the other person's persona name and the kind of
+  event (a request, an acceptance, a new message) — **never message content**. You can
+  turn them off any time in your phone's system settings; nothing else changes.
 - **Safety-review staff (admins)** can, through an audited, read-only admin tool,
   view the live content of a conversation **specifically when reviewing a
   crisis-safety flag or a user report/moderation case.** This access is logged in an

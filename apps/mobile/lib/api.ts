@@ -321,4 +321,11 @@ export const api = {
       { method: 'POST', body: JSON.stringify({ expo_push_token, platform }) },
       true,
     ),
+
+  deletePushToken: (expo_push_token: string) =>
+    request<{ status: string }>(
+      '/notifications/register-token',
+      { method: 'DELETE', body: JSON.stringify({ expo_push_token }) },
+      true,
+    ),
 };

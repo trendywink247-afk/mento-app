@@ -386,6 +386,10 @@ class PushTokenIn(BaseModel):
     platform: Literal["ios", "android"]
 
 
+class PushTokenDeleteIn(BaseModel):
+    expo_push_token: str = Field(min_length=1, max_length=255)
+
+
 # --- Paths (Communities) ---
 class PathTree(BaseModel):
     """Pathfinder question tree — the client walks it blindly (data-driven)."""

@@ -103,4 +103,10 @@ export const listenerApi = {
 
   end: (conversationId: string) =>
     req<{ status: string }>(`/listener/me/conversations/${conversationId}/end`, { method: 'POST' }),
+
+  registerPushToken: (expo_push_token: string, platform: 'ios' | 'android') =>
+    req<{ status: string }>('/listener/me/push-token', {
+      method: 'POST',
+      body: JSON.stringify({ expo_push_token, platform }),
+    }),
 };

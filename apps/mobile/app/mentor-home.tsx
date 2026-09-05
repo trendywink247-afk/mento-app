@@ -26,6 +26,7 @@ import {
   saveRole,
   type Persona,
 } from '@/lib/session';
+import { registerPush } from '@/lib/pushNotifications';
 import { useMentorConsole } from '@/lib/useMentorConsole';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -302,6 +303,10 @@ function ConsoleBody({
   useEffect(() => {
     if (c.error === 'session') onSessionLost();
   }, [c.error, onSessionLost]);
+
+  useEffect(() => {
+    void registerPush('listener');
+  }, []);
 
   const handleToggle = () => {
     toggles.current += 1;

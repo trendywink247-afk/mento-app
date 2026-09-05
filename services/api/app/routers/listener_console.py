@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,7 @@ from app.models.enums import (
     ConversationStatus,
     ListenerStatus,
     ModerationLevel,
+    PushOwnerKind,
     ReporterKind,
     RequestStatus,
     VettingStatus,
@@ -43,10 +44,11 @@ from app.schemas import (
     ListenerRequestItem,
     ListenerStatusIn,
     OkResult,
+    PushTokenIn,
     RequestOut,
 )
 from app.security import current_listener_id, issue_listener_token
-from app.services import stream
+from app.services import push, push_tasks, stream
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -175,6 +177,26 @@ def heartbeat(
     return OkResult(status="ok")
 
 
+@router.post("/me/push-token", response_model=dict)
+def register_push_token(
+    payload: PushTokenIn,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Mentor device registration (spec 2026-09-05 push §3). Same upsert as the
+    member path; `current_listener` already refuses suspended profiles."""
+    ratelimit.enforce(
+        f"push-token-listener:{listener.id}",
+        20,
+        3600,
+        detail="Too many token registrations — please wait a moment.",
+    )
+    push.upsert_token(
+        db, PushOwnerKind.listener, listener.id, payload.expo_push_token, payload.platform
+    )
+    return {"status": "registered"}
+
+
 @router.get("/me/conversations", response_model=list[ListenerConversationItem])
 def my_conversations(
     listener: ListenerProfile = Depends(current_listener),
@@ -232,6 +254,7 @@ def my_pending_requests(
 @router.post("/me/requests/{request_id}/accept", response_model=RequestOut)
 def accept(
     request_id: str,
+    background: BackgroundTasks,
     listener: ListenerProfile = Depends(current_listener),
     db: Session = Depends(get_db),
 ) -> RequestOut:
@@ -242,6 +265,7 @@ def accept(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found") from None
     except ListenerAtCapacity:
         raise HTTPException(status.HTTP_409_CONFLICT, "you're at capacity right now") from None
+    background.add_task(push_tasks.notify_request_accepted_safe, req.id)
     return RequestOut(
         id=req.id,
         status=req.status.value,

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
@@ -12,7 +12,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { PressKey } from '@/components/motion/PressKey';
 import { api, type ListenerApplication } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
-import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
+import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
 import { checkAndApplyUpdate, type UpdateStatus } from '@/lib/updates';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
@@ -28,6 +28,10 @@ const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
  * support & about. (Mirror/UPSC panels are deferred modules.) */
 export default function ProfileTab() {
   const router = useRouter();
+  const openMentorConsole = async () => {
+    await saveRole('mentor');
+    router.push('/mentor-home');
+  };
   const { colors, companionColor, setCompanionColor } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const [persona, setPersona] = useState<Persona | null>(null);
@@ -275,10 +279,12 @@ export default function ProfileTab() {
                   ? t('profile.approvedBody')
                   : t('profile.receivedBody')}
               </Text>
-              {application.status === 'approved' && application.console_url ? (
+              {application.status === 'approved' ? (
                 <Pressable
-                  onPress={() => void Linking.openURL(application.console_url as string)}
-                  accessibilityRole="link"
+                  // The console lives IN the app now (DECISIONS §K.9): switch the
+                  // device's role and go to Mentor Home — never the browser link.
+                  onPress={() => void openMentorConsole()}
+                  accessibilityRole="button"
                   testID="profile-open-console"
                   style={{ minHeight: 44, justifyContent: 'center' }}
                 >

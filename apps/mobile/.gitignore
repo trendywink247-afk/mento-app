@@ -4,3 +4,6 @@
 
 expo-env.d.ts
 # @end expo-cli
+
+# notification-route test's on-the-fly tsc output (see e2e/notifications-route.test.mjs)
+.tmp-route/

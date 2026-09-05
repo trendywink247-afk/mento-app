@@ -23,6 +23,7 @@ import { Tilt3D } from '@/components/motion/Tilt3D';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { capture } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
+import { hasPendingTap } from '@/lib/notifications';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getRole, getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -53,7 +54,9 @@ export default function Landing() {
       if (!active) return;
       if (token) {
         const role = await getRole();
-        if (active) router.replace(role === 'mentor' ? '/mentor-home' : '/chats');
+        // A cold-start notification tap is already routing us somewhere specific —
+        // don't let this generic redirect clobber it (see lib/notifications.ts).
+        if (active && !hasPendingTap()) router.replace(role === 'mentor' ? '/mentor-home' : '/chats');
       } else setChecked(true);
     });
     return () => {
@@ -102,7 +105,8 @@ export default function Landing() {
       void getSessionToken().then(async (token) => {
         if (!active || !token) return;
         const role = await getRole();
-        if (active) router.replace(role === 'mentor' ? '/mentor-home' : '/chats');
+        // Same pending-tap guard as the mount effect above.
+        if (active && !hasPendingTap()) router.replace(role === 'mentor' ? '/mentor-home' : '/chats');
       });
       return () => {
         active = false;
