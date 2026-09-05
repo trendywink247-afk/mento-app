@@ -548,6 +548,8 @@
     "downloading": "Update found, downloading…",
     "restarting": "Restarting…",
     "upToDate": "You're up to date",
-    "checkFailed": "Couldn't check for updates"
+    "checkFailed": "Couldn't check for updates",
+    "runningOta": "Running over-the-air update %{id}",
+    "runningEmbedded": "Running the built-in version"
   }
 }

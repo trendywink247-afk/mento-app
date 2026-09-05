@@ -30,3 +30,15 @@ export async function checkAndApplyUpdate(
     return 'checkFailed';
   }
 }
+
+/** What JS is running right now — the built-in bundle or an over-the-air update.
+ * Shown under the Profile update row so a device test can prove OTA landed
+ * (session 31f: "You're up to date" alone could not distinguish the two). */
+export function runningUpdate(): { kind: 'embedded' | 'ota' | 'dev'; id: string | null; at: Date | null } {
+  if (!Updates.isEnabled) return { kind: 'dev', id: null, at: null };
+  return {
+    kind: Updates.isEmbeddedLaunch ? 'embedded' : 'ota',
+    id: Updates.updateId ? Updates.updateId.slice(0, 8) : null,
+    at: Updates.createdAt ?? null,
+  };
+}

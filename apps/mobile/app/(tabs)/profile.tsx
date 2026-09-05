@@ -13,7 +13,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { api, type ListenerApplication } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
-import { checkAndApplyUpdate, type UpdateStatus } from '@/lib/updates';
+import { checkAndApplyUpdate, runningUpdate, type UpdateStatus } from '@/lib/updates';
 import { useTheme } from '@/theme/ThemeProvider';
 import {
   COMPANION_COLOR_LABELS,
@@ -38,6 +38,7 @@ export default function ProfileTab() {
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   const [application, setApplication] = useState<ListenerApplication | null>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | 'idle'>('idle');
+  const running = runningUpdate();
 
   useFocusEffect(
     useCallback(() => {
@@ -322,6 +323,13 @@ export default function ProfileTab() {
                           ? t('updates.checkFailed')
                           : t('profile.updatesBody')}
               </Text>
+              {running.kind !== 'dev' ? (
+                <Text style={[type.caption, { color: colors.inkMuted }]} testID="profile-running-update">
+                  {running.kind === 'ota'
+                    ? t('updates.runningOta', { id: running.id ?? '?' })
+                    : t('updates.runningEmbedded')}
+                </Text>
+              ) : null}
             </View>
           </PressKey>
         ) : null}
