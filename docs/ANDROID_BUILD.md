@@ -99,7 +99,27 @@ ready" state.
 
 ---
 
-## 4. Self-hosted OTA (make shake-to-update live)
+## 4. OTA — DECIDED (session 31f): EAS Update free tier
+
+Rebuild-and-install per JS fix proved too slow on the device day, so the founder switched
+shake-to-update on via **EAS Update's free tier** (1,000 MAU, $0; this is EAS *Update* only —
+local Gradle builds stay, no EAS cloud builds). Configured with `eas update:configure`:
+`updates.url = https://u.expo.dev/47a19df2-…`, `enabled: true`, `fallbackToCacheTimeout: 0`,
+and — because a local Gradle build never reads `eas.json`'s channel —
+`updates.requestHeaders["expo-channel-name"] = "preview"` in `app.json`. `runtimeVersion`
+stays `{"policy": "appVersion"}` (`0.1.0`): bump `version` whenever native code changes.
+
+**Ship a JS-only change (from `apps/mobile`, reads `.env.production`):**
+
+```powershell
+npx eas-cli update --branch preview --message "what changed"
+```
+
+Then shake the phone (or Profile → Check for updates) → download → restart into the new JS.
+Native changes (new modules, `app.json` plugins, permissions, the notification colour) still
+need §3 + `adb install`. The self-hosted path below is kept for reference only.
+
+## 4-alt. Self-hosted OTA (reference — not the chosen route)
 
 ### 4a. Stand up a free OTA server
 

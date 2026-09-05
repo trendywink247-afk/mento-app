@@ -23,6 +23,8 @@
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
@@ -68,6 +70,14 @@
         "projectId": "47a19df2-eefe-482f-a160-42b615b6ff27"
       }
     },
-    "owner": "geekspace"
+    "owner": "geekspace",
+    "updates": {
+      "url": "https://u.expo.dev/47a19df2-eefe-482f-a160-42b615b6ff27",
+      "enabled": true,
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": {
+        "expo-channel-name": "preview"
+      }
+    }
   }
 }
