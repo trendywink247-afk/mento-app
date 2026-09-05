@@ -28,11 +28,14 @@
   - `7bfad33` chat bubbles clipped the last word/letter ("Hell|o|", "…are you |doing|") on Android new-arch: the kit measures text with one typeface/scale and draws with another (RN #52895, still open upstream). Fixed by owning `MessageText` with explicit Baloo 2 metrics — which also closes the one place the app used the system font. APK build 4 carries it.
   - `a582c45` Profile's approved card still opened the browser console link → in-app Mentor Home.
 - Also: notification accent was the old indigo → terracotta (shows after a rebuild).
-- **Not yet proven:** watcher suppression on device after the fix (phone must be inside the chat when a message lands); member-side pushes need a second phone holding a member session — the founder appears to have one (sky-accent member chatting with Purple Maple).
+- **Watcher suppression proven on device** after the fix: with the mentor chat open, Stream listed the mentor as a watcher and the server logged `push suppressed reason=watching`; no push. Every rule in the push spec is now live-proven.
+- **Two profiles, not two phones:** the founder's phone runs Android work + personal profiles; each has its own Mento install and storage (two member personas, one mentor). `adb install -r` updates both. This explains the "didn't pick up where I left off" report and the Serene Brook / Purple Maple split.
+- **OTA is live (EAS Update, free tier):** `updates.url` + `expo-channel-name: preview` baked into build 5 (manifest verified), channel linked to branch, two updates published (`01a07150` pipeline check, `01a07160` "Profile shows the running update"). The Profile update row now says whether the built-in or an over-the-air bundle is running — the visible proof of the loop. JS-only fixes ship with `npx eas-cli update --branch preview --message …`; native changes still need §3 of `docs/ANDROID_BUILD.md`.
+- **Not yet proven:** member-side pushes (accepted / reply) — needs the personal-profile member app open on the phone while the mentor replies from the browser console.
 
 **Open (founder):** Carried: web token-link console never heartbeats; web-thread privacy banner/empty state strings; "panda" copy on non-panda screens; sleepy-hour pose on the ready screen.
 
-**Next:** OTA updates — the founder asked for them (rebuild+install per fix is too slow): expo-updates is wired (shake + Profile button) but inert without `updates.url`; decision pending between EAS Update free tier (recommended: one rebuild, then `eas update`) and a self-hosted server on the VPS. Then: suppression proof on device, second-phone member push, the open items.
+**Next:** member-side push proof (personal profile), then the open items (web console heartbeat, web-thread copy keys, "panda" copy on non-panda screens, sleepy-hour pose on ready, orphaned Serene Brook/Purple Maple profiles for one person, Start Fresh not clearing a listener-owned token).
 
 **How to resume:** prod deploy = push origin → `ssh mento-ops@87.232.72.79 'cd /opt/mento && ./deploy/backup-postgres.sh && ./deploy/deploy.sh'` → `./deploy/deploy-console.sh` locally when UI changed. APK = robocopy sync to `C:\mento-build\mobile` (`/XD .cxx`, purge `android/build` + `.cxx`), then `pwsh -File scripts\build-android-release.ps1` with `SENTRY_DISABLE_AUTO_UPLOAD=true`; `adb -s 100.102.23.1:41129 install -r …` (re-pair if the phone rebooted).
 
