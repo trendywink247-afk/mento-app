@@ -114,8 +114,11 @@ def _is_watching(channel_id: str, user_id: str) -> bool:
     if client is None:
         return False
     try:
+        # Stream only populates `watchers` in the query response when `state` is
+        # requested (proven against the live API, session 31f) — state=False returns
+        # an empty list and would silently disable this suppression rule.
         resp = client.channel("messaging", channel_id).query(
-            watchers={"limit": 100}, state=False, presence=False
+            watchers={"limit": 100}, state=True, presence=False
         )
         watchers = [w.get("id") for w in (resp.get("watchers") or []) if w.get("id")]
     except Exception as exc:  # noqa: BLE001 — best-effort by design

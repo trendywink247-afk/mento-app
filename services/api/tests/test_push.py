@@ -455,3 +455,30 @@ def test_message_new_webhook_schedules_push_and_never_depends_on_it(client, sent
         "/api/v1/stream/webhook", json={**event, "message": {**event["message"], "id": "m2"}}
     )
     assert r.status_code == 200
+
+
+# --- watcher query contract --------------------------------------------------------
+
+
+def test_is_watching_requests_state_and_reads_watchers(monkeypatch):
+    """Stream returns `watchers` only when `state` is requested (live-API finding,
+    session 31f). Guard the exact query options so the rule can't silently die."""
+    seen: dict = {}
+
+    class _Channel:
+        def query(self, **options):
+            seen.update(options)
+            return {"watchers": [{"id": "listener-1"}, {"id": "member-1"}], "watcher_count": 2}
+
+    class _Client:
+        def channel(self, kind, cid):
+            seen["kind"], seen["cid"] = kind, cid
+            return _Channel()
+
+    monkeypatch.setattr(stream, "_client", lambda: _Client())
+    monkeypatch.setattr(
+        ratelimit, "_redis", lambda: (_ for _ in ()).throw(RuntimeError("no redis"))
+    )
+    assert push._is_watching("ch-1", "listener-1") is True
+    assert push._is_watching("ch-1", "someone-else") is False
+    assert seen["state"] is True and seen["watchers"] == {"limit": 100} and seen["cid"] == "ch-1"
