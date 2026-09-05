@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, UTC
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -199,3 +199,170 @@ def test_member_delete_removes_only_own_token(client):
         assert [t.expo_push_token for t in s.scalars(select(PushToken)).all()] == [
             "ExponentPushToken[b]"
         ]
+
+
+# --- send path -------------------------------------------------------------------
+
+
+def _seed_pair(s, *, token_kind: PushOwnerKind, paused=False):
+    uid, lid = _user(s, "Quiet Cove"), _listener(s, name="Open River")
+    cid = _convo(s, uid, lid, paused=paused)
+    if token_kind == PushOwnerKind.member:
+        _token(s, PushOwnerKind.member, uid, "ExponentPushToken[member]")
+    else:
+        _token(s, PushOwnerKind.listener, lid, "ExponentPushToken[listener]")
+    s.commit()
+    return uid, lid, cid
+
+
+def test_member_message_pushes_the_listener_with_member_persona(sent):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=uid)
+    assert len(sent) == 1
+    msg = sent[0]
+    assert msg["to"] == "ExponentPushToken[listener]"
+    assert msg["title"] == "Mento" and msg["body"] == "Quiet Cove sent a message"
+    assert msg["sound"] is None
+    assert msg["data"] == {
+        "kind": "message",
+        "conversation_id": cid,
+        "stream_channel_id": f"ch-{uid[:8]}",
+    }
+    assert "text" not in msg["data"]
+
+
+def test_listener_message_pushes_the_member_with_listener_persona(sent):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.member)
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
+    assert len(sent) == 1 and sent[0]["body"] == "Open River replied"
+
+
+@pytest.mark.parametrize(
+    "reason", ["no_token", "suspended", "ended", "watching", "paused", "burst"]
+)
+def test_message_suppression_rules(sent, monkeypatch, reason):
+    with TestSession() as s:
+        uid, lid = _user(s, "Quiet Cove"), _listener(s, name="Open River")
+        cid = _convo(s, uid, lid, paused=(reason == "paused"))
+        if reason != "no_token":
+            _token(s, PushOwnerKind.listener, lid, "ExponentPushToken[listener]")
+            _token(s, PushOwnerKind.member, uid, "ExponentPushToken[member]")
+        if reason == "suspended":
+            s.get(ListenerProfile, lid).vetting_status = VettingStatus.suspended
+        if reason == "ended":
+            s.get(Conversation, cid).status = ConversationStatus.ended
+        s.commit()
+    if reason == "watching":
+        monkeypatch.setattr(push, "_is_watching", lambda channel_id, user_id: True)
+    sender = (
+        lid if reason == "paused" else uid
+    )  # paused: the LISTENER writes, member must not be pushed
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=sender)
+        if reason == "burst":
+            push.notify_message(s, conversation_id=cid, sender_stream_user_id=sender)
+    if reason == "burst":
+        assert len(sent) == 1
+    else:
+        assert sent == []
+
+
+def test_burst_window_resets(sent, monkeypatch):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=uid)
+        ratelimit._redis().delete(*ratelimit._redis().keys("push:burst:*") or ["push:burst:none"])
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=uid)
+    assert len(sent) == 2
+
+
+def test_self_echo_never_pushes_and_unknown_channel_is_ignored(sent):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id="someone-else")
+        push.notify_message(s, conversation_id="nope", sender_stream_user_id=uid)
+    assert sent == []
+
+
+def test_accepted_pushes_member_even_when_paused(sent):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.member, paused=True)
+        req = ConversationRequest(requester_id=uid, target_listener_id=lid, conversation_id=cid)
+        s.add(req)
+        s.commit()
+        rid = req.id
+    with TestSession() as s:
+        push.notify_request_accepted(s, request_id=rid)
+    assert len(sent) == 1
+    assert sent[0]["body"] == "Open River is ready to talk"
+    assert sent[0]["data"]["kind"] == "accepted" and sent[0]["data"]["conversation_id"] == cid
+
+
+def test_request_created_pushes_listener_without_requester_persona(sent):
+    with TestSession() as s:
+        uid, lid = _user(s, "Quiet Cove"), _listener(s)
+        _token(s, PushOwnerKind.listener, lid, "ExponentPushToken[listener]")
+        req = ConversationRequest(requester_id=uid, target_listener_id=lid)
+        s.add(req)
+        s.commit()
+        rid = req.id
+    with TestSession() as s:
+        push.notify_request_created(s, request_id=rid)
+    assert len(sent) == 1
+    assert sent[0]["body"] == "Someone would like to talk with you"
+    assert "Quiet Cove" not in sent[0]["body"]
+    assert sent[0]["data"] == {"kind": "request", "request_id": rid}
+
+
+def test_device_not_registered_deletes_token(monkeypatch):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+    monkeypatch.setattr(push, "ENABLED", True)
+    monkeypatch.setattr(push, "_is_watching", lambda c, u: False)
+    monkeypatch.setattr(
+        push,
+        "_post_expo",
+        lambda msgs: [
+            {"status": "error", "details": {"error": "DeviceNotRegistered"}} for _ in msgs
+        ],
+    )
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=uid)
+    with TestSession() as s:
+        assert s.scalars(select(PushToken)).all() == []
+
+
+def test_network_error_retried_once_then_dropped(monkeypatch):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+    attempts = {"n": 0}
+
+    def flaky(msgs):
+        attempts["n"] += 1
+        raise push.httpx.ConnectError("boom")
+
+    monkeypatch.setattr(push, "ENABLED", True)
+    monkeypatch.setattr(push, "_is_watching", lambda c, u: False)
+    monkeypatch.setattr(push, "_post_expo", flaky)
+    monkeypatch.setattr(push.time, "sleep", lambda s: None)
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=uid)  # must not raise
+    assert attempts["n"] == 2
+
+
+def test_disabled_sends_nothing(monkeypatch):
+    calls = []
+    monkeypatch.setattr(push, "_post_expo", lambda m: calls.extend(m) or [])
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+    with TestSession() as s:
+        push.notify_message(
+            s, conversation_id=cid, sender_stream_user_id=uid
+        )  # ENABLED is False via conftest
+    assert calls == []
