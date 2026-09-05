@@ -10,6 +10,7 @@ import { Platform } from 'react-native';
 
 import { api } from './api';
 import { listenerApi } from './listenerApi';
+import { getListenerToken } from './listenerSession';
 
 export type PushRole = 'member' | 'listener';
 
@@ -53,7 +54,12 @@ export async function registerPush(role: PushRole): Promise<void> {
 export async function unregisterPush(): Promise<void> {
   try {
     const token = lastToken ?? (await currentToken({ prompt: false }));
-    if (token) await api.deletePushToken(token);
+    if (!token) return;
+    // Both roles, best-effort each: a device that was also a mentor keeps a listener
+    // row (one row per role) — drop it too, or it would keep receiving mentor pushes
+    // with no session left to route the tap.
+    await api.deletePushToken(token).catch(() => {});
+    if (await getListenerToken()) await listenerApi.deletePushToken(token).catch(() => {});
     registered = null;
   } catch {
     /* best-effort */

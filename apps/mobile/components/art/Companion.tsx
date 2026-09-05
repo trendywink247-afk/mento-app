@@ -69,6 +69,7 @@ export function Companion({
   waveTrigger = 0,
   trigger = null,
   pose,
+  awake = false,
   interactive = false,
   onPress,
 }: {
@@ -81,6 +82,8 @@ export function Companion({
   trigger?: CompanionTrigger;
   /** Pin a specific pose directly, overriding trigger-derived pose. */
   pose?: CompanionPose;
+  /** Skip the sleepy-hour resting pose (onboarding: a first meeting is never asleep). */
+  awake?: boolean;
   /** Tap-react acknowledgement (wraps in a Pressable). */
   interactive?: boolean;
   onPress?: () => void;
@@ -122,7 +125,7 @@ export function Companion({
     []
   );
 
-  const wanted = pose ?? triggerPose ?? restingPose();
+  const wanted = pose ?? triggerPose ?? (awake ? 'idle' : restingPose());
   const effective: CompanionPose = set.poses[wanted] ? wanted : 'idle';
   const artSource = set.poses[effective] ?? set.poses.idle;
   const artKey = `${resolved}/${effective}`;

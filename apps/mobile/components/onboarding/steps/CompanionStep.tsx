@@ -148,7 +148,7 @@ export function CompanionStep({
                   selected && { borderWidth: 2, borderColor: colors.accent },
                 ]}
               >
-                <Companion animal={a} size={76} trigger={selected ? greet : null} />
+                <Companion animal={a} size={76} trigger={selected ? greet : null} awake />
                 {selected ? checkBadge : null}
               </View>
               <Text

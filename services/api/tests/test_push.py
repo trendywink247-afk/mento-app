@@ -496,3 +496,34 @@ def test_is_watching_requests_state_and_reads_watchers(monkeypatch):
     assert push._is_watching("ch-1", "listener-1") is True
     assert push._is_watching("ch-1", "someone-else") is False
     assert seen["state"] is True and seen["watchers"] == {"limit": 100} and seen["cid"] == "ch-1"
+
+
+def test_listener_delete_removes_only_own_listener_row(client):
+    with TestSession() as s:
+        uid, lid, other = _user(s), _listener(s), _listener(s, name="Still Pine")
+        _token(s, PushOwnerKind.member, uid, "ExponentPushToken[dev]")
+        _token(s, PushOwnerKind.listener, lid, "ExponentPushToken[dev]")
+        s.commit()
+    # Another listener cannot remove it.
+    r = client.request(
+        "DELETE",
+        "/api/v1/listener/me/push-token",
+        json={"expo_push_token": "ExponentPushToken[dev]"},
+        headers=listener_auth(other),
+    )
+    assert r.status_code == 200
+    with TestSession() as s:
+        assert {t.owner_kind for t in s.scalars(select(PushToken)).all()} == {
+            PushOwnerKind.member,
+            PushOwnerKind.listener,
+        }
+    # The owner can; the member row is untouched.
+    r = client.request(
+        "DELETE",
+        "/api/v1/listener/me/push-token",
+        json={"expo_push_token": "ExponentPushToken[dev]"},
+        headers=listener_auth(lid),
+    )
+    assert r.status_code == 200 and r.json()["status"] == "ok"
+    with TestSession() as s:
+        assert [t.owner_kind for t in s.scalars(select(PushToken)).all()] == [PushOwnerKind.member]

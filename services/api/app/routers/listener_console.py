@@ -44,6 +44,7 @@ from app.schemas import (
     ListenerRequestItem,
     ListenerStatusIn,
     OkResult,
+    PushTokenDeleteIn,
     PushTokenIn,
     RequestOut,
 )
@@ -352,3 +353,16 @@ def end_conversation(
         release_listener_slot(db, convo)
     db.commit()
     return OkResult(status="ended")
+
+
+@router.delete("/me/push-token", response_model=OkResult)
+def delete_push_token(
+    payload: PushTokenDeleteIn,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Start Fresh on a device that also held a mentor session: drop the mentor's
+    push row too (session 31f device finding — the member-only delete left a
+    listener-owned token receiving pushes with no session to route the tap)."""
+    push.delete_token(db, PushOwnerKind.listener, listener.id, payload.expo_push_token)
+    return OkResult(status="ok")

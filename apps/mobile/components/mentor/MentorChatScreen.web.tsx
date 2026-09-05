@@ -18,6 +18,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { MentorRail } from '@/components/mentor/MentorRail';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
+import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { listenerApi } from '@/lib/listenerApi';
 import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
 import { getSessionToken } from '@/lib/session';
@@ -67,6 +68,8 @@ export default function MentorChatScreenWeb() {
   const memberName = member ?? 'Anonymous member';
 
   const [ready, setReady] = useState(false);
+  const [online, setOnline] = useState(false);
+  useListenerHeartbeat(online);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
@@ -123,6 +126,7 @@ export default function MentorChatScreenWeb() {
         if (!channelId) throw new Error('Missing channel.');
         // /listener/me returns a fresh Stream token for this listener identity.
         const me = await listenerApi.me();
+        setOnline(me.status === 'online');
         const client = await ensureListenerConnected(
           { id: me.id, name: me.persona_name },
           me.stream_token,

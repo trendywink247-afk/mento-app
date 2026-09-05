@@ -16,6 +16,7 @@ import {
   type ListenerRequest,
 } from '@/lib/listenerApi';
 import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
+import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -29,6 +30,9 @@ export default function ListenerConsoleWeb() {
   const { colors, elevation } = useTheme();
 
   const [me, setMe] = useState<ListenerMe | null>(null);
+  // Presence pulse while this console is open and online (spec 2026-09-05 §6) — the
+  // web console was the one surface that never heartbeated, so it was never auto-away.
+  useListenerHeartbeat(me?.status === 'online');
   const [requests, setRequests] = useState<ListenerRequest[]>([]);
   const [convos, setConvos] = useState<ListenerConversation[]>([]);
   const [error, setError] = useState<string | null>(null);
