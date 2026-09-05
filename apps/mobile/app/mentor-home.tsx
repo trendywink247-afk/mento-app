@@ -1,19 +1,23 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ApplicationForm } from '@/components/ApplicationForm';
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
+import { ConversationRow } from '@/components/mentor/ConversationRow';
+import { PresenceHeader } from '@/components/mentor/PresenceHeader';
+import { RequestCard } from '@/components/mentor/RequestCard';
 import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
 import { api, type ListenerApplication } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
+import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
 import {
   getCompanionAnimal,
   getPersona,
@@ -22,15 +26,17 @@ import {
   saveRole,
   type Persona,
 } from '@/lib/session';
+import { useMentorConsole } from '@/lib/useMentorConsole';
+import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { DEFAULT_COMPANION_COLOR } from '@/theme/companion';
 import { radius, space, type } from '@/theme/tokens';
 
-/** Mentor Home (DECISIONS §K.7): the mentor branch's landing until the native
- * console exists. Outside the tab shell. Hosts the shared ApplicationForm inline
- * (no application yet), the status card (pending / approved / declined) and the
- * private console link, plus a quiet switch back to the talking side. */
+/** Mentor Home (DECISIONS §K.7): the mentor branch's landing, and — once approved —
+ * the native console itself (spec 2026-09-05). Outside the tab shell. Hosts the
+ * shared ApplicationForm inline (no application yet), the status card (pending /
+ * declined), the console (approved), and a quiet switch back to the talking side. */
 export default function MentorHome() {
   useSessionGuard();
   const router = useRouter();
@@ -42,6 +48,9 @@ export default function MentorHome() {
   const [application, setApplication] = useState<ListenerApplication | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
   const [switching, setSwitching] = useState(false);
+  // null = not attempted / minting; true = a listener token is on device and
+  // usable; 'unavailable' = we tried and the credential couldn't be minted.
+  const [consoleReady, setConsoleReady] = useState<boolean | 'unavailable' | null>(null);
   const approvedHapticFired = useRef(false);
 
   // Best-effort — a persona/animal fetch failure should never blank the hero or
@@ -56,17 +65,35 @@ export default function MentorHome() {
     }
   }, []);
 
+  // A listener token already on device is reused as-is; otherwise mint a fresh
+  // console session. Never throws — callers just get 'unavailable'.
+  const ensureConsole = useCallback(async () => {
+    if (await getListenerToken()) {
+      setConsoleReady(true);
+      return;
+    }
+    try {
+      const cs = await api.consoleSession();
+      await saveListenerToken(cs.listener_token);
+      setConsoleReady(true);
+    } catch {
+      setConsoleReady('unavailable');
+    }
+  }, []);
+
   const loadApplication = useCallback(async () => {
     try {
       const app = await api.getListenerApplication();
       setApplication(app);
       setLoadError(false);
+      if (app?.status === 'approved') await ensureConsole();
+      else setConsoleReady(null);
     } catch {
       // Leave `application` as-is (no spinner flash, no accidental form reveal —
       // an unknown status must never show the form, that risks a duplicate apply).
       setLoadError(true);
     }
-  }, []);
+  }, [ensureConsole]);
 
   const load = useCallback(async () => {
     await Promise.all([loadIdentity(), loadApplication()]);
@@ -107,23 +134,27 @@ export default function MentorHome() {
     }
   };
 
+  const showConsole = application?.status === 'approved' && consoleReady === true;
+
   return (
     <Screen scroll bg="lavender">
-      <Entrance index={0}>
-        <View style={styles.hero} testID="mentor-home">
-          <Tilt3D maxTilt={6}>
-            <Companion animal={animal} size={96} />
-          </Tilt3D>
-          <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
-            {t('mentorHome.title')}
-          </Text>
-          {persona ? (
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('mentorHome.appearAs', { name: persona.persona_name })}
+      {!showConsole ? (
+        <Entrance index={0}>
+          <View style={styles.hero} testID="mentor-home">
+            <Tilt3D maxTilt={6}>
+              <Companion animal={animal} size={96} />
+            </Tilt3D>
+            <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
+              {t('mentorHome.title')}
             </Text>
-          ) : null}
-        </View>
-      </Entrance>
+            {persona ? (
+              <Text style={[type.caption, { color: colors.inkMuted }]}>
+                {t('mentorHome.appearAs', { name: persona.persona_name })}
+              </Text>
+            ) : null}
+          </View>
+        </Entrance>
+      ) : null}
 
       {loadError ? (
         <Entrance index={1}>
@@ -154,32 +185,44 @@ export default function MentorHome() {
           <Text style={[type.body, styles.intro, { color: colors.inkMuted }]}>{t('mentorHome.applyIntro')}</Text>
           <ApplicationForm onSuccess={(result) => setApplication(result)} />
         </Entrance>
+      ) : application.status === 'approved' ? (
+        consoleReady === true ? (
+          <ConsoleBody animal={animal} onSessionLost={() => setConsoleReady(null)} />
+        ) : consoleReady === 'unavailable' ? (
+          <Entrance index={1}>
+            <EdgeSurface
+              edge={colors.edgeSurface}
+              style={[styles.card, styles.row, { backgroundColor: colors.surface }]}
+              testID="mentor-status"
+            >
+              <IconBadge icon="checkmark-circle-outline" tone="green" size={44} />
+              <View style={{ flex: 1 }}>
+                <Text style={[type.label, { color: colors.ink }]}>{t('profile.approvedTitle')}</Text>
+                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.approvedBody')}</Text>
+                <Text style={[type.caption, styles.unavailable, { color: colors.warning }]}>
+                  {t('mentor.consoleUnavailable')}
+                </Text>
+              </View>
+            </EdgeSurface>
+            <PrimaryButton
+              label={t('mentor.consoleRetry')}
+              variant="ghost"
+              onPress={() => void ensureConsole()}
+              testID="mentor-console-retry"
+            />
+          </Entrance>
+        ) : (
+          <View style={styles.center}>
+            <ActivityIndicator color={colors.accent} />
+          </View>
+        )
       ) : (
         <Entrance index={1}>
           <View style={[styles.card, styles.row, elevation.sm, { backgroundColor: colors.surface }]} testID="mentor-status">
-            <IconBadge
-              icon={application.status === 'approved' ? 'checkmark-circle-outline' : 'ear-outline'}
-              tone={application.status === 'approved' ? 'green' : 'accent'}
-              size={44}
-            />
+            <IconBadge icon="ear-outline" tone="accent" size={44} />
             <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>
-                {application.status === 'approved' ? t('profile.approvedTitle') : t('profile.receivedTitle')}
-              </Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {application.status === 'approved' ? t('profile.approvedBody') : t('profile.receivedBody')}
-              </Text>
-              {application.status === 'approved' && application.console_url ? (
-                <Pressable
-                  onPress={() => void Linking.openURL(application.console_url as string)}
-                  accessibilityRole="link"
-                  testID="mentor-open-console"
-                  style={styles.link}
-                >
-                  <Text style={[type.bodySemi, { color: colors.accent }]}>{t('profile.openConsole')}</Text>
-                  <Ionicons name="open-outline" size={16} color={colors.accent} />
-                </Pressable>
-              ) : null}
+              <Text style={[type.label, { color: colors.ink }]}>{t('profile.receivedTitle')}</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.receivedBody')}</Text>
             </View>
           </View>
         </Entrance>
@@ -198,6 +241,146 @@ export default function MentorHome() {
   );
 }
 
+/** The console proper — mounted only once a listener token is on device, so the
+ * data hook and heartbeat never spin up for a mentor who hasn't reached this state
+ * yet. */
+function ConsoleBody({
+  animal,
+  onSessionLost,
+}: {
+  animal: CompanionAnimal | null;
+  onSessionLost: () => void;
+}) {
+  const router = useRouter();
+  const { colors } = useTheme();
+  const { t } = useI18n();
+  const c = useMentorConsole(t('mentor.atCapacity'));
+  useListenerHeartbeat(c.me?.status === 'online');
+
+  // Detect a server-side sweep to Away (the 15-minute heartbeat timeout) versus a
+  // status change this device itself just requested — only the former shows the
+  // "you were swept away" caption.
+  const prevStatus = useRef<'online' | 'away' | 'offline' | null>(null);
+  const localToggle = useRef(false);
+  const [swept, setSwept] = useState(false);
+
+  useEffect(() => {
+    if (!c.me) return;
+    if (localToggle.current) {
+      localToggle.current = false;
+      prevStatus.current = c.me.status;
+      return;
+    }
+    if (prevStatus.current === 'online' && c.me.status === 'away') {
+      setSwept(true);
+    }
+    prevStatus.current = c.me.status;
+  }, [c.me]);
+
+  useEffect(() => {
+    if (c.error === 'session') onSessionLost();
+  }, [c.error, onSessionLost]);
+
+  const handleToggle = () => {
+    localToggle.current = true;
+    setSwept(false);
+    void c.toggleStatus();
+  };
+
+  const openConversation = (conversation: {
+    id: string;
+    stream_channel_id: string | null;
+    user_persona_name: string;
+    member_masked: boolean;
+  }) => {
+    router.push({
+      pathname: '/mentor/chat/[id]',
+      params: {
+        id: conversation.id,
+        channel: conversation.stream_channel_id ?? '',
+        member: conversation.user_persona_name,
+        masked: conversation.member_masked ? '1' : '0',
+      },
+    });
+  };
+
+  if (c.loading && !c.me) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.accent} />
+      </View>
+    );
+  }
+
+  if (!c.me) {
+    return (
+      <Entrance index={1}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          style={[styles.card, { backgroundColor: colors.surface }]}
+          testID="mentor-console-error"
+        >
+          <Text style={[type.body, { color: colors.ink }]}>{t('mentor.loadError')}</Text>
+        </EdgeSurface>
+        <PrimaryButton
+          label={t('mentor.consoleRetry')}
+          variant="ghost"
+          onPress={() => void c.refresh()}
+          testID="mentor-console-error-retry"
+        />
+      </Entrance>
+    );
+  }
+
+  const active = c.conversations.filter((conv) => conv.status === 'active');
+  const ended = c.conversations.filter((conv) => conv.status !== 'active');
+  const conversations = [...active, ...ended];
+
+  return (
+    <Entrance index={0}>
+      <PresenceHeader me={c.me} animal={animal} busy={c.busy === 'status'} swept={swept} onToggle={handleToggle} />
+
+      <Text style={[styles.section, { color: colors.ink }]}>{t('mentor.requestsTitle')}</Text>
+      {c.note ? (
+        <Text style={[type.caption, styles.note, { color: colors.warning }]} testID="mentor-note">
+          {c.note}
+        </Text>
+      ) : null}
+      {c.requests.length ? (
+        c.requests.map((request) => (
+          <RequestCard
+            key={request.id}
+            request={request}
+            busy={c.busy === request.id}
+            onAccept={() => void c.act(request.id, 'accept')}
+            onDecline={() => void c.act(request.id, 'decline')}
+          />
+        ))
+      ) : (
+        <Text style={[type.caption, { color: colors.inkMuted }]} testID="mentor-requests-empty">
+          {t('mentor.requestsEmpty')}
+        </Text>
+      )}
+
+      <Text style={[styles.section, { color: colors.ink }]}>{t('mentor.conversationsTitle')}</Text>
+      {conversations.length ? (
+        conversations.map((conversation) => (
+          <ConversationRow
+            key={conversation.id}
+            conversation={conversation}
+            live={conversation.stream_channel_id ? c.live[conversation.stream_channel_id] : undefined}
+            onPress={() => openConversation(conversation)}
+          />
+        ))
+      ) : (
+        <Text style={[type.caption, { color: colors.inkMuted }]} testID="mentor-convos-empty">
+          {t('mentor.conversationsEmpty')}
+        </Text>
+      )}
+    </Entrance>
+  );
+}
+
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: space.xs, marginTop: space.lg, marginBottom: space.xl },
   title: { ...type.displayHeadline, textAlign: 'center' },
@@ -205,5 +388,7 @@ const styles = StyleSheet.create({
   card: { borderRadius: radius.lg, padding: space.md, gap: space.xs, marginBottom: space.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   intro: { marginBottom: space.md },
-  link: { flexDirection: 'row', alignItems: 'center', gap: space.xs, minHeight: 44 },
+  unavailable: { marginTop: space.xs },
+  note: { marginBottom: space.sm },
+  section: { ...type.label, fontSize: 16, lineHeight: 22, marginTop: space.md, marginBottom: space.xs },
 });
