@@ -6,7 +6,7 @@ from sqlalchemy import Boolean, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
-from app.models.enums import ModerationLevel
+from app.models.enums import ModerationLevel, ReporterKind
 from app.models.mixins import TimestampMixin, UUIDMixin
 
 
@@ -16,6 +16,9 @@ class ModerationEvent(UUIDMixin, TimestampMixin, Base):
     __table_args__ = (Index("ix_moderation_events_reporter_blocked", "reporter_id", "blocked"),)
 
     reporter_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # Who filed it. `reporter_id` is a User id for members and a ListenerProfile id
+    # for listeners; the block-list query only ever reads member rows (blocked=True).
+    reporter_kind: Mapped[ReporterKind] = mapped_column(default=ReporterKind.member)
     subject_id: Mapped[str] = mapped_column(String(36), index=True)  # reported user/listener
     conversation_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 

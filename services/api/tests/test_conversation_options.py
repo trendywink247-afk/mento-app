@@ -163,6 +163,8 @@ def test_report_ends_chat_and_lands_in_review_queue(client, db_session):
     )
     assert q.status_code == 200
     assert any(item["conversation_id"] == cid and item["reviewed"] is False for item in q.json())
+    item = next(i for i in q.json() if i["conversation_id"] == cid)
+    assert item["reporter_kind"] == "member"
     # Queue is guarded.
     assert client.get("/api/v1/admin/moderation/queue").status_code in (401, 403)
 

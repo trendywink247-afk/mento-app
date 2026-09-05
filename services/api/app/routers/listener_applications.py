@@ -19,8 +19,9 @@ from app.models.enums import ApplicationStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.user import User
-from app.schemas import ListenerApplicationIn, ListenerApplicationOut
+from app.schemas import ConsoleSessionOut, ListenerApplicationIn, ListenerApplicationOut
 from app.security import current_user_id, issue_listener_token
+from app.services import stream
 from app.services.paths_data import COMMUNITIES
 
 router = APIRouter(prefix="/listener-applications", tags=["listener-applications"])
@@ -121,3 +122,35 @@ def my_application(
 ) -> ListenerApplicationOut | None:
     latest = _latest(db, user_id)
     return None if latest is None else _out(db, latest)
+
+
+@router.post("/me/console-session", response_model=ConsoleSessionOut)
+def console_session(
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ConsoleSessionOut:
+    """Hand an approved member their listener credential for the NATIVE console
+    (spec 2026-09-05 §3). Same live double-check as `console_url`: a listener
+    suspended after approval is refused (T&S #9), and the console re-checks
+    vetting on every request after this, so revocation still bites instantly."""
+    ratelimit.enforce(
+        f"console-session:{user_id}",
+        10,
+        3600,
+        detail="Too many console sign-ins — please try again in an hour.",
+    )
+    latest = _latest(db, user_id)
+    if latest is None or latest.status != ApplicationStatus.approved or not latest.listener_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not_approved")
+    listener = db.get(ListenerProfile, latest.listener_id)
+    if listener is None or listener.vetting_status != VettingStatus.approved:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not_approved")
+    ttl = timedelta(days=get_settings().listener_jwt_ttl_days)
+    return ConsoleSessionOut(
+        listener_token=issue_listener_token(listener.id),
+        listener_id=listener.id,
+        persona_name=listener.persona_name,
+        persona_avatar=listener.persona_avatar,
+        stream_token=stream.user_token(listener.id),
+        expires_at=(datetime.now(UTC) + ttl).isoformat(),
+    )

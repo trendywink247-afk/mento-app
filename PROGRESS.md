@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-09-05 (session 31d) — Native mentor console, server half ✅ (branch `feat/mentor-console-server`)
+
+**Context:** founder rulings DECISIONS §K.9 (brainstorm with browser mockups: parity scope, dedicated credential endpoint, one-screen home, mentor rail, manual + auto-away presence, kit thread). Spec `docs/superpowers/specs/2026-09-05-native-mentor-console-design.md`; plans `…/plans/2026-09-05-mentor-console-{server,mobile}.md`. This is Plan 1; the mobile console is Plan 2.
+
+**Done (subagent-driven, Sonnet; every task spec-reviewed + quality-reviewed):**
+- `b5e0239` enums `ConversationEndedBy`, `ReporterKind`, `ListenerReportReason`; columns `listener_profiles.last_seen_at`, `conversations.ended_by`, `moderation_events.reporter_kind` (rev `2788b34bd299`; enum types created explicitly — Postgres `add_column` doesn't auto-create them).
+- `5467424` `release_listener_slot` moved into `services/matching`; member end/wipe/report/block stamp `ended_by=member`, reconcile sweep stamps `system`.
+- `dd50e71` `POST /listener-applications/me/console-session` — listener JWT + Stream token for an approved member; 403 `not_approved` unless application AND profile approved; 10/h per user.
+- `8ffaf2e` `POST /listener/me/heartbeat` (30/10 min) + `sweep_stale_presence` (online, tracked, > 15 min → away) wired into General matching (sweep + commit before pick) and admin reconcile (`presence_swept`); `PATCH /listener/me/status` rate-limited and resets tracking on online.
+- `b5e52a6` `POST /listener/me/conversations/{id}/report` (scoped, `reporter_kind=listener`, chat stays open, 10/h) and `…/end` (row-locked, idempotent, `ended_by=listener`, seat released once under 8-way concurrency).
+- `6cb054e` review fixes: `ListenerReportIn.reason` uses the `ListenerReportReason` enum (single source of truth); member end/wipe now lock the conversation row like the mentor end; `ModerationItem.reporter_kind` so admins can tell member- from mentor-filed reports.
+- Stream upsert on approval was already covered (`test_listener_provisioning.py`) — plan Task 6 verified, no change.
+- Proof: pytest **183 passed**, `alembic check` clean, ruff + black clean, listeners re-seeded.
+
+**Open (founder):** copy still says "panda" on a fox screen (carried from 31c); sleepy-hour pose on the ready screen (carried). New: should the web console also heartbeat (it is currently untracked, i.e. never auto-away)? Planned as a follow-up once Plan 2 lands.
+
+**Next:** merge this branch, then Plan 2 (mobile: SecureStore listener session, Mentor Home console state, native kit chat + rail, web parity, `mentor-console.e2e.js`).
+
+**How to resume:** server plan complete; run `alembic upgrade head` on any stale checkout. Reviewer note: `match_general` now commits once before picking (sweep durability) — expire-on-commit means one extra SELECT per General match; harmless.
+
 ## 2026-09-05 (session 31c) — Companion pipeline: painterly pose set for all six animals ✅ (branch `feat/companion-pipeline`)
 
 **Context:** Plan 2 of the fidelity pass (`docs/superpowers/plans/2026-09-05-companion-pipeline.md`, DECISIONS §K.8 "painterly" ruling, budget "all six animals" approved). Replaces the flat one-pose-per-animal set + panda-only pose set with a reference-locked painterly set, and makes the legacy `Panda` component render the user's chosen animal (closes the §I.5 "fixed panda" exception from the session-30 audit).

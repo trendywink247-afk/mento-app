@@ -11,15 +11,27 @@ and none of the member's privacy controls (lock/mask/PIN are the member's).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app import ratelimit
 from app.config import get_settings
 from app.db import get_db
 from app.models.conversation import Conversation
-from app.models.enums import ConversationStatus, ListenerStatus, RequestStatus, VettingStatus
+from app.models.enums import (
+    ConversationEndedBy,
+    ConversationStatus,
+    ListenerStatus,
+    ModerationLevel,
+    ReporterKind,
+    RequestStatus,
+    VettingStatus,
+)
 from app.models.listener import ListenerProfile
+from app.models.moderation import ModerationEvent
 from app.models.request import ConversationRequest
 from app.models.user import User
 from app.schemas import (
@@ -27,6 +39,7 @@ from app.schemas import (
     DevTokenOut,
     ListenerConversationItem,
     ListenerMeOut,
+    ListenerReportIn,
     ListenerRequestItem,
     ListenerStatusIn,
     OkResult,
@@ -39,6 +52,7 @@ from app.services.matching import (
     RequestNotPending,
     accept_personal_request,
     decline_personal_request,
+    release_listener_slot,
 )
 
 router = APIRouter(prefix="/listener", tags=["listener-console"])
@@ -131,10 +145,34 @@ def set_status(
     db: Session = Depends(get_db),
 ) -> ListenerMeOut:
     """online/away — directly gates General matching (its query filters on online)."""
+    ratelimit.enforce(
+        f"listener-status:{listener.id}",
+        30,
+        600,
+        detail="Too many status changes — try again in a few minutes.",
+    )
     listener.status = ListenerStatus(payload.status)
+    if listener.status == ListenerStatus.online:
+        # Tracking (re)starts with the next heartbeat — see matching.sweep_stale_presence.
+        listener.last_seen_at = None
     db.commit()
     db.refresh(listener)
     return _me_out(listener)
+
+
+@router.post("/me/heartbeat", response_model=OkResult)
+def heartbeat(
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Native console presence pulse (every 5 min while focused + online). The
+    sweep in services/matching marks a listener away 15 min after the last one."""
+    ratelimit.enforce(
+        f"listener-heartbeat:{listener.id}", 30, 600, detail="Slow down — heartbeat limit reached."
+    )
+    listener.last_seen_at = datetime.now(UTC)
+    db.commit()
+    return OkResult(status="ok")
 
 
 @router.get("/me/conversations", response_model=list[ListenerConversationItem])
@@ -225,3 +263,68 @@ def decline(
     except RequestNotPending:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found") from None
     return OkResult(status="declined")
+
+
+def _owned_conversation(db: Session, convo_id: str, listener: ListenerProfile) -> Conversation:
+    """Only this listener's conversations; anything else is opaquely 404."""
+    convo = db.get(Conversation, convo_id)
+    if convo is None or convo.listener_id != listener.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+    return convo
+
+
+@router.post("/me/conversations/{convo_id}/report", response_model=OkResult)
+def report_conversation(
+    convo_id: str,
+    payload: ListenerReportIn,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Mentor rail → Report. Files an unreviewed moderation event against the
+    MEMBER (subject) with the listener as reporter. The chat stays open — human
+    review decides (T&S #9 layered moderation). The response carries nothing
+    about the member."""
+    ratelimit.enforce(
+        f"listener-report:{listener.id}",
+        10,
+        3600,
+        detail="Too many reports — please try again later.",
+    )
+    convo = _owned_conversation(db, convo_id, listener)
+    reason = payload.reason.value if not payload.note else f"{payload.reason.value}: {payload.note}"
+    db.add(
+        ModerationEvent(
+            reporter_id=listener.id,
+            reporter_kind=ReporterKind.listener,
+            subject_id=convo.user_id,
+            conversation_id=convo.id,
+            level=ModerationLevel.warning,
+            reason=reason,
+            blocked=False,
+            reviewed=False,
+        )
+    )
+    db.commit()
+    return OkResult(status="reported")
+
+
+@router.post("/me/conversations/{convo_id}/end", response_model=OkResult)
+def end_conversation(
+    convo_id: str,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Mentor header menu → End. Same atomic slot release as the member end path;
+    idempotent, so a double tap or a concurrent member end never double-releases."""
+    convo = db.execute(
+        select(Conversation).where(Conversation.id == convo_id).with_for_update()
+    ).scalar_one_or_none()
+    if convo is None or convo.listener_id != listener.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+    if convo.status == ConversationStatus.active:
+        convo.status = ConversationStatus.ended
+        convo.ended_at = datetime.now(UTC)
+        convo.ended_by = ConversationEndedBy.listener
+        release_listener_slot(db, convo)
+    db.commit()
+    return OkResult(status="ended")
