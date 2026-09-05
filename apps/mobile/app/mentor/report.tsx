@@ -38,7 +38,7 @@ export default function MentorReportRoute() {
   };
 
   const submit = async () => {
-    if (!reason || state === 'sending') return;
+    if (!reason || !id || state === 'sending') return;
     setState('sending');
     try {
       await listenerApi.report(id, reason, note.trim() ? note.trim().slice(0, 300) : null);
@@ -117,7 +117,7 @@ export default function MentorReportRoute() {
             <PrimaryButton
               label={t('mentor.reportSheet.submit')}
               onPress={() => void submit()}
-              disabled={!reason}
+              disabled={!reason || !id}
               loading={state === 'sending'}
               testID="report-submit"
             />

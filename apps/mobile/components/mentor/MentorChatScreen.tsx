@@ -86,6 +86,9 @@ export default function MentorChatScreen() {
 
   useEffect(() => {
     let cancelled = false;
+    // Held so the cleanup below can unsubscribe the exact channel this run watched.
+    let activeChannel: ChannelType | null = null;
+    const onNew = (e: Event) => surfaceCrisis(e.message as CrisisCarrier);
 
     const setup = async () => {
       try {
@@ -96,9 +99,10 @@ export default function MentorChatScreen() {
         await ch.watch();
         if (cancelled) return;
 
+        activeChannel = ch;
         setChannel(ch);
         ch.state.messages.forEach((m) => surfaceCrisis(m as CrisisCarrier));
-        ch.on('message.new', (e: Event) => surfaceCrisis(e.message as CrisisCarrier));
+        ch.on('message.new', onNew);
       } catch {
         if (!cancelled) setError(true);
       }
@@ -107,6 +111,7 @@ export default function MentorChatScreen() {
     void setup();
     return () => {
       cancelled = true;
+      activeChannel?.off('message.new', onNew);
     };
   }, [channelId, surfaceCrisis, attempt]);
 
@@ -195,7 +200,8 @@ export default function MentorChatScreen() {
                     edge={colors.accentEdge}
                     radius={radius.md}
                     disabled={ending}
-                    style={[styles.menuItem, styles.menuRowItem, { backgroundColor: colors.accent }]}
+                    style={[styles.menuItem, { backgroundColor: colors.accent }]}
+                    containerStyle={{ flex: 1 }}
                     testID="mentor-end-confirm"
                   >
                     <Text style={[type.label, { color: colors.onAccent }]}>{t('mentor.chat.endConfirm')}</Text>
@@ -205,7 +211,8 @@ export default function MentorChatScreen() {
                     edge={colors.edgeSurface}
                     radius={radius.md}
                     disabled={ending}
-                    style={[styles.menuItem, styles.menuRowItem, { backgroundColor: colors.surface }]}
+                    style={[styles.menuItem, { backgroundColor: colors.surface }]}
+                    containerStyle={{ flex: 1 }}
                     testID="mentor-end-cancel"
                   >
                     <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.keep')}</Text>
@@ -275,7 +282,6 @@ const styles = StyleSheet.create({
   },
   menuItem: { padding: space.sm, alignItems: 'center' },
   menuRow: { flexDirection: 'row', gap: space.sm },
-  menuRowItem: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   retry: { paddingHorizontal: space.lg, paddingVertical: space.sm },
 });

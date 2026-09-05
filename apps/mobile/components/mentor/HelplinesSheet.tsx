@@ -26,7 +26,7 @@ export function HelplinesSheet({ onClose }: { onClose: () => void }) {
         {HELPLINES.map(({ key, number }) => (
           <PressKey
             key={key}
-            onPress={() => void Linking.openURL(`tel:${number.replace(/-/g, '')}`)}
+            onPress={() => void Linking.openURL(`tel:${number.replace(/-/g, '')}`).catch(() => {})}
             edge={colors.edgeSurface}
             radius={radius.md}
             style={[styles.helpline, { backgroundColor: colors.surfaceAlt }]}
