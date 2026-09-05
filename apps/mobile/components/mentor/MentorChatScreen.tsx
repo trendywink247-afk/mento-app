@@ -5,13 +5,14 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps } from 'react';
 import type { Channel as ChannelType, Event } from 'stream-chat';
-import { Channel, Chat, MessageComposer, MessageList } from 'stream-chat-expo';
+import { Channel, Chat, MessageComposer, MessageList, WithComponents } from 'stream-chat-expo';
 
 // stream-chat-expo's star re-exports collide on the name `Theme` (the kit's UI theme vs
 // a stream-chat type), so derive the exact prop type from the component instead.
 type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
+import { MessageText } from '@/components/chat/MessageText';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { MentorRail } from '@/components/mentor/MentorRail';
 import { PressKey } from '@/components/motion/PressKey';
@@ -241,6 +242,8 @@ export default function MentorChatScreen() {
         ) : channel ? (
           <View style={{ flex: 1 }} testID="mentor-chat-ready">
             <Chat client={getListenerStreamClient()} style={streamTheme}>
+              {/* Baloo message text + Android measure/draw fix — see components/chat/MessageText.tsx */}
+              <WithComponents overrides={{ MessageText }}>
               <Channel channel={channel}>
                 <MessageList />
                 <MentorRail
@@ -249,6 +252,7 @@ export default function MentorChatScreen() {
                 />
                 <MessageComposer />
               </Channel>
+              </WithComponents>
             </Chat>
           </View>
         ) : (

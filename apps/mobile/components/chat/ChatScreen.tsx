@@ -5,7 +5,7 @@ import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps } from 'react';
 import type { Channel as ChannelType, Event } from 'stream-chat';
-import { Channel, Chat, MessageComposer, MessageList, useMessageComposer } from 'stream-chat-expo';
+import { Channel, Chat, MessageComposer, MessageList, useMessageComposer, WithComponents } from 'stream-chat-expo';
 
 // stream-chat-expo's star re-exports collide on the name `Theme` (the kit's UI theme vs
 // a stream-chat type), so derive the exact prop type from the component instead.
@@ -13,6 +13,7 @@ type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
 import { IconBadge } from '@/components/IconBadge';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
+import { MessageText } from '@/components/chat/MessageText';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
@@ -274,6 +275,8 @@ export default function ChatScreen() {
       ) : channel ? (
         <View style={{ flex: 1 }} testID="chat-ready">
           <Chat client={getStreamClient()} style={streamTheme}>
+            {/* Baloo message text + Android measure/draw fix — see components/chat/MessageText.tsx */}
+            <WithComponents overrides={{ MessageText }}>
             <Channel
               channel={channel}
               doSendMessageRequest={doSendMessageRequest}
@@ -283,6 +286,7 @@ export default function ChatScreen() {
               <MessageList />
               <MessageComposer />
             </Channel>
+            </WithComponents>
           </Chat>
         </View>
       ) : (
