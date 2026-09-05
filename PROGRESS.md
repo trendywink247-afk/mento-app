@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-09-05 (session 31e) — Native mentor console, mobile half ✅ (branch `feat/mentor-console-mobile`)
+
+**Context:** Plan 2 of DECISIONS §K.9 (`docs/superpowers/plans/2026-09-05-mentor-console-mobile.md`), on top of the merged server half (31d). Subagent-driven (Sonnet), spec + quality review per task, fixes looped back.
+
+**Done (12 commits):**
+- `088b652` + `9b8a16e` listener session on SecureStore (web: localStorage), `api.consoleSession()`, `listenerApi.{heartbeat,report,end}`, 401/403 → clear token + `onListenerSessionLost`; `disconnectListenerClient` joins the connect chain (review fix).
+- `2b5053f` `mentor.*` copy, EN + HI, key parity checked.
+- `7d5a4df` + `a5a481a` `useMentorConsole` (focus refresh, 30 s request poll, Stream unread/preview/typing per active channel) — review fix: generation-guarded refresh, cancel on blur, parallel `watch()`; `useListenerHeartbeat` (5 min while focused + online).
+- `e21ebd0` + `36fe82a` Mentor Home console state: `ensureConsole` (stored token or mint; 403 → unavailable card + retry), `ConsoleBody` (PresenceHeader with companion + pillow-key toggle, RequestCards, ConversationRows, empty states), swept-away caption, browser hop removed; `app/mentor/_layout.tsx` — review fixes: re-mint after session loss, swept-detection counters, margins in `containerStyle`.
+- `9e4a2fd` + `05d5710` native `MentorChatScreen` on the stream-chat-expo kit (listener client, member persona header + Masked chip, crisis card, `⋯` Report/End with confirm strip), `MentorRail`, `HelplinesSheet` (tel:), `app/mentor/report.tsx` — review fixes: confirm-row `containerStyle`, `message.new` unsubscribed, guarded tel/report.
+- `342c792` + `34017dd` web parity: `ListenerChatScreen.web` moved to the shared `MentorChatScreen.web.tsx` with rail + menu; `/listener/chat/[id]` re-exports it; web console list passes `masked`; `chat.typing`/`chat.sendFailed` keys reused.
+- `e2e/mentor-console.e2e.js` (new): mentor fork → apply → admin approve → console → online; member Personal request; accept → chat → rail → reply delivered; Report; End frees seat; reduced-motion console — **PASSED, 0 page errors**. Also green: `role-fork`, `member-screens`, `connecting-experience`, `two-party-chat` (live Stream). tsc clean.
+- Screens captured (scratchpad): console away/online, request card, conversation row, chat + rail, helplines, report, end confirm.
+
+**Not proven here:** native (Expo Go) hand-proof of the kit chat — stream-chat-expo does not run under react-native-web; the kit + provider pattern is identical to the member chat which is proven on-device. Do the Expo Go pass before the next device build.
+
+**Open (founder):** web token-link console never heartbeats (never auto-away) — add the hook there or accept. Chat privacy banner + empty state on the web thread still hardcoded English (no key yet). Carried: "panda" copy on non-panda screens; sleepy-hour pose on the ready screen.
+
+**Next:** merge; Expo Go pass on a device; then push notifications for mentors (out of §K.9 scope, needs its own ruling).
+
+**How to resume:** Expo web must be restarted with `-c` after the new routes (`npx expo start --web --port 8081 -c`; the detached restart via cmd sometimes dies silently — check `netstat` for :8081 before running e2e). `MENTO_ADMIN_TOKEN` from `python -m scripts.issue_admin_token --owner --name e2e` (read the token out of the printed console link). Playwright gotcha logged: after `router.replace` under expo-router's fade the outgoing screen stays mounted for a beat — wait on `[data-testid=…]:visible`; text that also appears in a list preview must be scoped to the thread container.
+
 ## 2026-09-05 (session 31d) — Native mentor console, server half ✅ (branch `feat/mentor-console-server`)
 
 **Context:** founder rulings DECISIONS §K.9 (brainstorm with browser mockups: parity scope, dedicated credential endpoint, one-screen home, mentor rail, manual + auto-away presence, kit thread). Spec `docs/superpowers/specs/2026-09-05-native-mentor-console-design.md`; plans `…/plans/2026-09-05-mentor-console-{server,mobile}.md`. This is Plan 1; the mobile console is Plan 2.
