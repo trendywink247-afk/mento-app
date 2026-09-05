@@ -20,9 +20,19 @@
 
 **Device (done):** release APK built at `C:\mento-build\mobile` (44 min; launch the build script with **pwsh 7**, Windows PowerShell 5 chokes on its last line) with `api.agentin.chat` inlined and cleartext allowed; installed on the Nothing Phone 1 over wireless adb via Tailscale (pair on the dialog's port, connect on the main one — both change per session). Founder applied as a mentor from the phone; approved in prod via a temporary helper admin minted in-container (`scripts/` are not in the prod image — mint inline through `app.security.issue_admin_token`), then revoked. **This APK predates the push branch** — rebuild after merge for the device push proof.
 
-**Open (founder):** device push proof (spec §8) pending the rebuilt APK; member-side pushes need a second phone (the web member never receives pushes). Carried: web token-link console never heartbeats; web-thread privacy banner/empty state strings; "panda" copy on non-panda screens; sleepy-hour pose on the ready screen.
+**Device proof (founder + session, Nothing Phone 1 on the prod API):**
+- Request push ("Someone would like to talk with you") and message push ("Misty Harbor sent a message") both **arrived** — silent, private visibility, importance HIGH, tapped from the shade. First real pushes through the pipeline.
+- Three bugs found on the device and fixed the same session:
+  - `1eb2ca9` watcher suppression never fired: Stream returns `watchers` only when the query asks for `state` (proven on dev with a browser member watching); contract test added.
+  - `228e280` one token row per device let the member tab **steal** the mentor's registration (a dual-role phone lost mentor pushes) → unique per (token, role), migration `1170df9bb61d`.
+  - `7bfad33` chat bubbles clipped the last word/letter ("Hell|o|", "…are you |doing|") on Android new-arch: the kit measures text with one typeface/scale and draws with another (RN #52895, still open upstream). Fixed by owning `MessageText` with explicit Baloo 2 metrics — which also closes the one place the app used the system font. APK build 4 carries it.
+  - `a582c45` Profile's approved card still opened the browser console link → in-app Mentor Home.
+- Also: notification accent was the old indigo → terracotta (shows after a rebuild).
+- **Not yet proven:** watcher suppression on device after the fix (phone must be inside the chat when a message lands); member-side pushes need a second phone holding a member session — the founder appears to have one (sky-accent member chatting with Purple Maple).
 
-**Next:** merge; deploy API (migration `03397471ed9e` runs on boot); rebuild + install the APK; device push proof together; then the open items.
+**Open (founder):** Carried: web token-link console never heartbeats; web-thread privacy banner/empty state strings; "panda" copy on non-panda screens; sleepy-hour pose on the ready screen.
+
+**Next:** OTA updates — the founder asked for them (rebuild+install per fix is too slow): expo-updates is wired (shake + Profile button) but inert without `updates.url`; decision pending between EAS Update free tier (recommended: one rebuild, then `eas update`) and a self-hosted server on the VPS. Then: suppression proof on device, second-phone member push, the open items.
 
 **How to resume:** prod deploy = push origin → `ssh mento-ops@87.232.72.79 'cd /opt/mento && ./deploy/backup-postgres.sh && ./deploy/deploy.sh'` → `./deploy/deploy-console.sh` locally when UI changed. APK = robocopy sync to `C:\mento-build\mobile` (`/XD .cxx`, purge `android/build` + `.cxx`), then `pwsh -File scripts\build-android-release.ps1` with `SENTRY_DISABLE_AUTO_UPLOAD=true`; `adb -s 100.102.23.1:41129 install -r …` (re-pair if the phone rebooted).
 

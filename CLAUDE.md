@@ -81,6 +81,9 @@ E2E specs are plain Node scripts in `apps/mobile/e2e/` (not `@playwright/test` �
 - Crisis webhook live-testing needs a tunnel: `cloudflared tunnel` + `scripts.configure_stream` (README).
 - **Native/Expo Go (session 22):** `apps/mobile/.npmrc` (`legacy-peer-deps`) + `apps/mobile/patches/` (patch-package, postinstall) hold the device-compat fixes — **never remove them**; without them the app crashes at boot on-device (duplicate safe-area registration, Reanimated Pressable invariant, Stream/teleport native modules absent from Expo Go). Metro bundles stream-chat's **`src/` TS** (its `react-native` entry field), not `lib/` — patch src, and verify fixes in the served bundle, not just on disk.
 - **RN `<Modal>` renders blank on Android under the new arch** (presents natively, content invisible = app looks frozen; back dismisses it). Use a screens-backed `presentation: 'transparentModal'` route instead (pattern: `app/start-fresh.tsx`).
+- **Android new-arch text clipping** (session 31f): stream-chat-expo's default markdown text measured narrower than it drew, so bubbles lost their last word/letter behind `overflow: hidden` (RN #52895, open upstream). `components/chat/MessageText.tsx` owns the text with explicit Baloo metrics — keep it on both kit `Channel`s via `WithComponents`.
+- **Stream watchers**: a server-side `channel.query(watchers=…)` returns an empty list unless `state=True` is also requested — `push._is_watching` depends on it (contract test in `tests/test_push.py`).
+- **Push tokens are unique per (token, role)**, never per token: a dual-role phone keeps a member row and a listener row.
 - Phone testing: Expo Go **2.32.20** (SDK 52) sideloaded from Expo's GitHub releases (Play Store Expo Go is newer-SDK-only); API must run `--host 0.0.0.0` with `EXPO_PUBLIC_API_URL` on the LAN IP.
 
 ---
