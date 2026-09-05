@@ -65,7 +65,7 @@ export default function MentorChatScreenWeb() {
     member?: string;
     masked?: string;
   }>();
-  const memberName = member ?? 'Anonymous member';
+  const memberName = member ?? t('mentor.chat.anonymous');
 
   const [ready, setReady] = useState(false);
   const [online, setOnline] = useState(false);
@@ -319,7 +319,7 @@ export default function MentorChatScreenWeb() {
       <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
         <Ionicons name="heart" size={13} color={colors.accent} />
         <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
-          You're supporting an anonymous member — be kind, never ask for personal details.
+          {t('mentor.chat.privacy')}
         </Text>
       </View>
 
@@ -356,7 +356,7 @@ export default function MentorChatScreenWeb() {
               <View style={styles.emptyChat}>
                 <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.inkMuted} />
                 <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-                  No messages yet — say hello.
+                  {t('mentor.chat.empty')}
                 </Text>
               </View>
             }

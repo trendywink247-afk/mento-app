@@ -26,7 +26,7 @@ person seeking support and the listener — appears only as an auto-assigned per
   reset if you choose to provide it. Never required to use Mento.
 - **Chat messages** — stored by our real-time messaging provider (Stream Chat) to
   deliver the conversation to both participants, show typing/read state, and allow
-  reconnection after a dropped connection. Deleting a conversation ("Panda Wipe")
+  reconnection after a dropped connection. Deleting a conversation ("Clean Wipe")
   hard-deletes the channel and its messages from Stream's servers, not just your
   device — see §5.
 - **Path (community/journey-stage) preference** — which community lens you've chosen
@@ -88,9 +88,9 @@ separate mentor-verification flow and does not apply to people seeking support).
   safety review (see above). This scan cannot be bypassed by either party since it
   runs server-to-server before the message is delivered.
 
-## 5. Deletion — "Panda Wipe"
+## 5. Deletion — "Clean Wipe"
 
-Ending a conversation with Panda Wipe permanently deletes that conversation's
+Ending a conversation with Clean Wipe permanently deletes that conversation's
 messages and channel from our servers (via Stream Chat's API), not just from your
 device. This is a real, verified server-side delete — we do not claim on-device-only
 deletion anywhere, because that would not be true while messages are also stored on

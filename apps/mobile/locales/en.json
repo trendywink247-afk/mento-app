@@ -56,7 +56,10 @@
       "opening": "Opening the conversation…",
       "errOpen": "This conversation couldn't be opened. Retry, or go back to the console.",
       "retry": "Retry",
-      "reply": "Reply…"
+      "reply": "Reply…",
+      "privacy": "You're supporting an anonymous member — be kind, never ask for personal details.",
+      "empty": "No messages yet — say hello.",
+      "anonymous": "Anonymous member"
     },
     "helplines": {
       "title": "If someone is in danger",
@@ -297,7 +300,7 @@
       "doneBodyUnlock": "Welcome back. This chat is open again."
     },
     "mask": {
-      "title": "Panda Mask",
+      "title": "Away Mask",
       "subtitle": "Status for this conversation",
       "heroBody": "Choose how you'd like to appear in this conversation.",
       "note": "The mentor will see the status you choose, not your actual status.",
@@ -305,7 +308,7 @@
       "apply": "Apply Mask",
       "privateTitle": "Your real status stays private.",
       "privateBody": "Only this mentor will see the status you set here. Your actual status won't be shared in this conversation.",
-      "doneTitle": "Panda Mask is on!!",
+      "doneTitle": "Away Mask is on!!",
       "doneBody": "This mentor now sees you as \"%{status}\".",
       "availableTitle": "Available",
       "availableBody": "I'm available to chat",
@@ -321,12 +324,12 @@
       "invisibleBody": "Hide my presence in this chat"
     },
     "pause": {
-      "title": "Panda Pause",
+      "title": "Quiet Pause",
       "subtitle": "Take a break from this conversation",
-      "ctaOn": "Turn on Panda Pause",
+      "ctaOn": "Turn on Quiet Pause",
       "ctaResume": "Resume notifications",
       "heroTitle": "Need a little\nbreathing room?",
-      "heroBody": "Turn on Panda Pause and we'll quietly hold any new messages from this mentor until you're ready to return.",
+      "heroBody": "Turn on Quiet Pause and we'll quietly hold any new messages from this mentor until you're ready to return.",
       "info1Title": "Your mentor can still write to you.",
       "info1Body": "They can send messages as usual.",
       "info2Title": "You simply won't be notified.",
@@ -335,7 +338,7 @@
       "toggleBody": "You won't receive any messages until you resume.",
       "lostTitle": "Nothing will be lost.",
       "lostBody": "We'll keep every message safe until you come back. 🧡",
-      "doneTitle": "Panda Pause is on.",
+      "doneTitle": "Quiet Pause is on.",
       "doneBody": "Take all the time you need. We'll quietly hold new messages from this mentor until you're ready to continue.",
       "row1Title": "Notifications paused",
       "row1Body": "You won't get any alerts.",
@@ -344,8 +347,8 @@
     },
     "end": {
       "title": "End Conversation",
-      "wipeScreenTitle": "Panda Wipe",
-      "wipeTitle": "Panda Wipe!!",
+      "wipeScreenTitle": "Clean Wipe",
+      "wipeTitle": "Clean Wipe!!",
       "gotItBang": "Got it!",
       "allClean": "All clean! 🍃",
       "allCleanBody": "The conversation has been deleted from both accounts.",
@@ -361,9 +364,9 @@
       "endRowBody": "Close the chat. Your messages stay until you wipe them.",
       "endA11y": "End conversation",
       "wipeRowBody": "Delete all messages from this conversation for both you and your mentor.",
-      "wipeA11y": "Panda Wipe — delete all messages",
+      "wipeA11y": "Clean Wipe — delete all messages",
       "privacyTitle": "We value your privacy",
-      "privacyBody": "Ending a chat keeps your messages. Panda Wipe deletes them from your device and from our servers — both sides, permanently."
+      "privacyBody": "Ending a chat keeps your messages. Clean Wipe deletes them from your device and from our servers — both sides, permanently."
     },
     "report": {
       "title": "Report or Block",
@@ -527,7 +530,7 @@
     "listenersTitle": "Mentors, not therapists",
     "listenersBody": "Mento connects you with real people who listen. For clinical support, please reach a professional — in a crisis, call Tele-MANAS (14416), free, 24×7.",
     "privacyTitle": "Privacy, plainly",
-    "privacyBody": "No real names. No photos. Panda Wipe deletes a conversation from your device and our servers. Analytics never see your messages.",
+    "privacyBody": "No real names. No photos. Clean Wipe deletes a conversation from your device and our servers. Analytics never see your messages.",
     "becomeTitle": "Become a mentor",
     "becomeBody": "Been through a hard season? Help someone through theirs.",
     "declinedTitle": "About your application",
@@ -551,5 +554,9 @@
     "checkFailed": "Couldn't check for updates",
     "runningOta": "Running over-the-air update %{id}",
     "runningEmbedded": "Running the built-in version"
+  },
+  "coffee": {
+    "askTitle": "Would you like to buy a coffee for the Mento team? ☕",
+    "askBody": "It keeps the team fueled up to build a safe space for more hearts. 🧡"
   }
 }

@@ -8,6 +8,7 @@ import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
 import { Panda } from '@/components/art/Panda';
 import { PressKey } from '@/components/motion/PressKey';
+import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -28,6 +29,7 @@ const METHODS: { key: string; icon: keyof typeof Ionicons.glyphMap; title: strin
 export default function CoffeeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useI18n();
   const [amount, setAmount] = useState<number>(49);
   const [custom, setCustom] = useState('');
   const [customOpen, setCustomOpen] = useState(false);
@@ -53,10 +55,10 @@ export default function CoffeeScreen() {
           <Panda pose="excited" size={56} />
           <View style={{ flex: 1 }}>
             <Text style={[type.label, { color: colors.ink }]}>
-              Would you like to buy a coffee for the Mento team? ☕
+              {t('coffee.askTitle')}
             </Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>
-              It keeps our pandas fueled up to build a safe space for more hearts. 🧡
+              {t('coffee.askBody')}
             </Text>
           </View>
         </View>

@@ -12,7 +12,7 @@
 
 - Cinematic onboarding (single-route journey over an ambient shader sky, living mascot, haptics) → anonymous persona → **live 1:1 Stream chat** in ~5s.
 - **Server-side crisis enforcement** on the message path (Stream webhooks — un-bypassable from the client), verified India helplines.
-- Conversation controls (PIN lock, Panda Mask, Panda Pause, honest End/Wipe with real server-side deletion, Report/Block → moderation queue).
+- Conversation controls (PIN lock, Away Mask, Quiet Pause, honest End/Wipe with real server-side deletion, Report/Block → moderation queue).
 - End-of-conversation reflection (private, no points), save-to-Mentor-Notes, Journals hub (Mood/Finance/Gratitude/Mentor Notes), My Chats, Mentor discovery + Personal requests, Profile with live theme switching + Start fresh.
 
 Not yet: Razorpay wiring (creds), AI Journal Assistant (LLM decision), native device verification (Maestro), Module B mentor portal. Exact current state: `PROGRESS.md`.

@@ -184,7 +184,7 @@ mento/
 3. **Real-time 1:1 chat** — text + emoji, instant send, typing indicator, read state. Clean/spare, not a busy messenger.
 4. **New-chat routing** — **General** (next-available match) + **Personal** (pick a mentor → intro → request → listener inbox). Topic chips lean life/emotional.
 5. **Mentor/listener discovery** — list + filters, profiles (no star ratings). Anonymous personas in v1. Reached via Browse (Mentors tab is hidden-but-routable since the Path tab landed).
-6. **Conversation controls** — Lock (PIN), Panda Mask, Panda Pause, End + Panda Wipe (honest server delete), Report/Block, Support-the-team.
+6. **Conversation controls** — Lock (PIN), Away Mask, Quiet Pause, End + Clean Wipe (honest server delete), Report/Block, Support-the-team.
 7. **Save-to-journal from chat** — long-press/tap a mentor message → Mentor Notes. The core talk→action loop.
 8. **End-of-conversation reflection** — private energy slider. **No points/XP.** Decoupled from money.
 9. **Journals** — hub + Mood/Finance/Gratitude/Mentor Notes; AI Journal Assistant pending the LLM decision.
@@ -221,7 +221,7 @@ mento/
 - **Chat**: send→delivered p95 < 500ms; typing + read state correct; reconnect < 3s, no lost/dup messages; save-to-Mentor-Notes works; persona names render on both sides.
 - **Routing**: General matches an available listener; Personal lands in that listener's inbox with accept/decline; no double-assignment under concurrency (tested).
 - **Path**: community/stage changes persist server-side; clearing works; matcher preference stays soft (a user with a rare community still matches); starter prompts never auto-send.
-- **Conversation controls**: each option has a working flow; Report/Block files a moderation event; End vs Panda-Wipe behave exactly as the copy promises.
+- **Conversation controls**: each option has a working flow; Report/Block files a moderation event; End vs Clean Wipe behave exactly as the copy promises.
 - **Reflection**: private, stored without identity linkage; no points; never routes into a payment as a "reward".
 - **Crisis flow**: inbound scan → verified India helplines → support-and-refer → human-review flag → excluded from retention metrics.
 - **Contribution**: reachable from menu; never auto-opens in conversation; copy says *team*; receipt + audit row (lands with Razorpay wiring).
@@ -242,7 +242,7 @@ mento/
 5. **No dependency engineering.** Measure "did the user leave with something usable." Retention metrics exclude crisis sessions.
 6. **Minimize PII; policy must match reality (PRD §14).** Path community + journey stage are deliberately coarse, optional and clearable — must be disclosed in the privacy policy alongside safety-staff conversation access (launch gate).
 7. **Anonymity integrity — both sides.** v1 chat uses personas only. The listener console shows member *personas* only; listeners never see age, email, or identity. Don't leak identity through avatars, metadata, or analytics.
-8. **The storage promise (resolved — DECISIONS §H.2).** "Delete from your device **and** our servers" — Panda Wipe is implemented and proven to hard-delete channel + messages on Stream (`/conversations/{id}/wipe`). Never reintroduce an on-device-only claim.
+8. **The storage promise (resolved — DECISIONS §H.2).** "Delete from your device **and** our servers" — Clean Wipe is implemented and proven to hard-delete channel + messages on Stream (`/conversations/{id}/wipe`). Never reintroduce an on-device-only claim.
 9. **Moderation (PRD §11).** Layered: friction → redirect → warning → suspension. Report/Block reasons captured. The listener token is revoked instantly by `vetting_status=suspended`.
 10. **Analytics discipline.** PostHog never receives message content or PII. Crisis sessions never feed engagement dashboards.
 11. **Motion/haptics restraint.** No audio anywhere (public-place safety). Reduced-motion is honoured end-to-end. Error states go *still* — stillness signals the problem; nothing shakes or buzzes at a struggling person.
