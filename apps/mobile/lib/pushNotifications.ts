@@ -14,12 +14,19 @@ import { listenerApi } from './listenerApi';
 export type PushRole = 'member' | 'listener';
 
 let lastToken: string | null = null;
+/** Tracks the last (token, role) pair successfully registered with the server, so a
+ * remount (e.g. Mentor Home re-focusing) doesn't re-POST an unchanged token. */
+let registered: { token: string; role: PushRole } | null = null;
 
-async function currentToken(): Promise<string | null> {
+async function currentToken(options: { prompt?: boolean } = {}): Promise<string | null> {
+  const { prompt = true } = options;
   if (Platform.OS === 'web' || !Device.isDevice) return null;
   const { status: existing } = await Notifications.getPermissionsAsync();
   let status = existing;
-  if (status !== 'granted') ({ status } = await Notifications.requestPermissionsAsync());
+  if (status !== 'granted') {
+    if (!prompt) return null;
+    ({ status } = await Notifications.requestPermissionsAsync());
+  }
   if (status !== 'granted') return null;
   const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
   const { data } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
@@ -31,19 +38,23 @@ export async function registerPush(role: PushRole): Promise<void> {
     const token = await currentToken();
     if (!token) return;
     lastToken = token;
+    if (registered && registered.token === token && registered.role === role) return;
     const platform = Platform.OS === 'ios' ? 'ios' : 'android';
     if (role === 'member') await api.registerPushToken(token, platform);
     else await listenerApi.registerPushToken(token, platform);
+    registered = { token, role };
   } catch {
     /* best-effort — see module doc */
   }
 }
 
-/** Start Fresh: stop the old persona's device from receiving anything. */
+/** Start Fresh: stop the old persona's device from receiving anything. Never prompts
+ * for permission — if it was never granted there's no token to delete anyway. */
 export async function unregisterPush(): Promise<void> {
   try {
-    const token = lastToken ?? (await currentToken());
+    const token = lastToken ?? (await currentToken({ prompt: false }));
     if (token) await api.deletePushToken(token);
+    registered = null;
   } catch {
     /* best-effort */
   }
