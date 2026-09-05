@@ -51,39 +51,63 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  // Event-handler `off` functions for the currently-watched channels — torn down
+  // Event-handler subscriptions for the currently-watched channels — torn down
   // before every re-subscribe (next refresh) and on blur.
-  const unsubsRef = useRef<(() => void)[]>([]);
+  const unsubsRef = useRef<Array<{ unsubscribe: () => void }>>([]);
   const unsubscribeAll = useCallback(() => {
-    unsubsRef.current.forEach((off) => off());
+    unsubsRef.current.forEach((s) => s.unsubscribe());
     unsubsRef.current = [];
   }, []);
 
+  // Generation token: a fast blur/refocus (or `act()` triggering a refresh while an
+  // earlier one is still in flight) must not let the two runs interleave writes to
+  // shared state or to unsubsRef — only the run holding the CURRENT seq is allowed
+  // to touch either. Bumped by refresh() itself and by the focus-effect cleanup.
+  const seq = useRef(0);
+
   const refresh = useCallback(async () => {
+    const mySeq = ++seq.current;
+    const live = () => seq.current === mySeq;
+
     setLoading(true);
     try {
       const meData = await listenerApi.me();
+      if (!live()) return;
       const [reqs, convos] = await Promise.all([
         listenerApi.requests(),
         listenerApi.conversations(),
       ]);
+      if (!live()) return;
       setMe(meData);
       setRequests(reqs);
       setConversations(convos);
       setError(null);
 
-      unsubscribeAll();
       const client = await ensureListenerConnected(
         { id: meData.id, name: meData.persona_name },
         meData.stream_token,
       );
+      if (!live()) return;
 
+      // Watch every active channel in parallel — no reason to serialize network calls.
+      const active = convos.filter(
+        (c): c is ListenerConversation & { stream_channel_id: string } =>
+          c.status === 'active' && c.stream_channel_id !== null,
+      );
+      const watched = await Promise.all(
+        active.map(async (c) => {
+          const ch = client.channel('messaging', c.stream_channel_id);
+          await ch.watch();
+          return { channelId: c.stream_channel_id, ch };
+        }),
+      );
+      if (!live()) return;
+
+      const subs: Array<{ unsubscribe: () => void }> = [];
       const nextLive: Record<string, ChannelLive> = {};
-      for (const c of convos) {
-        if (c.status !== 'active' || !c.stream_channel_id) continue;
-        const channelId = c.stream_channel_id;
-        const ch = client.channel('messaging', channelId);
-        await ch.watch();
+
+      for (const { channelId, ch } of watched) {
+        if (!live()) break;
 
         const messages = ch.state.messages;
         const lastMessage = messages[messages.length - 1];
@@ -94,6 +118,7 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
         };
 
         const onMessageNew = (e: Event) => {
+          if (!live()) return;
           setLive((prev) => ({
             ...prev,
             [channelId]: {
@@ -104,55 +129,75 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
           }));
         };
         const onMessageRead = () => {
+          if (!live()) return;
           setLive((prev) => ({
             ...prev,
             [channelId]: { ...(prev[channelId] ?? EMPTY_LIVE), unread: ch.countUnread() },
           }));
         };
         const onTypingStart = (e: Event) => {
-          if (e.user?.id === client.userID) return;
+          if (!live() || e.user?.id === client.userID) return;
           setLive((prev) => ({
             ...prev,
             [channelId]: { ...(prev[channelId] ?? EMPTY_LIVE), typing: true },
           }));
         };
         const onTypingStop = (e: Event) => {
-          if (e.user?.id === client.userID) return;
+          if (!live() || e.user?.id === client.userID) return;
           setLive((prev) => ({
             ...prev,
             [channelId]: { ...(prev[channelId] ?? EMPTY_LIVE), typing: false },
           }));
         };
 
-        unsubsRef.current.push(
-          ch.on('message.new', onMessageNew).unsubscribe,
-          ch.on('message.read', onMessageRead).unsubscribe,
-          ch.on('typing.start', onTypingStart).unsubscribe,
-          ch.on('typing.stop', onTypingStop).unsubscribe,
+        if (!live()) break;
+        subs.push(
+          ch.on('message.new', onMessageNew),
+          ch.on('message.read', onMessageRead),
+          ch.on('typing.start', onTypingStart),
+          ch.on('typing.stop', onTypingStop),
         );
       }
+
+      if (!live()) {
+        // A newer run (or a blur) won the race — never leak these subscriptions.
+        subs.forEach((s) => s.unsubscribe());
+        return;
+      }
+
+      unsubscribeAll();
+      unsubsRef.current = subs;
       setLive(nextLive);
     } catch (e) {
+      if (!live()) return;
       setError(e instanceof ApiError && (e.status === 401 || e.status === 403) ? 'session' : 'network');
     } finally {
-      setLoading(false);
+      if (live()) setLoading(false);
     }
   }, [unsubscribeAll]);
 
   useFocusEffect(
     useCallback(() => {
       void refresh();
+      // Pin the poll to the generation refresh() just started — if a blur (or a
+      // later refresh) bumps seq, this poll's writes become no-ops.
+      const g = seq.current;
       const id = setInterval(() => {
         void listenerApi
           .requests()
-          .then(setRequests)
+          .then((r) => {
+            if (seq.current === g) setRequests(r);
+          })
           .catch(() => {
             /* the 30s poll is a freshness nicety, not a source of truth — swallow */
           });
       }, REQUEST_POLL_MS);
       return () => {
-        clearInterval(id);
+        // Invalidate any in-flight refresh() first so it bails out of its own
+        // setStates/subscribes and unsubscribes only the subs IT created.
+        seq.current += 1;
         unsubscribeAll();
+        clearInterval(id);
       };
     }, [refresh, unsubscribeAll]),
   );
