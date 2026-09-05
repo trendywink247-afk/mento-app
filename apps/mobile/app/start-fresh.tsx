@@ -6,6 +6,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
 import { clearListenerSession } from '@/lib/listenerSession';
 import { disconnectListenerClient } from '@/lib/listenerStreamClient';
+import { unregisterPush } from '@/lib/pushNotifications';
 import { clearSession, getPersona, type Persona } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import { DEFAULT_COMPANION_COLOR } from '@/theme/companion';
@@ -35,6 +36,7 @@ export default function StartFreshDialog() {
     if (leaving) return;
     setLeaving(true);
     setCompanionColor(DEFAULT_COMPANION_COLOR); // un-tint before the new onboarding picks its own
+    await unregisterPush();
     await clearSession();
     await clearListenerSession();
     await disconnectListenerClient().catch(() => {});
