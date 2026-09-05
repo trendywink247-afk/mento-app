@@ -35,13 +35,13 @@ import logging
 from datetime import UTC, datetime
 
 import anyio.to_thread
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from sqlalchemy import select
 
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models.conversation import Conversation
-from app.services import moderation, safety, stream
+from app.services import moderation, push, safety, stream
 from app.services.crisis import CrisisResult
 from app.services.moderation import RedactionResult
 
@@ -186,16 +186,20 @@ async def before_message_send(request: Request) -> dict:
 
 
 @router.post("/webhook")
-async def push_webhook(request: Request) -> Response:
-    """Async safety net: re-scan message.new events (retried by Stream on recovery)."""
+async def push_webhook(request: Request, background: BackgroundTasks) -> Response:
+    """Async safety net: re-scan message.new events (retried by Stream on recovery),
+    then schedule the push to the other party (best-effort, after the scan)."""
     event = await _verified_event(request)
     if event.get("type") == "message.new":
         message = event.get("message") or {}
         channel_id = (event.get("channel") or {}).get("id") or event.get("channel_id")
+        sender_id = (message.get("user") or {}).get("id") or "unknown"
         await _run_scan(
             text=message.get("text") or "",
-            user_id=(message.get("user") or {}).get("id") or "unknown",
+            user_id=sender_id,
             channel_id=channel_id,
             message_id=message.get("id"),
         )
+        if channel_id:
+            background.add_task(push.notify_message_safe, channel_id, sender_id)
     return Response(status_code=status.HTTP_200_OK)

@@ -9,7 +9,7 @@ real and testable today without a mentor app.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,7 @@ from app.models.request import ConversationRequest
 from app.routers.admin_console import current_admin
 from app.schemas import ListenerOut, OkResult, PersonalRequestIn, RequestOut
 from app.security import current_user_id
-from app.services import audit
+from app.services import audit, push_tasks
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -79,6 +79,7 @@ def list_listeners(
 def create_personal_request(
     listener_id: str,
     payload: PersonalRequestIn,
+    background: BackgroundTasks,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> RequestOut:
@@ -112,6 +113,7 @@ def create_personal_request(
     db.add(req)
     db.commit()
     db.refresh(req)
+    background.add_task(push_tasks.notify_request_created_safe, req.id)
     return _request_out(req)
 
 
@@ -131,6 +133,7 @@ def my_requests(
 @router.post("/requests/{request_id}/accept", response_model=RequestOut)
 def accept_request(
     request_id: str,
+    background: BackgroundTasks,
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> RequestOut:
@@ -148,6 +151,7 @@ def accept_request(
         db, admin, "personal_request.accept", subject_type="request", subject_id=request_id
     )
     db.commit()
+    background.add_task(push_tasks.notify_request_accepted_safe, request_id)
     return _request_out(req)
 
 

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -48,7 +48,7 @@ from app.schemas import (
     RequestOut,
 )
 from app.security import current_listener_id, issue_listener_token
-from app.services import push, stream
+from app.services import push, push_tasks, stream
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -254,6 +254,7 @@ def my_pending_requests(
 @router.post("/me/requests/{request_id}/accept", response_model=RequestOut)
 def accept(
     request_id: str,
+    background: BackgroundTasks,
     listener: ListenerProfile = Depends(current_listener),
     db: Session = Depends(get_db),
 ) -> RequestOut:
@@ -264,6 +265,7 @@ def accept(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found") from None
     except ListenerAtCapacity:
         raise HTTPException(status.HTTP_409_CONFLICT, "you're at capacity right now") from None
+    background.add_task(push_tasks.notify_request_accepted_safe, req.id)
     return RequestOut(
         id=req.id,
         status=req.status.value,

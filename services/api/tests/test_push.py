@@ -366,3 +366,92 @@ def test_disabled_sends_nothing(monkeypatch):
             s, conversation_id=cid, sender_stream_user_id=uid
         )  # ENABLED is False via conftest
     assert calls == []
+
+
+# --- triggers --------------------------------------------------------------------
+
+
+def test_create_request_endpoint_pushes_target_listener(client, sent):
+    with TestSession() as s:
+        uid, lid = _user(s), _listener(s)
+        _token(s, PushOwnerKind.listener, lid, "ExponentPushToken[listener]")
+        s.commit()
+    r = client.post(
+        f"/api/v1/listeners/{lid}/request",
+        json={"intro_message": "hi", "issue_category": None},
+        headers=member_auth(uid),
+    )
+    assert r.status_code == 200, r.text
+    assert len(sent) == 1 and sent[0]["data"]["kind"] == "request"
+    # Idempotent re-post (existing pending) must NOT push again.
+    client.post(
+        f"/api/v1/listeners/{lid}/request",
+        json={"intro_message": "hi", "issue_category": None},
+        headers=member_auth(uid),
+    )
+    assert len(sent) == 1
+
+
+def test_console_accept_pushes_requester(client, sent):
+    with TestSession() as s:
+        uid, lid = _user(s), _listener(s)
+        _token(s, PushOwnerKind.member, uid, "ExponentPushToken[member]")
+        req = ConversationRequest(requester_id=uid, target_listener_id=lid)
+        s.add(req)
+        s.commit()
+        rid = req.id
+    r = client.post(f"/api/v1/listener/me/requests/{rid}/accept", headers=listener_auth(lid))
+    assert r.status_code == 200, r.text
+    assert len(sent) == 1 and sent[0]["data"]["kind"] == "accepted"
+
+
+def test_admin_accept_pushes_requester(client, sent):
+    from app.models.admin import AdminAccount
+    from app.models.enums import AdminRole
+    from app.security import issue_admin_token
+
+    with TestSession() as s:
+        s.execute(text("TRUNCATE admin_accounts, admin_audit_log CASCADE"))
+        a = AdminAccount(name="Founder", role=AdminRole.owner)
+        s.add(a)
+        s.flush()
+        admin_id = a.id
+        uid, lid = _user(s), _listener(s)
+        _token(s, PushOwnerKind.member, uid, "ExponentPushToken[member]")
+        req = ConversationRequest(requester_id=uid, target_listener_id=lid)
+        s.add(req)
+        s.commit()
+        rid = req.id
+    r = client.post(
+        f"/api/v1/listeners/requests/{rid}/accept",
+        headers={"Authorization": f"Bearer {issue_admin_token(admin_id)}"},
+    )
+    assert r.status_code == 200, r.text
+    assert len(sent) == 1 and sent[0]["data"]["kind"] == "accepted"
+
+
+def test_message_new_webhook_schedules_push_and_never_depends_on_it(client, sent, monkeypatch):
+    """The async webhook pushes the other party; a push failure changes neither the 200 nor the scan."""
+    from app.routers import stream_hooks
+
+    monkeypatch.setattr(stream, "verify_webhook", lambda body, sig: True)
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+        channel = s.get(Conversation, cid).stream_channel_id
+    event = {
+        "type": "message.new",
+        "message": {"id": "m1", "text": "hello", "user": {"id": uid}},
+        "channel": {"id": channel},
+    }
+    r = client.post("/api/v1/stream/webhook", json=event)
+    assert r.status_code == 200
+    assert len(sent) == 1 and sent[0]["body"] == "Quiet Cove sent a message"
+
+    def explode(*a, **k):
+        raise RuntimeError("push exploded")
+
+    monkeypatch.setattr(stream_hooks.push, "notify_message", explode)
+    r = client.post(
+        "/api/v1/stream/webhook", json={**event, "message": {**event["message"], "id": "m2"}}
+    )
+    assert r.status_code == 200
