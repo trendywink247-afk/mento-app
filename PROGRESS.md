@@ -12,10 +12,9 @@
 - `2fd1996` (1) web console list + web mentor chat now heartbeat while online → the token-link console is finally auto-away-eligible; (3) `DELETE /listener/me/push-token` + `unregisterPush` drops the mentor row too on Start Fresh (test: another listener cannot delete it); (5) `Companion awake` prop — the companion picker and Ready screen never show the sleepy-hour pose (a first meeting is never asleep).
 - `97f95da` (4) **Quiet Pause / Away Mask / Clean Wipe** across EN + HI (11 strings each), CLAUDE.md, README, PRIVACY; the coffee card's two lines and the web thread's privacy/empty/anonymous strings moved to i18n. Code identifiers, testIDs and API paths unchanged; historical docs keep the old names.
 - Prod: API redeployed (delete endpoint live); web console redeployed; OTA update `01a07189` published with all mobile changes — no APK rebuild needed.
-- (2) decided, not changed: both mentor profiles stay. (6) accept-push proof: a Personal request from Soft Maple → Serene Brook was created server-side for the founder to accept on the phone; the accepted push lands on the other profile.
+- (2) decided, not changed: both mentor profiles stay. (6) **accept push proven on device:** a Personal request from Soft Maple → Serene Brook was created server-side, the founder accepted on the phone, and "Serene Brook is ready to talk" arrived on the other profile. Every push path in the spec is now live-proven (request, accepted, mentor message, member reply, watcher suppression).
 
-**Open (founder):** `app/coffee.tsx` is otherwise still hardcoded English (only the card lines were moved) — a full i18n pass on that screen is a small follow-up. The `accepted` push on device — pending the founder's accept.
-
+**Open (founder):** `app/coffee.tsx` is otherwise still hardcoded English (only the card lines were moved) — a full i18n pass on that screen is a small follow-up. 
 **Next:** founder-driven testing; then pick the next feature (candidates: mentor console polish from device feedback, Module B naming, Sentry native symbolication).
 
 **How to resume:** everything ships from master; JS via `npx eas-cli update --branch preview --message …`, API via `deploy.sh`, console via `deploy-console.sh`.
