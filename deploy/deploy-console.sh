@@ -23,8 +23,11 @@ rm -rf dist
 npx expo export --platform web
 
 echo "[deploy-console] uploading..."
-ssh "$VPS_HOST" "rm -rf ${REMOTE_BASE}/new"
-scp -r dist "${VPS_HOST}:${REMOTE_BASE}/new"
+# tar stream, not `scp -r`: on Windows OpenSSH `scp -r dist host:new` races its own
+# directory creation ("remote setstat … No such file or directory") and leaves a
+# partial upload (session 31f). tar is atomic per file and exits non-zero on failure.
+ssh "$VPS_HOST" "rm -rf ${REMOTE_BASE}/new && mkdir -p ${REMOTE_BASE}/new"
+tar -C dist -cf - . | ssh "$VPS_HOST" "tar -C ${REMOTE_BASE}/new -xf -"
 
 echo "[deploy-console] swapping in atomically..."
 ssh "$VPS_HOST" "
