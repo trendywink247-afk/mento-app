@@ -105,6 +105,8 @@ def _is_watching(channel_id: str, user_id: str) -> bool:
         r = ratelimit._redis()
         cached = r.get(key)
         if cached is not None:
+            # "".split(",") == [""] when no one is watching — harmless, since a
+            # real user id is never the empty string.
             return user_id in cached.split(",")
     except Exception:
         pass
@@ -187,10 +189,20 @@ def _listener_ok(db: Session, listener_id: str) -> bool:
     return li is not None and li.vetting_status == VettingStatus.approved
 
 
+def _suppressed(reason: str) -> None:
+    """Spec §4: log the reason as a counter, never the ids."""
+    logger.info("push suppressed reason=%s", reason)
+
+
 def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: str) -> None:
-    """message.new → push the OTHER party unless suppressed (spec §4)."""
+    """message.new → push the OTHER party unless suppressed (spec §4).
+
+    Callers must commit their own state before calling — `_send` may itself
+    commit (dead-token cleanup).
+    """
     convo = db.get(Conversation, conversation_id)
     if convo is None or convo.status != ConversationStatus.active or not convo.stream_channel_id:
+        _suppressed("not_active")
         return
     if sender_stream_user_id == convo.user_id:
         recipient_kind, recipient_id = PushOwnerKind.listener, convo.listener_id
@@ -205,17 +217,23 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
             "persona": li.persona_name if li else "Your mentor"
         }
     else:
-        return  # not a party to this conversation
+        _suppressed("not_party")
+        return
     tokens = tokens_for(db, recipient_kind, recipient_id)
     if not tokens:
+        _suppressed("no_token")
         return
     if recipient_kind == PushOwnerKind.listener and not _listener_ok(db, recipient_id):
-        return
-    if recipient_kind == PushOwnerKind.member and convo.is_paused:
+        _suppressed("listener_not_approved")
         return
     if _is_watching(convo.stream_channel_id, recipient_id):
+        _suppressed("watching")
+        return
+    if recipient_kind == PushOwnerKind.member and convo.is_paused:
+        _suppressed("paused")
         return
     if not _burst_open(convo.id, recipient_id):
+        _suppressed("burst")
         return
     _send(
         db,
@@ -230,22 +248,38 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
 
 
 def notify_request_created(db: Session, *, request_id: str) -> None:
+    """Callers must commit their own state before calling — `_send` may itself
+    commit (dead-token cleanup)."""
     req = db.get(ConversationRequest, request_id)
-    if req is None or not req.target_listener_id or not _listener_ok(db, req.target_listener_id):
+    if req is None or not req.target_listener_id:
+        if req is not None:
+            _suppressed("no_target")
+        return
+    if not _listener_ok(db, req.target_listener_id):
+        _suppressed("listener_not_approved")
         return
     tokens = tokens_for(db, PushOwnerKind.listener, req.target_listener_id)
+    if not tokens:
+        _suppressed("no_token")
+        return
     _send(db, tokens, TEMPLATES["request"], {"kind": "request", "request_id": req.id})
 
 
 def notify_request_accepted(db: Session, *, request_id: str) -> None:
+    """Callers must commit their own state before calling — `_send` may itself
+    commit (dead-token cleanup)."""
     req = db.get(ConversationRequest, request_id)
     if req is None or not req.conversation_id:
         return
     convo = db.get(Conversation, req.conversation_id)
     li = db.get(ListenerProfile, req.target_listener_id) if req.target_listener_id else None
     if convo is None or li is None:
+        _suppressed("no_conversation")
         return
     tokens = tokens_for(db, PushOwnerKind.member, req.requester_id)
+    if not tokens:
+        _suppressed("no_token")
+        return
     _send(
         db,
         tokens,
