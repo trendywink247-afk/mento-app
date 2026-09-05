@@ -39,6 +39,7 @@ export function ConversationRow({
       edge={colors.edgeSurface}
       accessibilityLabel={conversation.user_persona_name}
       testID={`mentor-convo-${conversation.id}`}
+      containerStyle={styles.rowContainer}
       style={[styles.row, { backgroundColor: colors.surface, opacity: active ? 1 : 0.7 }]}
     >
       <PersonaAvatar
@@ -66,13 +67,13 @@ export function ConversationRow({
 }
 
 const styles = StyleSheet.create({
+  rowContainer: { marginBottom: space.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     borderRadius: radius.lg,
     padding: space.sm + 2,
-    marginBottom: space.sm,
   },
   unread: {
     borderRadius: radius.pill,

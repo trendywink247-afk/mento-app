@@ -52,6 +52,10 @@ export default function MentorHome() {
   // usable; 'unavailable' = we tried and the credential couldn't be minted.
   const [consoleReady, setConsoleReady] = useState<boolean | 'unavailable' | null>(null);
   const approvedHapticFired = useRef(false);
+  // Tracks an in-flight api.consoleSession() mint — read only during the
+  // consoleReady === null render to decide spinner vs. unavailable card, so a
+  // failed/uncalled mint can never leave the screen on an endless spinner.
+  const minting = useRef(false);
 
   // Best-effort — a persona/animal fetch failure should never blank the hero or
   // block the application status from loading.
@@ -66,18 +70,24 @@ export default function MentorHome() {
   }, []);
 
   // A listener token already on device is reused as-is; otherwise mint a fresh
-  // console session. Never throws — callers just get 'unavailable'.
+  // console session (this is also the re-mint path after a session-lost signal —
+  // listenerApi already cleared the stale token by the time this runs, so
+  // getListenerToken() correctly falls through to a fresh mint). Never throws —
+  // callers just get 'unavailable'.
   const ensureConsole = useCallback(async () => {
     if (await getListenerToken()) {
       setConsoleReady(true);
       return;
     }
+    minting.current = true;
     try {
       const cs = await api.consoleSession();
       await saveListenerToken(cs.listener_token);
       setConsoleReady(true);
     } catch {
       setConsoleReady('unavailable');
+    } finally {
+      minting.current = false;
     }
   }, []);
 
@@ -187,8 +197,17 @@ export default function MentorHome() {
         </Entrance>
       ) : application.status === 'approved' ? (
         consoleReady === true ? (
-          <ConsoleBody animal={animal} onSessionLost={() => setConsoleReady(null)} />
-        ) : consoleReady === 'unavailable' ? (
+          <ConsoleBody
+            animal={animal}
+            onSessionLost={() => {
+              // The token's already cleared (listenerApi does that before this
+              // fires) — re-mint immediately rather than stranding the mentor on
+              // the null/loading state with nothing driving it forward.
+              setConsoleReady(null);
+              void ensureConsole();
+            }}
+          />
+        ) : consoleReady === 'unavailable' || (consoleReady === null && !minting.current) ? (
           <Entrance index={1}>
             <EdgeSurface
               edge={colors.edgeSurface}
@@ -259,21 +278,24 @@ function ConsoleBody({
 
   // Detect a server-side sweep to Away (the 15-minute heartbeat timeout) versus a
   // status change this device itself just requested — only the former shows the
-  // "you were swept away" caption.
+  // "you were swept away" caption. `toggles` counts every local tap; `acknowledgedToggles`
+  // is that count as of the last `c.me` this effect processed. A tap bumps `toggles`
+  // immediately (synchronously, before the async status call resolves), so if the
+  // `me` update this effect is reacting to was caused by that tap, the counts differ
+  // and the sweep flag is skipped — a deliberate "Take a break" never shows swept.
   const prevStatus = useRef<'online' | 'away' | 'offline' | null>(null);
-  const localToggle = useRef(false);
+  const toggles = useRef(0);
+  const acknowledgedToggles = useRef(0);
   const [swept, setSwept] = useState(false);
 
   useEffect(() => {
     if (!c.me) return;
-    if (localToggle.current) {
-      localToggle.current = false;
-      prevStatus.current = c.me.status;
-      return;
-    }
-    if (prevStatus.current === 'online' && c.me.status === 'away') {
-      setSwept(true);
-    }
+    const sweptAway =
+      prevStatus.current === 'online' &&
+      c.me.status === 'away' &&
+      toggles.current === acknowledgedToggles.current;
+    if (sweptAway) setSwept(true);
+    acknowledgedToggles.current = toggles.current;
     prevStatus.current = c.me.status;
   }, [c.me]);
 
@@ -282,7 +304,7 @@ function ConsoleBody({
   }, [c.error, onSessionLost]);
 
   const handleToggle = () => {
-    localToggle.current = true;
+    toggles.current += 1;
     setSwept(false);
     void c.toggleStatus();
   };

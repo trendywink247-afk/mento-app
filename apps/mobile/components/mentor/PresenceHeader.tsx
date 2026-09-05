@@ -60,6 +60,7 @@ export function PresenceHeader({
         accessibilityRole="switch"
         accessibilityState={{ checked: online }}
         testID="mentor-status-toggle"
+        containerStyle={styles.toggleContainer}
         style={[
           styles.toggle,
           { backgroundColor: online ? colors.surface : colors.accent },
@@ -78,12 +79,11 @@ const styles = StyleSheet.create({
   title: { textAlign: 'center', marginTop: space.sm },
   presence: { marginTop: space.xs },
   swept: { textAlign: 'center' },
+  toggleContainer: { marginTop: space.sm, minHeight: 44 },
   toggle: {
-    marginTop: space.sm,
     paddingHorizontal: space.lg,
     paddingVertical: space.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
   },
 });

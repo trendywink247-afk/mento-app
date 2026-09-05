@@ -35,6 +35,7 @@ export function RequestCard({
   return (
     <EdgeSurface
       edge={colors.edgeSurface}
+      containerStyle={styles.cardContainer}
       style={[styles.card, { backgroundColor: colors.surface }]}
       testID={`mentor-request-${request.id}`}
     >
@@ -101,7 +102,8 @@ export function RequestCard({
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.lg, padding: space.md, gap: space.sm, marginBottom: space.sm },
+  cardContainer: { marginBottom: space.sm },
+  card: { borderRadius: radius.lg, padding: space.md, gap: space.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   chip: {
     alignSelf: 'flex-start',
