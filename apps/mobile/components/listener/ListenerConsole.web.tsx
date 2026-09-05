@@ -144,7 +144,12 @@ export default function ListenerConsoleWeb() {
     if (c.status === 'wiped' || !c.stream_channel_id) return; // channel is gone
     router.push({
       pathname: '/listener/chat/[id]',
-      params: { id: c.id, channel: c.stream_channel_id, member: c.user_persona_name },
+      params: {
+        id: c.id,
+        channel: c.stream_channel_id,
+        member: c.user_persona_name,
+        masked: c.member_masked ? '1' : '0',
+      },
     });
   };
 

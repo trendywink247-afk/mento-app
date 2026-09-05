@@ -1,17 +1,37 @@
 /** Listener-console session storage — distinct keys from the member session so one
- * browser can hold BOTH (needed for two-party testing, and honest anyway: the roles
- * never share a token). The console is web-only, so localStorage is the store. */
+ * device can hold BOTH (two-party testing, and honest anyway: the roles never share
+ * a token). Native: OS secure store; web: localStorage (same split as lib/session.ts). */
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 const TOKEN_KEY = 'mento.listener.session_token';
 
+type Store = {
+  setItemAsync(key: string, value: string): Promise<void>;
+  getItemAsync(key: string): Promise<string | null>;
+  deleteItemAsync(key: string): Promise<void>;
+};
+
+const webStore: Store = {
+  setItemAsync: async (k, v) => {
+    globalThis.localStorage?.setItem(k, v);
+  },
+  getItemAsync: async (k) => globalThis.localStorage?.getItem(k) ?? null,
+  deleteItemAsync: async (k) => {
+    globalThis.localStorage?.removeItem(k);
+  },
+};
+
+const store: Store = Platform.OS === 'web' ? webStore : SecureStore;
+
 export async function saveListenerToken(token: string): Promise<void> {
-  globalThis.localStorage?.setItem(TOKEN_KEY, token);
+  await store.setItemAsync(TOKEN_KEY, token);
 }
 
 export async function getListenerToken(): Promise<string | null> {
-  return globalThis.localStorage?.getItem(TOKEN_KEY) ?? null;
+  return store.getItemAsync(TOKEN_KEY);
 }
 
 export async function clearListenerSession(): Promise<void> {
-  globalThis.localStorage?.removeItem(TOKEN_KEY);
+  await store.deleteItemAsync(TOKEN_KEY);
 }

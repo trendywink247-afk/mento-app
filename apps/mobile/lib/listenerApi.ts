@@ -1,7 +1,7 @@
 /** Typed client for the listener console (/listener/me endpoints). Same transport as
  * lib/api.ts, bound to the listener token instead of the member session. */
-import { apiRequest } from '@/lib/api';
-import { getListenerToken } from '@/lib/listenerSession';
+import { ApiError, apiRequest } from '@/lib/api';
+import { clearListenerSession, getListenerToken } from '@/lib/listenerSession';
 
 export type ListenerMe = {
   id: string;
@@ -42,8 +42,29 @@ export type DevListenerItem = {
   status: 'online' | 'away' | 'offline';
 };
 
-function req<T>(path: string, init: RequestInit = {}): Promise<T> {
-  return apiRequest<T>(path, init, getListenerToken);
+export type ListenerReportReason = 'abuse' | 'harassment' | 'spam' | 'other';
+
+/** Fired whenever a console call comes back 401/403 (token expired or the listener
+ * was suspended). Mentor Home subscribes and falls back to the status card; the
+ * token is already cleared by then. */
+const sessionLostListeners = new Set<() => void>();
+export function onListenerSessionLost(fn: () => void): () => void {
+  sessionLostListeners.add(fn);
+  return () => {
+    sessionLostListeners.delete(fn);
+  };
+}
+
+async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
+  try {
+    return await apiRequest<T>(path, init, getListenerToken);
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+      await clearListenerSession();
+      sessionLostListeners.forEach((fn) => fn());
+    }
+    throw e;
+  }
 }
 
 export const listenerApi = {
@@ -71,4 +92,15 @@ export const listenerApi = {
 
   devToken: (id: string) =>
     apiRequest<{ token: string }>(`/listener/dev/token/${id}`, { method: 'POST' }),
+
+  heartbeat: () => req<{ status: string }>('/listener/me/heartbeat', { method: 'POST' }),
+
+  report: (conversationId: string, reason: ListenerReportReason, note: string | null) =>
+    req<{ status: string }>(`/listener/me/conversations/${conversationId}/report`, {
+      method: 'POST',
+      body: JSON.stringify({ reason, note }),
+    }),
+
+  end: (conversationId: string) =>
+    req<{ status: string }>(`/listener/me/conversations/${conversationId}/end`, { method: 'POST' }),
 };

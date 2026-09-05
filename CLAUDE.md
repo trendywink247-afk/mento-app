@@ -96,7 +96,8 @@ mento/
                             · journal/[channel] · mentor/[id] · reflection · coffee · start-fresh (transparentModal)
                             · listener-apply (become-a-listener form, member-flow) · apply (public
                             listener-recruitment landing page, no session needed — console.agentin.chat/apply)
-                            · listener/ (web-only console) · admin/ (web-only dashboard)
+                            · mentor/ (chat/[id] platform-split mentor chat · report + helplines transparentModal sheets)
+                            · listener/ (web token-link console; chat/[id] re-exports the shared mentor chat) · admin/ (web-only dashboard)
     components/
       art/                  Logo, Panda, AnimatedPanda rig, Companion(s), ReactiveCompanion (idle states:
                             curious/joy/sleepy), Scenes, SceneTile, LottieTile, PersonaAvatar
@@ -104,7 +105,9 @@ mento/
                             useBreathing, ambientLift, StaticAmbient, Tilt3D/TiltCard (2.5D), ConnectionConstellation, SkyMotes · PressKey (pillow key)
       onboarding/           OnboardingJourney (step machine) + steps/ + StepScaffold
       chat/                 ChatScreen(.web), CrisisCard, ConversationOptions + options/
-      listener/             ListenerConsole(.web), ListenerChatScreen(.web), WebOnlyNotice
+      mentor/               PresenceHeader, RequestCard, ConversationRow, MentorRail, HelplinesSheet,
+                            MentorChatScreen(.web) — the in-app mentor console (DECISIONS §K.9)
+      listener/             ListenerConsole(.web) (web token-link console list), WebOnlyNotice
       admin/                AdminConsole(.web) + panels/ ×7
     theme/                  tokens.ts · motion.ts · companion.ts · ThemeProvider (see Design tokens)
     lib/                    api.ts, adminApi.ts, listenerApi.ts (typed clients) · session/adminSession/listenerSession
@@ -114,7 +117,8 @@ mento/
                             painterly set + registry.ts; fluent/ SVG fallback + convert.js) · scenes/ (webp empty-states)
     locales/                en.json · hi.json (typed keys via lib/i18n.tsx; EN is canonical)
     e2e/                    connecting-experience.e2e.js · path-communities.e2e.js · listener-apply.e2e.js
-                            · analytics-dark.e2e.js · hindi-core-loop.e2e.js · README.md
+                            · analytics-dark.e2e.js · hindi-core-loop.e2e.js · role-fork · member-screens
+                            · two-party-chat · mentor-console (needs MENTO_ADMIN_TOKEN) · README.md
     patches/ + .npmrc       Expo Go device-compat (patch-package via postinstall + legacy-peer-deps) — do not remove
   services/api/
     app/                    routers/ (onboarding, match, conversation, stream_hooks, moderation, journals, listeners,
@@ -183,7 +187,7 @@ mento/
 10. **Crisis & safety flow** — real, server-side (see Trust & Safety). Non-negotiable.
 11. **Contribution ("coffee")** — transparent, opt-in, from the menu; never inside a live conversation; supports the *team*.
 12. **Design system** — light-mode indigo/lavender + the motion token system; **companion-is-the-star** theming (accent + animal follow the user's choice everywhere).
-13. **Mentor console** — web console (DECISIONS §I.6, token-link auth) **+ native in-app console** (spec `docs/superpowers/specs/2026-09-05-native-mentor-console-design.md`, DECISIONS §K.9): own conversations, real-time reply, accept/decline own Personal requests, online/away with a 5-min heartbeat and 15-min auto-away sweep, mentor-side Report/End. **Server half shipped session 31d** (`POST /listener-applications/me/console-session`, `/listener/me/{heartbeat,conversations/{id}/report,conversations/{id}/end}`); native UI is Plan 2 (`docs/superpowers/plans/2026-09-05-mentor-console-mobile.md`).
+13. **Mentor console** — web console (DECISIONS §I.6, token-link auth) **+ native in-app console** (spec `docs/superpowers/specs/2026-09-05-native-mentor-console-design.md`, DECISIONS §K.9): own conversations, real-time reply, accept/decline own Personal requests, online/away with a 5-min heartbeat and 15-min auto-away sweep, mentor-side Report/End. Server half session 31d (`POST /listener-applications/me/console-session`, `/listener/me/{heartbeat,conversations/{id}/report,conversations/{id}/end}`); **mobile half session 31e**: Mentor Home *is* the console (`app/mentor-home.tsx` + `components/mentor/`), chat at `app/mentor/chat/[id]` (stream-chat-expo kit native / shared hand-rolled thread web), listener session on SecureStore. Proof: `e2e/mentor-console.e2e.js`.
 14. **Admin dashboard** — web-only `/admin` (spec `docs/superpowers/specs/2026-07-13-admin-dashboard-design.md`), owner/helper token-link auth (per-request revocation), full audit trail. Seven tabs: Overview cockpit · Safety review (audited read-only live conversation view — bodies never stored) · Moderation (+ one-click suspend) · Listener management (replaces the CLI scripts) · Contributions stub · Health (incl. silent-webhook-death detector) · Admins + audit. Bootstrap: `python -m scripts.issue_admin_token --owner --name "<n>"`. **Privacy policy must disclose safety-staff conversation access before launch.**
 15. **Path (Communities) — SHIPPED session 17, awaiting DECISIONS §J ratification** — Pathfinder → community lens (upsc/neet/jee/exams/life) with journey stages, warm-up prompts and seasonal cards, all server-driven (`GET /paths/tree`, `GET/PUT/DELETE /paths/me`, content in `services/paths_data.py`). Prompt taps pre-fill the composer via `?starter=` — **never auto-send**. Community is the strongest **soft** matcher preference — it must never strand a user unmatched. Tabs: **Chats · Path · Journals · Profile**. Community + stage are coarse, optional, clearable (privacy-policy note pending).
 16. **Become-a-listener funnel — SHIPPED session 22, awaiting DECISIONS ratification** — Profile → application (motivation, communities, availability, optional email, `mentor_interest` Module B staging flag, hard-gated "not therapists" pledge) → admin Applications queue in the Listeners panel (approve mints a real listener + audit row; decline stores an admin-private reason) → in-app status card (approved reveals the private console link; declined can reapply after a 30-day server-enforced cooldown). Emails stored, not sent (no provider yet).

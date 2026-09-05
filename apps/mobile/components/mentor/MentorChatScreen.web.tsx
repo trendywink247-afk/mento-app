@@ -15,15 +15,21 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { MentorRail } from '@/components/mentor/MentorRail';
+import { PressKey } from '@/components/motion/PressKey';
+import { useI18n } from '@/lib/i18n';
 import { listenerApi } from '@/lib/listenerApi';
 import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
+import { getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 /**
- * Listener-side chat (web-only console). A trimmed sibling of ChatScreen.web: same
+ * Mentor-side chat, web console (in-app web at /mentor/chat/[id] AND the token-link
+ * console at /listener/chat/[id]). A trimmed sibling of ChatScreen.web: same
  * bubbles/day-pills/read-state/composer, but the header shows the MEMBER's persona,
- * there is no options sheet and no save-to-Mentor-Notes (those are member features).
+ * plus the same rail + report/end menu as the native stream-chat-expo thread
+ * (components/mentor/MentorChatScreen.tsx) for parity across platforms.
  * The CrisisCard renders here too — the listener sees exactly which helplines the
  * member was shown (the payload is server-injected; the client never scans).
  */
@@ -31,6 +37,7 @@ import { radius, space, type } from '@/theme/tokens';
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
 type Msg = { id: string; text: string; mine: boolean; at: string };
 type RawMsg = { id?: string; text?: string; user?: { id?: string }; created_at?: string | Date };
+type MenuState = 'closed' | 'open' | 'confirmEnd';
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);
@@ -47,13 +54,15 @@ function dayLabel(iso: string): string {
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
 
-export default function ListenerChatScreenWeb() {
+export default function MentorChatScreenWeb() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
-  const { channel: channelId, member } = useLocalSearchParams<{
+  const { t } = useI18n();
+  const { id, channel: channelId, member, masked } = useLocalSearchParams<{
     id: string;
     channel?: string;
     member?: string;
+    masked?: string;
   }>();
   const memberName = member ?? 'Anonymous member';
 
@@ -67,8 +76,19 @@ export default function ListenerChatScreenWeb() {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [readTick, setReadTick] = useState(0);
+  const [menu, setMenu] = useState<MenuState>('closed');
+  const [ending, setEnding] = useState(false);
   const channelRef = useRef<ChannelType | null>(null);
   const shownRef = useRef<Set<string>>(new Set());
+
+  // A device with a member session open is the in-app console (back → Mentor Home);
+  // a bare token-link browser (the standalone console) goes back to the console list.
+  const [home, setHome] = useState<'/listener' | '/mentor-home'>('/listener');
+  useEffect(() => {
+    void getSessionToken().then((tok) => {
+      if (tok) setHome('/mentor-home');
+    });
+  }, []);
 
   const surfaceCrisis = useCallback((m: CrisisCarrier | undefined) => {
     if (m?.crisis && m.id && !shownRef.current.has(m.id)) {
@@ -132,7 +152,7 @@ export default function ListenerChatScreenWeb() {
         setReady(true);
       } catch {
         // Never surface raw error internals to the listener — one calm, actionable line.
-        if (!cancelled) setError('This conversation couldn’t be opened. Retry, or go back to the console.');
+        if (!cancelled) setError(t('mentor.chat.errOpen'));
       }
     };
 
@@ -184,28 +204,113 @@ export default function ListenerChatScreenWeb() {
     [readTick],
   );
 
+  const endNow = async () => {
+    if (ending) return;
+    setEnding(true);
+    try {
+      await listenerApi.end(id);
+      router.replace(home);
+    } catch {
+      // Stay still and silent (T&S: no shaking/buzzing at a struggling user) —
+      // release the spinner and fold the menu back rather than surface an error.
+      setEnding(false);
+      setMenu('closed');
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       {/* Member header — persona only, anonymity holds both ways. */}
       <View style={[styles.header, { backgroundColor: colors.surface }, elevation.sm]}>
         <ConsolePressable
-          // Pop back to the (still-mounted) console; replace would stack a duplicate.
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/listener'))}
+          onPress={() => router.replace(home)}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Back to console"
-          testID="back-to-console"
+          accessibilityLabel={t('mentor.chat.back')}
+          testID="mentor-chat-back"
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </ConsolePressable>
-        <PersonaAvatar name={memberName} size={52} online />
+        <PersonaAvatar name={memberName} size={52} online={masked !== '1'} />
         <View style={{ flex: 1 }} accessible accessibilityRole="header">
           <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
             {memberName}
           </Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>Anonymous member</Text>
+          {masked === '1' ? (
+            <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+              {t('mentor.masked')}
+            </Text>
+          ) : null}
         </View>
+        <ConsolePressable
+          onPress={() => setMenu((m) => (m === 'closed' ? 'open' : 'closed'))}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={t('mentor.chat.menu')}
+          testID="mentor-chat-menu"
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
+        </ConsolePressable>
       </View>
+
+      {menu !== 'closed' ? (
+        <View style={[styles.menuSheet, { backgroundColor: colors.surfaceAlt }]} testID="mentor-chat-menu-sheet">
+          {menu === 'open' ? (
+            <>
+              <PressKey
+                onPress={() => {
+                  setMenu('closed');
+                  router.push({ pathname: '/mentor/report', params: { id } });
+                }}
+                edge={colors.edgeSurface}
+                radius={radius.md}
+                style={[styles.menuItem, { backgroundColor: colors.surface }]}
+                testID="mentor-menu-report"
+              >
+                <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.report')}</Text>
+              </PressKey>
+              <PressKey
+                onPress={() => setMenu('confirmEnd')}
+                edge={colors.edgeSurface}
+                radius={radius.md}
+                style={[styles.menuItem, { backgroundColor: colors.surface }]}
+                testID="mentor-menu-end"
+              >
+                <Text style={[type.label, { color: colors.danger }]}>{t('mentor.chat.end')}</Text>
+              </PressKey>
+            </>
+          ) : (
+            <>
+              <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.endTitle')}</Text>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.chat.endBody')}</Text>
+              <View style={styles.menuRow}>
+                <PressKey
+                  onPress={() => void endNow()}
+                  edge={colors.accentEdge}
+                  radius={radius.md}
+                  disabled={ending}
+                  style={[styles.menuItem, { backgroundColor: colors.accent }]}
+                  containerStyle={{ flex: 1 }}
+                  testID="mentor-end-confirm"
+                >
+                  <Text style={[type.label, { color: colors.onAccent }]}>{t('mentor.chat.endConfirm')}</Text>
+                </PressKey>
+                <PressKey
+                  onPress={() => setMenu('closed')}
+                  edge={colors.edgeSurface}
+                  radius={radius.md}
+                  disabled={ending}
+                  style={[styles.menuItem, { backgroundColor: colors.surface }]}
+                  containerStyle={{ flex: 1 }}
+                  testID="mentor-end-cancel"
+                >
+                  <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.keep')}</Text>
+                </PressKey>
+              </View>
+            </>
+          )}
+        </View>
+      ) : null}
 
       <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
         <Ionicons name="heart" size={13} color={colors.accent} />
@@ -228,15 +333,16 @@ export default function ListenerChatScreenWeb() {
             testID="chat-retry"
             style={styles.retryBtn}
           >
-            <Text style={[type.label, { color: colors.accent }]}>Retry</Text>
+            <Text style={[type.label, { color: colors.accent }]}>{t('mentor.chat.retry')}</Text>
           </ConsolePressable>
         </View>
       ) : !ready ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.accent} />
-          <Text style={[type.body, { color: colors.inkMuted }]}>Opening the conversation…</Text>
+          <Text style={[type.body, { color: colors.inkMuted }]}>{t('mentor.chat.opening')}</Text>
         </View>
       ) : (
+        <View style={{ flex: 1 }} testID="mentor-chat-ready">
         <View style={{ flex: 1 }} testID="listener-chat-ready">
           <FlatList
             data={messages}
@@ -319,9 +425,14 @@ export default function ListenerChatScreenWeb() {
               style={[type.caption, styles.typingLine, { color: colors.inkMuted }]}
               testID="listener-typing-indicator"
             >
-              {typing} is typing…
+              {t('chat.typing', { name: typing })}
             </Text>
           ) : null}
+
+          <MentorRail
+            onHelplines={() => router.push('/mentor/helplines')}
+            onReport={() => router.push({ pathname: '/mentor/report', params: { id } })}
+          />
 
           <View style={styles.composer}>
             <View style={{ flex: 1 }}>
@@ -330,13 +441,13 @@ export default function ListenerChatScreenWeb() {
                   style={[type.caption, styles.sendErrorLine, { color: colors.danger }]}
                   testID="listener-send-error"
                 >
-                  Not sent — check your connection and tap send to retry.
+                  {t('chat.sendFailed')}
                 </Text>
               ) : null}
               <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
               <TextInput
                 style={[styles.input, { color: colors.ink }]}
-                placeholder="Write a kind reply…"
+                placeholder={t('mentor.chat.reply')}
                 placeholderTextColor={colors.inkMuted}
                 value={draft}
                 onChangeText={(text) => {
@@ -362,6 +473,7 @@ export default function ListenerChatScreenWeb() {
             </ConsolePressable>
           </View>
         </View>
+        </View>
       )}
     </SafeAreaView>
   );
@@ -380,6 +492,14 @@ const styles = StyleSheet.create({
   },
   personaName: { ...type.titleSmSerif },
   tnum: { fontVariant: ['tabular-nums'] },
+  menuSheet: {
+    margin: space.md,
+    padding: space.sm,
+    borderRadius: radius.lg,
+    gap: space.sm,
+  },
+  menuItem: { padding: space.sm, alignItems: 'center' },
+  menuRow: { flexDirection: 'row', gap: space.sm },
   retryBtn: {
     minHeight: 44,
     alignItems: 'center',

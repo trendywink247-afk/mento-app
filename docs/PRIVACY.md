@@ -62,7 +62,10 @@ separate mentor-verification flow and does not apply to people seeking support).
   theme — never your identity, age, or contact details.
 - **Listeners** (the people you're matched with) see your persona only. They do not
   see your age, email, or any identifying information, and they are not clinicians —
-  Mento states this explicitly in onboarding and listener-facing copy.
+  Mento states this explicitly in onboarding and listener-facing copy. Listeners
+  can **report** a conversation from their console; a report records only the
+  conversation, a reason category and an optional short note — no new data about
+  you is collected, and the report goes to the same human review as member reports.
 - **Safety-review staff (admins)** can, through an audited, read-only admin tool,
   view the live content of a conversation **specifically when reviewing a
   crisis-safety flag or a user report/moderation case.** This access is logged in an

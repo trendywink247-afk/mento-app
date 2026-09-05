@@ -40,3 +40,17 @@ export async function ensureListenerConnected(
   await run;
   return c;
 }
+
+/** Drop the listener identity (session lost, Start Fresh). Joins the connect chain so a
+ * queued/mid-flight connectUser is disconnected too. Safe when never connected. */
+export async function disconnectListenerClient(): Promise<void> {
+  if (!client) return;
+  const c = client;
+  const run = connecting
+    .catch(() => {})
+    .then(async () => {
+      if (c.userID) await c.disconnectUser();
+    });
+  connecting = run;
+  await run;
+}

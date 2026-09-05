@@ -181,6 +181,17 @@ export type ListenerApplicationIn = {
   pledge_accepted: boolean;
 };
 
+/** Native console credential (spec 2026-09-05 §3). Only issued while the application
+ * AND the listener profile are approved; 403 `not_approved` otherwise. */
+export type ConsoleSession = {
+  listener_token: string;
+  listener_id: string;
+  persona_name: string;
+  persona_avatar: string;
+  stream_token: string;
+  expires_at: string;
+};
+
 // One-shot latch so overlapping 401s from parallel requests trigger a single
 // session-clear + redirect instead of a replace() loop.
 let handling401 = false;
@@ -299,6 +310,9 @@ export const api = {
     request<ListenerApplication>('/listener-applications', { method: 'POST', body: JSON.stringify(payload) }, true),
 
   getListenerApplication: () => request<ListenerApplication | null>('/listener-applications/me', {}, true),
+
+  consoleSession: () =>
+    request<ConsoleSession>('/listener-applications/me/console-session', { method: 'POST' }, true),
 
   // --- Push notifications (device registration only, v1 test pass) ---
   registerPushToken: (expo_push_token: string, platform: 'ios' | 'android') =>
