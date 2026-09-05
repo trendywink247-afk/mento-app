@@ -109,6 +109,11 @@ and — because a local Gradle build never reads `eas.json`'s channel —
 `updates.requestHeaders["expo-channel-name"] = "preview"` in `app.json`. `runtimeVersion`
 stays `{"policy": "appVersion"}` (`0.1.0`): bump `version` whenever native code changes.
 
+**One-time gotcha (session 31f):** `eas update:configure` creates the `preview` channel but does
+**not** point it at a branch — `eas channel:view preview` showed "No branches are pointed to
+this channel", which means every check-for-updates finds nothing. Link it once:
+`npx eas-cli channel:edit preview --branch preview`.
+
 **Ship a JS-only change (from `apps/mobile`, reads `.env.production`):**
 
 ```powershell
