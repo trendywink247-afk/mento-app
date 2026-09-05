@@ -289,7 +289,8 @@ export default function MentorChatScreenWeb() {
                   edge={colors.accentEdge}
                   radius={radius.md}
                   disabled={ending}
-                  style={[styles.menuItem, styles.menuRowItem, { backgroundColor: colors.accent }]}
+                  style={[styles.menuItem, { backgroundColor: colors.accent }]}
+                  containerStyle={{ flex: 1 }}
                   testID="mentor-end-confirm"
                 >
                   <Text style={[type.label, { color: colors.onAccent }]}>{t('mentor.chat.endConfirm')}</Text>
@@ -299,7 +300,8 @@ export default function MentorChatScreenWeb() {
                   edge={colors.edgeSurface}
                   radius={radius.md}
                   disabled={ending}
-                  style={[styles.menuItem, styles.menuRowItem, { backgroundColor: colors.surface }]}
+                  style={[styles.menuItem, { backgroundColor: colors.surface }]}
+                  containerStyle={{ flex: 1 }}
                   testID="mentor-end-cancel"
                 >
                   <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.keep')}</Text>
@@ -423,7 +425,7 @@ export default function MentorChatScreenWeb() {
               style={[type.caption, styles.typingLine, { color: colors.inkMuted }]}
               testID="listener-typing-indicator"
             >
-              {typing} is typing…
+              {t('chat.typing', { name: typing })}
             </Text>
           ) : null}
 
@@ -439,7 +441,7 @@ export default function MentorChatScreenWeb() {
                   style={[type.caption, styles.sendErrorLine, { color: colors.danger }]}
                   testID="listener-send-error"
                 >
-                  Not sent — check your connection and tap send to retry.
+                  {t('chat.sendFailed')}
                 </Text>
               ) : null}
               <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
@@ -498,7 +500,6 @@ const styles = StyleSheet.create({
   },
   menuItem: { padding: space.sm, alignItems: 'center' },
   menuRow: { flexDirection: 'row', gap: space.sm },
-  menuRowItem: { flex: 1 },
   retryBtn: {
     minHeight: 44,
     alignItems: 'center',
