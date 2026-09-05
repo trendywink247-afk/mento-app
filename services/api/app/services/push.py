@@ -38,12 +38,14 @@ def _enabled() -> bool:
 def upsert_token(
     db: Session, kind: PushOwnerKind, owner_id: str, token: str, platform: str
 ) -> None:
-    """One row per device token: re-point on reinstall or role flip, never duplicate."""
+    """One row per device token PER ROLE: re-point on reinstall, never duplicate; a
+    device that is both a member and a mentor keeps one row for each role."""
     existing = db.scalars(
-        select(PushToken).where(PushToken.expo_push_token == token).limit(1)
+        select(PushToken)
+        .where(PushToken.expo_push_token == token, PushToken.owner_kind == kind)
+        .limit(1)
     ).first()
     if existing is not None:
-        existing.owner_kind = kind
         existing.owner_id = owner_id
         existing.platform = platform
         if kind == PushOwnerKind.member:

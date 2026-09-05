@@ -141,7 +141,10 @@ def test_member_register_sets_owner_member(client):
         assert row.owner_kind == PushOwnerKind.member and row.owner_id == uid and row.user_id == uid
 
 
-def test_listener_register_sets_owner_listener_and_repoints_a_member_token(client):
+def test_one_device_keeps_a_row_per_role(client):
+    """A phone that is both a member and a mentor registers the SAME token twice —
+    once per role — and must keep both rows (session 31f: a single-token rule let
+    the member tab steal the mentor's row, silencing mentor pushes)."""
     with TestSession() as s:
         uid, lid = _user(s), _listener(s)
         s.commit()
@@ -158,9 +161,20 @@ def test_listener_register_sets_owner_listener_and_repoints_a_member_token(clien
     )
     assert r.status_code == 200 and r.json()["status"] == "registered"
     with TestSession() as s:
-        rows = s.scalars(select(PushToken)).all()
-        assert len(rows) == 1
-        assert rows[0].owner_kind == PushOwnerKind.listener and rows[0].owner_id == lid
+        rows = {t.owner_kind: t.owner_id for t in s.scalars(select(PushToken)).all()}
+        assert rows == {PushOwnerKind.member: uid, PushOwnerKind.listener: lid}
+    # Re-registering as a NEW member (reinstall) re-points only the member row.
+    with TestSession() as s:
+        uid2 = _user(s, "Still Pine")
+        s.commit()
+    client.post(
+        "/api/v1/notifications/register-token",
+        json={"expo_push_token": tok, "platform": "android"},
+        headers=member_auth(uid2),
+    )
+    with TestSession() as s:
+        rows = {t.owner_kind: t.owner_id for t in s.scalars(select(PushToken)).all()}
+        assert rows == {PushOwnerKind.member: uid2, PushOwnerKind.listener: lid}
 
 
 def test_listener_register_refused_when_suspended(client):

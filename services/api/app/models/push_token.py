@@ -20,7 +20,10 @@ from app.models.mixins import TimestampMixin, UUIDMixin
 class PushToken(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "push_tokens"
     __table_args__ = (
-        UniqueConstraint("expo_push_token", name="uq_push_token_value"),
+        # One row per device token PER ROLE: a phone that is both a member and a mentor
+        # keeps both registrations (session 31f device finding — a single-token rule let
+        # whichever surface registered last steal the row, silencing the other role).
+        UniqueConstraint("expo_push_token", "owner_kind", name="uq_push_token_value_kind"),
         Index("ix_push_tokens_owner", "owner_kind", "owner_id"),
     )
 
