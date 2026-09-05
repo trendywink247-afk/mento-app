@@ -8,14 +8,14 @@ be found by user id when we want to push to it.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.db import get_db
-from app.models.push_token import PushToken
-from app.schemas import PushTokenIn
+from app.models.enums import PushOwnerKind
+from app.schemas import PushTokenDeleteIn, PushTokenIn
 from app.security import current_user_id
+from app.services import push
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
@@ -33,21 +33,17 @@ def register_token(
         3600,
         detail="Too many token registrations — please wait a moment.",
     )
-    # Upsert by token value: a device that lands on a new anonymous user_id
-    # (reinstall) re-points the existing row instead of leaving a stale duplicate.
-    existing = db.scalars(
-        select(PushToken).where(PushToken.expo_push_token == payload.expo_push_token).limit(1)
-    ).first()
-    if existing is not None:
-        existing.user_id = user_id
-        existing.platform = payload.platform
-    else:
-        db.add(
-            PushToken(
-                user_id=user_id,
-                expo_push_token=payload.expo_push_token,
-                platform=payload.platform,
-            )
-        )
-    db.commit()
+    push.upsert_token(db, PushOwnerKind.member, user_id, payload.expo_push_token, payload.platform)
     return {"status": "registered"}
+
+
+@router.delete("/register-token", response_model=dict)
+def delete_token(
+    payload: PushTokenDeleteIn,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Start Fresh calls this before wiping the session so the old persona's device
+    stops receiving anything. Only the owner can remove a token."""
+    push.delete_token(db, PushOwnerKind.member, user_id, payload.expo_push_token)
+    return {"status": "ok"}

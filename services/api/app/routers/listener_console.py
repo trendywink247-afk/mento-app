@@ -26,6 +26,7 @@ from app.models.enums import (
     ConversationStatus,
     ListenerStatus,
     ModerationLevel,
+    PushOwnerKind,
     ReporterKind,
     RequestStatus,
     VettingStatus,
@@ -43,10 +44,11 @@ from app.schemas import (
     ListenerRequestItem,
     ListenerStatusIn,
     OkResult,
+    PushTokenIn,
     RequestOut,
 )
 from app.security import current_listener_id, issue_listener_token
-from app.services import stream
+from app.services import push, stream
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -173,6 +175,26 @@ def heartbeat(
     listener.last_seen_at = datetime.now(UTC)
     db.commit()
     return OkResult(status="ok")
+
+
+@router.post("/me/push-token", response_model=dict)
+def register_push_token(
+    payload: PushTokenIn,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Mentor device registration (spec 2026-09-05 push §3). Same upsert as the
+    member path; `current_listener` already refuses suspended profiles."""
+    ratelimit.enforce(
+        f"push-token-listener:{listener.id}",
+        20,
+        3600,
+        detail="Too many token registrations — please wait a moment.",
+    )
+    push.upsert_token(
+        db, PushOwnerKind.listener, listener.id, payload.expo_push_token, payload.platform
+    )
+    return {"status": "registered"}
 
 
 @router.get("/me/conversations", response_model=list[ListenerConversationItem])

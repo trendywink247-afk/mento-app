@@ -101,3 +101,8 @@ class ListenerReportReason(str, enum.Enum):
     harassment = "harassment"
     spam = "spam"
     other = "other"
+
+
+class PushOwnerKind(str, enum.Enum):
+    member = "member"
+    listener = "listener"
