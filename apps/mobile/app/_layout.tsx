@@ -11,14 +11,20 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProviders } from '@/components/AppProviders';
+import { installNotificationHandler, useNotificationTaps } from '@/lib/notifications';
 import { useShakeToUpdate } from '@/lib/useShakeToUpdate';
 import { ThemeProvider } from '@/theme/ThemeProvider';
 import { colors } from '@/theme/tokens';
+
+// Foreground banners without sound + tap routing (spec 2026-09-05 push §6). Web
+// resolves to lib/notifications.web.ts, a no-op — the web console/app never receives pushes.
+installNotificationHandler();
 
 export default function RootLayout() {
   // Device-testing affordance: shake anywhere to check EAS Update. No-op in
   // Expo Go/dev server (see lib/useShakeToUpdate.ts).
   useShakeToUpdate();
+  useNotificationTaps();
 
   // Family names must match theme/tokens.ts `font`. One family (DECISIONS §K.6):
   // Baloo 2 carries Latin AND Devanagari, so the Lora/Noto pairing is retired.
