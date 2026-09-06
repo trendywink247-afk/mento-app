@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Companion } from '@/components/art/Companion';
@@ -10,8 +11,10 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 /** Mentor Home's hero once the console is live: the companion greets, presence line
- * reads seat load at a glance, and the online/away toggle IS the console's main
- * control (no separate settings screen for it). */
+ * reads seat load at a glance, the online/away toggle IS the console's main
+ * control (no separate settings screen for it), and "Your line" opens the sheet
+ * where the mentor edits the one-sentence public line + availability note members
+ * see on the member-side mentor profile (spec §3.3, app/mentor/line.tsx). */
 export function PresenceHeader({
   me,
   animal,
@@ -25,6 +28,7 @@ export function PresenceHeader({
   swept: boolean;
   onToggle: () => void;
 }) {
+  const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
   const online = me.status === 'online';
@@ -70,6 +74,24 @@ export function PresenceHeader({
           {online ? t('mentor.goAway') : t('mentor.goOnline')}
         </Text>
       </PressKey>
+
+      <PressKey
+        onPress={() => router.push('/mentor/line')}
+        edge={colors.edgeSurface}
+        travel={2}
+        radius={radius.pill}
+        testID="your-line"
+        containerStyle={styles.lineRowContainer}
+        style={[styles.lineRow, { backgroundColor: colors.surface }]}
+      >
+        <Text
+          style={[type.caption, styles.lineText, { color: me.public_line ? colors.ink : colors.inkMuted }]}
+          numberOfLines={1}
+        >
+          {me.public_line || t('mentor.line.placeholder')}
+        </Text>
+        <Text style={[type.label, { color: colors.accent }]}>{t('mentor.line.row')}</Text>
+      </PressKey>
     </View>
   );
 }
@@ -86,4 +108,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  lineRowContainer: { marginTop: space.sm, alignSelf: 'stretch', minHeight: 44 },
+  lineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
+    borderRadius: radius.pill,
+  },
+  lineText: { flex: 1 },
 });

@@ -146,6 +146,35 @@ async function memberOnboard(page, tid) {
   await b.locator('[data-testid="chat-ready"]').locator(`text=${MENTOR_MSG}`).first().waitFor({ timeout: 30000 });
   console.log('OK mentor reply delivered to the member');
 
+  // --- A: member brief ("Context for care") -------------------------------------
+  await atid('member-header').click();
+  await a.waitForSelector('[data-testid="brief-ready"]', { timeout: 30000 });
+  await a.locator('text=Why they came').first().waitFor({ timeout: 15000 });
+  await a.locator('text=A gentle next step').first().waitFor({ timeout: 15000 });
+  console.log('OK member brief shows "Why they came" + "A gentle next step"');
+  await atid('back').click();
+  await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
+
+  // --- A: "Your line" -------------------------------------------------------------
+  await atid('mentor-chat-back').click();
+  // expo-router's fade keeps the outgoing chat mounted for a beat (same gotcha as
+  // the report/end wait below) — wait for a VISIBLE console, not just an attached one.
+  await a.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 30000 });
+  await a.locator('[data-testid="your-line"]:visible').first().click();
+  await a.waitForSelector('[data-testid="line-sheet"]', { timeout: 15000 });
+  await atid('line-input').fill('I mostly just listen.');
+  await atid('line-save').click();
+  const consoleAfterSave = a.locator('[data-testid="mentor-console"]:visible').first();
+  await consoleAfterSave.waitFor({ timeout: 30000 });
+  // Scope to the visible console — expo-router's fade can leave a stale, hidden
+  // copy of the same row (still showing the old placeholder) mounted underneath.
+  await consoleAfterSave.getByText('I mostly just listen.').waitFor({ timeout: 15000 });
+  console.log('OK "Your line" saved and shown on the console');
+
+  // Re-open the conversation to continue the report/end proof below.
+  await a.locator('[data-testid^="mentor-convo-"]:visible').first().click();
+  await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
+
   // --- A: report, then end -----------------------------------------------------
   await atid('mentor-report').click();
   await a.waitForSelector('[data-testid="mentor-report-sheet"]', { timeout: 15000 });

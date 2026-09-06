@@ -15,6 +15,7 @@ import { Composer } from '@/components/chat/Composer';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { MessageText } from '@/components/chat/MessageText';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { EndConfirmSheet } from '@/components/mentor/EndConfirmSheet';
 import { MentorRail } from '@/components/mentor/MentorRail';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
@@ -150,17 +151,30 @@ export default function MentorChatScreen() {
           >
             <Ionicons name="chevron-back" size={26} color={colors.ink} />
           </Pressable>
-          <PersonaAvatar name={member} size={44} online={masked !== '1'} />
-          <View style={{ flex: 1 }} accessible accessibilityRole="header">
-            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-              {member}
-            </Text>
-            {masked === '1' ? (
-              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-                {t('mentor.masked')}
+          <PressKey
+            onPress={() =>
+              router.push({ pathname: '/mentor/member/[id]', params: { id, member, masked } })
+            }
+            edge={colors.edgeSurface}
+            travel={2}
+            radius={radius.md}
+            accessibilityLabel={member}
+            containerStyle={styles.headerPressContainer}
+            style={styles.headerPressFace}
+            testID="member-header"
+          >
+            <PersonaAvatar name={member} size={44} online={masked !== '1'} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
+                {member}
               </Text>
-            ) : null}
-          </View>
+              {masked === '1' ? (
+                <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+                  {t('mentor.masked')}
+                </Text>
+              ) : null}
+            </View>
+          </PressKey>
           <Pressable
             onPress={() => setMenu((m) => (m === 'closed' ? 'open' : 'closed'))}
             hitSlop={12}
@@ -199,34 +213,7 @@ export default function MentorChatScreen() {
                 </PressKey>
               </>
             ) : (
-              <>
-                <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.endTitle')}</Text>
-                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.chat.endBody')}</Text>
-                <View style={styles.menuRow}>
-                  <PressKey
-                    onPress={() => void endNow()}
-                    edge={colors.accentEdge}
-                    radius={radius.md}
-                    disabled={ending}
-                    style={[styles.menuItem, { backgroundColor: colors.accent }]}
-                    containerStyle={{ flex: 1 }}
-                    testID="mentor-end-confirm"
-                  >
-                    <Text style={[type.label, { color: colors.onAccent }]}>{t('mentor.chat.endConfirm')}</Text>
-                  </PressKey>
-                  <PressKey
-                    onPress={() => setMenu('closed')}
-                    edge={colors.edgeSurface}
-                    radius={radius.md}
-                    disabled={ending}
-                    style={[styles.menuItem, { backgroundColor: colors.surface }]}
-                    containerStyle={{ flex: 1 }}
-                    testID="mentor-end-cancel"
-                  >
-                    <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.keep')}</Text>
-                  </PressKey>
-                </View>
-              </>
+              <EndConfirmSheet busy={ending} onConfirm={() => void endNow()} onCancel={() => setMenu('closed')} />
             )}
           </View>
         ) : null}
@@ -286,6 +273,14 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: radius.lg,
   },
   personaName: { fontFamily: font.sansBold, fontSize: 18, lineHeight: 24 },
+  headerPressContainer: { flex: 1 },
+  headerPressFace: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    backgroundColor: 'transparent',
+  },
   menuSheet: {
     margin: space.md,
     padding: space.sm,
@@ -293,7 +288,6 @@ const styles = StyleSheet.create({
     gap: space.sm,
   },
   menuItem: { padding: space.sm, alignItems: 'center' },
-  menuRow: { flexDirection: 'row', gap: space.sm },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   retry: { paddingHorizontal: space.lg, paddingVertical: space.sm },
 });

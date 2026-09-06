@@ -239,17 +239,30 @@ export default function MentorChatScreenWeb() {
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </ConsolePressable>
-        <PersonaAvatar name={memberName} size={52} online={masked !== '1'} />
-        <View style={{ flex: 1 }} accessible accessibilityRole="header">
-          <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-            {memberName}
-          </Text>
-          {masked === '1' ? (
-            <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-              {t('mentor.masked')}
+        <PressKey
+          onPress={() =>
+            router.push({ pathname: '/mentor/member/[id]', params: { id, member: memberName, masked } })
+          }
+          edge={colors.edgeSurface}
+          travel={2}
+          radius={radius.md}
+          accessibilityLabel={memberName}
+          containerStyle={styles.headerPressContainer}
+          style={styles.headerPressFace}
+          testID="member-header"
+        >
+          <PersonaAvatar name={memberName} size={52} online={masked !== '1'} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
+              {memberName}
             </Text>
-          ) : null}
-        </View>
+            {masked === '1' ? (
+              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+                {t('mentor.masked')}
+              </Text>
+            ) : null}
+          </View>
+        </PressKey>
         <ConsolePressable
           onPress={() => setMenu((m) => (m === 'closed' ? 'open' : 'closed'))}
           hitSlop={12}
@@ -509,6 +522,14 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: radius.lg,
   },
   personaName: { ...type.titleSmSerif },
+  headerPressContainer: { flex: 1 },
+  headerPressFace: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    backgroundColor: 'transparent',
+  },
   tnum: { fontVariant: ['tabular-nums'] },
   menuSheet: {
     margin: space.md,
