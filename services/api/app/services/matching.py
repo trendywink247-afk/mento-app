@@ -154,8 +154,11 @@ def open_conversation(
         status=ConversationStatus.active,
         user_id=user_id,
         listener_id=listener.id,
-        # Free text today (nothing here validates it against ISSUE_CATEGORIES);
-        # the column is 40 chars, so truncate rather than 500 on an oversized value.
+        # Free text today (nothing here validates it against ISSUE_CATEGORIES).
+        # MatchRequest/PersonalRequestIn already cap issue_category at 40 chars
+        # (a 41-char value is a 422 at the API boundary) — this slice is
+        # belt-and-braces for any other caller of open_conversation, so the
+        # column (40 chars) can never overflow regardless of the request path.
         issue_category=issue_category[:40] if issue_category else None,
     )
     db.add(convo)

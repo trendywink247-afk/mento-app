@@ -233,6 +233,20 @@ def test_general_match_stores_the_issue_category_on_the_conversation(client, db_
 
 
 @requires_postgres
+def test_match_rejects_an_issue_category_over_40_chars(client, db_session):
+    with TestSession() as s:
+        uid = _seed_user(s)
+        s.commit()
+
+    r = client.post(
+        "/api/v1/match",
+        json={"kind": "general", "issue_category": "a" * 41},
+        headers=_auth(uid),
+    )
+    assert r.status_code == 422
+
+
+@requires_postgres
 def test_personal_accept_stores_the_requests_issue_category(client, db_session):
     from app.security import issue_listener_token
 

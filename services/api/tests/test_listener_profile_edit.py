@@ -1,8 +1,12 @@
 """PUT /listener/me/profile — the mentor's "Your line" editor (spec 2026-09-06
 §3.3): length limits, whitespace/newline collapsing, empty → null, PATCH
-semantics (an omitted field is left unchanged), suspension, and the rate limit."""
+semantics (an omitted field is left unchanged), suspension, and the rate limit
+(live proof, same precedent as
+test_security_hardening.py::test_pin_attempts_are_rate_limited)."""
 
 from __future__ import annotations
+
+import uuid
 
 import pytest
 from fastapi.testclient import TestClient
@@ -140,26 +144,42 @@ def test_suspended_listener_is_rejected(client, db_session):
 
 
 @requires_postgres
-def test_rate_limit_is_enforced_on_the_listener_profile_key(client, db_session, monkeypatch):
-    """Limits are off by default in tests (conftest's autouse fixture) — record
-    the enforce() call instead of tripping a real Redis window, same idiom the
-    console's other rate-limited routes have no precedent for exercising live."""
+def test_newlines_and_repeated_whitespace_are_collapsed_for_availability_note(client, db_session):
     lid = _seed_listener(db_session)
     db_session.commit()
 
-    calls: list[tuple[str, int, int]] = []
-    original = ratelimit.enforce
-
-    def _recording_enforce(key, limit, window_seconds, *, detail, fail_closed=False):
-        calls.append((key, limit, window_seconds))
-        return original(key, limit, window_seconds, detail=detail, fail_closed=fail_closed)
-
-    monkeypatch.setattr(ratelimit, "enforce", _recording_enforce)
-
     r = client.put(
         "/api/v1/listener/me/profile",
-        json={"public_line": "hello"},
+        json={"availability_note": "most\nevenings"},
         headers=_auth(lid),
     )
     assert r.status_code == 200
-    assert calls == [(f"listener-profile:{lid}", 10, 3600)]
+    assert r.json()["availability_note"] == "most evenings"
+
+
+@requires_postgres
+def test_rate_limit_is_enforced_on_the_listener_profile_key(client, db_session):
+    """Live proof, not a call-recording stand-in — same idiom as
+    test_security_hardening.py::test_pin_attempts_are_rate_limited: enable the
+    real limiter around a key unique to this test run (a fresh listener id),
+    skip if Redis is unreachable (the limiter fails open by design), and prove
+    the 11th call in the 10/hour window is actually rejected."""
+    lid = _seed_listener(db_session)
+    db_session.commit()
+
+    ratelimit.ENABLED = True
+    try:
+        if not ratelimit.allow(f"probe:{uuid.uuid4()}", 1, 5):
+            pytest.skip("Redis unavailable — limiter fails open by design")
+        statuses = [
+            client.put(
+                "/api/v1/listener/me/profile",
+                json={"public_line": "hello"},
+                headers=_auth(lid),
+            ).status_code
+            for _ in range(11)
+        ]
+        assert statuses[:10] == [200] * 10
+        assert statuses[10] == 429
+    finally:
+        ratelimit.ENABLED = False

@@ -34,7 +34,7 @@ class OnboardingResult(BaseModel):
 # --- Matching ---
 class MatchRequest(BaseModel):
     kind: RequestKind = RequestKind.general
-    issue_category: str | None = None
+    issue_category: str | None = Field(default=None, max_length=40)
     target_listener_id: str | None = None
     intro_message: str | None = Field(default=None, max_length=160)
 
@@ -82,7 +82,7 @@ class ListenerProfileOut(BaseModel):
 
 class PersonalRequestIn(BaseModel):
     intro_message: str = Field(min_length=1, max_length=160)
-    issue_category: str | None = None
+    issue_category: str | None = Field(default=None, max_length=40)
 
 
 class RequestOut(BaseModel):
