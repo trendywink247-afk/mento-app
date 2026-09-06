@@ -37,3 +37,8 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     # endpoint; reset to NULL when the listener sets themselves online, so a
     # listener that never heartbeats (seeds, the web console) is never swept.
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Chat-profile fields (spec 2026-09-06 "Two in the room"). Mentor-editable via
+    # PUT /listener/me/profile; admin can clear public_line but not set it.
+    public_line: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    availability_note: Mapped[str | None] = mapped_column(String(60), nullable=True)

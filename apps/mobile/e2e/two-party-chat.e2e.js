@@ -26,8 +26,27 @@ const WEB = 'http://localhost:8081';
 const LISTENER_ID = process.env.LISTENER_ID;
 const MEMBER_MSG = 'hello, are you there?';
 const LISTENER_MSG = 'yes, I am right here with you';
+// Enter-to-send proof (both pillow-key web composers, components/chat/ComposerField.tsx):
+// react-native-web only calls a multiline TextInput's onSubmitEditing when blurOnSubmit
+// is set, so Enter is wired through onKeyPress instead — these two messages prove it
+// actually sends (and clears the field) rather than silently doing nothing.
+const MEMBER_ENTER_MSG = 'sending this one with enter';
+const LISTENER_ENTER_MSG = 'replying with enter too';
 
 const errors = { member: [], listener: [] };
+
+/** Polls a composer field until it reads empty — the send round-trips to Stream, so
+ * the field clears a beat after the message becomes visible, not in the same tick. */
+async function waitForFieldEmpty(field, timeoutMs = 10000) {
+  const start = Date.now();
+  for (;;) {
+    if ((await field.inputValue()) === '') return;
+    if (Date.now() - start > timeoutMs) {
+      throw new Error(`composer field did not clear within ${timeoutMs}ms`);
+    }
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
 
 async function onboardMember(page, tid) {
   await page.goto(WEB, { waitUntil: 'networkidle', timeout: 180000 });
@@ -67,6 +86,12 @@ async function onboardMember(page, tid) {
   await mpage.waitForSelector(`text=${MEMBER_MSG}`, { timeout: 20000 });
   console.log('OK member message sent + echoed locally');
 
+  await mtid('composer-input').fill(MEMBER_ENTER_MSG);
+  await mtid('composer-input').press('Enter');
+  await mpage.waitForSelector(`text=${MEMBER_ENTER_MSG}`, { timeout: 20000 });
+  await waitForFieldEmpty(mtid('composer-input'));
+  console.log('OK member Enter-to-send works and clears the field');
+
   // --- listener console (dev picker; no token needed in dev) ---
   const lctx = await browser.newContext({ viewport: { width: 1100, height: 800 } });
   const lpage = await lctx.newPage();
@@ -91,6 +116,13 @@ async function onboardMember(page, tid) {
   await lpage.waitForSelector(`text=${LISTENER_MSG}`, { timeout: 20000 });
   await mpage.waitForSelector(`text=${LISTENER_MSG}`, { timeout: 30000 });
   console.log('OK listener->member delivery confirmed');
+
+  await ltid('listener-composer-input').fill(LISTENER_ENTER_MSG);
+  await ltid('listener-composer-input').press('Enter');
+  await lpage.waitForSelector(`text=${LISTENER_ENTER_MSG}`, { timeout: 20000 });
+  await waitForFieldEmpty(ltid('listener-composer-input'));
+  await mpage.waitForSelector(`text=${LISTENER_ENTER_MSG}`, { timeout: 30000 });
+  console.log('OK listener Enter-to-send works, clears the field, and delivers');
 
   await browser.close();
   const total = errors.member.length + errors.listener.length;

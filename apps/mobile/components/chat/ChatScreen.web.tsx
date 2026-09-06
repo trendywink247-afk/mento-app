@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -7,8 +7,9 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
+  type NativeSyntheticEvent,
+  type TextInputKeyPressEventData,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PressKey } from '@/components/motion/PressKey';
+import { ComposerField } from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { TypingDots } from '@/components/chat/TypingDots';
@@ -26,6 +28,7 @@ import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TFunc } from '@/lib/i18n';
+import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -46,6 +49,7 @@ import { font, radius, space, type } from '@/theme/tokens';
  */
 
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
+
 type Msg = { id: string; text: string; mine: boolean; at: string };
 
 type RawMsg = { id?: string; text?: string; user?: { id?: string }; created_at?: string | Date };
@@ -254,15 +258,23 @@ type ComposerProps = {
   onTyping: () => void;
 };
 
-/** Composer pill + send FAB (mockup #8). Owns the draft locally so every keystroke
- * re-renders only this leaf — never the transcript above it. The draft is cleared
- * only AFTER the send resolves; on failure it stays put with an honest retry line. */
+/** Pillow-key composer (spec §5.2 — same anatomy/tokens as the native
+ * components/chat/Composer.tsx, via the shared components/chat/ComposerField.tsx).
+ * Owns the draft locally so every keystroke re-renders only this leaf — never the
+ * transcript above it. The draft is cleared only AFTER the send resolves; on
+ * failure it stays put with an honest retry line. Enter sends, Shift+Enter
+ * newlines: react-native-web only invokes `onSubmitEditing` on a multiline
+ * TextInput when `blurOnSubmit` is set (see TextInput/index.js's handleKeyDown),
+ * so Enter-to-send is wired through `onKeyPress` instead, reading the DOM
+ * KeyboardEvent's `shiftKey` off `nativeEvent` (present at runtime; not in RN's
+ * official TextInputKeyPressEventData type, hence the narrow cast below). */
 const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const [draft, setDraft] = useState(initialDraft ?? '');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
+  const isEmpty = !draft.trim();
 
   const submit = async () => {
     const body = draft.trim();
@@ -280,6 +292,17 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
     }
   };
 
+  const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+    // reason: react-native-web's key event carries `shiftKey` on `nativeEvent`
+    // (verified against its TextInput source) — RN's official
+    // TextInputKeyPressEventData type only declares `key`.
+    const shiftKey = (e.nativeEvent as unknown as { shiftKey?: boolean }).shiftKey;
+    if (e.nativeEvent.key === 'Enter' && !shiftKey) {
+      e.preventDefault();
+      void submit();
+    }
+  };
+
   return (
     <View>
       {sendError ? (
@@ -290,37 +313,19 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
           {t('chat.sendFailed')}
         </Text>
       ) : null}
-      <View style={styles.composer}>
-        <View style={[styles.inputPill, { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border }]}>
-          <Ionicons name="add-circle-outline" size={24} color={colors.inkMuted} />
-          <TextInput
-            style={[styles.input, { color: colors.ink }]}
-            placeholder={t('chat.placeholder')}
-            placeholderTextColor={colors.inkMuted}
-            value={draft}
-            onChangeText={(text) => {
-              setDraft(text);
-              onTyping();
-            }}
-            onSubmitEditing={() => void submit()}
-            testID="composer-input"
-            accessibilityLabel={t('chat.messageA11y')}
-            multiline
-          />
-        </View>
-        <PressKey
-          onPress={() => void submit()}
-          edge={colors.accentEdge}
-          travel={4}
-          radius={radius.pill}
-          disabled={sending}
-          testID="composer-send"
-          accessibilityLabel={t('chat.sendA11y')}
-          style={[styles.sendBtn, { backgroundColor: colors.accent }]}
-        >
-          <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
-        </PressKey>
-      </View>
+      <ComposerField
+        value={draft}
+        onChangeText={(text) => {
+          setDraft(text);
+          onTyping();
+        }}
+        onSubmit={() => void submit()}
+        onKeyPress={handleKeyPress}
+        disabled={isEmpty || sending}
+        sending={sending}
+        placeholder={t('chat.placeholder')}
+        testIDPrefix="composer"
+      />
     </View>
   );
 });
@@ -340,6 +345,20 @@ export default function ChatScreenWeb() {
   }>();
   const listenerName = listener ?? t('chat.yourListener');
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // Set right before pendingOption.take() opens the sheet with the Report flow
+  // pre-selected (the mentor-profile screen's "Report or block" hand-off) — cleared
+  // on close so a later, ordinary open of the sheet starts fresh.
+  const [pendingInitial, setPendingInitial] = useState<'report' | undefined>(undefined);
+
+  useFocusEffect(
+    useCallback(() => {
+      const opt = pendingOption.take(conversationId ?? '');
+      if (opt === 'report') {
+        setPendingInitial('report');
+        setOptionsOpen(true);
+      }
+    }, [conversationId]),
+  );
 
   const [ready, setReady] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -540,18 +559,37 @@ export default function ChatScreenWeb() {
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
-        <PersonaAvatar name={listenerName} size={52} online />
-        <View style={{ flex: 1 }} accessible accessibilityRole="header">
-          <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-            {listenerName}
-          </Text>
-          <View style={styles.statusRow}>
-            <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
-            <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-              {t('chat.statusLine')}
+        {/* reason: this row is header chrome, not a card — face + edge are both
+            colors.surface (flush with the header background, no visible lip) so the
+            pillow travel + haptic on press are the only cue it's tappable. */}
+        <PressKey
+          onPress={() =>
+            router.push({
+              pathname: '/mentor-profile/[id]',
+              params: { id: conversationId ?? '', name: listenerName },
+            })
+          }
+          edge={colors.surface}
+          travel={2}
+          testID="mentor-header"
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.mentorHeaderA11y', { name: listenerName })}
+          style={[styles.headerPressFace, { backgroundColor: colors.surface }]}
+          containerStyle={styles.headerPressContainer}
+        >
+          <PersonaAvatar name={listenerName} size={52} online />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
+              {listenerName}
             </Text>
+            <View style={styles.statusRow}>
+              <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
+              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+                {t('chat.statusLine')}
+              </Text>
+            </View>
           </View>
-        </View>
+        </PressKey>
         <View
           style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
           accessibilityLabel={t('chat.connectedA11y')}
@@ -646,9 +684,13 @@ export default function ChatScreenWeb() {
       <ConversationOptions
         conversationId={conversationId}
         visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
+        onClose={() => {
+          setOptionsOpen(false);
+          setPendingInitial(undefined);
+        }}
         onLeft={() => router.replace('/chats')}
         listenerName={listenerName}
+        initial={pendingInitial}
       />
     </SafeAreaView>
   );
@@ -667,6 +709,8 @@ const styles = StyleSheet.create({
   },
   personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  headerPressContainer: { flex: 1 },
+  headerPressFace: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   connectedDot: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -726,27 +770,4 @@ const styles = StyleSheet.create({
     padding: space.sm,
   },
   sendErrorLine: { paddingHorizontal: space.md, paddingTop: space.xs },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: space.sm,
-    padding: space.md,
-  },
-  inputPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    minHeight: 50,
-  },
-  input: { flex: 1, maxHeight: 120, paddingVertical: space.sm, ...type.body },
-  sendBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

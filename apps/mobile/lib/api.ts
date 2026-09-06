@@ -39,6 +39,25 @@ export type Listener = {
   categories: string[];
   status: 'online' | 'away' | 'offline';
   available: boolean;
+  is_favourite: boolean;
+};
+
+/** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
+ * ("Two in the room") and Browse-scoped ("/listeners/{id}") profile routes. */
+export type ListenerProfile = {
+  id: string;
+  persona_name: string;
+  persona_avatar: string;
+  gender: string;
+  categories: string[];
+  community_slug: string | null;
+  status: 'online' | 'away' | 'offline';
+  available: boolean;
+  public_line: string | null;
+  availability_note: string | null;
+  listening_since: string;
+  conversations_held: number;
+  is_favourite: boolean;
 };
 
 export type PersonalRequest = {
@@ -251,6 +270,20 @@ export const api = {
     request<PersonalRequest>(`/listeners/${id}/request`, { method: 'POST', body: JSON.stringify({ intro_message, issue_category }) }, true),
 
   myRequests: () => request<PersonalRequest[]>('/listeners/requests/mine', {}, true),
+
+  // --- Mentor profile ("Two in the room") + favourites ---
+  mentorProfile: (convoId: string) =>
+    request<ListenerProfile>(`/conversations/${convoId}/mentor`, {}, true),
+
+  listenerProfile: (listenerId: string) =>
+    request<ListenerProfile>(`/listeners/${listenerId}`, {}, true),
+
+  favouriteListener: (listenerId: string, on: boolean) =>
+    request<{ status: string }>(
+      `/listeners/${listenerId}/favourite`,
+      { method: on ? 'POST' : 'DELETE' },
+      true,
+    ),
 
   verifyPin: (id: string, pin: string) =>
     request<{ status: string }>(`/conversations/${id}/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }, true),

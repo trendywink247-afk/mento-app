@@ -81,6 +81,34 @@
       "cancel": "Cancel",
       "sent": "Thank you. A reviewer will take it from here.",
       "error": "We couldn't send that. Try again in a moment."
+    },
+    "brief": {
+      "title": "About this chat",
+      "memberHere": "Member · %{animal} in %{colour} · here now",
+      "memberAway": "Member · %{animal} in %{colour} · away",
+      "memberPlainHere": "Member · here now",
+      "memberPlainAway": "Member · away",
+      "why": "Why they came",
+      "picked": "Picked %{topic} at match",
+      "lens": "Path lens %{lens}",
+      "started": "Chat started %{when}",
+      "inChat": "In this chat",
+      "lastMessage": "Last message",
+      "safety": "Safety flags",
+      "safetyNone": "none",
+      "safetyOpen": "%{count} · under review",
+      "nextStep": "A gentle next step",
+      "unavailable": "—",
+      "headerA11y": "View %{name}'s brief"
+    },
+    "line": {
+      "row": "Your line",
+      "title": "Your line",
+      "body": "One sentence members see on your profile. Keep it about how you listen.",
+      "placeholder": "I sat the exam three times. I mostly just listen.",
+      "availability": "When you're usually here",
+      "availabilityPlaceholder": "evenings, weekends",
+      "save": "Save"
     }
   },
   "common": {
@@ -91,7 +119,8 @@
     "goBack": "Go back",
     "somethingWrong": "Something went wrong. Please try again.",
     "networkError": "We had trouble connecting. Please check your network and try again.",
-    "allBusy": "All mentors are busy right now. Please try again in a moment. 🧡"
+    "allBusy": "All mentors are busy right now. Please try again in a moment. 🧡",
+    "retry": "Retry"
   },
   "onboarding": {
     "age": {
@@ -244,8 +273,8 @@
     "typing": "%{name} is typing…",
     "sendFailed": "Not sent — check your connection and tap send to retry.",
     "placeholder": "Type a message…",
-    "messageA11y": "Message",
-    "sendA11y": "Send message",
+    "send": "Send message",
+    "mentorHeaderA11y": "View %{name}'s profile",
     "emptyTitle": "You're connected!",
     "emptyBody": "This is a safe space to share, reflect and grow. Take your time.",
     "today": "Today",
@@ -559,5 +588,29 @@
   "coffee": {
     "askTitle": "Would you like to buy a coffee for the Mento team? ☕",
     "askBody": "It keeps the team fueled up to build a safe space for more hearts. 🧡"
+  },
+  "mentorProfile": {
+    "online": "Mentor · online now",
+    "away": "Mentor · away",
+    "usually": "usually here %{note}",
+    "talkedWith": "Talked with %{count} people",
+    "since": "Listening since %{month}",
+    "sees": "Sees about you",
+    "seesValue": "persona only",
+    "pledge": "A real person, not a therapist. Vetted by the Mento team.",
+    "askAgain": "Ask for %{name} next time",
+    "saved": "Saved · you'll see %{name} first",
+    "reportBlock": "Report or block",
+    "saveFailed": "Couldn't save — try again"
+  },
+  "mentors": {
+    "favourite": "Favourite"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "%{count} min ago",
+    "hoursAgo": "%{count} hr ago",
+    "yesterday": "yesterday",
+    "daysAgo": "%{count} days ago"
   }
 }

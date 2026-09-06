@@ -146,6 +146,35 @@ async function memberOnboard(page, tid) {
   await b.locator('[data-testid="chat-ready"]').locator(`text=${MENTOR_MSG}`).first().waitFor({ timeout: 30000 });
   console.log('OK mentor reply delivered to the member');
 
+  // --- A: member brief ("Context for care") -------------------------------------
+  await atid('member-header').click();
+  await a.waitForSelector('[data-testid="brief-ready"]', { timeout: 30000 });
+  await a.locator('text=Why they came').first().waitFor({ timeout: 15000 });
+  await a.locator('text=A gentle next step').first().waitFor({ timeout: 15000 });
+  console.log('OK member brief shows "Why they came" + "A gentle next step"');
+  await atid('back').click();
+  await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
+
+  // --- A: "Your line" -------------------------------------------------------------
+  await atid('mentor-chat-back').click();
+  // expo-router's fade keeps the outgoing chat mounted for a beat (same gotcha as
+  // the report/end wait below) — wait for a VISIBLE console, not just an attached one.
+  await a.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 30000 });
+  await a.locator('[data-testid="your-line"]:visible').first().click();
+  await a.waitForSelector('[data-testid="line-sheet"]', { timeout: 15000 });
+  await atid('line-input').fill('I mostly just listen.');
+  await atid('line-save').click();
+  const consoleAfterSave = a.locator('[data-testid="mentor-console"]:visible').first();
+  await consoleAfterSave.waitFor({ timeout: 30000 });
+  // Scope to the visible console — expo-router's fade can leave a stale, hidden
+  // copy of the same row (still showing the old placeholder) mounted underneath.
+  await consoleAfterSave.getByText('I mostly just listen.').waitFor({ timeout: 15000 });
+  console.log('OK "Your line" saved and shown on the console');
+
+  // Re-open the conversation to continue the report/end proof below.
+  await a.locator('[data-testid^="mentor-convo-"]:visible').first().click();
+  await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
+
   // --- A: report, then end -----------------------------------------------------
   await atid('mentor-report').click();
   await a.waitForSelector('[data-testid="mentor-report-sheet"]', { timeout: 15000 });
@@ -166,10 +195,27 @@ async function memberOnboard(page, tid) {
   const state = await A.storageState();
   const R = await browser.newContext({ ...ctxOpts(true), storageState: state });
   const r = await R.newPage();
-  track(r, 'R');
+  const rtid = track(r, 'R');
   await r.goto(`${WEB}/mentor-home`, { waitUntil: 'networkidle', timeout: 120000 });
   await r.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 60000 });
   console.log('OK reduced-motion console');
+
+  // R: the brief + "Your line" sheet must also render statically under reduced
+  // motion. Reuses A's (now-ended) conversation — still tappable, its transcript
+  // stays reachable — and A's listener session already carried in `state` above.
+  await r.locator('[data-testid^="mentor-convo-"]:visible').first().click();
+  await r.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
+  await rtid('member-header').click();
+  await r.waitForSelector('[data-testid="brief-ready"]', { timeout: 30000 });
+  await rtid('back').click();
+  await r.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
+  await rtid('mentor-chat-back').click();
+  await r.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 30000 });
+  await r.locator('[data-testid="your-line"]:visible').first().click();
+  await r.waitForSelector('[data-testid="line-sheet"]', { timeout: 15000 });
+  await rtid('line-cancel').click();
+  await r.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 30000 });
+  console.log('OK reduced-motion brief + "Your line" sheet');
 
   await browser.close();
   if (errors.length) {

@@ -22,6 +22,28 @@ def stage_info(community: str, stage: str) -> dict:
     return {"id": stage, "title": s["title"], "blurb": s["blurb"]}
 
 
+def community_label(slug: str | None) -> str | None:
+    """Safe display-name lookup — unlike `community_info` (which assumes the slug
+    is already valid), this never raises: a slug persisted on an old row can
+    outlive its config entry, and a caller like the mentor brief must still
+    render (never 500) when that happens."""
+    if not slug:
+        return None
+    c = COMMUNITIES.get(slug)
+    return c["name"] if c else None
+
+
+def stage_label(community_slug: str | None, stage_slug: str | None) -> str | None:
+    """Safe display-title lookup for a (community, stage) pair — see `community_label`."""
+    if not community_slug or not stage_slug:
+        return None
+    c = COMMUNITIES.get(community_slug)
+    if not c:
+        return None
+    s = c.get("stages", {}).get(stage_slug)
+    return s["title"] if s else None
+
+
 def prompts_for(community: str, stage: str) -> list[str]:
     return list(COMMUNITIES[community]["stages"][stage]["prompts"])
 

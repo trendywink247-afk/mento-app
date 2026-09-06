@@ -27,6 +27,8 @@ type EventMap = {
   match_found: { wait_bucket: WaitBucket };
   chat_first_message_sent: undefined;
   reflection_submitted: undefined; // no energy value — reflection is private
+  mentor_profile_viewed: undefined; // "Two in the room" — never the listener id
+  mentor_favourited: { on: boolean };
 };
 
 export type WaitBucket = '<5s' | '5-15s' | '15-60s' | '>60s';

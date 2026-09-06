@@ -21,9 +21,11 @@ from app.models.enums import ConversationEndedBy, ConversationStatus, Moderation
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.reflection import ConversationReflection
+from app.routers.listeners import _profile_out
 from app.schemas import (
     ConversationListItem,
     ConversationState,
+    ListenerProfileOut,
     LockRequest,
     OkResult,
     PauseRequest,
@@ -127,6 +129,22 @@ def list_conversations(
         )
         for c in convos
     ]
+
+
+@router.get("/{convo_id}/mentor", response_model=ListenerProfileOut)
+def conversation_mentor(
+    convo_id: str,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ListenerProfileOut:
+    """ "Two in the room" (spec §3.3), keyed by the conversation the member is in —
+    the chat route only knows the conversation id, so the listener id never has to
+    travel through route params. Opaque 404 for any conversation not this member's."""
+    convo = _owned(db, convo_id, user_id)
+    listener = db.get(ListenerProfile, convo.listener_id)
+    if listener is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+    return _profile_out(db, listener, user_id)
 
 
 @router.post("/{convo_id}/verify-pin", response_model=OkResult)

@@ -34,7 +34,7 @@ class OnboardingResult(BaseModel):
 # --- Matching ---
 class MatchRequest(BaseModel):
     kind: RequestKind = RequestKind.general
-    issue_category: str | None = None
+    issue_category: str | None = Field(default=None, max_length=40)
     target_listener_id: str | None = None
     intro_message: str | None = Field(default=None, max_length=160)
 
@@ -57,11 +57,32 @@ class ListenerOut(BaseModel):
     categories: list[str]
     status: str
     available: bool
+    is_favourite: bool
+
+
+class ListenerProfileOut(BaseModel):
+    """The member-side mentor profile, "Two in the room" (spec 2026-09-06 §3.3).
+    Keyed by conversation (`GET /conversations/{id}/mentor`) or by listener id
+    (`GET /listeners/{id}`, Browse). Anonymous persona only — T&S #7."""
+
+    id: str
+    persona_name: str
+    persona_avatar: str
+    gender: str
+    categories: list[str]
+    community_slug: str | None
+    status: str
+    available: bool
+    public_line: str | None
+    availability_note: str | None
+    listening_since: str  # ISO date of ListenerProfile.created_at
+    conversations_held: int
+    is_favourite: bool
 
 
 class PersonalRequestIn(BaseModel):
     intro_message: str = Field(min_length=1, max_length=160)
-    issue_category: str | None = None
+    issue_category: str | None = Field(default=None, max_length=40)
 
 
 class RequestOut(BaseModel):
@@ -85,6 +106,17 @@ class ListenerMeOut(BaseModel):
     active_conversations: int
     max_concurrent: int
     stream_token: str
+    public_line: str | None
+    availability_note: str | None
+
+
+class ListenerProfileEditIn(BaseModel):
+    """PUT /listener/me/profile (spec 2026-09-06 §3.3). PATCH semantics on a PUT:
+    a field omitted from the request body is left unchanged; a field present as
+    `null`/empty string clears it. See `model_fields_set` in the router."""
+
+    public_line: str | None = Field(default=None, max_length=120)
+    availability_note: str | None = Field(default=None, max_length=60)
 
 
 class AdminMeOut(BaseModel):
@@ -141,6 +173,7 @@ class AdminListenerItem(BaseModel):
     active_conversations: int
     max_concurrent: int
     rank: int
+    public_line: str | None
 
 
 class AdminListenerCreateIn(BaseModel):
@@ -241,6 +274,29 @@ class ListenerConversationItem(BaseModel):
     member_masked: bool
     created_at: str
     ended_at: str | None
+
+
+class MemberBriefOut(BaseModel):
+    """Mentee brief, "Context for care" (spec 2026-09-06 §4.3). Anonymous persona
+    + companion + coarse Path lens + topic + safety count — never age, email, or
+    identity (T&S #7). `member_masked` is the same Panda-Mask signal
+    `ListenerConversationItem` carries: the listener sees "away", never why."""
+
+    persona_name: str
+    persona_avatar: str
+    companion_animal: str | None
+    companion_colour: str | None
+    community_slug: str | None
+    community_label: str | None
+    journey_stage: str | None
+    journey_stage_label: str | None
+    issue_category: str | None
+    issue_category_label: str | None
+    created_at: str
+    last_message_at: str | None
+    member_masked: bool
+    safety_flags_open: int
+    care_prompt: str
 
 
 class ListenerRequestItem(BaseModel):

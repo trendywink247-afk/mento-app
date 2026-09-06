@@ -28,6 +28,7 @@ export default function ListenersPanel() {
   const [toast, setToast] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [clearConfirmId, setClearConfirmId] = useState<string | null>(null);
 
   const [categories, setCategories] = useState('');
   const [maxConc, setMaxConc] = useState('3');
@@ -134,6 +135,25 @@ export default function ListenersPanel() {
       await load();
     } catch {
       setError("Couldn't update that listener. Try again.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const clearLine = async (id: string) => {
+    if (clearConfirmId !== id) {
+      setClearConfirmId(id);
+      return;
+    }
+    setBusy(id);
+    setError(null);
+    setClearConfirmId(null);
+    try {
+      await adminApi.clearListenerLine(id);
+      setToast('Line cleared');
+      await load();
+    } catch {
+      setError("Couldn't clear that line. Try again.");
     } finally {
       setBusy(null);
     }
@@ -311,6 +331,17 @@ export default function ListenersPanel() {
                 </View>
               </View>
 
+              <Text
+                style={[
+                  type.caption,
+                  li.public_line ? styles.publicLine : null,
+                  { color: colors.inkMuted },
+                ]}
+                testID={`admin-listener-${li.id}-line`}
+              >
+                {li.public_line ?? '—'}
+              </Text>
+
               {li.categories.length > 0 ? (
                 <View style={styles.chips}>
                   {li.categories.map((c) => (
@@ -373,6 +404,22 @@ export default function ListenersPanel() {
                 >
                   <Text style={[type.label, { color: colors.ink }]}>Copy link</Text>
                 </ConsolePressable>
+                <ConsolePressable
+                  onPress={() => void clearLine(li.id)}
+                  disabled={busy === li.id || !li.public_line}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Clear line for ${li.persona_name}`}
+                  testID={`admin-listener-${li.id}-clear-line`}
+                  style={[
+                    styles.secondaryBtn,
+                    { borderColor: colors.border },
+                    !li.public_line && styles.disabledBtn,
+                  ]}
+                >
+                  <Text style={[type.label, { color: colors.ink }]}>
+                    {clearConfirmId === li.id ? 'Confirm clear' : 'Clear line'}
+                  </Text>
+                </ConsolePressable>
               </View>
             </View>
           );
@@ -398,6 +445,8 @@ const styles = StyleSheet.create({
   },
   rosterHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   rosterNums: { fontVariant: ['tabular-nums'] },
+  publicLine: { fontStyle: 'italic' },
+  disabledBtn: { opacity: 0.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   chip: {
     borderRadius: radius.pill,

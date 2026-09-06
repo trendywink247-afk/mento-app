@@ -6,12 +6,14 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  TextInput,
   View,
+  type NativeSyntheticEvent,
+  type TextInputKeyPressEventData,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 
+import { ComposerField } from '@/components/chat/ComposerField';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
@@ -195,6 +197,20 @@ export default function MentorChatScreenWeb() {
     }
   };
 
+  // Enter sends, Shift+Enter newlines: react-native-web only invokes
+  // `onSubmitEditing` on a multiline TextInput when `blurOnSubmit` is set (see
+  // TextInput/index.js's handleKeyDown), so Enter-to-send is wired through
+  // `onKeyPress` instead, reading the DOM KeyboardEvent's `shiftKey` off
+  // `nativeEvent` (present at runtime; not in RN's official
+  // TextInputKeyPressEventData type, hence the narrow cast below).
+  const handleComposerKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+    const shiftKey = (e.nativeEvent as unknown as { shiftKey?: boolean }).shiftKey;
+    if (e.nativeEvent.key === 'Enter' && !shiftKey) {
+      e.preventDefault();
+      void send();
+    }
+  };
+
   const isRead = useCallback(
     (m: Msg): boolean => {
       void readTick;
@@ -235,17 +251,30 @@ export default function MentorChatScreenWeb() {
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </ConsolePressable>
-        <PersonaAvatar name={memberName} size={52} online={masked !== '1'} />
-        <View style={{ flex: 1 }} accessible accessibilityRole="header">
-          <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-            {memberName}
-          </Text>
-          {masked === '1' ? (
-            <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-              {t('mentor.masked')}
+        <PressKey
+          onPress={() =>
+            router.push({ pathname: '/mentor/member/[id]', params: { id, member: memberName, masked } })
+          }
+          edge={colors.edgeSurface}
+          travel={2}
+          radius={radius.md}
+          accessibilityLabel={t('mentor.brief.headerA11y', { name: memberName })}
+          containerStyle={styles.headerPressContainer}
+          style={styles.headerPressFace}
+          testID="member-header"
+        >
+          <PersonaAvatar name={memberName} size={52} online={masked !== '1'} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
+              {memberName}
             </Text>
-          ) : null}
-        </View>
+            {masked === '1' ? (
+              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+                {t('mentor.masked')}
+              </Text>
+            ) : null}
+          </View>
+        </PressKey>
         <ConsolePressable
           onPress={() => setMenu((m) => (m === 'closed' ? 'open' : 'closed'))}
           hitSlop={12}
@@ -438,43 +467,28 @@ export default function MentorChatScreenWeb() {
             onReport={() => router.push({ pathname: '/mentor/report', params: { id } })}
           />
 
-          <View style={styles.composer}>
-            <View style={{ flex: 1 }}>
-              {sendError ? (
-                <Text
-                  style={[type.caption, styles.sendErrorLine, { color: colors.danger }]}
-                  testID="listener-send-error"
-                >
-                  {t('chat.sendFailed')}
-                </Text>
-              ) : null}
-              <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
-              <TextInput
-                style={[styles.input, { color: colors.ink }]}
-                placeholder={t('mentor.chat.reply')}
-                placeholderTextColor={colors.inkMuted}
-                value={draft}
-                onChangeText={(text) => {
-                  setDraft(text);
-                  onTyping();
-                }}
-                onSubmitEditing={() => void send()}
-                testID="listener-composer-input"
-                accessibilityLabel="Reply"
-                multiline
-              />
-              </View>
-            </View>
-            <ConsolePressable
-              style={[styles.sendBtn, { backgroundColor: colors.accent }, elevation.sm]}
-              onPress={() => void send()}
+          <View>
+            {sendError ? (
+              <Text
+                style={[type.caption, styles.sendErrorLine, { color: colors.danger }]}
+                testID="listener-send-error"
+              >
+                {t('chat.sendFailed')}
+              </Text>
+            ) : null}
+            <ComposerField
+              value={draft}
+              onChangeText={(text) => {
+                setDraft(text);
+                onTyping();
+              }}
+              onSubmit={() => void send()}
+              onKeyPress={handleComposerKeyPress}
               disabled={!draft.trim() || sending}
-              testID="listener-composer-send"
-              accessibilityRole="button"
-              accessibilityLabel="Send reply"
-            >
-              <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
-            </ConsolePressable>
+              sending={sending}
+              placeholder={t('mentor.chat.reply')}
+              testIDPrefix="listener-composer"
+            />
           </View>
         </View>
         </View>
@@ -495,6 +509,14 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: radius.lg,
   },
   personaName: { ...type.titleSmSerif },
+  headerPressContainer: { flex: 1 },
+  headerPressFace: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    backgroundColor: 'transparent',
+  },
   tnum: { fontVariant: ['tabular-nums'] },
   menuSheet: {
     margin: space.md,
@@ -538,22 +560,4 @@ const styles = StyleSheet.create({
   theirsTime: { marginLeft: 34 + space.sm + space.xs, marginTop: 3 },
   typingLine: { paddingHorizontal: space.md, paddingTop: space.xs },
   sendErrorLine: { paddingBottom: space.xs },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, padding: space.md },
-  inputPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    minHeight: 50,
-  },
-  input: { flex: 1, maxHeight: 120, paddingVertical: space.sm, ...type.body },
-  sendBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

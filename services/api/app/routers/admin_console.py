@@ -53,6 +53,7 @@ from app.schemas import (
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
 from app.services import audit, stream
+from app.services.categories import AVAILABILITY_NOTES
 from app.services.matching import reconcile_listener_capacity
 from app.services.persona import generate_persona
 
@@ -295,6 +296,26 @@ def suspend_listener(
     return OkResult(status="suspended")
 
 
+@router.post("/listeners/{listener_id}/clear-line", response_model=OkResult)
+def clear_listener_line(
+    listener_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Listeners panel → "Clear line" (spec 2026-09-06 §3.3). The mentor's public
+    line goes live without pre-approval on save; this is the moderation backstop —
+    same admin gate as suspend, always audited."""
+    li = db.get(ListenerProfile, listener_id)
+    if li is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
+    li.public_line = None
+    audit.record(
+        db, admin, "listener.public_line_cleared", subject_type="listener", subject_id=listener_id
+    )
+    db.commit()
+    return OkResult(status="cleared")
+
+
 @router.post("/listeners/{listener_id}/reinstate", response_model=OkResult)
 def reinstate_listener(
     listener_id: str,
@@ -337,6 +358,7 @@ def _listener_item(li: ListenerProfile) -> AdminListenerItem:
         active_conversations=li.active_conversations,
         max_concurrent=li.max_concurrent,
         rank=li.rank,
+        public_line=li.public_line,
     )
 
 
@@ -492,6 +514,14 @@ def approve_application(
         rank=0,
         active_conversations=0,
         max_concurrent=3,
+        # Seeded from the application's own answer (spec 2026-09-06 §3.3) — that
+        # question was written for this purpose, reworded to a member-facing
+        # label (AVAILABILITY_NOTES) rather than the raw enum slug. An unknown
+        # value (future enum drift) falls back to the raw text, still capped at
+        # 60. The mentor can edit it afterwards via PUT /listener/me/profile.
+        availability_note=AVAILABILITY_NOTES.get(
+            a.availability, a.availability.strip()[:60] or None
+        ),
     )
     db.add(li)
     db.flush()
