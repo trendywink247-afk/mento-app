@@ -46,7 +46,7 @@ Motion: standard `Entrance` stagger on mount; companion `curious` trigger once w
 
 ### 3.3 Data
 
-New endpoint `GET /listeners/{id}` → `ListenerProfileOut`:
+New endpoint `GET /conversations/{id}/mentor` → `ListenerProfileOut` (keyed by the **conversation** the member is in: the chat route only knows the conversation id and persona name, and the server derives the listener, so listener ids never need to travel through route params; 404 unless the conversation belongs to the caller). The same `ListenerProfileOut` is also served by `GET /listeners/{id}` for Browse:
 
 ```
 id, persona_name, persona_avatar, gender, categories: list[str], community_slug: str | None,
