@@ -178,9 +178,7 @@ export default function MemberBriefScreen() {
                 </Text>
               ) : null}
               <Text style={[type.body, { color: colors.inkMuted }]}>
-                {brief.last_message_at
-                  ? t('mentor.brief.firstMessage', { when: relativeTime(brief.last_message_at) })
-                  : t('mentor.brief.started', { when: relativeTime(brief.created_at) })}
+                {t('mentor.brief.started', { when: relativeTime(brief.created_at, t) })}
               </Text>
             </EdgeSurface>
 
@@ -193,7 +191,7 @@ export default function MemberBriefScreen() {
               <View style={styles.factRow}>
                 <Text style={[type.body, { color: colors.inkMuted }]}>{t('mentor.brief.lastMessage')}</Text>
                 <Text style={[type.body, { color: colors.ink }]}>
-                  {brief.last_message_at ? relativeTime(brief.last_message_at) : t('mentor.brief.unavailable')}
+                  {brief.last_message_at ? relativeTime(brief.last_message_at, t) : t('mentor.brief.unavailable')}
                 </Text>
               </View>
               <View style={styles.factRow}>

@@ -67,7 +67,7 @@ export function LineSheet({ onClose, onSaved }: { onClose: () => void; onSaved: 
         value={line}
         onChangeText={(v) => setLine(v.slice(0, 120))}
         maxLength={120}
-        multiline
+        multiline={false}
         placeholder={t('mentor.line.placeholder')}
         placeholderTextColor={colors.inkMuted}
         style={[type.body, styles.input, { backgroundColor: colors.surfaceAlt, color: colors.ink }]}
@@ -122,7 +122,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
   },
   title: { fontFamily: font.sansHeavy, fontSize: 20, lineHeight: 26 },
-  input: { borderRadius: radius.md, padding: space.sm, minHeight: 72, textAlignVertical: 'top' },
+  input: { borderRadius: radius.md, padding: space.sm, minHeight: 44 },
   counter: { textAlign: 'right' },
   availabilityInput: { borderRadius: radius.md, padding: space.sm, minHeight: 44 },
 });

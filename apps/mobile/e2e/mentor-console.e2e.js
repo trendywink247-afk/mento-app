@@ -195,10 +195,27 @@ async function memberOnboard(page, tid) {
   const state = await A.storageState();
   const R = await browser.newContext({ ...ctxOpts(true), storageState: state });
   const r = await R.newPage();
-  track(r, 'R');
+  const rtid = track(r, 'R');
   await r.goto(`${WEB}/mentor-home`, { waitUntil: 'networkidle', timeout: 120000 });
   await r.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 60000 });
   console.log('OK reduced-motion console');
+
+  // R: the brief + "Your line" sheet must also render statically under reduced
+  // motion. Reuses A's (now-ended) conversation — still tappable, its transcript
+  // stays reachable — and A's listener session already carried in `state` above.
+  await r.locator('[data-testid^="mentor-convo-"]:visible').first().click();
+  await r.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
+  await rtid('member-header').click();
+  await r.waitForSelector('[data-testid="brief-ready"]', { timeout: 30000 });
+  await rtid('back').click();
+  await r.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
+  await rtid('mentor-chat-back').click();
+  await r.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 30000 });
+  await r.locator('[data-testid="your-line"]:visible').first().click();
+  await r.waitForSelector('[data-testid="line-sheet"]', { timeout: 15000 });
+  await rtid('line-cancel').click();
+  await r.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 30000 });
+  console.log('OK reduced-motion brief + "Your line" sheet');
 
   await browser.close();
   if (errors.length) {

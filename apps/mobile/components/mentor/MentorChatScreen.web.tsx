@@ -258,7 +258,7 @@ export default function MentorChatScreenWeb() {
           edge={colors.edgeSurface}
           travel={2}
           radius={radius.md}
-          accessibilityLabel={memberName}
+          accessibilityLabel={t('mentor.brief.headerA11y', { name: memberName })}
           containerStyle={styles.headerPressContainer}
           style={styles.headerPressFace}
           testID="member-header"

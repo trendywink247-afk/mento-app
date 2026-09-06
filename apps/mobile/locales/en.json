@@ -91,7 +91,6 @@
       "why": "Why they came",
       "picked": "Picked %{topic} at match",
       "lens": "Path lens %{lens}",
-      "firstMessage": "First message %{when}",
       "started": "Chat started %{when}",
       "inChat": "In this chat",
       "lastMessage": "Last message",
@@ -99,7 +98,8 @@
       "safetyNone": "none",
       "safetyOpen": "%{count} · under review",
       "nextStep": "A gentle next step",
-      "unavailable": "—"
+      "unavailable": "—",
+      "headerA11y": "View %{name}'s brief"
     },
     "line": {
       "row": "Your line",
@@ -605,5 +605,12 @@
   },
   "mentors": {
     "favourite": "Favourite"
+  },
+  "time": {
+    "justNow": "just now",
+    "minutesAgo": "%{count} min ago",
+    "hoursAgo": "%{count} hr ago",
+    "yesterday": "yesterday",
+    "daysAgo": "%{count} days ago"
   }
 }
