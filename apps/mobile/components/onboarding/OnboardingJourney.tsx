@@ -33,7 +33,7 @@ import { ReadyStep } from '@/components/onboarding/steps/ReadyStep';
 import { RoleStep } from '@/components/onboarding/steps/RoleStep';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
-import { getDraft } from '@/lib/onboardingDraft';
+import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import type { Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
@@ -126,6 +126,16 @@ export function OnboardingJourney() {
     router.replace('/mentor-home');
   }, [router]);
 
+  // No mentor free (503 after the honest retries): the session already exists, so
+  // the member enters the app on Browse mentors and can send a Personal request.
+  // Same stack rebuild as the matched path — hardware back lands on My Chats.
+  const onBrowseMentors = useCallback(() => {
+    clearDraft();
+    router.dismissAll();
+    router.replace('/chats');
+    router.push('/(tabs)/mentors');
+  }, [router]);
+
   // The matched moment: success haptic, panda celebrates, the sky lifts toward the
   // accent for a hard-capped beat — then the route crossfade carries us into chat.
   const onMatched = useCallback(
@@ -193,6 +203,7 @@ export function OnboardingJourney() {
               active={key === step}
               onInvalidDraft={() => setStep('role')}
               onMatched={onMatched}
+              onBrowseMentors={onBrowseMentors}
             />
           );
         case 'primer':

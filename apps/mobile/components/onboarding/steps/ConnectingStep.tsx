@@ -105,15 +105,20 @@ export function ConnectingStep({
   active,
   onInvalidDraft,
   onMatched,
+  onBrowseMentors,
 }: {
   active: boolean;
   onInvalidDraft: () => void;
   onMatched: (params: MatchParams) => void;
+  /** No mentor free right now: the session exists, so let them in to browse
+   * mentors and send a Personal request instead of a dead-end retry. */
+  onBrowseMentors: () => void;
 }) {
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
   const reduced = useReducedMotion();
   const [phase, setPhase] = useState<Phase>('searching');
+  const [hasSession, setHasSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [foundName, setFoundName] = useState<string | null>(null);
   const [line, setLine] = useState(0);
@@ -160,6 +165,7 @@ export function ConnectingStep({
         capture('onboarding_completed');
       }
       onboardedRef.current = true;
+      setHasSession(true);
 
       if (!matchRequestedRef.current) {
         matchRequestedRef.current = true;
@@ -273,14 +279,24 @@ export function ConnectingStep({
     <StepScaffold
       footer={
         phase === 'error' ? (
-          <PrimaryButton
-            label={t('connecting.tryAgain')}
-            onPress={() => {
-              retriesRef.current = 0;
-              void connect();
-            }}
-            testID="retry"
-          />
+          <View style={styles.footerStack}>
+            <PrimaryButton
+              label={t('connecting.tryAgain')}
+              onPress={() => {
+                retriesRef.current = 0;
+                void connect();
+              }}
+              testID="retry"
+            />
+            {hasSession ? (
+              <PrimaryButton
+                variant="ghost"
+                label={t('connecting.browseMentors')}
+                onPress={onBrowseMentors}
+                testID="browse-mentors"
+              />
+            ) : null}
+          </View>
         ) : undefined
       }
     >
@@ -389,6 +405,7 @@ export function ConnectingStep({
 }
 
 const styles = StyleSheet.create({
+  footerStack: { gap: space.sm },
   head: { alignItems: 'center', gap: space.sm, marginTop: space.md, marginBottom: space.sm },
   headline: { ...type.displayHeadline, textAlign: 'center' },
   center: { textAlign: 'center' },

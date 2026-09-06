@@ -8,6 +8,7 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   cancelAnimation,
   runOnJS,
@@ -37,6 +38,8 @@ export type StageStep =
   | 'handoff';
 
 const BASE_SIZE = 64;
+/** Offset below the safe-area inset — level with the journey's back chevron. */
+const HOST_TOP = 6;
 
 /** Transform-only anchors from a fixed top-right base position. */
 const ANCHORS: Record<StageStep, { x: number; y: number; scale: number; opacity: number }> = {
@@ -68,6 +71,10 @@ export function PandaStage({
   const reduced = useReducedMotion();
   const { companionColor } = useTheme();
   const breathing = useBreathing();
+  // The journey's SafeAreaView pads its *flow* children; an absolutely positioned
+  // host ignores that padding, so the inset is applied here by hand (device finding:
+  // the companion sat under the Android status bar).
+  const insets = useSafeAreaInsets();
 
   const x = useSharedValue(ANCHORS[step].x);
   const y = useSharedValue(ANCHORS[step].y);
@@ -173,7 +180,7 @@ export function PandaStage({
   }));
 
   return (
-    <View style={styles.host} pointerEvents="none">
+    <View style={[styles.host, { top: insets.top + HOST_TOP }]} pointerEvents="none">
       <Animated.View style={stageStyle}>
         {/* Dimensional presence: the companion is an object in space — it faces the
           * pointer on web and drifts on two desynced periods on native. */}
@@ -194,5 +201,5 @@ export function PandaStage({
 
 const styles = StyleSheet.create({
   // Sits in the journey's header band, top-right — clear of the back chevron.
-  host: { position: 'absolute', top: 6, right: 20 },
+  host: { position: 'absolute', right: 20 },
 });

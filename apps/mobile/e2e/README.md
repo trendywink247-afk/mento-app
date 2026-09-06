@@ -24,3 +24,7 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   Reduced-motion pass reopens the console. 0 page errors in every context.
 - notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
   notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.
+- connecting-busy.e2e.js — flips every seeded listener to away (docker exec), drives
+  onboarding into the honest-busy retries, and asserts the error state offers Try again
+  AND "Browse mentors instead", which lands on the Mentors screen inside the app.
+  Restores listeners to online afterwards. Normal + reduced-motion, 0 page errors.
