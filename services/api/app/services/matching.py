@@ -228,6 +228,18 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
     blocked_ids = _blocked_listener_ids(db, user.id) | _own_listener_ids(db, user.id)
     listener = _pick_available_listener(db, category, blocked_ids, community=user.community_slug)
     if listener is None:
+        # Self-heal before giving up. Prod finding (2026-09-06): every slot was held
+        # by abandoned chats older than conversation_max_age_hours, and the sweep
+        # only ran when an admin pressed Reconcile — so a member was told "all our
+        # mentors are with someone" for a day. Retry once only if the sweep
+        # actually freed something; a genuinely full pool still 503s.
+        healed = reconcile_listener_capacity(db)
+        db.commit()
+        if any(healed.values()):
+            listener = _pick_available_listener(
+                db, category, blocked_ids, community=user.community_slug
+            )
+    if listener is None:
         raise NoListenerAvailable()
     return open_conversation(db, user.id, listener)
 

@@ -163,3 +163,48 @@ def test_reconcile_ends_stale_conversations_and_frees_slots(client, db_session):
     with TestSession() as s:
         assert s.get(Conversation, cid2).status == ConversationStatus.active
         assert s.get(ListenerProfile, lid).active_conversations == 1
+
+
+@requires_postgres
+def test_match_self_heals_a_slot_leaked_by_a_stale_conversation(client, db_session):
+    # The only listener is "full" purely because an abandoned chat older than
+    # conversation_max_age_hours never ended. General match must sweep + retry
+    # instead of 503ing (prod finding, 2026-09-06: nine day-old test chats held
+    # every slot and a fresh member saw "all our mentors are with someone").
+    with TestSession() as s:
+        old_uid = _seed_user(s)
+        lid = _seed_listener(s, active=1, max_concurrent=1)
+        stale_cid = _seed_active_convo(
+            s, old_uid, lid, created_at=datetime.now(UTC) - timedelta(hours=25)
+        )
+        new_uid = _seed_user(s)
+        s.commit()
+
+    r = client.post("/api/v1/match", json={"kind": "general"}, headers=_auth(new_uid))
+    assert r.status_code == 200, r.text
+    assert r.json()["listener_persona_name"] == "Open River"
+
+    with TestSession() as s:
+        stale = s.get(Conversation, stale_cid)
+        assert stale.status == ConversationStatus.ended
+        assert stale.ended_at is not None
+        # Exactly the new chat is counted — the swept one no longer holds a slot.
+        assert s.get(ListenerProfile, lid).active_conversations == 1
+
+
+@requires_postgres
+def test_match_still_503_when_capacity_is_genuinely_full(client, db_session):
+    # A live, recent conversation is never swept to make room — honest busy.
+    with TestSession() as s:
+        uid = _seed_user(s)
+        lid = _seed_listener(s, active=1, max_concurrent=1)
+        cid = _seed_active_convo(s, uid, lid)
+        new_uid = _seed_user(s)
+        s.commit()
+
+    r = client.post("/api/v1/match", json={"kind": "general"}, headers=_auth(new_uid))
+    assert r.status_code == 503
+
+    with TestSession() as s:
+        assert s.get(Conversation, cid).status == ConversationStatus.active
+        assert s.get(ListenerProfile, lid).active_conversations == 1
