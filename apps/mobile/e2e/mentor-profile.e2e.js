@@ -1,8 +1,11 @@
 /** Mentor profile — "Two in the room" (spec 2026-09-06-chat-profiles-composer-design.md §3).
  * Chat header tap → mentor profile screen (persona name renders immediately from route
  * params, then the fetched profile fills in) → favourite toggle (optimistic, "Saved"
- * label) → back to the still-live chat → Browse shows the favourite first with a heart
- * badge. Runs once normally, once under reduced motion. 0 page errors in every context.
+ * label) → "Report or block" hands off to the chat: back navigation regains the still-
+ * live chat AND the options sheet auto-opens straight onto the Report flow (the
+ * conversation-scoped pendingOption store) → close it → Browse shows the favourite
+ * first with a heart badge. Runs once normally, once under reduced motion. 0 page
+ * errors in every context.
  *
  * Needs: API :8000 seeded + Expo web :8081, the mento-postgres / mento-redis containers
  * (this script resets rate limits + capacity accounting through docker exec before each
@@ -76,9 +79,22 @@ async function attempt(browser, reduced) {
   );
   console.log(`OK [${label}] favourite saved`);
 
-  await page.goBack();
+  // "Report or block" hands off to the chat via the conversation-scoped pendingOption
+  // store: router.back() must land on the still-live chat AND the options sheet must
+  // auto-open straight onto the Report flow (skipping the choice sheet).
+  await tid('report-block').click();
   await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 30000 });
-  console.log(`OK [${label}] back in the still-live chat`);
+  await page.waitForSelector('[data-testid="report-and-block"]', { timeout: 15000 });
+  console.log(`OK [${label}] report hand-off: back in chat with the Report flow open`);
+
+  // Close it: Cancel pops the Report flow back to the choice sheet, then the X
+  // fully dismisses (both call ConversationOptions' close(), which also clears the
+  // hand-off's pendingInitial so a later ordinary open starts fresh).
+  await tid('opt-cancel').click();
+  await tid('options-sheet').waitFor({ timeout: 15000 });
+  await tid('options-close').click();
+  await page.waitForSelector('[data-testid="options-sheet"]', { state: 'hidden', timeout: 15000 });
+  console.log(`OK [${label}] options sheet closed`);
 
   await page.goto(`${WEB}/mentors`, { waitUntil: 'networkidle', timeout: 60000 });
   const firstRow = page.locator('[data-testid^="mentor-"]').first();

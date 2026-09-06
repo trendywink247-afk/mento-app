@@ -107,7 +107,12 @@ export default function MentorsTab() {
         ) : null}
       </View>
       {l.is_favourite ? (
-        <View testID={`mentor-favourite-${l.id}`} accessibilityLabel={t('mentors.favourite')}>
+        <View
+          testID={`mentor-favourite-${l.id}`}
+          accessible
+          accessibilityRole="image"
+          accessibilityLabel={t('mentors.favourite')}
+        >
           <Ionicons name="heart" size={18} color={colors.accent} />
         </View>
       ) : null}

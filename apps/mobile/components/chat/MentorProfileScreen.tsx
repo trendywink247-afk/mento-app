@@ -19,7 +19,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { duration } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type, wash } from '@/theme/tokens';
+import { font, radius, space, type } from '@/theme/tokens';
 
 /**
  * "Two in the room" (spec §3.2) — the member-side mentor profile, pushed from the
@@ -33,7 +33,21 @@ import { font, radius, space, type, wash } from '@/theme/tokens';
 function monthYear(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(d);
+  return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(d);
+}
+
+// Community labels only need the tree once per app session — cache the in-flight/
+// resolved promise at module scope so reopening the profile never re-fetches it.
+// Cleared on failure so a later open can still retry.
+let pathTreePromise: ReturnType<typeof api.pathTree> | null = null;
+function cachedPathTree(): ReturnType<typeof api.pathTree> {
+  if (!pathTreePromise) {
+    pathTreePromise = api.pathTree().catch((e) => {
+      pathTreePromise = null;
+      throw e;
+    });
+  }
+  return pathTreePromise;
 }
 
 function titleCase(slug: string): string {
@@ -124,7 +138,7 @@ export default function MentorProfileScreen() {
   // Community labels are a nice-to-have polish, never a blocker — fetched once,
   // best-effort, and simply ignored on failure (falls back to a title-cased slug).
   useEffect(() => {
-    void api.pathTree().then(setTree).catch(() => {});
+    void cachedPathTree().then(setTree).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -166,7 +180,7 @@ export default function MentorProfileScreen() {
   };
 
   const reportOrBlock = () => {
-    pendingOption.set('report');
+    pendingOption.set(conversationId ?? '', 'report');
     router.back();
   };
 
@@ -176,8 +190,18 @@ export default function MentorProfileScreen() {
   return (
     <Screen onBack={() => router.back()} scroll>
       <Entrance index={0}>
-        <View style={styles.hero}>
-          {animal ? (
+        {/* `animal` is undefined while the stored choice is still loading, null once
+            read and there truly is none — only the latter falls back to the avatar-only
+            layout. Reserving the two-up row's height (and leaving the companion slot
+            blank) while undefined means a normal open — which always resolves to an
+            animal — never jumps layout once it lands. */}
+        <View style={[styles.hero, { minHeight: 120 }]}>
+          {animal === undefined ? (
+            <View style={styles.heroRow}>
+              <View style={styles.heroPlaceholder} />
+              <PersonaAvatar name={displayName} size={78} online={online} />
+            </View>
+          ) : animal ? (
             <View style={styles.heroRow}>
               <Companion animal={animal} size={120} awake trigger={trigger} />
               <PersonaAvatar name={displayName} size={78} online={online} />
@@ -217,12 +241,12 @@ export default function MentorProfileScreen() {
         <Entrance index={3}>
           <View style={styles.chips}>
             {profile.categories.map((c) => (
-              <View key={c} style={[styles.chip, { backgroundColor: wash.accent }]}>
+              <View key={c} style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
                 <Text style={[styles.chipText, { color: colors.accent }]}>{formatTopic(c)}</Text>
               </View>
             ))}
             {profile.community_slug ? (
-              <View style={[styles.chip, { backgroundColor: wash.green }]}>
+              <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
                 <Text style={[styles.chipText, { color: colors.success }]}>
                   {communityLabel(tree, profile.community_slug)}
                 </Text>
@@ -315,6 +339,7 @@ export default function MentorProfileScreen() {
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', marginTop: space.sm, marginBottom: space.md },
   heroRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', gap: space.md },
+  heroPlaceholder: { width: 120, height: 120 },
   nameBlock: { alignItems: 'center', gap: space.xs, marginBottom: space.md },
   publicLine: {
     borderLeftWidth: 3,

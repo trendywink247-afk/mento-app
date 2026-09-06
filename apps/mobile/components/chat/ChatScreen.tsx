@@ -93,12 +93,12 @@ export default function ChatScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      const opt = pendingOption.take();
+      const opt = pendingOption.take(conversationId ?? '');
       if (opt === 'report') {
         setPendingInitial('report');
         setOptionsOpen(true);
       }
-    }, []),
+    }, [conversationId]),
   );
 
   // The core talk→action loop (SCOPE §7): long-press a mentor message → message menu →
@@ -244,6 +244,9 @@ export default function ChatScreen() {
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
+        {/* reason: this row is header chrome, not a card — face + edge are both
+            colors.surface (flush with the header background, no visible lip) so the
+            pillow travel + haptic on press are the only cue it's tappable. */}
         <PressKey
           onPress={() =>
             router.push({
@@ -256,7 +259,7 @@ export default function ChatScreen() {
           testID="mentor-header"
           accessibilityRole="button"
           accessibilityLabel={t('chat.mentorHeaderA11y', { name: listenerName })}
-          style={styles.headerPressFace}
+          style={[styles.headerPressFace, { backgroundColor: colors.surface }]}
           containerStyle={styles.headerPressContainer}
         >
           <PersonaAvatar name={listenerName} size={52} online />
