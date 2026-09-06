@@ -19,3 +19,15 @@ ISSUE_CATEGORIES: dict[str, str] = {
 def label(slug: str | None) -> str | None:
     """Display label for an issue-category slug, or None if unset/unknown."""
     return ISSUE_CATEGORIES.get(slug) if slug else None
+
+
+# The four `ListenerApplicationIn.availability` Literal values, reworded to read
+# naturally inside the member-facing caption "usually here {note}" (spec
+# 2026-09-06 §3.2) — approval seeds ListenerProfile.availability_note from this,
+# not the raw application slug.
+AVAILABILITY_NOTES: dict[str, str] = {
+    "few_hours": "a few hours a week",
+    "most_evenings": "most evenings",
+    "weekends": "weekends",
+    "varies": "when I can",
+}

@@ -206,8 +206,18 @@ def test_approving_an_application_seeds_availability_note(client, db_session):
 
     with TestSession() as s:
         li = s.query(ListenerProfile).one()
-        assert li.availability_note == "most_evenings"
+        assert li.availability_note == "most evenings"  # readable label, not the raw enum slug
         assert li.public_line is None
+
+
+def test_availability_notes_cover_every_application_literal():
+    from typing import get_args
+
+    from app.schemas import ListenerApplicationIn
+    from app.services.categories import AVAILABILITY_NOTES
+
+    literal = get_args(ListenerApplicationIn.model_fields["availability"].annotation)
+    assert set(literal) <= AVAILABILITY_NOTES.keys()
 
 
 @requires_postgres
