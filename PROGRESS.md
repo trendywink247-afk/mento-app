@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-09-06 (session 32) — Device feedback: companion clears the status bar; "no mentor free" is no longer a dead end; matcher self-heals leaked slots ✅
+
+**Context:** founder on the Nothing Phone 1 after cloning the app to a fresh profile: (1) the corner companion sat under the battery/status bar; (2) a brand-new "I need to talk" member hit "We couldn't connect just yet"; ruling: "even if no listener is available it should take the mentee to homepage and can browse mentors he can send req to" (DECISIONS §K.12).
+
+**Root cause of (2):** prod had **9 abandoned test conversations** (4–5 Sept) holding all 3×3 listener slots — the stale sweep (`reconcile_listener_capacity`, 24 h max age) only ran from the admin Reconcile button, so the pool looked full for a day. Not a matcher bug, not a seed problem.
+
+**Done:**
+- `8ac3bd9` **matcher self-heal**: when no listener is free, `match_general` runs the capacity reconcile inline (end >24 h chats, recompute counters, presence sweep) and retries the pick once *only if something was freed*; a genuinely full pool still 503s. Tests: stale slot heals → 200 + old chat ended; recent chat never swept → 503. pytest **210 passed**, alembic check clean, ruff + black clean, listeners re-seeded.
+- `84faab8` **mobile**: `PandaStage` applies `useSafeAreaInsets().top` itself (absolute children ignore `SafeAreaView` padding — new CLAUDE.md gotcha); connecting error state shows a ghost **Browse mentors instead** under Try again once the session exists → journey rebuilds the stack onto Chats and opens the Mentors screen (EN + HI). New proof `e2e/connecting-busy.e2e.js` (flips seeded listeners away via docker exec, restores after; normal + reduced motion, 0 page errors); `connecting-experience.e2e.js` still green; tsc clean.
+- **Shipped:** prod API redeployed (backup `mento-20260906-053719.sql.gz`, container verified to carry the fix, health 200); OTA update `01a07617` on branch/channel `preview` (runtime 0.1.0) — no reinstall needed. The first General match a member attempts on prod will sweep the day-old test chats itself.
+
+**Open (founder):**
+- **Idle vs old:** slots free only for chats older than 24 h. A member who matches and walks away holds a human's slot for a day — consider an idle rule (no message for N hours) or ending the chat when the member's session is wiped. Veto/answer needed before pilot traffic.
+- The founder's own test chats younger than 24 h (one Serene Brook chat from 5 Sept 12:27 UTC) stay active until they age out or are ended in-app.
+- Carried: `app/coffee.tsx` residual English; Module B naming; Sentry native symbolication.
+
+**Next:** founder re-tests the fresh-profile "I need to talk" path on prod (expect a match now, or the Browse mentors exit if all three listeners are genuinely busy); then pick the next feature.
+
+**How to resume:** stack as before (`mento-stack`); busy-path proof = `node e2e/connecting-busy.e2e.js` with the playwright NODE_PATH (it needs the docker containers to flip presence). Prod ops unchanged (`deploy.sh` on the VPS, `eas update --branch preview` for JS-only changes). **Gotcha:** `locales/*.json` are CRLF in the working copy — scripted edits must match the file's own line ending.
+
 ## 2026-09-05 (session 31g) — Open items cleared: web heartbeat, Start Fresh mentor token, companion-neutral names, awake onboarding ✅
 
 **Context:** founder: "start with the open items in that order." Two rulings taken first (DECISIONS §K.11): keep both approved mentor profiles for two-role testing; rename the panda-named features to companion-neutral names everywhere.
