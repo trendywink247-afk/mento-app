@@ -9,14 +9,22 @@ from app.db import SessionLocal, init_db
 from app.models.enums import Gender, ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.services import stream
+from app.services.categories import ISSUE_CATEGORIES
 from app.services.persona import generate_persona
 
 # (gender, categories, community_slug) — community None = serves every path.
+# Category slugs must be keys of ISSUE_CATEGORIES (asserted below): these seeds
+# used to carry their own ad-hoc slugs (self_esteem/focus/studying/anxiety) —
+# renamed onto the shared dict so seeds, Browse chips and the mentor brief agree.
 SEED = [
-    (Gender.female, ["loneliness", "self_esteem", "relationships"], None),
-    (Gender.male, ["focus", "studying", "family"], "upsc"),
-    (Gender.undisclosed, ["loneliness", "anxiety", "studying"], "neet"),
+    (Gender.female, ["loneliness", "life", "relationships"], None),
+    (Gender.male, ["exam_stress", "family", "career_doubt"], "upsc"),
+    (Gender.undisclosed, ["loneliness", "exam_stress", "life"], "neet"),
 ]
+
+for _, _categories, _ in SEED:
+    for _slug in _categories:
+        assert _slug in ISSUE_CATEGORIES, f"seed category {_slug!r} not in ISSUE_CATEGORIES"
 
 
 def main() -> None:

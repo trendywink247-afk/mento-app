@@ -29,6 +29,10 @@ class Conversation(UUIDMixin, TimestampMixin, Base):
         String(128), nullable=True, unique=True, index=True
     )
 
+    # Topic picked at match time (General's chip or Personal request's issue_category).
+    # Server-data label lives in services/categories.py. Historic rows: NULL.
+    issue_category: Mapped[str | None] = mapped_column(String(40), nullable=True)
+
     # Per-conversation controls (simplified for v1; behind the options menu).
     is_locked: Mapped[bool] = mapped_column(Boolean, default=False)
     pin_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)

@@ -3,6 +3,7 @@
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation
+from app.models.favourite import FavouriteListener
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
@@ -20,6 +21,7 @@ __all__ = [
     "Conversation",
     "ConversationReflection",
     "ConversationRequest",
+    "FavouriteListener",
     "JournalEntry",
     "ListenerApplication",
     "ListenerProfile",
