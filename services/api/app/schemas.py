@@ -57,6 +57,27 @@ class ListenerOut(BaseModel):
     categories: list[str]
     status: str
     available: bool
+    is_favourite: bool
+
+
+class ListenerProfileOut(BaseModel):
+    """The member-side mentor profile, "Two in the room" (spec 2026-09-06 §3.3).
+    Keyed by conversation (`GET /conversations/{id}/mentor`) or by listener id
+    (`GET /listeners/{id}`, Browse). Anonymous persona only — T&S #7."""
+
+    id: str
+    persona_name: str
+    persona_avatar: str
+    gender: str
+    categories: list[str]
+    community_slug: str | None
+    status: str
+    available: bool
+    public_line: str | None
+    availability_note: str | None
+    listening_since: str  # ISO date of ListenerProfile.created_at
+    conversations_held: int
+    is_favourite: bool
 
 
 class PersonalRequestIn(BaseModel):
