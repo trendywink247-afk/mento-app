@@ -52,7 +52,7 @@ from app.schemas import (
     RequestOut,
 )
 from app.security import current_listener_id, issue_listener_token
-from app.services import care_prompts, categories, push, push_tasks, stream
+from app.services import care_prompts, categories, paths, push, push_tasks, stream
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -60,7 +60,6 @@ from app.services.matching import (
     decline_personal_request,
     release_listener_slot,
 )
-from app.services.paths_data import COMMUNITIES
 
 router = APIRouter(prefix="/listener", tags=["listener-console"])
 
@@ -334,26 +333,6 @@ def _owned_conversation(db: Session, convo_id: str, listener: ListenerProfile) -
     return convo
 
 
-def _community_label(slug: str | None) -> str | None:
-    """Safe lookup — unlike `services.paths.community_info` (which assumes the
-    slug is already valid), a brief must never 500 on a slug that config has
-    since dropped."""
-    if not slug:
-        return None
-    community = COMMUNITIES.get(slug)
-    return community["name"] if community else None
-
-
-def _stage_label(community_slug: str | None, stage_slug: str | None) -> str | None:
-    if not community_slug or not stage_slug:
-        return None
-    community = COMMUNITIES.get(community_slug)
-    if not community:
-        return None
-    stage = community.get("stages", {}).get(stage_slug)
-    return stage["title"] if stage else None
-
-
 @router.get("/me/conversations/{convo_id}/brief", response_model=MemberBriefOut)
 def member_brief(
     convo_id: str,
@@ -384,9 +363,9 @@ def member_brief(
         companion_animal=member.companion_animal,
         companion_colour=member.companion_colour,
         community_slug=member.community_slug,
-        community_label=_community_label(member.community_slug),
+        community_label=paths.community_label(member.community_slug),
         journey_stage=member.journey_stage,
-        journey_stage_label=_stage_label(member.community_slug, member.journey_stage),
+        journey_stage_label=paths.stage_label(member.community_slug, member.journey_stage),
         issue_category=convo.issue_category,
         issue_category_label=categories.label(convo.issue_category),
         created_at=convo.created_at.isoformat(),

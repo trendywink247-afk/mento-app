@@ -162,6 +162,8 @@ def test_unreviewed_flags_counted_reviewed_excluded(client, db_session):
         user = _seed_user(s)
         lid = _seed_listener(s)
         convo = _seed_convo(s, user_id=user.id, listener_id=lid)
+        other_user = _seed_user(s, name="Other Cove")
+        other_convo = _seed_convo(s, user_id=other_user.id, listener_id=lid)
         s.add(
             SafetyFlag(
                 conversation_id=convo.id,
@@ -176,6 +178,16 @@ def test_unreviewed_flags_counted_reviewed_excluded(client, db_session):
                 user_id=user.id,
                 signal=SafetySignal.self_harm,
                 reviewed=True,
+            )
+        )
+        # An unreviewed flag on a DIFFERENT conversation must never bleed into
+        # this one's count — the query scopes on conversation_id, not listener.
+        s.add(
+            SafetyFlag(
+                conversation_id=other_convo.id,
+                user_id=other_user.id,
+                signal=SafetySignal.self_harm,
+                reviewed=False,
             )
         )
         s.commit()

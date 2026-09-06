@@ -105,33 +105,46 @@ def _parse_iso(raw: str) -> datetime | None:
     return dt
 
 
+_LMA_ERROR_SENTINEL = "ERR"  # negative-cache marker — never a valid ISO timestamp
+
+
 def channel_last_message_at(channel_id: str) -> datetime | None:
     """Read-only lookup for the mentor console's brief (spec 2026-09-06 §4.3):
-    when did this channel last see a message. Never returns a message body.
+    when did this channel last see a message. `messages={"limit": 0}` asks
+    Stream for channel state only — no message body ever travels over the wire
+    for this lookup (defence in depth, T&S #7).
 
     Cached in Redis (`brief:lma:{channel_id}`, 30s) so re-opening the brief
     doesn't re-query Stream every tap; a channel with no messages yet caches the
-    empty string so it isn't re-queried either. Any Stream or Redis failure ->
-    None, logged once — the brief still renders, just without this row (fail-soft,
-    same philosophy as push._is_watching)."""
+    empty string so it isn't re-queried either. On a Stream failure a short
+    negative-cache sentinel (5s) stands in, so an outage doesn't turn every brief
+    tap into a live call; any Stream or Redis failure -> None, logged once — the
+    brief still renders, just without this row (fail-soft, same philosophy as
+    push._is_watching)."""
     key = f"brief:lma:{channel_id}"
     try:
         cached = ratelimit._redis().get(key)
     except Exception:
         cached = None
     if cached is not None:
+        if cached == _LMA_ERROR_SENTINEL:
+            return None
         return _parse_iso(cached) if cached else None
 
     client = _client()
     if client is None:
         return None
     try:
-        resp = client.channel("messaging", channel_id).query(state=True)
+        resp = client.channel("messaging", channel_id).query(messages={"limit": 0}, state=True)
         raw = (resp.get("channel") or {}).get("last_message_at") or ""
     except Exception as exc:  # noqa: BLE001 — best-effort by design
         logger.warning(
             "channel_last_message_at query failed (%s) — returning None", type(exc).__name__
         )
+        try:
+            ratelimit._redis().set(key, _LMA_ERROR_SENTINEL, ex=5)
+        except Exception:
+            pass
         return None
     try:
         ratelimit._redis().set(key, raw, ex=30)
