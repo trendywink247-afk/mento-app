@@ -7,8 +7,9 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   View,
+  type NativeSyntheticEvent,
+  type TextInputKeyPressEventData,
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +18,7 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PressKey } from '@/components/motion/PressKey';
+import { ComposerField } from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { TypingDots } from '@/components/chat/TypingDots';
@@ -47,8 +49,6 @@ import { font, radius, space, type } from '@/theme/tokens';
  */
 
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
-// Composer field grows to 4 lines (spec §5.1/§5.2) then scrolls.
-const COMPOSER_MAX_INPUT_HEIGHT = 4 * type.body.lineHeight + space.sm * 2;
 
 type Msg = { id: string; text: string; mine: boolean; at: string };
 
@@ -259,11 +259,15 @@ type ComposerProps = {
 };
 
 /** Pillow-key composer (spec §5.2 — same anatomy/tokens as the native
- * components/chat/Composer.tsx: EdgeSurface pill field + PressKey send circle).
+ * components/chat/Composer.tsx, via the shared components/chat/ComposerField.tsx).
  * Owns the draft locally so every keystroke re-renders only this leaf — never the
  * transcript above it. The draft is cleared only AFTER the send resolves; on
  * failure it stays put with an honest retry line. Enter sends, Shift+Enter
- * newlines (web convention, via onSubmitEditing — unchanged from before). */
+ * newlines: react-native-web only invokes `onSubmitEditing` on a multiline
+ * TextInput when `blurOnSubmit` is set (see TextInput/index.js's handleKeyDown),
+ * so Enter-to-send is wired through `onKeyPress` instead, reading the DOM
+ * KeyboardEvent's `shiftKey` off `nativeEvent` (present at runtime; not in RN's
+ * official TextInputKeyPressEventData type, hence the narrow cast below). */
 const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -288,6 +292,17 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
     }
   };
 
+  const handleKeyPress = (e: NativeSyntheticEvent<TextInputKeyPressEventData>) => {
+    // reason: react-native-web's key event carries `shiftKey` on `nativeEvent`
+    // (verified against its TextInput source) — RN's official
+    // TextInputKeyPressEventData type only declares `key`.
+    const shiftKey = (e.nativeEvent as unknown as { shiftKey?: boolean }).shiftKey;
+    if (e.nativeEvent.key === 'Enter' && !shiftKey) {
+      e.preventDefault();
+      void submit();
+    }
+  };
+
   return (
     <View>
       {sendError ? (
@@ -298,45 +313,19 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
           {t('chat.sendFailed')}
         </Text>
       ) : null}
-      <View style={styles.composer}>
-        <EdgeSurface
-          edge={colors.edgeSurface}
-          radius={radius.lg}
-          style={[styles.inputPill, { backgroundColor: colors.surface }]}
-          containerStyle={styles.inputPillContainer}
-        >
-          <TextInput
-            style={[type.body, styles.input, { color: colors.ink }]}
-            placeholder={t('chat.placeholder')}
-            placeholderTextColor={colors.inkMuted}
-            value={draft}
-            onChangeText={(text) => {
-              setDraft(text);
-              onTyping();
-            }}
-            onSubmitEditing={() => void submit()}
-            testID="composer-input"
-            accessibilityLabel={t('chat.placeholder')}
-            maxFontSizeMultiplier={1.3}
-            multiline
-          />
-        </EdgeSurface>
-        <PressKey
-          onPress={() => void submit()}
-          edge={colors.accentEdge}
-          radius={radius.lg}
-          disabled={isEmpty || sending}
-          testID="composer-send"
-          accessibilityLabel={t('chat.send')}
-          style={[styles.sendBtn, { backgroundColor: colors.accent }]}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color={colors.onAccent} />
-          ) : (
-            <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
-          )}
-        </PressKey>
-      </View>
+      <ComposerField
+        value={draft}
+        onChangeText={(text) => {
+          setDraft(text);
+          onTyping();
+        }}
+        onSubmit={() => void submit()}
+        onKeyPress={handleKeyPress}
+        disabled={isEmpty || sending}
+        sending={sending}
+        placeholder={t('chat.placeholder')}
+        testIDPrefix="composer"
+      />
     </View>
   );
 });
@@ -778,25 +767,4 @@ const styles = StyleSheet.create({
     padding: space.sm,
   },
   sendErrorLine: { paddingHorizontal: space.md, paddingTop: space.xs },
-  composer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: space.sm,
-    paddingHorizontal: 10,
-    paddingTop: space.sm,
-    paddingBottom: 12,
-  },
-  inputPillContainer: { flex: 1 },
-  inputPill: {
-    minHeight: 44,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  input: { maxHeight: COMPOSER_MAX_INPUT_HEIGHT, paddingVertical: space.sm, margin: 0 },
-  sendBtn: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
 });

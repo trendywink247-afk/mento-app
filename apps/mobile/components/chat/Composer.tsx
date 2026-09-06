@@ -37,29 +37,21 @@
  * `Input` renders, and separately applies a bottom safe-area inset — both screens
  * neutralise the border/background/top-padding via their `streamTheme` and leave
  * the safe-area bottom padding alone, so this component does not double it.
+ *
+ * The visible row (EdgeSurface field + PressKey send) lives in the presentational
+ * components/chat/ComposerField.tsx, shared with the two hand-rolled web
+ * composers — this file supplies only the kit-specific text/send wiring above.
  */
-import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import type { TextComposerState } from 'stream-chat';
 import { useMessageComposer, useMessageInputContext, useStateStore } from 'stream-chat-expo';
 
-import { EdgeSurface } from '@/components/EdgeSurface';
-import { PressKey } from '@/components/motion/PressKey';
+import { ComposerField } from '@/components/chat/ComposerField';
 import { useI18n } from '@/lib/i18n';
-import { useTheme } from '@/theme/ThemeProvider';
-import { radius, space, type as typeTokens } from '@/theme/tokens';
-
-const FIELD_RADIUS = radius.lg; // 22
-const SEND_SIZE = 44;
-const INPUT_VERTICAL_PADDING = space.sm; // 8 top + 8 bottom inside the field
-const MAX_LINES = 4;
-const MAX_INPUT_HEIGHT = MAX_LINES * typeTokens.body.lineHeight + INPUT_VERTICAL_PADDING * 2;
 
 const textComposerStateSelector = (state: TextComposerState) => ({ text: state.text });
 
 export function Composer() {
-  const { colors } = useTheme();
   const { t } = useI18n();
   const messageComposer = useMessageComposer();
   const { textComposer } = messageComposer;
@@ -88,75 +80,24 @@ export function Composer() {
     try {
       await sendMessage();
     } catch {
-      // sendMessage already reports failures via the kit's notification system and
-      // restores the draft on failure — nothing further to do here.
+      // The kit already clears the composer optimistically before this promise
+      // settles; on failure the optimistic message stays in the transcript as a
+      // retryable failed bubble (the kit's own error/retry affordance) — nothing
+      // further to do here.
     } finally {
       setSending(false);
     }
   }, [trimmed, sending, text, textComposer, sendMessage]);
 
   return (
-    <View style={styles.row}>
-      <EdgeSurface
-        edge={colors.edgeSurface}
-        radius={FIELD_RADIUS}
-        style={[styles.field, { backgroundColor: colors.surface }]}
-        containerStyle={styles.fieldContainer}
-      >
-        <TextInput
-          value={text}
-          onChangeText={onChangeText}
-          placeholder={t('chat.placeholder')}
-          placeholderTextColor={colors.inkMuted}
-          multiline
-          maxFontSizeMultiplier={1.3}
-          style={[typeTokens.body, styles.input, { color: colors.ink, maxHeight: MAX_INPUT_HEIGHT }]}
-          testID="composer-input"
-          accessibilityLabel={t('chat.placeholder')}
-        />
-      </EdgeSurface>
-      <PressKey
-        onPress={() => void handleSend()}
-        edge={colors.accentEdge}
-        disabled={isEmpty || sending}
-        radius={SEND_SIZE / 2}
-        style={[styles.send, { backgroundColor: colors.accent }]}
-        accessibilityLabel={t('chat.send')}
-        testID="composer-send"
-      >
-        {sending ? (
-          <ActivityIndicator size="small" color={colors.onAccent} />
-        ) : (
-          <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
-        )}
-      </PressKey>
-    </View>
+    <ComposerField
+      value={text}
+      onChangeText={onChangeText}
+      onSubmit={() => void handleSend()}
+      disabled={isEmpty || sending}
+      sending={sending}
+      placeholder={t('chat.placeholder')}
+      testIDPrefix="composer"
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: space.sm,
-    paddingHorizontal: 10,
-    paddingTop: space.sm,
-    paddingBottom: 12,
-  },
-  fieldContainer: { flex: 1 },
-  field: {
-    minHeight: 44,
-    paddingHorizontal: 14,
-    justifyContent: 'center',
-  },
-  input: {
-    paddingVertical: INPUT_VERTICAL_PADDING,
-    margin: 0,
-  },
-  send: {
-    width: SEND_SIZE,
-    height: SEND_SIZE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

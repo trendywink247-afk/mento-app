@@ -273,7 +273,6 @@
     "typing": "%{name} is typing…",
     "sendFailed": "Not sent — check your connection and tap send to retry.",
     "placeholder": "Type a message…",
-    "messageA11y": "Message",
     "send": "Send message",
     "mentorHeaderA11y": "View %{name}'s profile",
     "emptyTitle": "You're connected!",
