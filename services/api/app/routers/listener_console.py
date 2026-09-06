@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -34,6 +34,7 @@ from app.models.enums import (
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.request import ConversationRequest
+from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.schemas import (
     DevListenerItem,
@@ -44,13 +45,14 @@ from app.schemas import (
     ListenerReportIn,
     ListenerRequestItem,
     ListenerStatusIn,
+    MemberBriefOut,
     OkResult,
     PushTokenDeleteIn,
     PushTokenIn,
     RequestOut,
 )
 from app.security import current_listener_id, issue_listener_token
-from app.services import push, push_tasks, stream
+from app.services import care_prompts, categories, push, push_tasks, stream
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -58,6 +60,7 @@ from app.services.matching import (
     decline_personal_request,
     release_listener_slot,
 )
+from app.services.paths_data import COMMUNITIES
 
 router = APIRouter(prefix="/listener", tags=["listener-console"])
 
@@ -329,6 +332,69 @@ def _owned_conversation(db: Session, convo_id: str, listener: ListenerProfile) -
     if convo is None or convo.listener_id != listener.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
     return convo
+
+
+def _community_label(slug: str | None) -> str | None:
+    """Safe lookup — unlike `services.paths.community_info` (which assumes the
+    slug is already valid), a brief must never 500 on a slug that config has
+    since dropped."""
+    if not slug:
+        return None
+    community = COMMUNITIES.get(slug)
+    return community["name"] if community else None
+
+
+def _stage_label(community_slug: str | None, stage_slug: str | None) -> str | None:
+    if not community_slug or not stage_slug:
+        return None
+    community = COMMUNITIES.get(community_slug)
+    if not community:
+        return None
+    stage = community.get("stages", {}).get(stage_slug)
+    return stage["title"] if stage else None
+
+
+@router.get("/me/conversations/{convo_id}/brief", response_model=MemberBriefOut)
+def member_brief(
+    convo_id: str,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> MemberBriefOut:
+    """Mentee brief, "Context for care" (spec 2026-09-06 §4.2-4.5). Anonymous
+    persona + companion + coarse Path lens + topic + a deterministic care prompt
+    — never age, email, or identity (T&S #7)."""
+    convo = _owned_conversation(db, convo_id, listener)
+    member = db.get(User, convo.user_id)
+    if member is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+
+    safety_flags_open = db.execute(
+        select(func.count())
+        .select_from(SafetyFlag)
+        .where(SafetyFlag.conversation_id == convo.id, SafetyFlag.reviewed.is_(False))
+    ).scalar_one()
+
+    last_message_at = (
+        stream.channel_last_message_at(convo.stream_channel_id) if convo.stream_channel_id else None
+    )
+
+    return MemberBriefOut(
+        persona_name=member.persona_name,
+        persona_avatar=member.persona_avatar,
+        companion_animal=member.companion_animal,
+        companion_colour=member.companion_colour,
+        community_slug=member.community_slug,
+        community_label=_community_label(member.community_slug),
+        journey_stage=member.journey_stage,
+        journey_stage_label=_stage_label(member.community_slug, member.journey_stage),
+        issue_category=convo.issue_category,
+        issue_category_label=categories.label(convo.issue_category),
+        created_at=convo.created_at.isoformat(),
+        last_message_at=last_message_at.isoformat() if last_message_at else None,
+        member_masked=convo.status_mask is not None,
+        safety_flags_open=safety_flags_open,
+        care_prompt=care_prompts.pick(convo.issue_category, convo.id),
+    )
 
 
 @router.post("/me/conversations/{convo_id}/report", response_model=OkResult)

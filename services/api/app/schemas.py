@@ -276,6 +276,29 @@ class ListenerConversationItem(BaseModel):
     ended_at: str | None
 
 
+class MemberBriefOut(BaseModel):
+    """Mentee brief, "Context for care" (spec 2026-09-06 §4.3). Anonymous persona
+    + companion + coarse Path lens + topic + safety count — never age, email, or
+    identity (T&S #7). `member_masked` is the same Panda-Mask signal
+    `ListenerConversationItem` carries: the listener sees "away", never why."""
+
+    persona_name: str
+    persona_avatar: str
+    companion_animal: str | None
+    companion_colour: str | None
+    community_slug: str | None
+    community_label: str | None
+    journey_stage: str | None
+    journey_stage_label: str | None
+    issue_category: str | None
+    issue_category_label: str | None
+    created_at: str
+    last_message_at: str | None
+    member_masked: bool
+    safety_flags_open: int
+    care_prompt: str
+
+
 class ListenerRequestItem(BaseModel):
     id: str
     intro_message: str | None

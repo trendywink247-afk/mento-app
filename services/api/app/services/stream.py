@@ -8,8 +8,10 @@ local stub so the onboarding/match slice runs without external credentials.
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from functools import lru_cache
 
+from app import ratelimit
 from app.config import get_settings
 
 logger = logging.getLogger("mento.stream")
@@ -91,6 +93,51 @@ def fetch_channel_messages(channel_id: str) -> list[dict]:
             }
         )
     return out
+
+
+def _parse_iso(raw: str) -> datetime | None:
+    try:
+        dt = datetime.fromisoformat(raw)
+    except (ValueError, TypeError):
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=UTC)
+    return dt
+
+
+def channel_last_message_at(channel_id: str) -> datetime | None:
+    """Read-only lookup for the mentor console's brief (spec 2026-09-06 §4.3):
+    when did this channel last see a message. Never returns a message body.
+
+    Cached in Redis (`brief:lma:{channel_id}`, 30s) so re-opening the brief
+    doesn't re-query Stream every tap; a channel with no messages yet caches the
+    empty string so it isn't re-queried either. Any Stream or Redis failure ->
+    None, logged once — the brief still renders, just without this row (fail-soft,
+    same philosophy as push._is_watching)."""
+    key = f"brief:lma:{channel_id}"
+    try:
+        cached = ratelimit._redis().get(key)
+    except Exception:
+        cached = None
+    if cached is not None:
+        return _parse_iso(cached) if cached else None
+
+    client = _client()
+    if client is None:
+        return None
+    try:
+        resp = client.channel("messaging", channel_id).query(state=True)
+        raw = (resp.get("channel") or {}).get("last_message_at") or ""
+    except Exception as exc:  # noqa: BLE001 — best-effort by design
+        logger.warning(
+            "channel_last_message_at query failed (%s) — returning None", type(exc).__name__
+        )
+        return None
+    try:
+        ratelimit._redis().set(key, raw, ex=30)
+    except Exception:
+        pass
+    return _parse_iso(raw) if raw else None
 
 
 def is_configured() -> bool:
