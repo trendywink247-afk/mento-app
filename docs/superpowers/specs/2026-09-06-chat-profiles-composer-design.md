@@ -29,7 +29,7 @@ Three gaps in the chat, all visible on the founder's device:
 ### 3.1 Entry and route
 
 - The member chat header (`components/chat/ChatScreen.tsx` and `.web.tsx`) becomes a `PressKey` around avatar + name + status, `testID="mentor-header"`, accessibility label "View Serene Brook's profile".
-- Tap pushes `app/mentor-profile/[id].tsx` with params `id` (listener id) and `convo` (conversation id). It is a normal stack push (hardware back returns to the chat). The Browse profile `app/mentor/[id].tsx` is unchanged; the two screens share `PersonaAvatar` and the topic-chip component only.
+- Tap pushes `app/mentor-profile/[id].tsx` with params `id` (**conversation** id) and `name` (persona name for the instant header); the listener is derived server-side (§3.3). It is a normal stack push (hardware back returns to the chat). The Browse profile `app/mentor/[id].tsx` is unchanged; the two screens share `PersonaAvatar` and the topic-chip component only.
 
 ### 3.2 Layout (390×844, top to bottom)
 
@@ -103,7 +103,7 @@ Add to the closed union: `mentor_profile_viewed` (no properties), `mentor_favour
 
 1. Back chevron.
 2. **Row:** the member's companion (`Companion`, `curious`, size 56, in the member's accent) + persona name (`type.displayHeadline` scaled) + caption "Member · {Animal} in {Colour} · here now / away" (`member_masked` → "away").
-3. **Why they came** (EdgeSurface): "Picked **{topic label}** at match" (hidden when no topic), "path lens **{community} · {stage}**" (hidden when no community), "first message {relative time}" (falls back to "chat started {relative time}" when there is no message yet).
+3. **Why they came** (EdgeSurface): "Picked **{topic label}** at match" (hidden when no topic), "path lens **{community} · {stage}**" (hidden when no community), "chat started {relative time}" (the brief carries no first-message timestamp; the last-message time lives in §4.2 item 4).
 4. **In this chat** (list rows): "Last message · {relative}" · "Safety flags · none" or "{n} · under review" (see §4.4).
 5. **A gentle next step** (quote block): one prompt from the care-prompts list (§4.5).
 6. **Actions:** ghost "Helplines" → existing `/mentor/helplines`; danger "Report" → existing `/mentor/report?id=`; ink "End" → existing end flow with its confirm sheet.

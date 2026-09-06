@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-09-06 (session 33) — Chat profiles (mentor "two in the room", member "context for care") + pillow-key composer ✅ (branch `feat/chat-profiles-composer` → master `9d86b72`)
+
+**Context:** founder asked for ideas for both chat-header profiles and a better chat input, three variations each, plus a web-console inventory. Mockup page (nine phone mockups in Mento tokens) → founder picked **B, B** and "continue" (= the recommended composer A). DECISIONS §K.13. Spec `docs/superpowers/specs/2026-09-06-chat-profiles-composer-design.md`, plan `…/plans/2026-09-06-chat-profiles-composer.md`; subagent-driven (Sonnet), every task spec- and quality-reviewed with fixes looped back, final branch review before merge.
+
+**Done (server):**
+- `f6c8d08` migration `61e06b08d4df`: `listener_profiles.public_line` (120) / `availability_note` (60), `conversations.issue_category` (40), `favourite_listeners` (composite PK, cascade); `services/categories.py` (`ISSUE_CATEGORIES`, `AVAILABILITY_NOTES`), `services/care_prompts.py` (sha1-stable `pick`); seeds asserted against the dict.
+- `1527064` + `7ac76d3` `GET /conversations/{id}/mentor` + `GET /listeners/{id}` (`ListenerProfileOut`: line, note, since, conversations held, is_favourite), `POST/DELETE /listeners/{id}/favourite` (idempotent, IntegrityError-safe; unfavourite works after a block), Browse favourites-first.
+- `3458a8f` + `61f4b2a` + `370111b` `PUT /listener/me/profile` (PATCH semantics via `model_fields_set`, whitespace collapse, 10/h — proven live 429), admin `clear-line` (audited), approval seeds the availability note as a readable label, `issue_category` persisted at match/accept and capped at 40 at the boundary (422).
+- `d7bcbcc` + `c7e0ba6` `GET /listener/me/conversations/{id}/brief` (`MemberBriefOut`: companion, path labels via new safe `paths.community_label/stage_label`, topic label, open safety-flag count, deterministic care prompt, Stream `last_message_at` with `state=True`, `messages.limit=0`, 30 s cache + 5 s negative cache).
+- Proof: pytest **253 passed**, alembic check clean, ruff + black clean, re-seeded.
+
+**Done (mobile):**
+- `2e93ffd` + `f675996` typed clients, EN + HI strings (529 keys each, parity checked), analytics `mentor_profile_viewed` / `mentor_favourited`.
+- `2a80b9e` + `bd52dd6` **composer**: kit `Input` override (`WithComponents overrides={{ Input: Composer }}`) keeping `textComposer.handleChange` + `sendMessage`; shared `ComposerField` for native and both web chats; **web Enter-to-send had been dead** (react-native-web never fires `onSubmitEditing` on a multiline field) — now an `onKeyPress` handler proven in `two-party-chat.e2e.js`; orphan keys `chat.sendA11y` / `chat.messageA11y` removed.
+- `099fa70` + `780ab35` **mentor profile** `app/mentor-profile/[id]` (keyed by conversation): companion + persona hero (loading ≠ none), public line, chips (gated contrast pairing), facts, favourite toggle (optimistic + revert), report hand-off via `lib/pendingOption.ts` **scoped by conversation id**; header PressKey on both ChatScreens; Browse hearts. Proof `e2e/mentor-profile.e2e.js` (incl. the report hand-off).
+- `dc988e9` + `7da3f5f` **member brief** `app/mentor/member/[id]` + `LineSheet` (`/mentor/line`, transparentModal) + `EndConfirmSheet` extracted; PresenceHeader "Your line" row; relative times localized (`time.*` keys); brief shows "chat started" only (no fake first-message time). Proof `mentor-console.e2e.js` extended in both contexts.
+- `92e8ce7` admin Listeners panel shows + clears the public line (inline confirm, audit row proven in the browser).
+- Proof: tsc clean; e2e green with 0 page errors: mentor-profile, mentor-console, connecting-experience, connecting-busy, two-party-chat (real Stream, both directions + Enter).
+
+**Shipped:** prod API redeployed (backup `mento-20260906-082926.sql.gz`, migration head `61e06b08d4df`, health 200); web console redeployed (`/admin`, `/listener`, `/apply` → 200); OTA `01a076b5` on `preview` (runtime 0.1.0).
+
+**Open (founder veto, DECISIONS §K.13):** (1) the mentor's public line goes live on save, admin clear-after (no approval queue); (2) Quiet Pause never shown to the mentor; (3) open safety-flag count shown to the mentor; (4) composer has no emoji button (system keyboard); (5) favourites affect Browse ordering only; (6) availability note seeded from the application answer as a label ("most evenings"); (7) disabled send uses PressKey's house 0.55 opacity, not the spec's 40 %.
+**Device (pending):** composer on the Nothing Phone 1 (4-line growth, dimmed send, no clipping), the header tap → profile, the mentor brief, the line sheet vs keyboard (no `KeyboardAvoidingView` on any sheet yet — same as report.tsx).
+**Follow-ups logged:** category chip labels — Browse/profile use `formatTopic` (hyphenated) while server labels are "Exam stress" → give the client a mirror of `ISSUE_CATEGORIES`; `mentor.line.placeholder` doubles as the PresenceHeader caption; General match still sends no `issue_category` from the member flow; care-prompt ↔ category symmetry test; admin ops spec (conversations view / end on behalf, edit listener, push health) still to write; T&S: `PRIVACY.md` should mention favourites and the mentor's public line.
+
+**Gotchas (now in CLAUDE.md):** kit composer override seam; RNW multiline `onSubmitEditing`; module-store hand-offs across `router.back()` must be keyed. Shared dev DB under concurrent agents: pytest truncations and e2e runs collide — scope agent test runs to their own files and run the full suite once at the end; the dev uvicorn was found running stale code mid-session (no `--reload`) — restart it after server merges.
+
+**Next:** founder device pass on OTA `01a076b5` (composer, profiles, line sheet); then the admin ops spec or the composer starters (option B) per founder.
+
+**How to resume:** stack per `mento-stack`; `mentor-console.e2e.js` needs `MENTO_ADMIN_TOKEN`, `two-party-chat.e2e.js` needs `LISTENER_ID` (setup block in the file). Prod ops unchanged.
+
 ## 2026-09-06 (session 32) — Device feedback: companion clears the status bar; "no mentor free" is no longer a dead end; matcher self-heals leaked slots ✅
 
 **Context:** founder on the Nothing Phone 1 after cloning the app to a fresh profile: (1) the corner companion sat under the battery/status bar; (2) a brand-new "I need to talk" member hit "We couldn't connect just yet"; ruling: "even if no listener is available it should take the mentee to homepage and can browse mentors he can send req to" (DECISIONS §K.12).
