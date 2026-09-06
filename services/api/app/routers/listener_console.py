@@ -40,6 +40,7 @@ from app.schemas import (
     DevTokenOut,
     ListenerConversationItem,
     ListenerMeOut,
+    ListenerProfileEditIn,
     ListenerReportIn,
     ListenerRequestItem,
     ListenerStatusIn,
@@ -83,6 +84,8 @@ def _me_out(li: ListenerProfile) -> ListenerMeOut:
         active_conversations=li.active_conversations,
         max_concurrent=li.max_concurrent,
         stream_token=stream.user_token(li.id),
+        public_line=li.public_line,
+        availability_note=li.availability_note,
     )
 
 
@@ -158,6 +161,36 @@ def set_status(
     if listener.status == ListenerStatus.online:
         # Tracking (re)starts with the next heartbeat — see matching.sweep_stale_presence.
         listener.last_seen_at = None
+    db.commit()
+    db.refresh(listener)
+    return _me_out(listener)
+
+
+@router.put("/me/profile", response_model=ListenerMeOut)
+def update_profile(
+    payload: ListenerProfileEditIn,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> ListenerMeOut:
+    """The mentor's "Your line" editor (spec 2026-09-06 §3.3). PATCH semantics on
+    a PUT: only fields PRESENT in the request body are touched (`model_fields_set`),
+    so omitting a field leaves it unchanged — the member's line and availability
+    note are edited independently from the console sheet. A present field is
+    whitespace-collapsed (`" ".join(value.split())`, which also strips newlines)
+    and trimmed; an empty result is stored as NULL, never an empty string."""
+    ratelimit.enforce(
+        f"listener-profile:{listener.id}",
+        10,
+        3600,
+        detail="Too many profile edits — try again in a bit.",
+    )
+    fields = payload.model_fields_set
+    if "public_line" in fields:
+        value = payload.public_line
+        listener.public_line = (" ".join(value.split()) if value else "") or None
+    if "availability_note" in fields:
+        value = payload.availability_note
+        listener.availability_note = (" ".join(value.split()) if value else "") or None
     db.commit()
     db.refresh(listener)
     return _me_out(listener)

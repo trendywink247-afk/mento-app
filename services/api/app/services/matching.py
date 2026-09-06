@@ -134,6 +134,7 @@ def open_conversation(
     user_id: str,
     listener: ListenerProfile,
     *,
+    issue_category: str | None = None,
     before_commit: Callable[[Conversation], None] | None = None,
     on_stream_failure: Callable[[], None] | None = None,
 ) -> Conversation:
@@ -153,6 +154,9 @@ def open_conversation(
         status=ConversationStatus.active,
         user_id=user_id,
         listener_id=listener.id,
+        # Free text today (nothing here validates it against ISSUE_CATEGORIES);
+        # the column is 40 chars, so truncate rather than 500 on an oversized value.
+        issue_category=issue_category[:40] if issue_category else None,
     )
     db.add(convo)
     db.flush()  # assign convo.id
@@ -241,7 +245,7 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
             )
     if listener is None:
         raise NoListenerAvailable()
-    return open_conversation(db, user.id, listener)
+    return open_conversation(db, user.id, listener, issue_category=category)
 
 
 def _pending_request(
@@ -286,6 +290,7 @@ def accept_personal_request(
         db,
         req.requester_id,
         listener,
+        issue_category=req.issue_category,
         before_commit=_mark_matched,
         on_stream_failure=_revert_request,
     )

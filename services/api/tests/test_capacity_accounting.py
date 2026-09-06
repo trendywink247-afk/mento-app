@@ -208,3 +208,53 @@ def test_match_still_503_when_capacity_is_genuinely_full(client, db_session):
     with TestSession() as s:
         assert s.get(Conversation, cid).status == ConversationStatus.active
         assert s.get(ListenerProfile, lid).active_conversations == 1
+
+
+# --- issue_category persistence (spec 2026-09-06 §4.3) --------------------------
+
+
+@requires_postgres
+def test_general_match_stores_the_issue_category_on_the_conversation(client, db_session):
+    with TestSession() as s:
+        _seed_listener(s)
+        uid = _seed_user(s)
+        s.commit()
+
+    r = client.post(
+        "/api/v1/match",
+        json={"kind": "general", "issue_category": "exam_stress"},
+        headers=_auth(uid),
+    )
+    assert r.status_code == 200
+    convo_id = r.json()["conversation_id"]
+
+    with TestSession() as s:
+        assert s.get(Conversation, convo_id).issue_category == "exam_stress"
+
+
+@requires_postgres
+def test_personal_accept_stores_the_requests_issue_category(client, db_session):
+    from app.security import issue_listener_token
+
+    with TestSession() as s:
+        lid = _seed_listener(s)
+        uid = _seed_user(s)
+        s.commit()
+
+    req = client.post(
+        f"/api/v1/listeners/{lid}/request",
+        json={"intro_message": "hi", "issue_category": "loneliness"},
+        headers=_auth(uid),
+    )
+    assert req.status_code == 200
+    req_id = req.json()["id"]
+
+    accepted = client.post(
+        f"/api/v1/listener/me/requests/{req_id}/accept",
+        headers={"Authorization": f"Bearer {issue_listener_token(lid)}"},
+    )
+    assert accepted.status_code == 200
+    convo_id = accepted.json()["conversation_id"]
+
+    with TestSession() as s:
+        assert s.get(Conversation, convo_id).issue_category == "loneliness"

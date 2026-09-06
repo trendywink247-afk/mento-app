@@ -21,10 +21,19 @@ from app.models.enums import (
 from app.models.listener import ListenerProfile
 from app.models.safety import SafetyFlag
 from app.models.user import User
-from app.security import issue_admin_token
+from app.security import issue_admin_token, issue_session_token
 from app.services import stream
 
 from .conftest import TestSession, requires_postgres
+
+APPLY = {
+    "motivation": "I've walked the UPSC road twice and know how lonely the wait gets.",
+    "communities": ["upsc"],
+    "availability": "most_evenings",
+    "email": None,
+    "mentor_interest": False,
+    "pledge_accepted": True,
+}
 
 
 @pytest.fixture(autouse=True)
@@ -175,6 +184,68 @@ def test_suspend_listener_revokes_and_audits(client, db_session):
     )
     with TestSession() as s:
         assert s.get(ListenerProfile, lid).vetting_status == VettingStatus.approved
+
+
+@requires_postgres
+def test_approving_an_application_seeds_availability_note(client, db_session):
+    admin_id = _admin(db_session)
+    applicant_id = _user(db_session)
+    db_session.commit()
+
+    client.post(
+        "/api/v1/listener-applications",
+        json=APPLY,
+        headers={"Authorization": f"Bearer {issue_session_token(applicant_id)}"},
+    )
+    app_id = client.get(
+        "/api/v1/admin/applications?status=pending", headers=_auth(admin_id)
+    ).json()[0]["id"]
+
+    r = client.post(f"/api/v1/admin/applications/{app_id}/approve", headers=_auth(admin_id))
+    assert r.status_code == 200
+
+    with TestSession() as s:
+        li = s.query(ListenerProfile).one()
+        assert li.availability_note == "most_evenings"
+        assert li.public_line is None
+
+
+@requires_postgres
+def test_clear_line_nulls_the_line_and_audits(client, db_session):
+    admin_id = _admin(db_session)
+    lid = _listener(db_session)
+    db_session.get(ListenerProfile, lid).public_line = "I mostly just listen."
+    db_session.commit()
+
+    r = client.post(f"/api/v1/admin/listeners/{lid}/clear-line", headers=_auth(admin_id))
+    assert r.status_code == 200
+
+    with TestSession() as s:
+        assert s.get(ListenerProfile, lid).public_line is None
+        assert "listener.public_line_cleared" in [a.action for a in s.query(AdminAuditLog).all()]
+
+
+@requires_postgres
+def test_clear_line_helper_can_act_same_as_suspend(client, db_session):
+    """Same admin gate as suspend (current_admin, no owner-only restriction) —
+    a helper can clear a line just as they can suspend a listener."""
+    owner_id = _admin(db_session, role=AdminRole.owner)
+    lid = _listener(db_session)
+    db_session.commit()
+    created = client.post("/api/v1/admin/admins", json={"name": "Helper"}, headers=_auth(owner_id))
+    helper_id = created.json()["id"]
+    helper_headers = {"Authorization": f"Bearer {issue_admin_token(helper_id)}"}
+
+    r = client.post(f"/api/v1/admin/listeners/{lid}/clear-line", headers=helper_headers)
+    assert r.status_code == 200
+
+
+@requires_postgres
+def test_clear_line_unknown_listener_is_404(client, db_session):
+    admin_id = _admin(db_session)
+    db_session.commit()
+    r = client.post("/api/v1/admin/listeners/does-not-exist/clear-line", headers=_auth(admin_id))
+    assert r.status_code == 404
 
 
 @requires_postgres

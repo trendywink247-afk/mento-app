@@ -106,6 +106,17 @@ class ListenerMeOut(BaseModel):
     active_conversations: int
     max_concurrent: int
     stream_token: str
+    public_line: str | None
+    availability_note: str | None
+
+
+class ListenerProfileEditIn(BaseModel):
+    """PUT /listener/me/profile (spec 2026-09-06 §3.3). PATCH semantics on a PUT:
+    a field omitted from the request body is left unchanged; a field present as
+    `null`/empty string clears it. See `model_fields_set` in the router."""
+
+    public_line: str | None = Field(default=None, max_length=120)
+    availability_note: str | None = Field(default=None, max_length=60)
 
 
 class AdminMeOut(BaseModel):
@@ -162,6 +173,7 @@ class AdminListenerItem(BaseModel):
     active_conversations: int
     max_concurrent: int
     rank: int
+    public_line: str | None
 
 
 class AdminListenerCreateIn(BaseModel):
