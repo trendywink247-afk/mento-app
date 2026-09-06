@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -159,11 +160,20 @@ def favourite_listener(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> OkResult:
-    """Idempotent: a second POST is a no-op, not a second row (spec §3.4)."""
+    """Idempotent: a second POST is a no-op, not a second row (spec §3.4).
+
+    Check-then-insert has a TOCTOU gap under concurrency (two racing POSTs can
+    both pass the `is None` check); the primary key makes the loser's insert an
+    IntegrityError, which is exactly the "already favourited" outcome we want —
+    swallow it the same way services/safety.py dedupes a raced SafetyFlag.
+    """
     _visible_approved_listener(db, listener_id, user_id)
     if db.get(FavouriteListener, {"user_id": user_id, "listener_id": listener_id}) is None:
         db.add(FavouriteListener(user_id=user_id, listener_id=listener_id))
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
     return OkResult(status="favourited")
 
 
@@ -173,8 +183,15 @@ def unfavourite_listener(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> OkResult:
-    """Idempotent: unfavouriting something never favourited is still a 200."""
-    _visible_approved_listener(db, listener_id, user_id)
+    """Idempotent: unfavouriting something never favourited is still a 200.
+
+    Deliberately NOT gated by `_visible_approved_listener` — a member who
+    favourited a mentor and later blocked them must still be able to remove the
+    favourite even though the mentor is no longer "visible" to them. 404 only
+    when the listener id doesn't exist at all.
+    """
+    if db.get(ListenerProfile, listener_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
     row = db.get(FavouriteListener, {"user_id": user_id, "listener_id": listener_id})
     if row is not None:
         db.delete(row)

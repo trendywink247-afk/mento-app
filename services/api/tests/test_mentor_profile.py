@@ -8,12 +8,14 @@ from datetime import UTC, date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session as OrmSession
 
 from app.main import app
 from app.models.conversation import Conversation
-from app.models.enums import ConversationStatus, ListenerStatus, VettingStatus
+from app.models.enums import ApplicationStatus, ConversationStatus, ListenerStatus, VettingStatus
 from app.models.favourite import FavouriteListener
 from app.models.listener import ListenerProfile
+from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
 from app.models.user import User
 from app.security import issue_session_token
@@ -87,6 +89,36 @@ def _seed_convo(
     return c.id
 
 
+def _block(s, user_id: str, listener_id: str) -> None:
+    s.add(
+        ModerationEvent(
+            reporter_id=user_id,
+            subject_id=listener_id,
+            conversation_id=None,
+            blocked=True,
+            reviewed=False,
+        )
+    )
+    s.flush()
+
+
+def _own_application(s, user_id: str, listener_id: str) -> None:
+    """Mints the "this listener profile came from this member's own application"
+    link that `_own_listener_ids` reads (session 22 funnel)."""
+    s.add(
+        ListenerApplication(
+            user_id=user_id,
+            motivation="Walked the road, want to hold the lamp for the next person.",
+            communities=["life"],
+            availability="most_evenings",
+            status=ApplicationStatus.approved,
+            listener_id=listener_id,
+            pledge_accepted_at=datetime.now(UTC),
+        )
+    )
+    s.flush()
+
+
 def _auth(user_id: str) -> dict:
     return {"Authorization": f"Bearer {issue_session_token(user_id)}"}
 
@@ -132,15 +164,22 @@ def test_profile_by_id_404_when_blocked(client, db_session):
     with TestSession() as s:
         uid = _seed_user(s)
         lid = _seed_listener(s)
-        s.add(
-            ModerationEvent(
-                reporter_id=uid,
-                subject_id=lid,
-                conversation_id=None,
-                blocked=True,
-                reviewed=False,
-            )
-        )
+        _block(s, uid, lid)
+        s.commit()
+
+    r = client.get(f"/api/v1/listeners/{lid}", headers=_auth(uid))
+    assert r.status_code == 404
+
+
+@requires_postgres
+def test_profile_by_id_404_for_own_minted_listener(client, db_session):
+    """A member whose own application was approved must never see their own
+    listener profile through Browse (they'd otherwise be able to favourite or
+    request themself)."""
+    with TestSession() as s:
+        uid = _seed_user(s)
+        lid = _seed_listener(s)
+        _own_application(s, uid, lid)
         s.commit()
 
     r = client.get(f"/api/v1/listeners/{lid}", headers=_auth(uid))
@@ -177,6 +216,31 @@ def test_favourite_delete_is_idempotent_200_both_times(client, db_session):
     first = client.delete(f"/api/v1/listeners/{lid}/favourite", headers=_auth(uid))
     second = client.delete(f"/api/v1/listeners/{lid}/favourite", headers=_auth(uid))
     assert first.status_code == 200 and second.status_code == 200
+
+    with TestSession() as s:
+        rows = s.query(FavouriteListener).filter_by(user_id=uid, listener_id=lid).all()
+        assert len(rows) == 0
+
+
+@requires_postgres
+def test_unfavourite_works_after_blocking_the_mentor(client, db_session):
+    """DELETE .../favourite is not gated by visibility (spec decision): a member
+    who favourited a mentor and later blocked them must still be able to remove
+    the favourite, even though the mentor is no longer "visible" to them."""
+    with TestSession() as s:
+        uid = _seed_user(s)
+        lid = _seed_listener(s)
+        s.commit()
+
+    favourited = client.post(f"/api/v1/listeners/{lid}/favourite", headers=_auth(uid))
+    assert favourited.status_code == 200
+
+    with TestSession() as s:
+        _block(s, uid, lid)
+        s.commit()
+
+    unfavourited = client.delete(f"/api/v1/listeners/{lid}/favourite", headers=_auth(uid))
+    assert unfavourited.status_code == 200
 
     with TestSession() as s:
         rows = s.query(FavouriteListener).filter_by(user_id=uid, listener_id=lid).all()
@@ -224,6 +288,51 @@ def test_favourite_requires_approved_listener(client, db_session):
 
     r = client.post(f"/api/v1/listeners/{lid}/favourite", headers=_auth(uid))
     assert r.status_code == 404
+
+
+@requires_postgres
+def test_favourite_404_for_blocked_listener(client, db_session):
+    with TestSession() as s:
+        uid = _seed_user(s)
+        lid = _seed_listener(s)
+        _block(s, uid, lid)
+        s.commit()
+
+    r = client.post(f"/api/v1/listeners/{lid}/favourite", headers=_auth(uid))
+    assert r.status_code == 404
+
+
+@requires_postgres
+def test_favourite_post_survives_a_raced_insert(client, db_session, monkeypatch):
+    """Two concurrent POSTs can both pass the `is None` existence check before
+    either commits (TOCTOU); the loser's insert collides on the composite primary
+    key. Simulate the race by pre-seeding the row directly (as if another request
+    won it) and blinding the endpoint's existence check to it, so it still
+    attempts — and must survive — the real IntegrityError from Postgres."""
+    with TestSession() as s:
+        uid = _seed_user(s)
+        lid = _seed_listener(s)
+        s.commit()
+
+    with TestSession() as s:
+        s.add(FavouriteListener(user_id=uid, listener_id=lid))
+        s.commit()
+
+    original_get = OrmSession.get
+
+    def _blind_to_favourite(self, entity, ident, *args, **kwargs):
+        if entity is FavouriteListener:
+            return None
+        return original_get(self, entity, ident, *args, **kwargs)
+
+    monkeypatch.setattr(OrmSession, "get", _blind_to_favourite)
+
+    r = client.post(f"/api/v1/listeners/{lid}/favourite", headers=_auth(uid))
+    assert r.status_code == 200
+
+    with TestSession() as s:
+        rows = s.query(FavouriteListener).filter_by(user_id=uid, listener_id=lid).all()
+        assert len(rows) == 1  # still exactly one row — no crash, no duplicate
 
 
 # --- GET /conversations/{id}/mentor ---
