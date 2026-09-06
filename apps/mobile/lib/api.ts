@@ -51,7 +51,7 @@ export type ListenerProfile = {
   gender: string;
   categories: string[];
   community_slug: string | null;
-  status: string;
+  status: 'online' | 'away' | 'offline';
   available: boolean;
   public_line: string | null;
   availability_note: string | null;
