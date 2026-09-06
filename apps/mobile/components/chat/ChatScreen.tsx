@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,9 +16,11 @@ import { Composer } from '@/components/chat/Composer';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { MessageText } from '@/components/chat/MessageText';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { PressKey } from '@/components/motion/PressKey';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -79,11 +81,25 @@ export default function ChatScreen() {
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // Set right before pendingOption.take() opens the sheet with the Report flow
+  // pre-selected (the mentor-profile screen's "Report or block" hand-off) — cleared
+  // on close so a later, ordinary open of the sheet starts fresh.
+  const [pendingInitial, setPendingInitial] = useState<'report' | undefined>(undefined);
   const [privacyNote, setPrivacyNote] = useState(true);
   // Surface each crisis message once, so dismissing it isn't undone by later events.
   const shownRef = useRef<Set<string>>(new Set());
   // Funnel: chat_first_message_sent fires once per screen mount.
   const firstSentRef = useRef(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      const opt = pendingOption.take();
+      if (opt === 'report') {
+        setPendingInitial('report');
+        setOptionsOpen(true);
+      }
+    }, []),
+  );
 
   // The core talk→action loop (SCOPE §7): long-press a mentor message → message menu →
   // "Save to Mentor Notes" persists it to the journal.
@@ -228,18 +244,34 @@ export default function ChatScreen() {
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
-        <PersonaAvatar name={listenerName} size={52} online />
-        <View style={{ flex: 1 }} accessible accessibilityRole="header">
-          <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-            {listenerName}
-          </Text>
-          <View style={styles.statusRow}>
-            <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
-            <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-              {t('chat.statusLine')}
+        <PressKey
+          onPress={() =>
+            router.push({
+              pathname: '/mentor-profile/[id]',
+              params: { id: conversationId ?? '', name: listenerName },
+            })
+          }
+          edge={colors.surface}
+          travel={2}
+          testID="mentor-header"
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.mentorHeaderA11y', { name: listenerName })}
+          style={styles.headerPressFace}
+          containerStyle={styles.headerPressContainer}
+        >
+          <PersonaAvatar name={listenerName} size={52} online />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
+              {listenerName}
             </Text>
+            <View style={styles.statusRow}>
+              <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
+              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+                {t('chat.statusLine')}
+              </Text>
+            </View>
           </View>
-        </View>
+        </PressKey>
         <View
           style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
           accessibilityLabel={t('chat.connectedA11y')}
@@ -309,9 +341,13 @@ export default function ChatScreen() {
       <ConversationOptions
         conversationId={conversationId}
         visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
+        onClose={() => {
+          setOptionsOpen(false);
+          setPendingInitial(undefined);
+        }}
         onLeft={() => router.replace('/chats')}
         listenerName={listenerName}
+        initial={pendingInitial}
       />
     </SafeAreaView>
   );
@@ -369,6 +405,8 @@ const styles = StyleSheet.create({
   },
   personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  headerPressContainer: { flex: 1 },
+  headerPressFace: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   connectedDot: {
     alignItems: 'center',
     justifyContent: 'center',

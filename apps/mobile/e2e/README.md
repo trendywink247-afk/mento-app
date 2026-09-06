@@ -28,3 +28,10 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   onboarding into the honest-busy retries, and asserts the error state offers Try again
   AND "Browse mentors instead", which lands on the Mentors screen inside the app.
   Restores listeners to online afterwards. Normal + reduced-motion, 0 page errors.
+- mentor-profile.e2e.js — "Two in the room" (spec 2026-09-06-chat-profiles-composer-
+  design.md §3): onboard → chat → tap the mentor header → profile screen (persona name
+  from route params first, then the fetched profile) → favourite toggle flips to
+  "Saved" → back to the still-live chat → Browse shows the favourite first with a heart
+  badge. Resets rate limits + capacity accounting (docker exec) before each run and
+  retries once on a 503/429/missing-listener flake. Normal + reduced-motion, 0 page
+  errors.

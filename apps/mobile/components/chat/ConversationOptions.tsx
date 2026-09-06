@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { useI18n } from '@/lib/i18n';
@@ -26,17 +26,37 @@ type Props = {
   onLeft: () => void; // called after wipe/report/block (navigate away)
   /** Persona name, echoed on the reflection screen ("a better Purple Valley for you"). */
   listenerName?: string;
+  /** Opens straight onto a sub-flow instead of the choice sheet — the mentor-profile
+   * screen's "Report or block" hand-off (spec §3.5). Undefined = normal behaviour
+   * (sheet first). Only applied on the rising edge of `visible` so it never re-fires
+   * flow back to Report on a later, ordinary reopen of an already-mounted sheet. */
+  initial?: 'report';
 };
 
-export function ConversationOptions({ conversationId, visible, onClose, onLeft, listenerName }: Props) {
+export function ConversationOptions({
+  conversationId,
+  visible,
+  onClose,
+  onLeft,
+  listenerName,
+  initial,
+}: Props) {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const [flow, setFlow] = useState<SheetChoice | null>(null);
+  const [flow, setFlow] = useState<SheetChoice | null>(initial ?? null);
   // Server-confirmed state, reflected back into the sheet labels.
   const [locked, setLocked] = useState(false);
   const [paused, setPaused] = useState(false);
   const [mask, setMask] = useState<string | null>(null);
+
+  const wasVisible = useRef(visible);
+  useEffect(() => {
+    if (visible && !wasVisible.current && initial) {
+      setFlow(initial);
+    }
+    wasVisible.current = visible;
+  }, [visible, initial]);
 
   if (!visible) return null;
 

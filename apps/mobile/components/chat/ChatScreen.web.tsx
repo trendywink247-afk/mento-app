@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,6 +26,7 @@ import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TFunc } from '@/lib/i18n';
+import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -355,6 +356,20 @@ export default function ChatScreenWeb() {
   }>();
   const listenerName = listener ?? t('chat.yourListener');
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // Set right before pendingOption.take() opens the sheet with the Report flow
+  // pre-selected (the mentor-profile screen's "Report or block" hand-off) — cleared
+  // on close so a later, ordinary open of the sheet starts fresh.
+  const [pendingInitial, setPendingInitial] = useState<'report' | undefined>(undefined);
+
+  useFocusEffect(
+    useCallback(() => {
+      const opt = pendingOption.take();
+      if (opt === 'report') {
+        setPendingInitial('report');
+        setOptionsOpen(true);
+      }
+    }, []),
+  );
 
   const [ready, setReady] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
@@ -555,18 +570,34 @@ export default function ChatScreenWeb() {
         >
           <Ionicons name="chevron-back" size={26} color={colors.ink} />
         </Pressable>
-        <PersonaAvatar name={listenerName} size={52} online />
-        <View style={{ flex: 1 }} accessible accessibilityRole="header">
-          <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-            {listenerName}
-          </Text>
-          <View style={styles.statusRow}>
-            <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
-            <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-              {t('chat.statusLine')}
+        <PressKey
+          onPress={() =>
+            router.push({
+              pathname: '/mentor-profile/[id]',
+              params: { id: conversationId ?? '', name: listenerName },
+            })
+          }
+          edge={colors.surface}
+          travel={2}
+          testID="mentor-header"
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.mentorHeaderA11y', { name: listenerName })}
+          style={styles.headerPressFace}
+          containerStyle={styles.headerPressContainer}
+        >
+          <PersonaAvatar name={listenerName} size={52} online />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
+              {listenerName}
             </Text>
+            <View style={styles.statusRow}>
+              <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
+              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+                {t('chat.statusLine')}
+              </Text>
+            </View>
           </View>
-        </View>
+        </PressKey>
         <View
           style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
           accessibilityLabel={t('chat.connectedA11y')}
@@ -661,9 +692,13 @@ export default function ChatScreenWeb() {
       <ConversationOptions
         conversationId={conversationId}
         visible={optionsOpen}
-        onClose={() => setOptionsOpen(false)}
+        onClose={() => {
+          setOptionsOpen(false);
+          setPendingInitial(undefined);
+        }}
         onLeft={() => router.replace('/chats')}
         listenerName={listenerName}
+        initial={pendingInitial}
       />
     </SafeAreaView>
   );
@@ -682,6 +717,8 @@ const styles = StyleSheet.create({
   },
   personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
+  headerPressContainer: { flex: 1 },
+  headerPressFace: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   connectedDot: {
     alignItems: 'center',
     justifyContent: 'center',
