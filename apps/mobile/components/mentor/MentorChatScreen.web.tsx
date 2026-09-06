@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { MentorRail } from '@/components/mentor/MentorRail';
@@ -39,6 +40,9 @@ type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
 type Msg = { id: string; text: string; mine: boolean; at: string };
 type RawMsg = { id?: string; text?: string; user?: { id?: string }; created_at?: string | Date };
 type MenuState = 'closed' | 'open' | 'confirmEnd';
+
+// Composer field grows to 4 lines (spec §5.1/§5.2) then scrolls.
+const COMPOSER_MAX_INPUT_HEIGHT = 4 * type.body.lineHeight + space.sm * 2;
 
 function timeLabel(iso: string): string {
   const d = new Date(iso);
@@ -448,33 +452,43 @@ export default function MentorChatScreenWeb() {
                   {t('chat.sendFailed')}
                 </Text>
               ) : null}
-              <View style={[styles.inputPill, { backgroundColor: colors.surface }, elevation.sm]}>
-              <TextInput
-                style={[styles.input, { color: colors.ink }]}
-                placeholder={t('mentor.chat.reply')}
-                placeholderTextColor={colors.inkMuted}
-                value={draft}
-                onChangeText={(text) => {
-                  setDraft(text);
-                  onTyping();
-                }}
-                onSubmitEditing={() => void send()}
-                testID="listener-composer-input"
-                accessibilityLabel="Reply"
-                multiline
-              />
-              </View>
+              <EdgeSurface
+                edge={colors.edgeSurface}
+                radius={radius.lg}
+                style={[styles.inputPill, { backgroundColor: colors.surface }]}
+              >
+                <TextInput
+                  style={[type.body, styles.input, { color: colors.ink }]}
+                  placeholder={t('mentor.chat.reply')}
+                  placeholderTextColor={colors.inkMuted}
+                  value={draft}
+                  onChangeText={(text) => {
+                    setDraft(text);
+                    onTyping();
+                  }}
+                  onSubmitEditing={() => void send()}
+                  testID="listener-composer-input"
+                  accessibilityLabel={t('mentor.chat.reply')}
+                  maxFontSizeMultiplier={1.3}
+                  multiline
+                />
+              </EdgeSurface>
             </View>
-            <ConsolePressable
-              style={[styles.sendBtn, { backgroundColor: colors.accent }, elevation.sm]}
+            <PressKey
               onPress={() => void send()}
+              edge={colors.accentEdge}
+              radius={radius.lg}
               disabled={!draft.trim() || sending}
+              style={[styles.sendBtn, { backgroundColor: colors.accent }]}
               testID="listener-composer-send"
-              accessibilityRole="button"
-              accessibilityLabel="Send reply"
+              accessibilityLabel={t('chat.send')}
             >
-              <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
-            </ConsolePressable>
+              {sending ? (
+                <ActivityIndicator size="small" color={colors.onAccent} />
+              ) : (
+                <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
+              )}
+            </PressKey>
           </View>
         </View>
         </View>
@@ -538,21 +552,23 @@ const styles = StyleSheet.create({
   theirsTime: { marginLeft: 34 + space.sm + space.xs, marginTop: 3 },
   typingLine: { paddingHorizontal: space.md, paddingTop: space.xs },
   sendErrorLine: { paddingBottom: space.xs },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm, padding: space.md },
-  inputPill: {
-    flex: 1,
+  composer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: space.sm,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    minHeight: 50,
+    paddingHorizontal: 10,
+    paddingTop: space.sm,
+    paddingBottom: 12,
   },
-  input: { flex: 1, maxHeight: 120, paddingVertical: space.sm, ...type.body },
+  inputPill: {
+    minHeight: 44,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
+  },
+  input: { maxHeight: COMPOSER_MAX_INPUT_HEIGHT, paddingVertical: space.sm, margin: 0 },
   sendBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: radius.pill,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

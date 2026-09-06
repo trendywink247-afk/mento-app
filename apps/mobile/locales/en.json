@@ -274,7 +274,6 @@
     "sendFailed": "Not sent — check your connection and tap send to retry.",
     "placeholder": "Type a message…",
     "messageA11y": "Message",
-    "sendA11y": "Send message",
     "send": "Send message",
     "mentorHeaderA11y": "View %{name}'s profile",
     "emptyTitle": "You're connected!",

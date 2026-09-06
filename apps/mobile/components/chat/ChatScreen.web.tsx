@@ -46,6 +46,9 @@ import { font, radius, space, type } from '@/theme/tokens';
  */
 
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
+// Composer field grows to 4 lines (spec §5.1/§5.2) then scrolls.
+const COMPOSER_MAX_INPUT_HEIGHT = 4 * type.body.lineHeight + space.sm * 2;
+
 type Msg = { id: string; text: string; mine: boolean; at: string };
 
 type RawMsg = { id?: string; text?: string; user?: { id?: string }; created_at?: string | Date };
@@ -254,15 +257,19 @@ type ComposerProps = {
   onTyping: () => void;
 };
 
-/** Composer pill + send FAB (mockup #8). Owns the draft locally so every keystroke
- * re-renders only this leaf — never the transcript above it. The draft is cleared
- * only AFTER the send resolves; on failure it stays put with an honest retry line. */
+/** Pillow-key composer (spec §5.2 — same anatomy/tokens as the native
+ * components/chat/Composer.tsx: EdgeSurface pill field + PressKey send circle).
+ * Owns the draft locally so every keystroke re-renders only this leaf — never the
+ * transcript above it. The draft is cleared only AFTER the send resolves; on
+ * failure it stays put with an honest retry line. Enter sends, Shift+Enter
+ * newlines (web convention, via onSubmitEditing — unchanged from before). */
 const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const [draft, setDraft] = useState(initialDraft ?? '');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
+  const isEmpty = !draft.trim();
 
   const submit = async () => {
     const body = draft.trim();
@@ -291,10 +298,14 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
         </Text>
       ) : null}
       <View style={styles.composer}>
-        <View style={[styles.inputPill, { backgroundColor: colors.surface, borderWidth: 1.5, borderColor: colors.border }]}>
-          <Ionicons name="add-circle-outline" size={24} color={colors.inkMuted} />
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          radius={radius.lg}
+          style={[styles.inputPill, { backgroundColor: colors.surface }]}
+          containerStyle={styles.inputPillContainer}
+        >
           <TextInput
-            style={[styles.input, { color: colors.ink }]}
+            style={[type.body, styles.input, { color: colors.ink }]}
             placeholder={t('chat.placeholder')}
             placeholderTextColor={colors.inkMuted}
             value={draft}
@@ -304,21 +315,25 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
             }}
             onSubmitEditing={() => void submit()}
             testID="composer-input"
-            accessibilityLabel={t('chat.messageA11y')}
+            accessibilityLabel={t('chat.placeholder')}
+            maxFontSizeMultiplier={1.3}
             multiline
           />
-        </View>
+        </EdgeSurface>
         <PressKey
           onPress={() => void submit()}
           edge={colors.accentEdge}
-          travel={4}
-          radius={radius.pill}
-          disabled={sending}
+          radius={radius.lg}
+          disabled={isEmpty || sending}
           testID="composer-send"
-          accessibilityLabel={t('chat.sendA11y')}
+          accessibilityLabel={t('chat.send')}
           style={[styles.sendBtn, { backgroundColor: colors.accent }]}
         >
-          <Ionicons name="paper-plane" size={19} color={colors.onAccent} />
+          {sending ? (
+            <ActivityIndicator size="small" color={colors.onAccent} />
+          ) : (
+            <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
+          )}
         </PressKey>
       </View>
     </View>
@@ -730,22 +745,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: space.sm,
-    padding: space.md,
+    paddingHorizontal: 10,
+    paddingTop: space.sm,
+    paddingBottom: 12,
   },
+  inputPillContainer: { flex: 1 },
   inputPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.md,
-    minHeight: 50,
+    minHeight: 44,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
   },
-  input: { flex: 1, maxHeight: 120, paddingVertical: space.sm, ...type.body },
+  input: { maxHeight: COMPOSER_MAX_INPUT_HEIGHT, paddingVertical: space.sm, margin: 0 },
   sendBtn: {
-    width: 50,
-    height: 50,
-    borderRadius: radius.pill,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },

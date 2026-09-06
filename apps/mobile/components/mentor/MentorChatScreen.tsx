@@ -11,6 +11,7 @@ import { Channel, Chat, MessageComposer, MessageList, WithComponents } from 'str
 // a stream-chat type), so derive the exact prop type from the component instead.
 type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
+import { Composer } from '@/components/chat/Composer';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { MessageText } from '@/components/chat/MessageText';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
@@ -71,6 +72,12 @@ export default function MentorChatScreen() {
         chatTextOutgoing: colors.ink,
         chatTextTimestamp: colors.inkMuted,
         buttonPrimaryBg: colors.accent,
+      },
+      // See components/chat/Composer.tsx's header comment: neutralises the kit's own
+      // composer wrapper chrome (border/background/top-padding) so the pillow-key row
+      // is the only visible chrome; the safe-area bottom padding is left alone.
+      messageComposer: {
+        wrapper: { paddingHorizontal: 0, paddingTop: 0, borderTopWidth: 0, backgroundColor: 'transparent' },
       },
     }),
     [colors],
@@ -242,8 +249,9 @@ export default function MentorChatScreen() {
         ) : channel ? (
           <View style={{ flex: 1 }} testID="mentor-chat-ready">
             <Chat client={getListenerStreamClient()} style={streamTheme}>
-              {/* Baloo message text + Android measure/draw fix — see components/chat/MessageText.tsx */}
-              <WithComponents overrides={{ MessageText }}>
+              {/* Baloo message text + Android measure/draw fix (components/chat/MessageText.tsx),
+                  pillow-key composer (components/chat/Composer.tsx) */}
+              <WithComponents overrides={{ MessageText, Input: Composer }}>
               <Channel channel={channel}>
                 <MessageList />
                 <MentorRail
