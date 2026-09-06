@@ -33,6 +33,7 @@ export type AdminListener = {
   active_conversations: number;
   max_concurrent: number;
   rank: number;
+  public_line: string | null;
 };
 export type AdminModerationItem = {
   id: string;
@@ -107,6 +108,8 @@ export const adminApi = {
     req<{ status: string }>(`/admin/listeners/${id}/suspend`, { method: 'POST' }),
   reinstateListener: (id: string) =>
     req<{ status: string }>(`/admin/listeners/${id}/reinstate`, { method: 'POST' }),
+  clearListenerLine: (id: string) =>
+    req<{ status: string }>(`/admin/listeners/${id}/clear-line`, { method: 'POST' }),
   listeners: () => req<AdminListener[]>('/admin/listeners'),
   createListener: (categories: string[], max_concurrent: number) =>
     req<AdminListener>('/admin/listeners', {

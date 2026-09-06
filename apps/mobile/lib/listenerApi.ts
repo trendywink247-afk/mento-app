@@ -12,6 +12,27 @@ export type ListenerMe = {
   active_conversations: number;
   max_concurrent: number;
   stream_token: string;
+  public_line: string | null;
+  availability_note: string | null;
+};
+
+/** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
+export type MemberBrief = {
+  persona_name: string;
+  persona_avatar: string;
+  companion_animal: string | null;
+  companion_colour: string | null;
+  community_slug: string | null;
+  community_label: string | null;
+  journey_stage: string | null;
+  journey_stage_label: string | null;
+  issue_category: string | null;
+  issue_category_label: string | null;
+  created_at: string;
+  last_message_at: string | null;
+  member_masked: boolean;
+  safety_flags_open: number;
+  care_prompt: string;
 };
 
 export type ListenerConversation = {
@@ -76,6 +97,12 @@ export const listenerApi = {
   conversations: () => req<ListenerConversation[]>('/listener/me/conversations'),
 
   requests: () => req<ListenerRequest[]>('/listener/me/requests'),
+
+  brief: (convoId: string) => req<MemberBrief>(`/listener/me/conversations/${convoId}/brief`),
+
+  /** PATCH-like semantics on a PUT: an omitted field is left unchanged server-side. */
+  updateProfile: (body: { public_line?: string | null; availability_note?: string | null }) =>
+    req<ListenerMe>('/listener/me/profile', { method: 'PUT', body: JSON.stringify(body) }),
 
   accept: (id: string) =>
     req<{ id: string; status: string; conversation_id: string | null }>(
