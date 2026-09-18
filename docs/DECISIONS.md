@@ -175,3 +175,5 @@ Source: the developer relayed these after the recovered 2026-09-06 walkthrough c
 
 **5. Connection promise: both paths, stated honestly.** If a mentor is online the member is connected right away (General match, unchanged); if nobody is free, the member chooses a mentor and that mentor replies when they have time (Personal request, unchanged; §K.12 "never a dead end" already routes there). Nothing in the matcher changes — only the promise does: "in under a minute" is retired from member copy, because with ~15 mentors it cannot be kept at all hours. The 09-06 "mentors answer when they have time" model is what members meet whenever no one is online. CLAUDE.md's "talking to a real human in under 30 seconds" stays as the *best-case performance target*, not a marketing promise.
 
+**6. Mentor names stay stable — "ask for the same mentor next time" wins.** The 09-06 idea of rotating mentor persona names every 24 hours is **dropped**. Favourites, "Ask for %{name} next time" and chat-list continuity (§K.13) stand as shipped: a member who found a good mentor must be able to find them again.
+
