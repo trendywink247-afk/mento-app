@@ -4,12 +4,18 @@
     "references": 6,
     "poses": 38,
     "rerolls": 2,
-    "total": 74,
+    "total": 98,
     "batch_2026_09_19": {
       "references": 3,
       "poses": 18,
       "rerolls": 7,
       "total": 28
+    },
+    "batch_2026_09_19_hd": {
+      "references": 4,
+      "poses": 20,
+      "rerolls": 0,
+      "total": 24
     }
   },
   "renders": [
@@ -463,7 +469,8 @@
       "output": "apps/mobile/assets/companions/generated/Dog/idle.webp",
       "batch": "2026-09-19",
       "cutout_thresh": 12,
-      "note": "the accepted reference render doubles as idle (the separate idle render came back standing)"
+      "note": "the accepted reference render doubles as idle (the separate idle render came back standing)",
+      "cutout_size": 1024
     },
     {
       "animal": "Dog",
@@ -475,7 +482,8 @@
       "accepted": true,
       "output": "apps/mobile/assets/companions/generated/Dog/greet.webp",
       "batch": "2026-09-19",
-      "cutout_thresh": 12
+      "cutout_thresh": 12,
+      "cutout_size": 1024
     },
     {
       "animal": "Dog",
@@ -487,7 +495,8 @@
       "accepted": true,
       "output": "apps/mobile/assets/companions/generated/Dog/joy.webp",
       "batch": "2026-09-19",
-      "cutout_thresh": 12
+      "cutout_thresh": 12,
+      "cutout_size": 1024
     },
     {
       "animal": "Dog",
@@ -499,7 +508,8 @@
       "accepted": true,
       "output": "apps/mobile/assets/companions/generated/Dog/comfort.webp",
       "batch": "2026-09-19",
-      "cutout_thresh": 12
+      "cutout_thresh": 12,
+      "cutout_size": 1024
     },
     {
       "animal": "Dog",
@@ -511,7 +521,8 @@
       "accepted": true,
       "output": "apps/mobile/assets/companions/generated/Dog/curious.webp",
       "batch": "2026-09-19",
-      "cutout_thresh": 12
+      "cutout_thresh": 12,
+      "cutout_size": 1024
     },
     {
       "animal": "Dog",
@@ -523,7 +534,8 @@
       "accepted": true,
       "output": "apps/mobile/assets/companions/generated/Dog/sleepy.webp",
       "batch": "2026-09-19",
-      "cutout_thresh": 12
+      "cutout_thresh": 12,
+      "cutout_size": 1024
     },
     {
       "animal": "Cat",
@@ -531,8 +543,9 @@
       "model": "nano_banana",
       "job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
       "prompt": "recipe.md \u00a7reference",
-      "accepted": true,
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Cat",
@@ -541,9 +554,9 @@
       "job_id": "f4a3cf8f-0a25-4708-8440-ef3ec3429c9d",
       "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Cat/idle.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Cat",
@@ -552,9 +565,9 @@
       "job_id": "9766e23d-7cdb-4574-b79c-49e534ccfe46",
       "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Cat/greet.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Cat",
@@ -563,9 +576,9 @@
       "job_id": "8c9ccd7f-29e9-41fd-9ad6-35dca63f0b51",
       "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Cat/joy.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Cat",
@@ -574,9 +587,9 @@
       "job_id": "237b1e1a-b24a-4c39-abba-8dcadd042d7b",
       "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Cat/comfort.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Cat",
@@ -585,9 +598,9 @@
       "job_id": "bc997540-74cf-48fa-b012-8fe3c0565287",
       "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Cat/curious.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Cat",
@@ -596,9 +609,9 @@
       "job_id": "7afed6e8-b12c-4cc6-98b7-c358d77d4718",
       "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Cat/sleepy.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Capybara",
@@ -606,8 +619,9 @@
       "model": "nano_banana",
       "job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
       "prompt": "recipe.md \u00a7reference",
-      "accepted": true,
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Capybara",
@@ -616,9 +630,9 @@
       "job_id": "f8c78b6a-1360-4ea4-b167-8e00d55097c6",
       "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Capybara/idle.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Capybara",
@@ -627,9 +641,9 @@
       "job_id": "69fa4201-873c-4f68-b6cc-e2028e1dab3e",
       "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Capybara/greet.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Capybara",
@@ -638,9 +652,9 @@
       "job_id": "f4633c6f-8d64-4e75-b1a5-5367a7e3d0a1",
       "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Capybara/joy.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Capybara",
@@ -649,9 +663,9 @@
       "job_id": "1bd47843-bc6c-428d-afb3-889ccc96964f",
       "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Capybara/comfort.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Capybara",
@@ -660,9 +674,9 @@
       "job_id": "492bd713-5d83-45cb-8952-37213c56b354",
       "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
-      "accepted": true,
-      "output": "apps/mobile/assets/companions/generated/Capybara/curious.webp",
-      "batch": "2026-09-19"
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
     },
     {
       "animal": "Capybara",
@@ -671,9 +685,187 @@
       "job_id": "e0d92f92-55ca-476f-8eea-062f6734dfdb",
       "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
       "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": false,
+      "batch": "2026-09-19",
+      "superseded_by": "2026-09-19-hd"
+    },
+    {
+      "animal": "Cat",
+      "pose": "reference",
+      "model": "nano_banana_pro",
+      "job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "style_reference_job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7HD slim re-render (Fox reference passed for style only)",
+      "accepted": true,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Cat",
+      "pose": "idle",
+      "model": "nano_banana_pro",
+      "job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/idle.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd",
+      "note": "the accepted reference render doubles as idle"
+    },
+    {
+      "animal": "Cat",
+      "pose": "greet",
+      "model": "nano_banana_pro",
+      "job_id": "1a42e6c7-ac1a-4793-a93f-ba8695d3b5a4",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/greet.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Cat",
+      "pose": "joy",
+      "model": "nano_banana_pro",
+      "job_id": "9358bebb-3b6f-4ce8-8652-530876fc21d6",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/joy.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Cat",
+      "pose": "comfort",
+      "model": "nano_banana_pro",
+      "job_id": "9b2c27aa-f292-47c2-9f66-a9fc5067322a",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/comfort.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Cat",
+      "pose": "curious",
+      "model": "nano_banana_pro",
+      "job_id": "b1b0f1ae-3dc6-4b03-8dee-eb6e857cdb31",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/curious.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Cat",
+      "pose": "sleepy",
+      "model": "nano_banana_pro",
+      "job_id": "0cb06fe6-ba47-4c3a-932b-0b267df80880",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/sleepy.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "reference",
+      "model": "nano_banana_pro",
+      "job_id": "a0985b43-ff57-4e93-b052-685ae094cc2b",
+      "style_reference_job_id": "24d41d76-1385-46a0-b79d-1d411779092a",
+      "prompt": "recipe.md \u00a7HD slim re-render (Fox reference passed for style only)",
+      "accepted": true,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "idle",
+      "model": "nano_banana_pro",
+      "job_id": "a0985b43-ff57-4e93-b052-685ae094cc2b",
+      "reference_job_id": "a0985b43-ff57-4e93-b052-685ae094cc2b",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/idle.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd",
+      "note": "the accepted reference render doubles as idle"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "greet",
+      "model": "nano_banana_pro",
+      "job_id": "45b055e1-e659-4aba-a6b7-286139bc9828",
+      "reference_job_id": "a0985b43-ff57-4e93-b052-685ae094cc2b",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/greet.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "joy",
+      "model": "nano_banana_pro",
+      "job_id": "f04b70a5-8e27-4ee8-8440-6d7b3bbe71a0",
+      "reference_job_id": "a0985b43-ff57-4e93-b052-685ae094cc2b",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/joy.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "comfort",
+      "model": "nano_banana_pro",
+      "job_id": "a0a2b613-dfef-492c-9221-a6fcf69f4bcb",
+      "reference_job_id": "a0985b43-ff57-4e93-b052-685ae094cc2b",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/comfort.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "curious",
+      "model": "nano_banana_pro",
+      "job_id": "28fcb91c-9396-4195-b23e-c443c115d602",
+      "reference_job_id": "a0985b43-ff57-4e93-b052-685ae094cc2b",
+      "prompt": "recipe.md \u00a7HD slim re-render",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/curious.webp",
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "sleepy",
+      "model": "nano_banana_pro",
+      "job_id": "db8dc3b3-661d-4acf-a585-7e45705260c7",
+      "reference_job_id": "a0985b43-ff57-4e93-b052-685ae094cc2b",
+      "prompt": "recipe.md \u00a7HD slim re-render",
       "accepted": true,
       "output": "apps/mobile/assets/companions/generated/Capybara/sleepy.webp",
-      "batch": "2026-09-19"
+      "cutout_size": 1024,
+      "cutout_thresh": 16,
+      "batch": "2026-09-19-hd"
     }
   ]
 }

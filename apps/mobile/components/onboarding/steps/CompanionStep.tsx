@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
+import { useBreathing } from '@/components/motion/useBreathing';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { Companion, type CompanionTrigger } from '@/components/art/Companion';
 import { type CompanionAnimal } from '@/components/art/Companions';
@@ -32,6 +34,14 @@ const ANIMALS: CompanionAnimal[] = [
   'Owl',
 ];
 const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
+
+/** The picked companion breathes (the rail's other animals only micro-sway) — a quiet
+ * sign of life on the one you chose. Transform-only; useBreathing stills it under
+ * reduced motion. */
+function Breathe({ on, children }: { on: boolean; children: ReactNode }) {
+  const breathing = useBreathing(on);
+  return <Animated.View style={breathing}>{children}</Animated.View>;
+}
 
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -158,7 +168,9 @@ export function CompanionStep({
                   selected && { borderWidth: 2, borderColor: colors.accent },
                 ]}
               >
-                <Companion animal={a} size={76} trigger={selected ? greet : null} awake />
+                <Breathe on={selected}>
+                  <Companion animal={a} size={76} trigger={selected ? greet : null} awake />
+                </Breathe>
                 {selected ? checkBadge : null}
               </View>
               <Text

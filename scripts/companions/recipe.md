@@ -50,3 +50,16 @@ Rejects are regenerated with the same reference; never hand-edited.
 - Dog cutouts need `cutout.py --thresh 12`: the cream forehead sits within the default 30 of the
   oat ground and touches the silhouette, so the flood fill eats a hole in the head.
 - The batch endpoint rate-limits (429) around the 12th concurrent render — resubmit the failed index.
+
+## HD slim re-render (2026-09-19, founder: "cute not obese, HD")
+The first Cat and Capybara sets read as obese. They were re-rendered on `nano_banana_pro` (2 credits, 2048px)
+with proportions spelled out, and the Fox reference passed **for style only**:
+- Cat: "very cute young grey tabby kitten: SMALL SLENDER petite body, slim waist, dainty paws, a slightly
+  oversized round head with big sparkling green eyes … Healthy and light, NOT fat, NOT chubby, not a round ball."
+- Capybara: "very cute baby capybara pup: SMALL compact petite body with a slim tummy, short little legs, a
+  slightly oversized head … big shiny dark eyes with catchlights … lighter cream-tan chest. NOT fat, no big belly."
+- Pose prompts restate the identity in one parenthesis, then "Only the pose changes: …", and end "Still slim,
+  NOT fat." All ten poses were accepted first try (the pro model follows pose text far better than `nano_banana`).
+- Cut with `cutout.py --size 1024 --thresh 16`. Dog was re-cut at `--size 1024 --thresh 12` from its 1024px
+  renders. The original six animals are still 512px `nano_banana` art — re-rendering them on the pro model for a
+  uniform HD set is ~84 credits (6 × 7 × 2) and has not been done.
