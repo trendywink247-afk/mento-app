@@ -4,17 +4,23 @@
 
 ---
 
-## 2026-09-18 (session 34) — `console.agentin.chat/` no longer dead-ends ✅ (`f1d5483`, **live on prod**)
+## 2026-09-19 (session 34) — `console.agentin.chat/` opens the real app: landing + journey ✅ (`cad8cf6`, **live on prod**)
 
-**Context:** founder typed the bare console domain and got nginx's `404 Not Found`. Nothing was down — DNS/TLS fine, `/apply` `/admin` `/listener` 200, API health 200. The 404 at `/` was the session-28 lockdown's catch-all working as designed.
+**Context:** founder typed the bare console domain and got nginx's `404 Not Found`. Nothing was down — the 404 at `/` was the session-28 allow-list working as designed. First pass (2026-09-18, `f1d5483`) redirected `/` → `/apply`; **founder corrected it: the domain should show the landing screen and the app journey, not the recruitment page.** Redirect removed.
 
-**Done:** `deploy/nginx/mento-console.conf` gains an exact-match `location = / { return 302 /apply; }` above the catch-all; the bundle is still never served at `/`, so the member flow stays unreachable from this domain. `docs/DEPLOYMENT_VPS.md` lockdown note updated. Proof in a throwaway `nginx:1.22` container (TLS lines stripped, location blocks identical): `nginx -t` ok; `/` and `/?x=1` → 302 `/apply`; `/apply` `/admin` `/listener` `/_expo/*` → 200; `/onboarding` `/chat/abc` → 404.
+**Done:** `deploy/nginx/mento-console.conf` drops the allow-list for a plain SPA fallback (`location / { try_files $uri $uri/ /index.html; }`); `/_expo/` + `/assets/` stay strict (`=404` on a missing file). No app or API change was needed — no host guards in the app, and prod CORS already allowed the console origin. `deploy-console.sh` now also verifies `/` and `/onboarding`; `docs/DEPLOYMENT_VPS.md` + CLAUDE.md (stack row, layout line) updated.
 
-**Shipped:** conf pushed to `mento-ops@87.232.72.79` and nginx reloaded (previous conf backed up on the box at `/tmp/mento-console.conf.bak-20260918-104908`; `nginx -t` gated the reload). Live proof: `/` and `/?x=1` → 302 `https://console.agentin.chat/apply` (follows to 200); `/apply` `/admin` `/listener` → 200; `/onboarding` `/chat/abc` → 404; `http://` → 301 https; API health ok. Host note: `87.232.72.79` is the Mento VPS (key login + passwordless sudo from this machine); the `72.61.253.224` entry in this machine's `~/.ssh/config` is an unrelated box that serves neither domain.
+**Shipped:** conf pushed to `mento-ops@87.232.72.79`, `nginx -t` gated the reload (backups on the box: `/tmp/mento-console.conf.bak-20260918-104908` = original allow-list, `…-160955` = the redirect version). Proof — local `nginx:1.22` container: all app routes → `index.html`, missing assets → 404. Live: `/` `/onboarding` `/chat/abc` `/apply` `/admin` `/listener` → 200, `/_expo/nope.js` → 404, API health ok. Browser at 390×844 against prod, normal + `reducedMotion: 'reduce'`: landing renders, Start → role fork ("What brings you here today?"), **0 page errors, 0 API writes** (the smoke deliberately stops before any submit — no prod user minted, no real mentor pinged).
 
-**Next:** unchanged from session 33 — founder device pass on OTA `01a076b5`. These commits are local; `git push origin master` when ready.
+**Open decisions (founder veto):**
+1. **The member flow is now public on the web in prod** — this reverses the session-28 "mobile-only by design" lockdown. Server-side protections (18+ age gate, crisis scan on the Stream webhook, rate limits) hold on web; web UX stays best-effort (no push notifications in a browser, so a web member only sees a mentor's reply while the tab is open).
+2. It lives on the **`console.`** subdomain because that's what was asked for; a member-facing name (`app.agentin.chat` / the apex) is a DNS record + certbot + one `server_name` away if wanted.
+3. **`docs/PRIVACY.md` launch gate** now also covers a public web surface — same disclosures, but worth a line before this URL is shared widely.
+4. Not proven on prod: the full journey through matching → chat on the web build (would mint a prod user and ping a real mentor). Proven on the dev stack by `connecting-experience` / `two-party-chat` e2e; do one founder-driven pass on prod when a mentor is expecting it.
 
-**Open decisions (founder veto):** redirect target is `/apply` (the only public page) and it's a `302`, not a `301` — kept temporary so the bare domain can point somewhere else later without fighting browser caches.
+**Host note:** `87.232.72.79` is the Mento VPS (key login + passwordless sudo from this machine); the `72.61.253.224` entry in this machine's `~/.ssh/config` is an unrelated box.
+
+**Next:** unchanged from session 33 — founder device pass on OTA `01a076b5`. Session-34 commits are local; `git push origin master` when ready.
 
 ---
 
