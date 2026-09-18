@@ -52,7 +52,7 @@ VPS_SSH=mento-ops@87.232.72.79
 
 Consumers:
 
-- `deploy/nginx/mento-web.conf.template` (replaces the hardcoded `mento-console.conf`) — placeholders `APP_HOST` / `ADMIN_HOST` / `LEGACY_HOST`, cert paths derived from the host (`/etc/letsencrypt/live/<host>/…`). Rendered by `deploy/render-nginx.sh` (sources `domains.env`, `sed`, writes to stdout) — same idea as `mento-api.conf.template`.
+- Three site templates — `deploy/nginx/mento-{app,admin,redirect}.conf.template` (one site per file, like `mento-api.conf`; they replace the hardcoded `mento-console.conf`), cert paths derived from the host. Rendered by `deploy/render-nginx.sh app|admin|legacy <host>|apex` (sources `domains.env`, `sed`, stdout). `deploy/test-nginx.sh` is the committed proof: every site in a throwaway `nginx:1.22`, host map asserted row by row.
 - `deploy/deploy-web.sh` (renamed from `deploy-console.sh`; the old name stays as a one-line wrapper for one release) — sources `domains.env` for the SSH target and the post-deploy checks (`https://$APP_HOST/`, `/onboarding`, `/apply`, `https://$ADMIN_HOST/admin`).
 - `.github/workflows/console-deploy.yml` — sources the same file instead of hardcoding the IP/host.
 
@@ -122,7 +122,7 @@ Every old path keeps a route file that is only an expo-router `<Redirect>` to th
 
 ### 4.5 Server link builders
 
-Three call sites: `admin_console.py` (console link → `{app_base_url}/signin#token=`; new-admin link → `{admin_base_url}/admin#token=`) and `listener_applications.py` (approved-applicant console link → `/signin`). Ships **after** the app deploy that adds `/signin` (§5).
+Three call sites: `admin_console.py` (console link → `{app_base_url}/signin#token=`; new-admin link → `{admin_base_url}/admin#token=`) and `listener_applications.py` (approved-applicant console link → `/signin`). Ships **after** the app deploy that adds `/signin` (§5). Step 1 already routes all three builders through `app/services/links.py` on the app/admin origins (paths unchanged), so this step is a one-line path change there.
 
 ---
 
