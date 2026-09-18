@@ -59,8 +59,8 @@ def _enforce_prod_invariants() -> None:
     - Missing Stream creds make verify_webhook reject every webhook, which — with
       Stream's fail-open delivery — disables the crisis scan entirely and SILENTLY
       (Trust & Safety #1 must never be off without anyone noticing).
-    - An empty CORS allowlist silently bricks the web-only listener/admin consoles
-      (they call this API cross-origin from console_base_url).
+    - An empty CORS allowlist silently bricks the web build (it calls this API
+      cross-origin from APP_BASE_URL / ADMIN_BASE_URL).
     - An empty or shared ADMIN_JWT_SECRET means a leaked user/listener secret can
       forge admin tokens — the highest-privilege credential must have its own key.
     """
@@ -74,8 +74,8 @@ def _enforce_prod_invariants() -> None:
         )
     if not settings.resolved_cors_origins:
         problems.append(
-            "CORS origin list is empty — set CORS_ORIGINS (comma-separated) or a "
-            "valid CONSOLE_BASE_URL so the web consoles can reach the API"
+            "CORS origin list is empty — set CORS_ORIGINS (comma-separated) or valid "
+            "APP_BASE_URL / ADMIN_BASE_URL so the web build can reach the API"
         )
     if not settings.admin_jwt_secret or settings.admin_jwt_secret == settings.jwt_secret:
         problems.append(
@@ -103,12 +103,12 @@ app = FastAPI(title="Mento API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 # Mobile app + Expo web. Dev = wildcard; otherwise CORS_ORIGINS, falling back to
-# console_base_url's origin (the web-only consoles must reach this API cross-origin).
+# the app/admin base URL origins (the web build must reach this API cross-origin).
 # Auth is Bearer-token based (no cookies), so credentials are off — this keeps the
 # wildcard origin valid per the CORS spec (allow_credentials + "*" is rejected by browsers).
 if not settings.is_dev and not settings.cors_origin_list:
     logging.getLogger(__name__).warning(
-        "CORS_ORIGINS not set — falling back to console_base_url origin %s; "
+        "CORS_ORIGINS not set — falling back to the app/admin base URL origins %s; "
         "set CORS_ORIGINS explicitly for %s",
         settings.resolved_cors_origins,
         settings.env,
