@@ -59,6 +59,7 @@ export function PresenceHeader({
         onPress={onToggle}
         edge={online ? colors.edgeSurface : colors.accentEdge}
         travel={3}
+        intent="toggle"
         radius={radius.pill}
         disabled={busy}
         accessibilityRole="switch"

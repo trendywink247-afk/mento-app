@@ -246,7 +246,10 @@ export default function Landing() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  // Clipped: the ambient orbs deliberately hang off the edges (orbB sits at right: -30).
+  // Unclipped, the web page measured 30px wider than the viewport, and phone browsers
+  // let a too-wide page be dragged sideways even with body { overflow: hidden }.
+  root: { flex: 1, overflow: 'hidden' },
   fill: { flex: 1 },
   safe: { flex: 1, paddingHorizontal: space.lg },
   mountains: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },

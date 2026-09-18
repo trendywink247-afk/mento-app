@@ -19,6 +19,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { PressKey } from '@/components/motion/PressKey';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
@@ -121,12 +122,17 @@ export default function ChatScreen() {
       return [
         {
           action: () => {
-            void api.saveMentorNote({
-              body: message.text ?? '',
-              conversation_id: conversationId ?? null,
-              listener_persona: listenerName,
-              stream_message_id: message.id,
-            });
+            // The "kept" moment is confirmed by the server, not by the tap: success fires
+            // only once the note is really saved; a failure stays still (T&S #11).
+            void api
+              .saveMentorNote({
+                body: message.text ?? '',
+                conversation_id: conversationId ?? null,
+                listener_persona: listenerName,
+                stream_message_id: message.id,
+              })
+              .then(() => haptic.success())
+              .catch(() => {});
             dismissOverlay();
           },
           actionType: 'saveToMentorNotes',

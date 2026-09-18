@@ -79,6 +79,7 @@ export function PrimaryButton({
       onPress={onPress}
       edge={edge}
       travel={4}
+      intent={filled ? 'commit' : 'navigate'}
       radius={radius.pill}
       disabled={inactive}
       accessibilityLabel={accessibilityLabel ?? label}
