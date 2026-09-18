@@ -241,8 +241,9 @@ app route — including the anonymous-chat onboarding/matching flow, which is
 mobile-only by design (web is dev/test-only, CLAUDE.md) — is technically present
 in the JS and reachable unless Nginx blocks it. `deploy/nginx/mento-console.conf`
 allow-lists only `/admin`, `/listener`, and `/apply` (+ their static assets) and
-404s everything else, including `/` itself. Don't loosen this without re-adding
-an equivalent guard.
+404s everything else. The bare `/` is an exact-match `302 → /apply` (so typing the
+domain doesn't dead-end) — it never serves the bundle at `/`, which would boot the
+member landing screen. Don't loosen this without re-adding an equivalent guard.
 
 **Adding a route to the allow-list later** (not just first-time setup): edit
 `deploy/nginx/mento-console.conf` locally, then push it live —
