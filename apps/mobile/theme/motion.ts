@@ -21,6 +21,15 @@ export const duration = {
   slow: 700,
 } as const;
 
+/** Pillow-key press timings (PressKey). Press-in is quick and decelerating so the face
+ * meets the thumb at once; a commit lands a touch more deliberately than a chip. */
+export const press = {
+  commit: 120,
+  light: 100,
+  /** Reduced motion: the opacity dip's release. */
+  reduced: 150,
+} as const;
+
 export const easing = {
   /** Content arriving — decelerate in. */
   enter: Easing.out(Easing.cubic),

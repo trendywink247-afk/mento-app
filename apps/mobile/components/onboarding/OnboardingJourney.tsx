@@ -101,8 +101,9 @@ export function OnboardingJourney() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
+  // One press, one haptic: the key that calls this already fired its own on press-in
+  // (PressKey intent) — a second one here made every Continue buzz twice.
   const goNext = useCallback(() => {
-    haptic.advance();
     setStep((s) => order[Math.min(order.indexOf(s) + 1, order.length - 1)]);
   }, [order]);
 
@@ -114,7 +115,6 @@ export function OnboardingJourney() {
 
   // The fork: remember the branch, then advance to the age gate (shared by both).
   const onRolePicked = useCallback((r: Role) => {
-    haptic.advance();
     setRole(r);
     setStep('age');
   }, []);

@@ -25,7 +25,7 @@ import Animated, {
 
 import { haptic } from '@/lib/haptics';
 import { useReducedMotion } from '@/lib/useReducedMotion';
-import { duration, easing, spring } from '@/theme/motion';
+import { easing, press as pressTiming, spring } from '@/theme/motion';
 import { radius as radiusTokens } from '@/theme/tokens';
 
 export type PressKeyTravel = 4 | 3 | 2;
@@ -103,14 +103,15 @@ export function PressKey({
     if (disabled) return;
     const meaning: PressKeyIntent = intent ?? (travel === 4 ? 'navigate' : 'select');
     if (hapticMode === 'impact') INTENT_HAPTIC[meaning]();
-    // A commit lands a touch more deliberately than a chip; both stay well under 150 ms.
-    const pressIn = meaning === 'commit' ? duration.fast * 0.6 : duration.fast / 2;
-    press.value = withTiming(1, { duration: pressIn, easing: easing.exit });
+    // Decelerating (easing.enter): the face moves most in its first frames, so it meets
+    // the thumb immediately — an accelerating curve read as lag.
+    const pressIn = meaning === 'commit' ? pressTiming.commit : pressTiming.light;
+    press.value = withTiming(1, { duration: pressIn, easing: easing.enter });
   };
   const onPressOut = () => {
     if (disabled) return;
     press.value = reduced
-      ? withTiming(0, { duration: duration.fast - 50 })
+      ? withTiming(0, { duration: pressTiming.reduced })
       : withSpring(0, spring.calm);
   };
 
