@@ -24,7 +24,7 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Mobile | **Expo SDK 52** (RN 0.76, TS 5.3) + expo-router 4 | iOS + Android primary; **web = dev/test surface** (Playwright), best-effort UX. |
+| Mobile | **Expo SDK 52** (RN 0.76, TS 5.3) + expo-router 4 | iOS + Android primary; **web = dev/test surface** (Playwright), best-effort UX — also served whole on prod at `console.agentin.chat/` (founder ruling 2026-09-19; landing + journey next to `/admin` `/listener` `/apply`). |
 | Motion | **Reanimated 3.16** + **@shopify/react-native-skia 1.5** + expo-haptics | Skia 1.5 is the SDK 52 pin (v2 needs SDK 53+). Ambient SkSL aurora + motion tokens (`theme/motion.ts`). Web lazy-loads CanvasKit, falls back to a static gradient. |
 | Character art | In-house rig + painterly generated pose set (6 animals × 6 poses, `scripts/companions/`) + 2.5D `Tilt3D` parallax | **PERMANENT v1 route** (DECISIONS §I.4, amended 2026-07-13 — Rive retired, no commission budget; §K.8 painterly set 2026-09-05). Assets in `apps/mobile/assets/companions/generated/<Animal>/<pose>.webp`; regenerate via `scripts/companions/recipe.md` + `manifest.json`, cut with `cutout.py`. |
 | Scene art | **Lottie** — `lottie-react-native` 7.1 (native) + `@lottiefiles/dotlottie-react` (web) | Free LottieFiles assets, palette **baked** by `scripts/theme_lottie.py` (repo root). Licenses tracked in `apps/mobile/assets/lottie/README.md`. See Lottie rules below. |
@@ -144,7 +144,7 @@ mento/
   deploy/                   do-app.yaml (DigitalOcean App Platform spec; runbook in docs/DEPLOYMENT.md) ·
                             docker-compose.prod.yml + deploy.sh + deploy-console.sh + backup-postgres.sh +
                             nginx/{mento-api.conf.template,mento-console.conf} (self-managed VPS path — session 28
-                            LIVE at api.agentin.chat + console.agentin.chat/{admin,listener}; runbook docs/DEPLOYMENT_VPS.md)
+                            LIVE at api.agentin.chat + console.agentin.chat (whole web app: / + /admin + /listener + /apply); runbook docs/DEPLOYMENT_VPS.md)
   scripts/                  repo-root: sample_mockup_colors.py · theme_lottie.py (Lottie → Mento palette)
   docs/                     PRD.md · DECISIONS.md (WINS) · ALIGNMENT.md · MOCKUP_INVENTORY.md · MASCOT_ASSETS.md
                             · UX_REVIEW_2026-07-13.md · DEPLOYMENT.md (DO App Platform) · DEPLOYMENT_VPS.md

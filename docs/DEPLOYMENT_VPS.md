@@ -12,7 +12,7 @@
 | Where | This laptop | Hostinger VPS |
 | Postgres/Redis | `docker compose up -d` (services/api/docker-compose.yml) | `deploy/docker-compose.prod.yml`, self-managed containers |
 | API | `uvicorn app.main:app --port 8000` (reload-friendly, foreground) | Dockerized, `restart: always`, behind Nginx+TLS |
-| Mobile | `npx expo start --web --port 8081` (Metro dev server) | N/A — mobile ships as an APK; web stays dev/test only (CLAUDE.md) |
+| Mobile | `npx expo start --web --port 8081` (Metro dev server) | APK (primary) + the web build at `https://console.agentin.chat/` (whole app, best-effort UX — §11) |
 | Data | Disposable — pytest truncates listeners, safe to nuke | Real user data — back up before every deploy that touches migrations |
 
 **Start Test** (unchanged — full detail in the `mento-stack` skill):
@@ -234,19 +234,22 @@ sudo certbot --nginx -d console.agentin.chat --non-interactive --agree-tos -m <y
 # deploy/nginx/mento-console.conf — deploy-console.sh assumes that's done once.
 ```
 
-**Deliberately locked down** (learned live, session 28 — `console.agentin.chat/onboarding`
-was reachable and ran real matching against prod before this existed): since
+**Serves the whole app (founder ruling 2026-09-19, PROGRESS session 34):** since
 `web.output` is `"single"` (one SPA bundle, per `apps/mobile/app.json`), *every*
-app route — including the anonymous-chat onboarding/matching flow, which is
-mobile-only by design (web is dev/test-only, CLAUDE.md) — is technically present
-in the JS and reachable unless Nginx blocks it. `deploy/nginx/mento-console.conf`
-allow-lists only `/admin`, `/listener`, and `/apply` (+ their static assets) and
-404s everything else. The bare `/` is an exact-match `302 → /apply` (so typing the
-domain doesn't dead-end) — it never serves the bundle at `/`, which would boot the
-member landing screen. Don't loosen this without re-adding an equivalent guard.
+app route is in the JS. `deploy/nginx/mento-console.conf` falls every path back to
+`index.html`, so `https://console.agentin.chat/` is the member landing screen and
+the journey into chat, next to `/admin`, `/listener` and `/apply`. `/_expo/` and
+`/assets/` stay strict (`=404` on a missing file, never the SPA shell).
 
-**Adding a route to the allow-list later** (not just first-time setup): edit
-`deploy/nginx/mento-console.conf` locally, then push it live —
+History: session 28 allow-listed only `/admin`, `/listener`, `/apply` and 404'd the
+rest (`/onboarding` had been found running real matching against prod, and the
+member flow was mobile-only by design). That stance was reversed on purpose —
+what protects a member is server-side (age gate, crisis scan on the Stream
+webhook, rate limits) and holds on web. To re-close it, restore the allow-list
+from git history (`f1d5483` has the last locked-down version).
+
+**Changing the Nginx conf later:** edit `deploy/nginx/mento-console.conf` locally,
+then push it live —
 ```bash
 scp deploy/nginx/mento-console.conf mento-ops@<vps-ip>:/tmp/
 ssh mento-ops@<vps-ip> 'sudo cp /tmp/mento-console.conf /etc/nginx/sites-available/ && sudo nginx -t && sudo systemctl reload nginx'

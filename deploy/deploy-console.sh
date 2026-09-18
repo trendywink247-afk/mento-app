@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Run LOCALLY (on the dev machine, from repo root) to build and ship the admin
-# dashboard + listener console to the VPS. Unlike deploy.sh, this does NOT run
+# Run LOCALLY (on the dev machine, from repo root) to build and ship the web build
+# (member app at "/", + admin dashboard + listener console + /apply) to the VPS. Unlike deploy.sh, this does NOT run
 # on the VPS: the box is a 1-2GB Debian VPS and can't reliably run the
 # Expo/Metro toolchain (large node_modules, memory-hungry bundler). The static
 # build itself is tiny; only the BUILD step needs a real machine.
@@ -40,7 +40,7 @@ mv new current
 
 echo "[deploy-console] verifying..."
 sleep 1
-for path in /admin /listener /apply; do
+for path in / /onboarding /admin /listener /apply; do
     code=$(curl -s -o /dev/null -w '%{http_code}' "https://console.agentin.chat${path}")
     if [ "$code" != "200" ]; then
         echo "[deploy-console] FAILED — https://console.agentin.chat${path} returned ${code} (expected 200)" >&2
