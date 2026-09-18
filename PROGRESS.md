@@ -4,13 +4,15 @@
 
 ---
 
-## 2026-09-18 (session 34) — `console.agentin.chat/` no longer dead-ends ⏳ (committed `f1d5483`, **not yet live**)
+## 2026-09-18 (session 34) — `console.agentin.chat/` no longer dead-ends ✅ (`f1d5483`, **live on prod**)
 
 **Context:** founder typed the bare console domain and got nginx's `404 Not Found`. Nothing was down — DNS/TLS fine, `/apply` `/admin` `/listener` 200, API health 200. The 404 at `/` was the session-28 lockdown's catch-all working as designed.
 
 **Done:** `deploy/nginx/mento-console.conf` gains an exact-match `location = / { return 302 /apply; }` above the catch-all; the bundle is still never served at `/`, so the member flow stays unreachable from this domain. `docs/DEPLOYMENT_VPS.md` lockdown note updated. Proof in a throwaway `nginx:1.22` container (TLS lines stripped, location blocks identical): `nginx -t` ok; `/` and `/?x=1` → 302 `/apply`; `/apply` `/admin` `/listener` `/_expo/*` → 200; `/onboarding` `/chat/abc` → 404.
 
-**Next:** push the conf to the VPS and reload nginx (the two commands under "Adding a route to the allow-list later" in `docs/DEPLOYMENT_VPS.md`, host `mento-ops@87.232.72.79` — verified this session: key login + passwordless sudo work, live conf still has the old catch-all; the `72.61.253.224` entry in this machine's `~/.ssh/config` is an unrelated box that serves neither domain), then `curl -I https://console.agentin.chat/` should show `302` → `/apply`.
+**Shipped:** conf pushed to `mento-ops@87.232.72.79` and nginx reloaded (previous conf backed up on the box at `/tmp/mento-console.conf.bak-20260918-104908`; `nginx -t` gated the reload). Live proof: `/` and `/?x=1` → 302 `https://console.agentin.chat/apply` (follows to 200); `/apply` `/admin` `/listener` → 200; `/onboarding` `/chat/abc` → 404; `http://` → 301 https; API health ok. Host note: `87.232.72.79` is the Mento VPS (key login + passwordless sudo from this machine); the `72.61.253.224` entry in this machine's `~/.ssh/config` is an unrelated box that serves neither domain.
+
+**Next:** unchanged from session 33 — founder device pass on OTA `01a076b5`. These commits are local; `git push origin master` when ready.
 
 **Open decisions (founder veto):** redirect target is `/apply` (the only public page) and it's a `302`, not a `301` — kept temporary so the bare domain can point somewhere else later without fighting browser caches.
 
