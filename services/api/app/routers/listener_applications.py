@@ -22,6 +22,7 @@ from app.models.user import User
 from app.schemas import ConsoleSessionOut, ListenerApplicationIn, ListenerApplicationOut
 from app.security import current_user_id, issue_listener_token
 from app.services import stream
+from app.services.links import mentor_console_link
 from app.services.paths_data import COMMUNITIES
 
 router = APIRouter(prefix="/listener-applications", tags=["listener-applications"])
@@ -38,7 +39,7 @@ def _out(db: Session, a: ListenerApplication) -> ListenerApplicationOut:
         listener = db.get(ListenerProfile, a.listener_id)
         if listener is not None and listener.vetting_status == VettingStatus.approved:
             token = issue_listener_token(a.listener_id)
-            console_url = f"{get_settings().console_base_url}/listener#token={token}"
+            console_url = mentor_console_link(token)
     return ListenerApplicationOut(
         id=a.id,
         status=a.status.value,
