@@ -14,11 +14,12 @@
 import { useIsFocused } from '@react-navigation/native';
 import { Canvas, Fill, Shader, Skia, useClock } from '@shopify/react-native-skia';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, useWindowDimensions } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useDerivedValue, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { ambientLift } from '@/components/motion/ambientLift';
 import { hexToRgba01, mixHex01, mixRgba, type Rgba } from '@/components/motion/color';
+import { useFrameSize } from '@/lib/useFrameSize';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -83,7 +84,8 @@ const FROZEN_T = 40;
 export function AuroraCanvas() {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
-  const { width, height } = useWindowDimensions();
+  // The frame, not the window: on a wide browser the sky fills the 480 app column.
+  const { width, height } = useFrameSize();
   const clock = useClock();
 
   // Focus pause: expo-router keeps the previous screen mounted underneath the next
