@@ -1,0 +1,44 @@
+# The Mento web app (member + mentor sides, /apply, /signin) — one SPA.
+# Rendered by deploy/render-nginx.sh from deploy/domains.env; never hand-edit the
+# installed copy. TLS: `sudo certbot certonly --nginx -d SITE_HOST` once, BEFORE
+# installing this file (the cert paths below must already exist for `nginx -t`).
+#
+# Every route boots the SPA and expo-router resolves it client-side. What protects
+# a member is server-side (age gate, crisis scan on the Stream webhook, rate
+# limits), so it holds on web. The staff dashboard is NOT served from this origin
+# (it has its own host, so its token lives in a different localStorage).
+server {
+    listen 443 ssl;
+    server_name SITE_HOST;
+
+    root /opt/mento-console/current;
+    index index.html;
+
+    ssl_certificate /etc/letsencrypt/live/SITE_HOST/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/SITE_HOST/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # A missing static file is a real 404, never the SPA shell (a JS/CSS request
+    # answered with index.html fails confusingly in the browser).
+    location /_expo/ {
+        try_files $uri =404;
+    }
+    location /assets/ {
+        try_files $uri =404;
+    }
+
+    location /admin {
+        return 404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+
+server {
+    listen 80;
+    server_name SITE_HOST;
+    return 301 https://$host$request_uri;
+}
