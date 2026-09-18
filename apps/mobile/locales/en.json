@@ -196,7 +196,7 @@
       "headline": "What brings you here today?",
       "sub": "No wrong answer. You can change this later.",
       "talkTitle": "I need to talk",
-      "talkBody": "A real person, in under a minute.",
+      "talkBody": "A real person — now if a mentor is online, or when one is free.",
       "listenTitle": "I'm here to listen",
       "listenBody": "Be the steady voice for someone else.",
       "footer": "Mentors are real people, not therapists."
@@ -223,7 +223,7 @@
     "headlineError": "We couldn't connect just yet",
     "subFound": "Taking you to your conversation…",
     "subBusy": "Everyone's with someone right now. We're holding your place and retrying.",
-    "errorBusy": "It's a very busy moment — all our mentors are with someone. Please try again shortly.",
+    "errorBusy": "All our mentors are with someone right now. Try again shortly, or choose a mentor and they'll reply when they're free.",
     "breatheIn": "Breathe in with your companion…",
     "breatheOut": "…and slowly out",
     "isHere": "%{name} is here for you",

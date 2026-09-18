@@ -163,7 +163,7 @@ Context: full screen audit (24 route files, 45 rendered states walked at 390×84
 
 ## L. Founder rulings — 2026-09-19 (session 35: positioning, message allowance, email, trust wording)
 
-Source: the developer relayed these after the recovered 2026-09-06 walkthrough call and the Wispr-notes requirements review (kept outside the repo at the partner's request). They answer that review's open questions 1, 3, 4 and 5; question 2 (instant vs reply-when-free) is **still open**.
+Source: the developer relayed these after the recovered 2026-09-06 walkthrough call and the Wispr-notes requirements review (kept outside the repo at the partner's request). They answer that review's open questions 1, 3, 4 and 5; question 2 (instant vs reply-when-free) was ruled the same day — see item 5.
 
 **1. Positioning: a guidance app with communities inside it — not UPSC-only.** Mento serves people through **communities**; UPSC is the **first community inside the app**, not the product, and the app also accommodates people outside it with professional-register guidance. This *keeps* the communities-as-lens model (§J) and **rejects** the "UPSC guidance only" reading of the 09-06 call. What does change is the register: mentorship and guidance lead the copy; "emotional" and "anonymous" leave member-facing wording (session 35 copy pass), while the product stays persona-only and private (T&S #7 unchanged). The "Positioning decision" paragraph at the top of this file should be read through this ruling: *anonymous, low-friction support from a real mentor* still holds; "emotional-support app" is no longer the headline word.
 
@@ -172,4 +172,6 @@ Source: the developer relayed these after the recovered 2026-09-06 walkthrough c
 **3. Email stays optional and skippable** until an email service exists. No verification gate for returning members for now (§H.3 stands).
 
 **4. Trust wording must read professional.** "Vetted by the Mento team" is retired (it reads as veterinary); the mentor profile now says "Reviewed and approved by the Mento team" — true for every mentor, since each one is approved through the admin applications queue. No badges, ticks or "verified" marks (v1 scope 2 stands).
+
+**5. Connection promise: both paths, stated honestly.** If a mentor is online the member is connected right away (General match, unchanged); if nobody is free, the member chooses a mentor and that mentor replies when they have time (Personal request, unchanged; §K.12 "never a dead end" already routes there). Nothing in the matcher changes — only the promise does: "in under a minute" is retired from member copy, because with ~15 mentors it cannot be kept at all hours. The 09-06 "mentors answer when they have time" model is what members meet whenever no one is online. CLAUDE.md's "talking to a real human in under 30 seconds" stays as the *best-case performance target*, not a marketing promise.
 
