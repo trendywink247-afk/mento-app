@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-09-19 (session 34, part 2) — Unified domains step 1 built ⏳ (branch `worktree-unified-domains`, **not merged, not deployed**)
+
+**Context:** founder rulings, same session: "domains and all the routing should be normalized… single unified experience", domain is `agentin.chat` *for now and must be swappable*, route cleanup level A, and "fix web view on browsers too" (centered column + mentor two-pane). Two specs (`docs/superpowers/specs/2026-09-19-unified-domains-routes-design.md`, `…-desktop-web-layout-design.md`) and the step-1 plan (`docs/superpowers/plans/2026-09-19-unified-domains-step1.md`). **Worked in a git worktree** (`.claude/worktrees/unified-domains`) because a second Claude session (`mento-1e`, companions + copy pass) was live in the main checkout on `feat/companions-dog-cat-capybara` — two earlier docs commits of this session (`1af8a9c` specs, `ae59b9c` PROGRESS) landed on that branch by accident and ride along with its merge; the specs are also here (`29912fe`, identical content).
+
+**Done (plan Tasks 0–6, all local):**
+- `deploy/domains.env` is the **only** place a hostname or the VPS address is written (grep-proven across `deploy/` + `.github/`). `deploy/render-nginx.sh app|admin|legacy <host>|apex` renders three site templates (`nginx/mento-{app,admin,redirect}.conf.template`); hardcoded `mento-console.conf` deleted.
+- Host map: `app.<root>` = the whole app (`/admin` 404, strict `/_expo/` + `/assets/`); `admin.<root>` = only `/admin` (`/` → 302 `/admin`, rest 404); legacy `console.<root>` = 301s (path + query kept, `/admin*` → admin host); apex = 302 → app.
+- `deploy/test-nginx.sh` — committed proof: every site in a throwaway `nginx:1.22`, **21 assertions held**; re-run with `ROOT_DOMAIN=example.test` also held (a domain change is one line).
+- API: `APP_BASE_URL` / `ADMIN_BASE_URL` with `CONSOLE_BASE_URL` as deprecated fallback (deploy-before-env-edit safe), CORS derived from both; every minted link built in `app/services/links.py` (3 call sites; paths unchanged — `/signin` is routes-spec step 3).
+- `deploy-console.sh` → `deploy-web.sh` (wrapper kept one release); CI workflow reads `domains.env`. Runbook §11 rewritten + new §12 "Changing the domain" (6 steps; **step 6 = re-run `configure_stream`, the crisis webhook is dead until then**).
+- Proof: pytest **263 passed, 0 skipped** on an isolated DB (`mento_wt` — the shared dev DB kept its 16 listeners, so **no re-seed needed**), `alembic check` clean, ruff + black clean, `bash -n` on all four scripts.
+
+**Next (plan Task 7 — prod, founder go-ahead per sub-step):** certs for `app.` (+ `admin.`) → add both origins to prod `CORS_ORIGINS` (env only, no code deploy) → install app site → install admin site → flip `console.` to redirects → *after merge + push:* `deploy.sh`, set `APP_BASE_URL`/`ADMIN_BASE_URL`. **Founder action:** `admin` A record → `87.232.72.79` (`app` already points there; apex optional).
+
+**Then:** desktop frame (layout spec step A — the stretched desktop layout is public today) → app routes (hold until `feat/companions-dog-cat-capybara` is on master; it edits the same files) → server links → mentor workspace → delete the old `/listener` console.
+
+**Open decisions (founder veto):** `/mentoring` as the mentor home's name · apex 302 → app · `columnMax` 480 / `workspaceMin` 900 / rail 360 · static backdrop outside the column · members stay single-column on desktop · the web member flow is public (ruling 2026-09-19) → `docs/PRIVACY.md` needs a web-surface line before the URL is shared widely.
+
+**How to resume:** `EnterWorktree path=.claude/worktrees/unified-domains`; API tests with `DATABASE_URL=postgresql+psycopg://mento:mento@localhost:5432/mento_wt` and the main checkout's venv python; never run pytest against the shared `mento` DB while another session is live.
+
+---
+
 ## 2026-09-19 (session 34) — `console.agentin.chat/` opens the real app: landing + journey ✅ (`cad8cf6`, **live on prod**)
 
 **Context:** founder typed the bare console domain and got nginx's `404 Not Found`. Nothing was down — the 404 at `/` was the session-28 allow-list working as designed. First pass (2026-09-18, `f1d5483`) redirected `/` → `/apply`; **founder corrected it: the domain should show the landing screen and the app journey, not the recruitment page.** Redirect removed.
