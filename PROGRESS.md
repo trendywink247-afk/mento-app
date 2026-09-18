@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-09-19 (session 34, part 3) — Desktop web frame built ⏳ (branch `feat/desktop-web-frame`, stacked on `worktree-unified-domains`; **not merged, not deployed**)
+
+**Context:** founder: "let's fix web view on browsers too" → layout spec step A. The web build is public (`app.agentin.chat`) and had no desktop layout: measured at 1440×900 the role-fork doors were **1,408 px** wide and the Start key 1,392 px.
+
+**Done:** `components/WebFrame(.web).tsx` wraps the root `<Stack>` — above `layout.columnMax` (480, `theme/layout.ts`) the whole app sits in a centered column over the still `StaticAmbient` ground; the navigator lives inside the column, so the tab bar, transparent-modal sheets and absolutely-positioned art are contained for free. Tree shape is constant (only styles change) so a resize or a visit to `/admin` never remounts the navigator; no animation in the frame. `useFrameSize()` (`lib/useFrameSize.ts`) replaces `useWindowDimensions` in the two callers (`app/index.tsx` mountains, `AuroraCanvas`); grep-proven that only the frame + the hook read the window now. `/admin` exempt. Native + phone-width web = passthrough. CLAUDE.md gains the "never size from the window on web" convention.
+
+**Proof:** `npx tsc --noEmit` clean. New `e2e/desktop-frame.e2e.js` (`MENTO_WEB` selects the server; read-only, submits nothing) — **48/48 checks** over phone 390×844 / tablet 768×1024 / desktop 1440×900, each normal + `reducedMotion: 'reduce'`: column box (width, centred, full height), Start key and role-fork doors inside it, `/start-fresh` sheet inside it, `/admin` unframed, landing → Start → role fork, **0 page errors**. Screenshots at 1440 read and look right. Written test-first: 40 failures before the frame existed.
+
+**Pre-merge gate (NOT run yet):** the full existing e2e suite at 390×844 against this branch. It was skipped on purpose — those scripts hardcode `:8081`, which is the other live session's dev server and code, and that session is editing them; running matching flows would also take listener slots out from under its runs. Run it once the shared stack is free (the phone-width passthrough is already asserted by the new script, so no change is expected).
+
+**Gotcha (cost ~10 min, now in CLAUDE.md):** starting Expo with `CI=1` makes Metro disable file watching — it silently served the bundle from *before* the edits and the proof kept failing with the frame "missing". The startup log says so ("Metro is running in CI mode, reloads are disabled"); read it.
+
+**Crisis webhook follow-up (read-only triage, same session):** Stream is still configured to call `https://api.agentin.chat/api/v1/stream/{before-message-send,webhook}` (hook enabled, `message.new`), both endpoints answer 401 to an unsigned POST (alive, correctly rejecting), and nginx logs show the last webhook hits on 10 Sep matching the stale stamp. Two conversations were created on prod on 18 Sep with **zero** webhook hits that day — consistent with "opened, nothing typed", but only one real test message proves the path end-to-end. Founder's call; still no uptime monitor on `/health/crisis`.
+
+**Open decisions (founder veto):** `columnMax` 480 · static (not live) ground outside the column · hairline side edge on the column, no shadow · members stay single-column on desktop.
+
+**Next:** deploy the frame = merge → `./deploy/deploy-web.sh` (+ OTA is a no-op for native). Then routes-spec step 2 (hold until `feat/companions-dog-cat-capybara` is on master — same files), then the mentor workspace (layout spec B → C).
+
+**How to resume:** worktree `.claude/worktrees/unified-domains`; its own Expo web on **:8082** (`npx expo start --web --port 8082`, no `CI=1`); `apps/mobile/.env` there is a copy of the main checkout's (gitignored).
+
+---
+
 ## 2026-09-19 (session 34, part 2) — Unified domains step 1: hosts LIVE on prod ✅, API code on branch `worktree-unified-domains` ⏳ (not merged)
 
 **Context:** founder rulings, same session: "domains and all the routing should be normalized… single unified experience", domain is `agentin.chat` *for now and must be swappable*, route cleanup level A, and "fix web view on browsers too" (centered column + mentor two-pane). Two specs (`docs/superpowers/specs/2026-09-19-unified-domains-routes-design.md`, `…-desktop-web-layout-design.md`) and the step-1 plan (`docs/superpowers/plans/2026-09-19-unified-domains-step1.md`). **Worked in a git worktree** (`.claude/worktrees/unified-domains`) because a second Claude session (`mento-1e`, companions + copy pass) was live in the main checkout on `feat/companions-dog-cat-capybara` — two earlier docs commits of this session (`1af8a9c` specs, `ae59b9c` PROGRESS) landed on that branch by accident and ride along with its merge; the specs are also here (`29912fe`, identical content).

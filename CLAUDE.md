@@ -118,16 +118,16 @@ mento/
                             MentorChatScreen(.web) — the in-app mentor console (DECISIONS §K.9)
       listener/             ListenerConsole(.web) (web token-link console list), WebOnlyNotice
       admin/                AdminConsole(.web) + panels/ ×7
-    theme/                  tokens.ts · motion.ts · companion.ts · ThemeProvider (see Design tokens)
+    theme/                  tokens.ts · motion.ts · companion.ts · layout.ts (wide-screen widths) · ThemeProvider (see Design tokens)
     lib/                    api.ts, adminApi.ts, listenerApi.ts (typed clients) · session/adminSession/listenerSession
                             · streamClient/listenerStreamClient · haptics · useReducedMotion(.web) · onboardingDraft
-                            · useSessionGuard · format
+                            · useSessionGuard · format · useFrameSize (the column a screen may draw into)
     assets/                 lottie/ (5 themed animations + license README) · companions/ (generated/<Animal>/<pose>.webp
                             painterly set + registry.ts; fluent/ SVG fallback + convert.js) · scenes/ (webp empty-states)
     locales/                en.json · hi.json (typed keys via lib/i18n.tsx; EN is canonical)
     e2e/                    connecting-experience.e2e.js · path-communities.e2e.js · listener-apply.e2e.js
                             · analytics-dark.e2e.js · hindi-core-loop.e2e.js · role-fork · member-screens
-                            · two-party-chat · mentor-console (needs MENTO_ADMIN_TOKEN) · README.md
+                            · two-party-chat · mentor-console (needs MENTO_ADMIN_TOKEN) · desktop-frame (MENTO_WEB) · README.md
     patches/ + .npmrc       Expo Go device-compat (patch-package via postinstall + legacy-peer-deps) — do not remove
   services/api/
     app/                    routers/ (onboarding, match, conversation, stream_hooks, moderation, journals, listeners,
@@ -169,6 +169,7 @@ mento/
 - **Typed API clients only** — extend `lib/api.ts` (member), `lib/listenerApi.ts` (console), `lib/adminApi.ts` (dashboard). Never hand-write `fetch` in a component. Server side: Pydantic models in/out. (`lib/analytics.ts`'s fire-and-forget fetch is the sanctioned third-party exception.)
 - **User-visible strings via `useI18n().t()`** — never hardcoded literals in components (EN canonical in `locales/en.json`, typed keys). **Analytics via `lib/analytics.ts` only** — allowlisted closed event union, no PII ever, no crisis events.
 - **Web/native splits** use the `.web.tsx` convention (`AppProviders*`, `ChatScreen*`, `ListenerConsole*`, `AdminConsole*`). Listener console and admin dashboard are web-only — native gets `WebOnlyNotice`.
+- **Never size from the window on web.** Above `layout.columnMax` (480) the app draws into a centered column (`components/WebFrame.web.tsx`, wraps the root `<Stack>`), so screens and art use `useFrameSize()` (`lib/useFrameSize.ts`), never `useWindowDimensions`. Widths come from `theme/layout.ts`, like colours and durations come from their tokens. `/admin` is exempt (own wide layout). Proof: `e2e/desktop-frame.e2e.js` (`MENTO_WEB` selects the server). **Expo gotcha:** never start the dev server with `CI=1` — Metro then disables file watching and silently serves the bundle from before your edits.
 - **Motion rules (non-negotiable):**
   - Timings/easings from `theme/motion.ts` — never raw durations/beziers in components.
   - Animate **transform and opacity only** — never layout props (60fps mid-Android is a hard target).
