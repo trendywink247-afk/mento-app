@@ -1,17 +1,19 @@
 name: Console Deploy
 
-# Rebuilds and ships the admin/listener/apply static web console to the VPS on
-# every push to master that touches the mobile app or the deploy script — the
-# same thing deploy/deploy-console.sh does by hand, just automatic. The BUILD
-# runs on this runner (not the VPS — see deploy-console.sh's own comment on
-# why: the box is a 1-2GB Debian VPS that can't reliably run Expo/Metro); the
-# runner only SSHs in to upload the already-built static output and swap it in.
+# Rebuilds and ships the web build (app host + admin host) to the VPS on every
+# push to master that touches the mobile app or the deploy script — the same
+# thing deploy/deploy-web.sh does by hand, just automatic. The BUILD runs on this
+# runner (not the VPS — see deploy-web.sh's own comment on why: the box is a
+# 1-2GB Debian VPS that can't reliably run Expo/Metro); the runner only SSHs in to
+# upload the already-built static output and swap it in. Hostnames and the SSH
+# target come from deploy/domains.env — nothing is hardcoded here.
 on:
   push:
     branches: [main, master]
     paths:
       - "apps/mobile/**"
-      - "deploy/deploy-console.sh"
+      - "deploy/deploy-web.sh"
+      - "deploy/domains.env"
       - ".github/workflows/console-deploy.yml"
 
 jobs:
@@ -38,12 +40,13 @@ jobs:
 
       - name: Set up SSH
         run: |
+          . deploy/domains.env
           mkdir -p ~/.ssh
           printf '%s\n' "$CONSOLE_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H 87.232.72.79 >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${VPS_SSH#*@}" >> ~/.ssh/known_hosts
         env:
           CONSOLE_DEPLOY_SSH_KEY: ${{ secrets.CONSOLE_DEPLOY_SSH_KEY }}
 
-      - name: Deploy console
-        run: ./deploy/deploy-console.sh
+      - name: Deploy web build
+        run: ./deploy/deploy-web.sh
