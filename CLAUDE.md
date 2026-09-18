@@ -24,7 +24,7 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Mobile | **Expo SDK 52** (RN 0.76, TS 5.3) + expo-router 4 | iOS + Android primary; **web = dev/test surface** (Playwright), best-effort UX — also served whole on prod at `console.agentin.chat/` (founder ruling 2026-09-19; landing + journey next to `/admin` `/listener` `/apply`). |
+| Mobile | **Expo SDK 52** (RN 0.76, TS 5.3) + expo-router 4 | iOS + Android primary; **web = dev/test surface** (Playwright), best-effort UX — also served whole on prod at the app host (`app.<root>`, founder ruling 2026-09-19); the staff dashboard has its own host (`admin.<root>`); hostnames live only in `deploy/domains.env`. |
 | Motion | **Reanimated 3.16** + **@shopify/react-native-skia 1.5** + expo-haptics | Skia 1.5 is the SDK 52 pin (v2 needs SDK 53+). Ambient SkSL aurora + motion tokens (`theme/motion.ts`). Web lazy-loads CanvasKit, falls back to a static gradient. |
 | Character art | In-house rig + painterly generated pose set (6 animals × 6 poses, `scripts/companions/`) + 2.5D `Tilt3D` parallax | **PERMANENT v1 route** (DECISIONS §I.4, amended 2026-07-13 — Rive retired, no commission budget; §K.8 painterly set 2026-09-05). Assets in `apps/mobile/assets/companions/generated/<Animal>/<pose>.webp`; regenerate via `scripts/companions/recipe.md` + `manifest.json`, cut with `cutout.py`. |
 | Scene art | **Lottie** — `lottie-react-native` 7.1 (native) + `@lottiefiles/dotlottie-react` (web) | Free LottieFiles assets, palette **baked** by `scripts/theme_lottie.py` (repo root). Licenses tracked in `apps/mobile/assets/lottie/README.md`. See Lottie rules below. |
@@ -39,7 +39,7 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 | Errors | **Sentry** | env-gated both sides (empty DSN = off): API errors-only with request bodies stripped (`SENTRY_DSN`); mobile JS-error capture (`EXPO_PUBLIC_SENTRY_DSN`) — native crash symbolication is release-build work. |
 | i18n | **i18n-js** + expo-localization | EN + HI over `locales/{en,hi}.json`, typed keys (`lib/i18n.tsx`), persisted `mento.lang`, live Profile toggle; chat bodies/server Path content/personas stay untranslated. Devanagari via Baloo 2 (single family). |
 
-**Key env vars** — API (`services/api/.env`, template `.env.example`): `ENV`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, `DATABASE_URL`, `REDIS_URL`, `STREAM_API_KEY`/`STREAM_API_SECRET`, `RAZORPAY_KEY_ID`/`_SECRET`, `POSTHOG_API_KEY`, `SENTRY_DSN`, `PUSH_ENABLED`. Mobile (`apps/mobile/.env`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`, `EXPO_PUBLIC_SENTRY_DSN`.
+**Key env vars** — API (`services/api/.env`, template `.env.example`): `ENV`, `JWT_SECRET`, `ADMIN_JWT_SECRET`, `DATABASE_URL`, `APP_BASE_URL`/`ADMIN_BASE_URL` (`CONSOLE_BASE_URL` = deprecated fallback), `REDIS_URL`, `STREAM_API_KEY`/`STREAM_API_SECRET`, `RAZORPAY_KEY_ID`/`_SECRET`, `POSTHOG_API_KEY`, `SENTRY_DSN`, `PUSH_ENABLED`. Mobile (`apps/mobile/.env`): `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_POSTHOG_KEY`/`_HOST`, `EXPO_PUBLIC_SENTRY_DSN`.
 
 ---
 
@@ -142,9 +142,11 @@ mento/
                             hardening (age gate, wipe, PIN lockout, scan ownership), paths, admin, listener console
     docker-compose.yml      Postgres 16 + Redis 7
   deploy/                   do-app.yaml (DigitalOcean App Platform spec; runbook in docs/DEPLOYMENT.md) ·
-                            docker-compose.prod.yml + deploy.sh + deploy-console.sh + backup-postgres.sh +
-                            nginx/{mento-api.conf.template,mento-console.conf} (self-managed VPS path — session 28
-                            LIVE at api.agentin.chat + console.agentin.chat (whole web app: / + /admin + /listener + /apply); runbook docs/DEPLOYMENT_VPS.md)
+                            domains.env (the ONLY place hostnames live) + docker-compose.prod.yml + deploy.sh +
+                            deploy-web.sh + render-nginx.sh + test-nginx.sh + backup-postgres.sh +
+                            nginx/{mento-api,mento-app,mento-admin,mento-redirect}.conf.template (self-managed VPS —
+                            LIVE: api.<root>; app.<root> + admin.<root> pending the step-1 rollout; console.<root>
+                            serves the whole app until then; runbook docs/DEPLOYMENT_VPS.md)
   scripts/                  repo-root: sample_mockup_colors.py · theme_lottie.py (Lottie → Mento palette)
   docs/                     PRD.md · DECISIONS.md (WINS) · ALIGNMENT.md · MOCKUP_INVENTORY.md · MASCOT_ASSETS.md
                             · UX_REVIEW_2026-07-13.md · DEPLOYMENT.md (DO App Platform) · DEPLOYMENT_VPS.md

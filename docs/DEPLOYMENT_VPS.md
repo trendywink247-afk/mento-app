@@ -12,7 +12,7 @@
 | Where | This laptop | Hostinger VPS |
 | Postgres/Redis | `docker compose up -d` (services/api/docker-compose.yml) | `deploy/docker-compose.prod.yml`, self-managed containers |
 | API | `uvicorn app.main:app --port 8000` (reload-friendly, foreground) | Dockerized, `restart: always`, behind Nginx+TLS |
-| Mobile | `npx expo start --web --port 8081` (Metro dev server) | APK (primary) + the web build at `https://console.agentin.chat/` (whole app, best-effort UX — §11) |
+| Mobile | `npx expo start --web --port 8081` (Metro dev server) | APK (primary) + the web build at the app host (`app.<root>`, whole app, best-effort UX — §11) |
 | Data | Disposable — pytest truncates listeners, safe to nuke | Real user data — back up before every deploy that touches migrations |
 
 **Start Test** (unchanged — full detail in the `mento-stack` skill):
@@ -122,7 +122,7 @@ nano services/api/.env
 
 Set at minimum: `ENV=prod`, distinct random `JWT_SECRET` and `ADMIN_JWT_SECRET`,
 `POSTGRES_PASSWORD` (new value — this is the VPS path, `DATABASE_URL` itself is
-overridden by `deploy/docker-compose.prod.yml`), `CORS_ORIGINS`, `CONSOLE_BASE_URL`,
+overridden by `deploy/docker-compose.prod.yml`), `APP_BASE_URL`, `ADMIN_BASE_URL`, `CORS_ORIGINS` (hosts from `deploy/domains.env`),
 `STREAM_API_KEY`/`STREAM_API_SECRET`, `TRUSTED_PROXY_HOPS=1` (single Nginx hop).
 Leave Razorpay/PostHog/Sentry/Gemini blank until those are ready — every one of
 those integrations ships dark by design (CLAUDE.md).
@@ -184,77 +184,69 @@ Point an external monitor (UptimeRobot / Better Stack) at
 signal that the crisis-scan pipeline itself died (Stream configured but no webhook
 in 30 min, or Redis down) — not optional before real users touch this.
 
-### 11. Admin dashboard, listener console, public apply page (web)
+### 11. The web build — app host, admin host, legacy redirects
 
-These are the SAME Expo app as the member mobile app (`apps/mobile`), just
-three web-only routes (`/admin`, `/listener`, `/apply`) — CLAUDE.md's stack
-table already notes native gets `WebOnlyNotice` for the two consoles; `/apply`
-needs no such split since it's plain cross-platform UI, just unlinked on
-native. Unlike the API, **build locally, not on the VPS** — this box's 1-2GB
-RAM can't reliably run the Expo/Metro toolchain.
+One Expo web export (`apps/mobile`, `web.output: "single"`) is served by **two**
+Nginx sites from the same directory (`/opt/mento-console/current`):
+
+| Host (from `deploy/domains.env`) | Serves |
+|---|---|
+| `APP_HOST` (`app.<root>`) | the whole app — landing, journey, member + mentor sides, `/apply`; `/admin` is 404 here |
+| `ADMIN_HOST` (`admin.<root>`) | only `/admin` (+ static assets); `/` → `/admin`; everything else 404 |
+| each of `LEGACY_HOSTS` (`console.<root>`) | 301 → the app host (`/admin*` → the admin host), path + query kept |
+
+Founder ruling 2026-09-19: the member app is public on the web. What protects a
+member is server-side (age gate, crisis scan on the Stream webhook, rate limits).
+History: session 28 allow-listed only `/admin`, `/listener`, `/apply` on a single
+`console.` host; `f1d5483` is the last commit with that lockdown if it ever needs
+restoring.
+
+**Build locally, not on the VPS** (1–2 GB RAM can't run Expo/Metro):
 
 ```bash
 # One-time: create apps/mobile/.env.production (gitignored) with:
-#   EXPO_PUBLIC_API_URL=https://api.agentin.chat/api/v1
+#   EXPO_PUBLIC_API_URL=https://<API_HOST>/api/v1
 #   EXPO_PUBLIC_STREAM_API_KEY=<the PROD Stream app's publishable key>
-# `expo export` defaults NODE_ENV to production, so this file auto-loads —
-# no need to touch the dev .env or pass inline env vars.
-
-./deploy/deploy-console.sh
+./deploy/deploy-web.sh        # builds, uploads, swaps atomically, checks both hosts
 ```
 
-**Auto-deploy on push (session 29, `.github/workflows/console-deploy.yml`, not yet
-activated):** runs the same build+swap on every push to `master` touching
-`apps/mobile/**`. The workflow file is committed but needs two GitHub repo secrets
-before it will actually run (deliberately not created by an agent — these are live
-credentials):
-
-- `MOBILE_ENV_PRODUCTION` — the full contents of `apps/mobile/.env.production`.
-- `CONSOLE_DEPLOY_SSH_KEY` — a **dedicated** SSH private key (generate a fresh
-  `ssh-keygen -t ed25519 -f console-deploy` keypair; add the `.pub` half to
-  `~mento-ops/.ssh/authorized_keys` on the VPS; put the private half in this secret —
-  don't reuse your personal deploy key here). Restrict the VPS-side key to only what
-  `deploy-console.sh` needs if you want to harden further (e.g. a
-  `command="..."` forced-command restriction in `authorized_keys`).
-
-Until both secrets exist the workflow will fail loudly on push (missing env), not
-silently no-op — set them or leave the manual `./deploy/deploy-console.sh` as the only
-path.
-
-This builds (`expo export --platform web`), uploads to `/opt/mento-console/` on
-the VPS, and atomically swaps it into `current`. One-time Nginx + TLS setup (do
-once, before the first `deploy-console.sh` run):
+**One-time per host — cert first, then the site** (the rendered conf names the
+cert paths, so `nginx -t` fails until the cert exists):
 
 ```bash
-scp deploy/nginx/mento-console.conf mento-ops@<vps-ip>:/tmp/
-ssh mento-ops@<vps-ip> 'sudo mkdir -p /opt/mento-console && sudo chown mento-ops:mento-ops /opt/mento-console'
-ssh mento-ops@<vps-ip> 'sudo cp /tmp/mento-console.conf /etc/nginx/sites-available/ && sudo nginx -t'
-sudo certbot --nginx -d console.agentin.chat --non-interactive --agree-tos -m <you>@example.com --redirect
-# certbot rewrites the file with real cert paths matching what's already in
-# deploy/nginx/mento-console.conf — deploy-console.sh assumes that's done once.
+. deploy/domains.env
+ssh "$VPS_SSH" "sudo certbot certonly --nginx -d $APP_HOST --non-interactive --agree-tos -m <you>@example.com"
+./deploy/render-nginx.sh app | ssh "$VPS_SSH" "cat > /tmp/mento-app.conf"
+ssh "$VPS_SSH" 'sudo cp /tmp/mento-app.conf /etc/nginx/sites-available/ \
+  && sudo ln -sf /etc/nginx/sites-available/mento-app.conf /etc/nginx/sites-enabled/ \
+  && sudo nginx -t && sudo systemctl reload nginx'
+# same for:  render-nginx.sh admin → mento-admin.conf   (cert: $ADMIN_HOST)
+#            render-nginx.sh legacy <host> → mento-legacy-<host>.conf (cert already exists for console.)
 ```
 
-**Serves the whole app (founder ruling 2026-09-19, PROGRESS session 34):** since
-`web.output` is `"single"` (one SPA bundle, per `apps/mobile/app.json`), *every*
-app route is in the JS. `deploy/nginx/mento-console.conf` falls every path back to
-`index.html`, so `https://console.agentin.chat/` is the member landing screen and
-the journey into chat, next to `/admin`, `/listener` and `/apply`. `/_expo/` and
-`/assets/` stay strict (`=404` on a missing file, never the SPA shell).
+**Changing a site later:** edit the template, run `./deploy/test-nginx.sh` (renders
+every site into a throwaway `nginx:1.22` and asserts the host map), re-render,
+copy, `nginx -t`, reload. Back up the installed file first; never hand-edit it.
 
-History: session 28 allow-listed only `/admin`, `/listener`, `/apply` and 404'd the
-rest (`/onboarding` had been found running real matching against prod, and the
-member flow was mobile-only by design). That stance was reversed on purpose —
-what protects a member is server-side (age gate, crisis scan on the Stream
-webhook, rate limits) and holds on web. To re-close it, restore the allow-list
-from git history (`f1d5483` has the last locked-down version).
+**Auto-deploy on push (`.github/workflows/console-deploy.yml`, not yet activated):**
+runs `deploy-web.sh` on pushes to `master` touching `apps/mobile/**`. Needs two repo
+secrets before it runs (deliberately not created by an agent — live credentials):
+`MOBILE_ENV_PRODUCTION` (full contents of `apps/mobile/.env.production`) and
+`CONSOLE_DEPLOY_SSH_KEY` (a **dedicated** ed25519 private key whose `.pub` is in
+`~mento-ops/.ssh/authorized_keys`). Until both exist the workflow fails loudly.
 
-**Changing the Nginx conf later:** edit `deploy/nginx/mento-console.conf` locally,
-then push it live —
-```bash
-scp deploy/nginx/mento-console.conf mento-ops@<vps-ip>:/tmp/
-ssh mento-ops@<vps-ip> 'sudo cp /tmp/mento-console.conf /etc/nginx/sites-available/ && sudo nginx -t && sudo systemctl reload nginx'
-```
-No certbot re-run needed — TLS is provisioned for the domain, not per-route.
+### 12. Changing the domain
+
+Everything that names a host reads `deploy/domains.env`, so a move is:
+
+1. A records for `app`, `api`, `admin` (and the apex) on the new root → the VPS IP.
+2. Edit `ROOT_DOMAIN` in `deploy/domains.env`; append the old hosts to `LEGACY_HOSTS`. Run `./deploy/test-nginx.sh`.
+3. `certbot certonly --nginx -d <host>` for each new host; re-render + install the app, admin and legacy sites (and `mento-api.conf` from its template) → `nginx -t` → reload.
+4. API env: `APP_BASE_URL`, `ADMIN_BASE_URL`, `CORS_ORIGINS` → `./deploy/deploy.sh`.
+5. `EXPO_PUBLIC_API_URL` in `apps/mobile/.env.production` → `./deploy/deploy-web.sh` + an OTA for the APK.
+6. `python -m scripts.configure_stream` with the new API URL — **the crisis-scan webhook is dead until this runs**; prove it per the `mento-crisis-webhook` skill.
+
+Old hosts keep redirecting for as long as their DNS records and certs live.
 
 ---
 
@@ -271,9 +263,9 @@ automatically before serving, and refuses to serve if migrations fail. If a
 migration is destructive or backward-incompatible, run
 `./deploy/backup-postgres.sh` manually right before deploying that one.
 
-**If the change touched `/admin` or `/listener` UI**, also run
-`./deploy/deploy-console.sh` (locally — see step 11) — the two deploys are
-independent; `deploy.sh` only ships the API.
+**If the change touched anything in `apps/mobile`** (the web build serves the
+whole app), also run `./deploy/deploy-web.sh` (locally — see step 11) — the two
+deploys are independent; `deploy.sh` only ships the API.
 
 ### Rollback
 
@@ -297,9 +289,10 @@ Rotating `STREAM_API_SECRET` invalidates webhook signatures — re-run
 ## What's still missing (flag before real users depend on this)
 
 - ~~Admin dashboard / listener console have no production web build~~ **Resolved
-  session 28** — live at `console.agentin.chat` (step 11 above), locked down to
-  only `/admin` + `/listener`. Redeploy either UI with `./deploy/deploy-console.sh`.
-  Still manual/separate from `deploy.sh` — no CI wiring.
+  session 28**, reshaped session 34 — the web build is served from the app host
+  (whole app) and the admin host (`/admin` only); see step 11. Redeploy with
+  `./deploy/deploy-web.sh`. Still manual/separate from `deploy.sh` — the CI
+  workflow exists but is not activated (needs two repo secrets).
 - **Self-hosted OTA server** (for `expo-updates` shake-to-update, per
   `docs/ANDROID_BUILD.md`) is a natural fit to run on this same VPS
   (`updates.agentin.chat`) — not stood up yet; `app.json`'s `updates.url` block
