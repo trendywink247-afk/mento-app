@@ -87,7 +87,7 @@ async function memberOnboard(page, tid) {
   await tid('animal-panda').click();
   await tid('colour-terracotta').click();
   await tid('continue').click();
-  await page.waitForSelector('text=Mento space ready!', { timeout: 30000 });
+  await page.waitForSelector('text=Your Mento space is ready.', { timeout: 30000 });
   await tid('enter').click();
   // General match lands in a chat; we only need the session, so continue to Mentors.
   await page.waitForURL('**/chat/**', { timeout: 60000 });

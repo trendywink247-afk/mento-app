@@ -61,7 +61,7 @@ export default function StartFreshDialog() {
         <Panda pose="wave" size={110} />
         <Text style={[styles.title, { color: colors.ink }]}>Start fresh?</Text>
         <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-          You&apos;ll get a brand-new anonymous persona.{' '}
+          You&apos;ll get a brand-new persona.{' '}
           {persona?.persona_name ?? 'This persona'}&apos;s chats and journals stay behind —
           there&apos;s no way back to them.
         </Text>

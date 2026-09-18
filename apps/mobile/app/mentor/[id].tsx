@@ -196,7 +196,7 @@ export default function MentorProfile() {
         <View style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
           <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
           <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
-            Your message stays between you and this mentor. You're anonymous here.
+            Your message stays between you and this mentor. Your identity is never shared.
           </Text>
         </View>
       </Screen>

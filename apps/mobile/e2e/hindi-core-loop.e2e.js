@@ -32,7 +32,7 @@ async function walk(ctx, { assertConnecting }) {
   await tid('colour-terracotta').click();
   await tid('continue').click();
 
-  await page.waitForSelector('text=आपका Mento स्पेस तैयार!', { timeout: 30000 }); // ready
+  await page.waitForSelector('text=आपका Mento स्पेस तैयार है।', { timeout: 30000 }); // ready
   console.log('OK hi ready step');
   await tid('enter').click();
 

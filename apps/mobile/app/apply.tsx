@@ -90,7 +90,7 @@ export default function Apply() {
           </Text>
           <Text style={[type.body, { color: colors.inkMuted, marginTop: space.sm }]}>
             Mento connects people going through hard moments with real people who've been
-            there — anonymously, without judgment. Mentors are the heart of it.
+            there — privately, without judgment. Mentors are the heart of it.
           </Text>
         </Entrance>
 

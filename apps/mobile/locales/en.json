@@ -3,7 +3,7 @@
     "headline1": "A place to talk",
     "headline2": "with a mentor who",
     "headline3": "understands.",
-    "sub": "Anonymous. Judgment-free.\nReal conversations. When you need it most.",
+    "sub": "Private. Judgment-free.\nReal conversations. When you need it most.",
     "cta": "Start a Conversation"
   },
   "notFound": {
@@ -57,9 +57,9 @@
       "errOpen": "This conversation couldn't be opened. Retry, or go back to the console.",
       "retry": "Retry",
       "reply": "Reply…",
-      "privacy": "You're supporting an anonymous member — be kind, never ask for personal details.",
+      "privacy": "You're supporting a member in confidence — be kind, and never ask for personal details.",
       "empty": "No messages yet — say hello.",
-      "anonymous": "Anonymous member"
+      "anonymous": "Member"
     },
     "helplines": {
       "title": "If someone is in danger",
@@ -119,13 +119,13 @@
     "goBack": "Go back",
     "somethingWrong": "Something went wrong. Please try again.",
     "networkError": "We had trouble connecting. Please check your network and try again.",
-    "allBusy": "All mentors are busy right now. Please try again in a moment. 🧡",
+    "allBusy": "All mentors are busy right now. Please try again in a moment.",
     "retry": "Retry"
   },
   "onboarding": {
     "age": {
-      "headline": "Your age helps us\nkeep Mento safe,\nwhile keeping you\n",
-      "headlineAccent": "anonymous.",
+      "headline": "Your age helps us\nkeep Mento safe,\nand your identity\n",
+      "headlineAccent": "private.",
       "reassure": "We use your age to create appropriate conversations and maintain a safe space for everyone.",
       "neverShown": "Your age is never shown to other users.",
       "question": "How old are you?",
@@ -178,10 +178,10 @@
       "themeA11y": "%{label} theme"
     },
     "ready": {
-      "headline": "Mento space ready!",
-      "sub": "Your space is all set. Your journey\nbegins now. 🧡",
+      "headline": "Your Mento space is ready.",
+      "sub": "Your space is all set. Your journey\nbegins now.",
       "youChose": "You chose",
-      "asCompanion": "as your growth companion 🧡",
+      "asCompanion": "as your growth companion",
       "enter": "Enter My Space",
       "changeLater": "You can change your companion and theme later from Profile.",
       "gentleTitle": "A gentle space for your growth",
@@ -196,7 +196,7 @@
       "headline": "What brings you here today?",
       "sub": "No wrong answer. You can change this later.",
       "talkTitle": "I need to talk",
-      "talkBody": "Someone real, anonymous, in under a minute.",
+      "talkBody": "A real person, in under a minute.",
       "listenTitle": "I'm here to listen",
       "listenBody": "Be the steady voice for someone else.",
       "footer": "Mentors are real people, not therapists."
@@ -210,7 +210,7 @@
     },
     "handoff": {
       "headline": "Setting up your space…",
-      "sub": "Your identity stays yours — mentors are anonymous too."
+      "sub": "Your identity stays yours — and so does every mentor's."
     }
   },
   "connecting": {
@@ -219,7 +219,7 @@
     "line3": "Finding someone right for this moment…",
     "headlineSearching": "Connecting you to an\navailable mentor…",
     "headlineBusy": "It's a busy moment —\nyou're next in line",
-    "headlineFound": "Found someone\nfor you 🧡",
+    "headlineFound": "Found someone\nfor you",
     "headlineError": "We couldn't connect just yet",
     "subFound": "Taking you to your conversation…",
     "subBusy": "Everyone's with someone right now. We're holding your place and retrying.",
@@ -242,7 +242,7 @@
     "card4Body": "Ask for advice, or just be heard — both are welcome here.",
     "card5Title": "Reflect for better understanding",
     "card5Body": "Use this space to reflect and grow.",
-    "card6Title": "You're anonymous. So are they.",
+    "card6Title": "Your identity stays private. So does theirs.",
     "card6Body": "Just two people, personas on, walls down.",
     "card7Title": "Be yourself",
     "card7Body": "Honesty helps build meaningful conversations.",
@@ -255,7 +255,7 @@
     "connectedA11y": "Connected",
     "leaveA11y": "Leave conversation",
     "optionsA11y": "Conversation options",
-    "privacy": "This conversation is private. You're anonymous here.",
+    "privacy": "This conversation is private. Your identity is never shared.",
     "privacyDismissA11y": "Dismiss privacy note",
     "opening": "Opening your conversation…",
     "errMissingSession": "Missing session — please start again.",
@@ -275,7 +275,7 @@
     "placeholder": "Type a message…",
     "send": "Send message",
     "mentorHeaderA11y": "View %{name}'s profile",
-    "emptyTitle": "You're connected!",
+    "emptyTitle": "You're connected.",
     "emptyBody": "This is a safe space to share, reflect and grow. Take your time.",
     "today": "Today",
     "yesterday": "Yesterday"
@@ -324,7 +324,7 @@
       "bodyLock": "You'll need this PIN to open the conversation again.",
       "bodyUnlock": "This conversation is locked.",
       "wrongPin": "That PIN doesn't look quite right. Please enter your current PIN.",
-      "doneTitleLock": "Conversation locked!",
+      "doneTitleLock": "Conversation locked",
       "doneTitleUnlock": "Conversation unlocked",
       "doneBodyLock": "This chat now asks for your PIN before it opens.",
       "doneBodyUnlock": "Welcome back. This chat is open again."
@@ -338,7 +338,7 @@
       "apply": "Apply Mask",
       "privateTitle": "Your real status stays private.",
       "privateBody": "Only this mentor will see the status you set here. Your actual status won't be shared in this conversation.",
-      "doneTitle": "Away Mask is on!!",
+      "doneTitle": "Away Mask is on",
       "doneBody": "This mentor now sees you as \"%{status}\".",
       "availableTitle": "Available",
       "availableBody": "I'm available to chat",
@@ -367,7 +367,7 @@
       "toggleTitle": "Pause this conversation",
       "toggleBody": "You won't receive any messages until you resume.",
       "lostTitle": "Nothing will be lost.",
-      "lostBody": "We'll keep every message safe until you come back. 🧡",
+      "lostBody": "We'll keep every message safe until you come back.",
       "doneTitle": "Quiet Pause is on.",
       "doneBody": "Take all the time you need. We'll quietly hold new messages from this mentor until you're ready to continue.",
       "row1Title": "Notifications paused",
@@ -378,14 +378,14 @@
     "end": {
       "title": "End Conversation",
       "wipeScreenTitle": "Clean Wipe",
-      "wipeTitle": "Clean Wipe!!",
-      "gotItBang": "Got it!",
-      "allClean": "All clean! 🍃",
+      "wipeTitle": "Clean Wipe",
+      "gotItBang": "Got it",
+      "allClean": "All clean",
       "allCleanBody": "The conversation has been deleted from both accounts.",
       "deletedTitle": "Deleted everywhere",
       "deletedBody": "Messages were removed from your device and from our servers. You're always in control of your conversations.",
       "confirmBody": "Are you sure you want to delete this conversation?",
-      "wipeCta": "Yes, wipe it clean!",
+      "wipeCta": "Yes, wipe it clean",
       "info1": "All messages in this conversation will be deleted.",
       "info2": "This action cannot be undone.",
       "info3": "Messages will be deleted from your device and from our servers — both your account and your mentor's.",
@@ -426,7 +426,7 @@
     "headline": "Conversation ended",
     "sub": "You've taken a thoughtful step today.\nWe hope this space brought you some clarity and comfort.",
     "question": "How do you feel right now?",
-    "checkin": "One quiet check-in before you go —\nno right answers. 🧡",
+    "checkin": "One quiet check-in before you go —\nno right answers.",
     "energyA11y": "Energy level %{n} of 5",
     "drained": "Left drained",
     "energized": "Left energized",
@@ -452,7 +452,7 @@
     "retry": "Retry",
     "retryA11y": "Retry loading conversations",
     "emptyTitle": "No conversations yet",
-    "emptyBody": "When you start talking with a mentor, your conversations will live here — anonymous, always.",
+    "emptyBody": "When you start talking with a mentor, your conversations will live here — private, always.",
     "startCta": "Start a Conversation",
     "privacyFooter": "Your conversations are private and secure. We're here to support your journey.",
     "wiped": "Messages wiped — gone from both sides.",
@@ -463,7 +463,7 @@
     "newChat": "New Chat",
     "newChatA11y": "Start a new chat",
     "newChatTitle": "Who would you like to talk to?",
-    "newChatBody": "Both are anonymous. Both are real people.",
+    "newChatBody": "Both are private. Both are real people.",
     "newChatNow": "Talk to whoever's free now",
     "newChatNowSub": "We'll match you in a few seconds.",
     "newChatPick": "Choose a mentor",
@@ -546,7 +546,7 @@
   },
   "profile": {
     "title": "Profile",
-    "anonymous": "Anonymous",
+    "anonymous": "Member",
     "identityNote": "Your identity stays yours — this is all anyone ever sees.",
     "companionTitle": "Your growth companion",
     "recolour": "Switching colours re-tints the whole app, instantly.",
@@ -586,8 +586,8 @@
     "runningEmbedded": "Running the built-in version"
   },
   "coffee": {
-    "askTitle": "Would you like to buy a coffee for the Mento team? ☕",
-    "askBody": "It keeps the team fueled up to build a safe space for more hearts. 🧡"
+    "askTitle": "Would you like to buy the Mento team a coffee?",
+    "askBody": "It keeps the team going as we build a safe space for more people."
   },
   "mentorProfile": {
     "online": "Mentor · online now",

@@ -126,7 +126,7 @@ export default function MentorsTab() {
         Mentors
       </Text>
       <Text style={[type.body, { color: colors.inkMuted, marginBottom: space.sm }]}>
-        Real people, here to listen — always anonymous.
+        Real people, here to listen — always private.
       </Text>
 
       {loading ? (

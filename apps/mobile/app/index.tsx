@@ -232,7 +232,7 @@ export default function Landing() {
                   tone="ink"
                   icon="chatbubble-outline"
                   onPress={begin}
-                  accessibilityHint="Begins anonymous onboarding"
+                  accessibilityHint="Begins onboarding"
                   testID="start"
                 />
                 </View>

@@ -21,7 +21,7 @@ async function onboard(page) {
   await tid('animal-fox').click();
   await tid('colour-teal').click();
   await tid('continue').click();
-  await page.waitForSelector('text=Mento space ready!', { timeout: 30000 });
+  await page.waitForSelector('text=Your Mento space is ready.', { timeout: 30000 });
   await tid('enter').click();
   await page.waitForURL('**/chat/**', { timeout: 60000 });
   await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });

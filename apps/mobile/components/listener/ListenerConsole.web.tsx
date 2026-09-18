@@ -250,7 +250,7 @@ export default function ListenerConsoleWeb() {
           <View style={[styles.note, { backgroundColor: colors.brandTint }]}>
             <Ionicons name="shield-checkmark" size={14} color={colors.accent} />
             <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
-              You're supporting anonymous members. Be kind, listen first, and never ask for
+              You're supporting members in confidence. Be kind, listen first, and never ask for
               personal details. You're a listener, not a therapist.
             </Text>
           </View>
