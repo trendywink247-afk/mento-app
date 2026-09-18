@@ -89,11 +89,20 @@ COMMUNITIES: dict[str, dict] = {
                 "title": "The result wait.",
                 "body": "The space between paper and result is heavy for everyone. You don't have to carry it alone.",
             },
+            # 2026 cycle: mains ran 21-30 Aug (it fell in mid-September in 2023-24, which is
+            # what the old 09-15 -> 10-05 range encoded). Month-day ranges are year-agnostic,
+            # so re-check these two against the UPSC calendar every year.
             {
-                "from": "09-15",
-                "to": "10-05",
+                "from": "08-21",
+                "to": "08-30",
                 "title": "Mains season.",
                 "body": "Writing mains is a feat. Whatever stage you're at — someone here has walked it.",
+            },
+            {
+                "from": "08-31",
+                "to": "09-30",
+                "title": "Mains is behind you.",
+                "body": "The papers are done. The quiet afterwards is real, and someone here has sat in it too.",
             },
             {
                 "from": "12-01",

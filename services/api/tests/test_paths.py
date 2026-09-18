@@ -15,6 +15,7 @@ from app.models.user import User
 from app.security import issue_session_token
 from app.services import stream
 from app.services.matching import match_general
+from app.services.paths import seasonal_card
 from app.services.paths_data import COMMUNITIES, TREE, TREE_ROOT
 
 from .conftest import TestSession, requires_postgres
@@ -79,6 +80,24 @@ def test_every_tree_leaf_points_at_a_real_stage():
             else:
                 assert opt["community"] in COMMUNITIES
                 assert opt["stage"] in COMMUNITIES[opt["community"]]["stages"]
+
+
+def test_upsc_calendar_follows_the_2026_cycle():
+    """Mains ran 21-30 Aug 2026. The old 09-15 -> 10-05 "Mains season." card told people
+    who had already written mains that it was still ahead of them."""
+    during = seasonal_card("upsc", date(2026, 8, 25))
+    after = seasonal_card("upsc", date(2026, 9, 19))
+    assert during and during["title"] == "Mains season."
+    assert after and after["title"] == "Mains is behind you."
+    assert seasonal_card("upsc", date(2026, 10, 15)) is None
+
+
+def test_seasonal_cards_never_overlap():
+    """seasonal_card returns the first match, so an overlap silently hides a card."""
+    for slug, community in COMMUNITIES.items():
+        cards = sorted(community.get("seasonal", []), key=lambda c: c["from"])
+        for earlier, later in zip(cards, cards[1:]):
+            assert earlier["to"] < later["from"], f"{slug}: {earlier['title']} overlaps {later['title']}"
 
 
 def test_tree_endpoint_shape(client):
