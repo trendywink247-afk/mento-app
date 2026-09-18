@@ -94,7 +94,7 @@ export function Companion({
   // Unknown strings (corrupted/legacy stored value, e.g. lowercase 'panda') must
   // degrade to the brand guide, not crash the screen with fluent === undefined.
   const requested = animal ?? 'Panda';
-  const resolved: CompanionAnimal = requested in COMPANION_FLUENT ? requested : 'Panda';
+  const resolved: CompanionAnimal = requested in COMPANION_GENERATED ? requested : 'Panda';
   const lottieSource = COMPANION_LOTTIE[resolved];
   const set = COMPANION_GENERATED[resolved];
   const fluent = COMPANION_FLUENT[resolved];
@@ -209,7 +209,7 @@ export function Companion({
         style={[styles.layer, { width: box, height: box }, currentStyle]}
       />
     </View>
-  ) : (
+  ) : fluent ? (
     <SvgXml
       xml={fluent.xml}
       width={size * fluent.scale}
@@ -217,7 +217,7 @@ export function Companion({
       // Framing-normalised (face vs full-body emoji) — keep the visual centre.
       style={{ margin: (size - size * fluent.scale) / 2 }}
     />
-  );
+  ) : null;
 
   return (
     <ReactiveCompanion size={size} trigger={trigger} interactive={interactive} onPress={onPress}>

@@ -1,5 +1,5 @@
 {
-  "animals": ["Panda", "Elephant", "Fox", "Turtle", "Deer", "Owl"],
+  "animals": ["Panda", "Elephant", "Fox", "Turtle", "Deer", "Owl", "Dog", "Cat", "Capybara"],
   "poses": {
     "idle": "sitting calmly facing the camera, soft neutral smile, paws resting in its lap",
     "greet": "sitting, one paw raised beside its head in a small friendly wave, warm smile",

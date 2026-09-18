@@ -23,4 +23,7 @@ export const COMPANION_LOTTIE: Record<CompanionAnimal, CompanionAnimationSource 
   Turtle: null,
   Deer: null,
   Owl: null,
+  Dog: null,
+  Cat: null,
+  Capybara: null,
 };

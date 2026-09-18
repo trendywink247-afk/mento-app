@@ -4,7 +4,13 @@
     "references": 6,
     "poses": 38,
     "rerolls": 2,
-    "total": 46
+    "total": 74,
+    "batch_2026_09_19": {
+      "references": 3,
+      "poses": 18,
+      "rerolls": 7,
+      "total": 28
+    }
   },
   "renders": [
     {
@@ -436,6 +442,238 @@
       "prompt": "recipe.md \u00a7pose template + poses.json",
       "accepted": true,
       "output": "apps/mobile/assets/companions/generated/Owl/sleepy.webp"
+    },
+    {
+      "animal": "Dog",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "e0c02228-db94-4911-b3d6-3eab05ef8c8f",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true,
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Dog",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "e0c02228-db94-4911-b3d6-3eab05ef8c8f",
+      "reference_job_id": "e0c02228-db94-4911-b3d6-3eab05ef8c8f",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Dog/idle.webp",
+      "batch": "2026-09-19",
+      "cutout_thresh": 12,
+      "note": "the accepted reference render doubles as idle (the separate idle render came back standing)"
+    },
+    {
+      "animal": "Dog",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "a10805f4-44f1-41e6-b0be-63b536f1bbb3",
+      "reference_job_id": "e0c02228-db94-4911-b3d6-3eab05ef8c8f",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Dog/greet.webp",
+      "batch": "2026-09-19",
+      "cutout_thresh": 12
+    },
+    {
+      "animal": "Dog",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "52794b03-ed67-4311-aff2-f82d348427be",
+      "reference_job_id": "e0c02228-db94-4911-b3d6-3eab05ef8c8f",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Dog/joy.webp",
+      "batch": "2026-09-19",
+      "cutout_thresh": 12
+    },
+    {
+      "animal": "Dog",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "5f50cf8b-079c-403d-b0e4-48b39bcdb744",
+      "reference_job_id": "e0c02228-db94-4911-b3d6-3eab05ef8c8f",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Dog/comfort.webp",
+      "batch": "2026-09-19",
+      "cutout_thresh": 12
+    },
+    {
+      "animal": "Dog",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "8ea20b11-4999-4d34-bf5f-2f715ac96824",
+      "reference_job_id": "e0c02228-db94-4911-b3d6-3eab05ef8c8f",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Dog/curious.webp",
+      "batch": "2026-09-19",
+      "cutout_thresh": 12
+    },
+    {
+      "animal": "Dog",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "563e39a0-b3e6-45a3-aeda-360526785fd0",
+      "reference_job_id": "e0c02228-db94-4911-b3d6-3eab05ef8c8f",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Dog/sleepy.webp",
+      "batch": "2026-09-19",
+      "cutout_thresh": 12
+    },
+    {
+      "animal": "Cat",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true,
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Cat",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "f4a3cf8f-0a25-4708-8440-ef3ec3429c9d",
+      "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/idle.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Cat",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "9766e23d-7cdb-4574-b79c-49e534ccfe46",
+      "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/greet.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Cat",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "8c9ccd7f-29e9-41fd-9ad6-35dca63f0b51",
+      "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/joy.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Cat",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "237b1e1a-b24a-4c39-abba-8dcadd042d7b",
+      "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/comfort.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Cat",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "bc997540-74cf-48fa-b012-8fe3c0565287",
+      "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/curious.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Cat",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "7afed6e8-b12c-4cc6-98b7-c358d77d4718",
+      "reference_job_id": "9737a100-c465-470b-80dc-d0760253ec8b",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/sleepy.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "reference",
+      "model": "nano_banana",
+      "job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
+      "prompt": "recipe.md \u00a7reference",
+      "accepted": true,
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "idle",
+      "model": "nano_banana",
+      "job_id": "f8c78b6a-1360-4ea4-b167-8e00d55097c6",
+      "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/idle.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "greet",
+      "model": "nano_banana",
+      "job_id": "69fa4201-873c-4f68-b6cc-e2028e1dab3e",
+      "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/greet.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "joy",
+      "model": "nano_banana",
+      "job_id": "f4633c6f-8d64-4e75-b1a5-5367a7e3d0a1",
+      "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/joy.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "comfort",
+      "model": "nano_banana",
+      "job_id": "1bd47843-bc6c-428d-afb3-889ccc96964f",
+      "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/comfort.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "curious",
+      "model": "nano_banana",
+      "job_id": "492bd713-5d83-45cb-8952-37213c56b354",
+      "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/curious.webp",
+      "batch": "2026-09-19"
+    },
+    {
+      "animal": "Capybara",
+      "pose": "sleepy",
+      "model": "nano_banana",
+      "job_id": "e0d92f92-55ca-476f-8eea-062f6734dfdb",
+      "reference_job_id": "357d7bc3-a53f-4817-85ba-40e7bf963dbb",
+      "prompt": "recipe.md \u00a7pose template + poses.json (see recipe \u00a7Notes 2026-09-19 for the reroll wording)",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Capybara/sleepy.webp",
+      "batch": "2026-09-19"
     }
   ]
 }

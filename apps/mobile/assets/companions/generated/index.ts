@@ -1,6 +1,6 @@
 /**
- * Painterly companion set (DECISIONS §K.8, 2026-09-05): six animals × six poses (+ two
- * panda extras), generated on Higgsfield from one locked recipe with a reference image
+ * Painterly companion set (DECISIONS §K.8, 2026-09-05; Dog / Cat / Capybara added
+ * 2026-09-19): nine animals × six poses (+ two panda extras), generated on Higgsfield from one locked recipe with a reference image
  * per animal (scripts/companions/recipe.md, manifest.json), cut out locally by
  * scripts/companions/cutout.py, packed as ~30KB 512px RGBA WebP.
  *
@@ -38,4 +38,7 @@ export const COMPANION_GENERATED: Record<CompanionAnimal, CompanionArtSet> = {
   Turtle: { poses: { idle: require('./Turtle/idle.webp'), greet: require('./Turtle/greet.webp'), joy: require('./Turtle/joy.webp'), comfort: require('./Turtle/comfort.webp'), curious: require('./Turtle/curious.webp'), sleepy: require('./Turtle/sleepy.webp') }, scale: 1 },
   Deer: { poses: { idle: require('./Deer/idle.webp'), greet: require('./Deer/greet.webp'), joy: require('./Deer/joy.webp'), comfort: require('./Deer/comfort.webp'), curious: require('./Deer/curious.webp'), sleepy: require('./Deer/sleepy.webp') }, scale: 1 },
   Owl: { poses: { idle: require('./Owl/idle.webp'), greet: require('./Owl/greet.webp'), joy: require('./Owl/joy.webp'), comfort: require('./Owl/comfort.webp'), curious: require('./Owl/curious.webp'), sleepy: require('./Owl/sleepy.webp') }, scale: 1 },
+  Dog: { poses: { idle: require('./Dog/idle.webp'), greet: require('./Dog/greet.webp'), joy: require('./Dog/joy.webp'), comfort: require('./Dog/comfort.webp'), curious: require('./Dog/curious.webp'), sleepy: require('./Dog/sleepy.webp') }, scale: 1 },
+  Cat: { poses: { idle: require('./Cat/idle.webp'), greet: require('./Cat/greet.webp'), joy: require('./Cat/joy.webp'), comfort: require('./Cat/comfort.webp'), curious: require('./Cat/curious.webp'), sleepy: require('./Cat/sleepy.webp') }, scale: 1 },
+  Capybara: { poses: { idle: require('./Capybara/idle.webp'), greet: require('./Capybara/greet.webp'), joy: require('./Capybara/joy.webp'), comfort: require('./Capybara/comfort.webp'), curious: require('./Capybara/curious.webp'), sleepy: require('./Capybara/sleepy.webp') }, scale: 1 },
 };

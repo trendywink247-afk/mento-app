@@ -5,7 +5,16 @@ import Svg, { Circle, Ellipse, Path, Rect } from 'react-native-svg';
  * Consistent style: big head, soft shapes, no outlines — crisp on the white picker
  * cards at any scale.
  */
-export type CompanionAnimal = 'Panda' | 'Elephant' | 'Fox' | 'Turtle' | 'Deer' | 'Owl';
+export type CompanionAnimal =
+  | 'Panda'
+  | 'Elephant'
+  | 'Fox'
+  | 'Turtle'
+  | 'Deer'
+  | 'Owl'
+  | 'Dog'
+  | 'Cat'
+  | 'Capybara';
 
 export function CompanionArt({ animal, size = 72 }: { animal: CompanionAnimal; size?: number }) {
   switch (animal) {
@@ -21,6 +30,9 @@ export function CompanionArt({ animal, size = 72 }: { animal: CompanionAnimal; s
       return <DeerFace size={size} />;
     case 'Owl':
       return <OwlFace size={size} />;
+    default:
+      // Dog / Cat / Capybara (2026-09-19) ship painterly art only — no coded portrait.
+      return <PandaFace size={size} />;
   }
 }
 

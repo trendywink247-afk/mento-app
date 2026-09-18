@@ -20,7 +20,17 @@ import {
 } from '@/theme/companion';
 import { font, radius, space, type } from '@/theme/tokens';
 
-const ANIMALS: CompanionAnimal[] = ['Panda', 'Elephant', 'Fox', 'Turtle', 'Deer', 'Owl'];
+const ANIMALS: CompanionAnimal[] = [
+  'Panda',
+  'Dog',
+  'Cat',
+  'Fox',
+  'Capybara',
+  'Elephant',
+  'Turtle',
+  'Deer',
+  'Owl',
+];
 const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
 
 function pick<T>(arr: T[]): T {

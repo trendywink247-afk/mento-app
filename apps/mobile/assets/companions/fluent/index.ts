@@ -17,7 +17,9 @@ import { owlXml } from './owl';
 import { pandaXml } from './panda';
 import { turtleXml } from './turtle';
 
-export const COMPANION_FLUENT: Record<CompanionAnimal, { xml: string; scale: number }> = {
+// Partial: Dog / Cat / Capybara (2026-09-19) ship painterly art only — there is no
+// capybara emoji, and this tier is unreachable while every animal has an `idle` cutout.
+export const COMPANION_FLUENT: Partial<Record<CompanionAnimal, { xml: string; scale: number }>> = {
   Panda: { xml: pandaXml, scale: 1 },
   Elephant: { xml: elephantXml, scale: 1.08 },
   Fox: { xml: foxXml, scale: 1 },
