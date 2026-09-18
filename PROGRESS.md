@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-09-19 (session 35) — Design canvas (3 directions) · Dog/Cat/Capybara companions · "anonymous" out of the copy (branch `feat/companions-dog-cat-capybara`, not merged)
+
+**Context:** founder ran `/design` ("everything", 2–3 directions), then steered live: enhanced landing hero, three new companions, a professional copy pass without the word "anonymous", and a living playground on the role fork.
+
+**Done (repo):**
+- `3fa06c1` **companions 6 → 9**: Dog, Cat, Capybara × six poses from the locked recipe (`nano_banana`, one reference each; job ids in `scripts/companions/manifest.json`, 28 credits incl. 7 rerolls). Recipe gains identity lines + the reroll wording that fixed drift (curious = idle, Dog turning corgi, Capybara growing a leaf prop). **Dog needs `cutout.py --thresh 12`** — its cream forehead sits inside the default 30 of the oat ground and the flood fill ate a hole in the head. `COMPANION_FLUENT` is now `Partial` (no capybara emoji; that tier is unreachable while idle art exists) and `Companion` validates unknown animals against `COMPANION_GENERATED`. Picker order: Panda · Dog · Cat · Fox · Capybara · Elephant · Turtle · Deer · Owl. API untouched (`companion_animal` is a free string).
+- `9699aa1` **copy**: 12 "anonymous" strings → "private" / "your identity is never shared" (EN + HI), 6 hardcoded strings to match, emoji and `!!` stripped from locale strings, ready headline is now "Your Mento space is ready." (e2e selectors updated in 11 specs). Locale *keys* named `anonymous` kept (internal).
+- Proof: `tsc --noEmit` clean; `e2e/new-companions.e2e.js` (new) PASS normal + reduced, 0 page errors — each new animal's art decodes and selects, onboarding completes as Capybara → live chat, no "anonym" text on landing / role fork / age gate / chat / profile; `hindi-core-loop.e2e.js` PASS both passes. API not touched → pytest not run, no reseed needed.
+
+**Done (design, not in the repo):** Artifact canvas "Mento — App Screens, Three Directions" — A Pillow (Clay and Sage pushed) · B Night Sky (dark) · C Quiet Page (editorial), 10 screens each, real copy + companion art. A · Landing iterated to the founder's brief: the **real landing Lottie** (exported frame-by-frame to an animated WebP) on a lit stage with orbit rings, conversation ripples, floating chat cards, staged headline. A · Role fork: companions' playground loop (Higgsfield still → `seedance_2_0_mini` 6 s silent loop) replacing the lone panda.
+
+**Open decisions (founder veto):**
+1. **Third "cute trending" animal = Capybara** (the internet's calm animal; fits the Calm register). Alternatives considered: red panda, otter, axolotl.
+2. **"Anonymous" is gone from member copy but the product is still anonymous** — personas, no names/photos, T&S #7 unchanged. The privacy promise is now worded "private / identity never shared". DECISIONS §K.1-era copy and `docs/PRIVACY.md` still say "anonymous"; reconcile or ratify. CLAUDE.md's "What Mento is" is unchanged on purpose (it describes the product, not the copy).
+3. Emoji (🧡 ☕ 🍃) and `!!` removed from all locale strings as part of "professional" — revert per-string if any warmth is missed.
+4. Landing and role-fork motion on the canvas is **louder than the motion rules allow** (>3 simultaneous movers, a video loop). Founder asked for "crazy"; porting it to the app needs a ruling on the ≤3-movers rule and a video dependency (`expo-video`) or an animated-WebP path — not started.
+5. Direction A/B/C is still unpicked.
+
+**Next:** founder picks a direction + confirms the landing/role-fork treatment → port to the app on a branch (landing: Lottie + Reanimated stage; role fork: playground asset). Merge `feat/companions-dog-cat-capybara` after a device look at the new animals (picker rail, Ready, chat header, Profile).
+
+**How to resume:** stack per `mento-stack` — note `apps/mobile/.env` points `EXPO_PUBLIC_API_URL` at a Tailscale-style IP; for web/e2e start Expo with `$env:EXPO_PUBLIC_API_URL='http://localhost:8000/api/v1'` (process env wins, no file edit). Playwright for e2e: `NODE_PATH=~/.claude/skills/playwright-skill/node_modules`.
+
+---
+
 ## 2026-09-19 (session 34) — `console.agentin.chat/` opens the real app: landing + journey ✅ (`cad8cf6`, **live on prod**)
 
 **Context:** founder typed the bare console domain and got nginx's `404 Not Found`. Nothing was down — the 404 at `/` was the session-28 allow-list working as designed. First pass (2026-09-18, `f1d5483`) redirected `/` → `/apply`; **founder corrected it: the domain should show the landing screen and the app journey, not the recruitment page.** Redirect removed.
