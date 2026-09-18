@@ -145,8 +145,8 @@ mento/
                             domains.env (the ONLY place hostnames live) + docker-compose.prod.yml + deploy.sh +
                             deploy-web.sh + render-nginx.sh + test-nginx.sh + backup-postgres.sh +
                             nginx/{mento-api,mento-app,mento-admin,mento-redirect}.conf.template (self-managed VPS —
-                            LIVE: api.<root>; app.<root> + admin.<root> pending the step-1 rollout; console.<root>
-                            serves the whole app until then; runbook docs/DEPLOYMENT_VPS.md)
+                            LIVE since 2026-09-19: api.<root>, app.<root> (whole app), admin.<root> (/admin only);
+                            console.<root> 301s to them; runbook docs/DEPLOYMENT_VPS.md)
   scripts/                  repo-root: sample_mockup_colors.py · theme_lottie.py (Lottie → Mento palette)
   docs/                     PRD.md · DECISIONS.md (WINS) · ALIGNMENT.md · MOCKUP_INVENTORY.md · MASCOT_ASSETS.md
                             · UX_REVIEW_2026-07-13.md · DEPLOYMENT.md (DO App Platform) · DEPLOYMENT_VPS.md

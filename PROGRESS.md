@@ -4,7 +4,7 @@
 
 ---
 
-## 2026-09-19 (session 34, part 2) — Unified domains step 1 built ⏳ (branch `worktree-unified-domains`, **not merged, not deployed**)
+## 2026-09-19 (session 34, part 2) — Unified domains step 1: hosts LIVE on prod ✅, API code on branch `worktree-unified-domains` ⏳ (not merged)
 
 **Context:** founder rulings, same session: "domains and all the routing should be normalized… single unified experience", domain is `agentin.chat` *for now and must be swappable*, route cleanup level A, and "fix web view on browsers too" (centered column + mentor two-pane). Two specs (`docs/superpowers/specs/2026-09-19-unified-domains-routes-design.md`, `…-desktop-web-layout-design.md`) and the step-1 plan (`docs/superpowers/plans/2026-09-19-unified-domains-step1.md`). **Worked in a git worktree** (`.claude/worktrees/unified-domains`) because a second Claude session (`mento-1e`, companions + copy pass) was live in the main checkout on `feat/companions-dog-cat-capybara` — two earlier docs commits of this session (`1af8a9c` specs, `ae59b9c` PROGRESS) landed on that branch by accident and ride along with its merge; the specs are also here (`29912fe`, identical content).
 
@@ -16,7 +16,17 @@
 - `deploy-console.sh` → `deploy-web.sh` (wrapper kept one release); CI workflow reads `domains.env`. Runbook §11 rewritten + new §12 "Changing the domain" (6 steps; **step 6 = re-run `configure_stream`, the crisis webhook is dead until then**).
 - Proof: pytest **263 passed, 0 skipped** on an isolated DB (`mento_wt` — the shared dev DB kept its 16 listeners, so **no re-seed needed**), `alembic check` clean, ruff + black clean, `bash -n` on all four scripts.
 
-**Next (plan Task 7 — prod, founder go-ahead per sub-step):** certs for `app.` (+ `admin.`) → add both origins to prod `CORS_ORIGINS` (env only, no code deploy) → install app site → install admin site → flip `console.` to redirects → *after merge + push:* `deploy.sh`, set `APP_BASE_URL`/`ADMIN_BASE_URL`. **Founder action:** `admin` A record → `87.232.72.79` (`app` already points there; apex optional).
+**Shipped to prod (plan Task 7a–7f, founder-approved, 2026-09-19 ~00:20 IST):**
+- Certs for `app.` + `admin.` (expire 2026-12-17, certbot auto-renews). Founder added the `admin` A record.
+- Prod `CORS_ORIGINS` = console + app + admin (env only; API container restarted, a few seconds; `.env` backup `services/api/.env.bak-20260918-185101` on the box).
+- Sites `mento-app.conf` + `mento-admin.conf` installed from the rendered templates; `mento-console.conf` replaced by the redirect site (previous conf: `/opt/mento-console/mento-console.conf.bak-20260918-185520`). Every change `nginx -t`-gated.
+- Live proof: `app.` `/` `/onboarding` `/apply` `/chat/abc` → 200, `/admin` → 404, missing asset → 404 · `admin.` `/` → 302 `/admin`, `/admin` → 200, member routes → 404 · `console.` → 301 to `app.` (path + query kept), `/admin` → 301 `admin.` · browser smoke on `https://app.agentin.chat/` at 390×844 normal + reduced motion: landing → Start → role fork, **0 page/console errors, 0 failed requests, 0 API writes** · real-browser cross-origin GET to the API succeeds from all three origins (with preflight) · a `#token=` fragment **survives** the `console.` 301 on both `/listener` and `/admin` (checked with JS off), so every private link already handed out still signs in.
+
+**Founder needs to know:** the admin token lives in per-origin browser storage — the dashboard at `admin.agentin.chat/admin` asks for sign-in once. An existing `…/admin#token=…` link still works (it redirects with the token); otherwise mint a fresh one: `ssh mento-ops@87.232.72.79 'cd /opt/mento && docker compose -f deploy/docker-compose.prod.yml exec api python -m scripts.issue_admin_token --admin-id <uuid>'` (then swap the host to `admin.` until Task 7g lands).
+
+**⚠ Found, NOT caused by this work — needs a look:** `GET /health/crisis` is **503 `stale`**: last Stream webhook stamped **2026-09-10 14:17 UTC** (8 days). That is either "no chat message sent on prod for 8 days" or "the Stream webhook stopped reaching the API" — indistinguishable from outside. The webhook targets `api.`, untouched here. Prove it with one real message per the `mento-crisis-webhook` skill; if it does not stamp, re-run `scripts.configure_stream`. No uptime monitor is pointed at this endpoint yet (runbook §10 launch gate).
+
+**Next (plan Task 7g):** merge this branch to `master` + push (the VPS deploys from `origin/master`) → `backup-postgres.sh` + `deploy.sh` → set `APP_BASE_URL` / `ADMIN_BASE_URL`, drop `console.` from `CORS_ORIGINS` → confirm a newly issued mentor link starts with `https://app.agentin.chat/`. Until then minted links still say `console.…` and work via the redirect. Apex record still optional (Task 8).
 
 **Then:** desktop frame (layout spec step A — the stretched desktop layout is public today) → app routes (hold until `feat/companions-dog-cat-capybara` is on master; it edits the same files) → server links → mentor workspace → delete the old `/listener` console.
 
