@@ -10,7 +10,7 @@
 
 **Done:** `deploy/nginx/mento-console.conf` gains an exact-match `location = / { return 302 /apply; }` above the catch-all; the bundle is still never served at `/`, so the member flow stays unreachable from this domain. `docs/DEPLOYMENT_VPS.md` lockdown note updated. Proof in a throwaway `nginx:1.22` container (TLS lines stripped, location blocks identical): `nginx -t` ok; `/` and `/?x=1` → 302 `/apply`; `/apply` `/admin` `/listener` `/_expo/*` → 200; `/onboarding` `/chat/abc` → 404.
 
-**Next:** push the conf to the VPS and reload nginx (the two commands under "Adding a route to the allow-list later" in `docs/DEPLOYMENT_VPS.md`), then `curl -I https://console.agentin.chat/` should show `302` → `/apply`.
+**Next:** push the conf to the VPS and reload nginx (the two commands under "Adding a route to the allow-list later" in `docs/DEPLOYMENT_VPS.md`, host `mento-ops@87.232.72.79` — verified this session: key login + passwordless sudo work, live conf still has the old catch-all; the `72.61.253.224` entry in this machine's `~/.ssh/config` is an unrelated box that serves neither domain), then `curl -I https://console.agentin.chat/` should show `302` → `/apply`.
 
 **Open decisions (founder veto):** redirect target is `/apply` (the only public page) and it's a `302`, not a `301` — kept temporary so the bare domain can point somewhere else later without fighting browser caches.
 
