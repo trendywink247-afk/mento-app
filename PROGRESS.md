@@ -23,6 +23,23 @@
 4. Landing and role-fork motion on the canvas is **louder than the motion rules allow** (>3 simultaneous movers, a video loop). Founder asked for "crazy"; porting it to the app needs a ruling on the ≤3-movers rule and a video dependency (`expo-video`) or an animated-WebP path — not started.
 5. Direction A/B/C is still unpicked.
 
+**Recovered: founder walkthrough call, 2026-09-06 evening (from the dev's Wispr Flow dictation history — one mic, both voices, noisy; every item below needs founder confirmation before it is built).** Nothing from this call had been logged. It explains the session-35 "remove anonymous / make it professional" request.
+1. **Positioning: mentorship first, not "emotional companion".** "We will be removing the emotional word"; emotional ups and downs during preparation get "a very small" mention; mentors are told orally that both academic and emotional topics are welcome. **Conflicts with CLAUDE.md "What Mento is" / PRD** — needs a DECISIONS entry before copy or scope moves.
+2. **No "You are anonymous here" banner in chat** ("just like a banner — please not that"). Session 35 reworded it; the founder may want the banner gone entirely.
+3. **Footer line** "Mentors are real people, not therapists" → wants wording closer to "these are mentors; this is a peer-to-peer support platform". (T&S #2 still requires the not-therapists statement somewhere.)
+4. **Launch scope = UPSC mentorship only.** Find-my-path is UPSC-only for now; the generic lens should read life / exams / job pressure / job interview; other bodies get added only when a partner asks. A few "life guide" mentors beyond exam prep are fine.
+5. **Async, not instant.** Mentees ask, mentors answer when they have time; "they don't need immediate attention because this is not a crisis situation". Chat only, no voice. ~15 mentors × 3 seats is the MVP target. **Conflicts with the "talking to a human in under 30 seconds" hero promise and the landing/role-fork copy ("in under a minute").**
+6. **Anti-misuse:** a mentee must not send the same question to 2–3 mentors at once (one open request at a time); repeat-askers get moderated.
+7. **Rotate mentor persona names every 24 h** so mentees always feel new mentors. **Conflicts with session 33 favourites / "Ask for %{name} next time" and with chat-list continuity** — needs a ruling.
+8. **Message limits on the member side:** roughly 10 messages (window unclear — per day or per conversation) and max 3 in a row before the mentor replies.
+9. **Mentor snooze:** if a mentor hasn't replied in 24 h they can snooze the conversation another 24 h.
+10. **In-chat nudge:** "if this is important guidance, save it to your journal" — he wants the journal used.
+11. **Finance journal is off-path** ("nobody here will give finance advice") → mark it *upcoming* or tie journals to the kinds of chats people actually have.
+12. **Become a Mentor:** headline stays; his mentoring *philosophy* document becomes mandatory "Reading 1" before a mentor starts (what they can / cannot do), followed by Q&A with him. The Primer step is the natural home.
+13. **In-app feedback on every screen** — text + screenshot, stored server-side in one table, very low friction. Does not exist today.
+14. **Distribution:** Play Store closed testing (invite-only testers, required testing period) first; iOS after. Company incorporation / legal is unowned — neither side knows the steps.
+15. **Principle he stated:** once real people use it they will ask questions nobody anticipated, so *limit options now* and expect the path to change.
+
 **Next:** founder picks a direction + confirms the landing/role-fork treatment → port to the app on a branch (landing: Lottie + Reanimated stage; role fork: playground asset). Merge `feat/companions-dog-cat-capybara` after a device look at the new animals (picker rail, Ready, chat header, Profile).
 
 **How to resume:** stack per `mento-stack` — note `apps/mobile/.env` points `EXPO_PUBLIC_API_URL` at a Tailscale-style IP; for web/e2e start Expo with `$env:EXPO_PUBLIC_API_URL='http://localhost:8000/api/v1'` (process env wins, no file edit). Playwright for e2e: `NODE_PATH=~/.claude/skills/playwright-skill/node_modules`.
