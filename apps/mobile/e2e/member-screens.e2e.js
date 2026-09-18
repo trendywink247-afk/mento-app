@@ -93,7 +93,9 @@ async function run(browser, reduced) {
   });
 
   // Every journal channel screen.
-  for (const ch of ['mood', 'finance', 'mentor-notes', 'gratitude']) {
+  // Finance is Coming soon on the unified hub (no tappable row for a member with no
+  // finance history) — the channel route itself is still swept below.
+  for (const ch of ['mood', 'mentor-notes', 'gratitude']) {
     await visit(`journal: ${ch}`, async () => {
       await tid('tab-journals').click();
       await page.waitForSelector(`[data-testid="journal-${ch}"]`, { timeout: 30000 });

@@ -1,206 +1,438 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
-import { LottieTile } from '@/components/art/LottieTile';
-import { SceneTile } from '@/components/art/SceneTile';
+import { Companion } from '@/components/art/Companion';
+import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
-import { api } from '@/lib/api';
+import { api, type JournalEntry } from '@/lib/api';
+import { haptic } from '@/lib/haptics';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type, type Wash } from '@/theme/tokens';
+import { font, radius, space, type } from '@/theme/tokens';
 
-const JOURNALS: {
-  channel: string;
-  route: string;
-  title: TKey;
-  body: TKey;
-  icon: keyof typeof Ionicons.glyphMap;
-  tone: Wash;
-}[] = [
-  {
-    channel: 'finance',
-    route: 'finance',
-    title: 'journals.financeTitle',
-    body: 'journals.financeBody',
-    icon: 'wallet-outline',
-    tone: 'green',
-  },
-  {
-    channel: 'mood',
-    route: 'mood',
-    title: 'journals.moodTitle',
-    body: 'journals.moodBody',
-    icon: 'heart-outline',
-    tone: 'danger',
-  },
-  {
-    channel: 'mentor_notes',
-    route: 'mentor-notes',
-    title: 'journals.mentorNotesTitle',
-    body: 'journals.mentorNotesBody',
-    icon: 'book-outline',
-    tone: 'accent',
-  },
-  {
-    channel: 'gratitude',
-    route: 'gratitude',
-    title: 'journals.gratitudeTitle',
-    body: 'journals.gratitudeBody',
-    icon: 'leaf-outline',
-    tone: 'orange',
-  },
-];
+/** Canonical mood values (same set as journal/[channel].tsx — stored in entry meta). */
+const MOODS = ['Calm', 'Happy', 'Okay', 'Low', 'Anxious'] as const;
+type Mood = (typeof MOODS)[number];
+const MOOD_LABELS: Record<Mood, TKey> = {
+  Calm: 'journals.moodCalm',
+  Happy: 'journals.moodHappy',
+  Okay: 'journals.moodOkay',
+  Low: 'journals.moodLow',
+  Anxious: 'journals.moodAnxious',
+};
+const MOOD_ICONS: Record<Mood, keyof typeof Ionicons.glyphMap> = {
+  Calm: 'leaf-outline',
+  Happy: 'sunny-outline',
+  Okay: 'remove-circle-outline',
+  Low: 'cloud-outline',
+  Anxious: 'pulse-outline',
+};
 
-/** Journals hub (the `10.31.08 AM.jpeg` mockup): AI-assistant card + journal list
- * with count badges. The AI assistant ships after the LLM decision — the card is
- * present but honestly marked Coming soon. */
+/** The channels that make up the one journal. Finance is off-path for now (DECISIONS
+ * §L.8 / the 2026-09-06 call) — it is never merged in, only linked if it has history. */
+const MERGED = ['mentor_notes', 'gratitude', 'mood'] as const;
+const SHELF_DAYS = 6;
+const KEPT_PREVIEW = 3;
+
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/** Unified journal — "today first, then the shelf" (DECISIONS §L.8). One place: what
+ * the member kept from a chat sits beside what they wrote themselves. Front-end only:
+ * it merges the existing channels client-side; the per-channel screens stay as the
+ * writing surfaces. No counts of days, no streaks — a quiet day is simply absent. */
 export default function JournalsTab() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { t } = useI18n();
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const { t, locale } = useI18n();
+  const animal = useCompanionAnimal();
+  const [entries, setEntries] = useState<JournalEntry[] | null>(null);
+  const [hasFinance, setHasFinance] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [savingMood, setSavingMood] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [lists, summary] = await Promise.all([
+        Promise.all(MERGED.map((c) => api.listJournalEntries(c))),
+        api.journalSummary(),
+      ]);
+      const all = lists.flat().sort((a, b) => b.created_at.localeCompare(a.created_at));
+      setEntries(all);
+      setHasFinance((summary.finance ?? 0) > 0);
+      setFailed(false);
+    } catch {
+      // Still, not alarming: the hub keeps whatever it last showed.
+      setFailed(true);
+      setEntries((prev) => prev ?? []);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      let active = true;
-      void api
-        .journalSummary()
-        .then((s) => {
-          if (active) setCounts(s);
-        })
-        .catch(() => {});
-      return () => {
-        active = false;
-      };
-    }, []),
+      void load();
+    }, [load]),
+  );
+
+  const { today, shelf, kept, moodToday } = useMemo(() => {
+    const all = entries ?? [];
+    const todayKey = dayKey(new Date().toISOString());
+    const todays = all.filter((e) => dayKey(e.created_at) === todayKey);
+    const byDay = new Map<string, JournalEntry[]>();
+    for (const e of all) {
+      const k = dayKey(e.created_at);
+      if (k === todayKey) continue;
+      byDay.set(k, [...(byDay.get(k) ?? []), e]);
+    }
+    const mood = todays.find((e) => e.channel === 'mood' && e.meta.mood)?.meta.mood ?? null;
+    return {
+      today: todays,
+      shelf: [...byDay.values()].slice(0, SHELF_DAYS),
+      kept: all.filter((e) => e.channel === 'mentor_notes'),
+      moodToday: mood,
+    };
+  }, [entries]);
+
+  const dayLabel = (iso: string): string => {
+    const d = new Date(iso);
+    const y = new Date();
+    y.setDate(y.getDate() - 1);
+    if (dayKey(iso) === dayKey(y.toISOString())) return t('chat.yesterday');
+    return d.toLocaleDateString(locale === 'hi' ? 'hi-IN' : 'en-IN', { weekday: 'short', day: 'numeric' });
+  };
+
+  const logMood = async (m: Mood) => {
+    if (savingMood) return;
+    setSavingMood(true);
+    try {
+      // Same contract as journal/[channel].tsx: a mood with no note stores the mood as its body.
+      await api.createJournalEntry({ channel: 'mood', body: m, meta: { mood: m } });
+      haptic.success();
+      await load();
+    } catch {
+      // A failed save stays still — the row simply remains untouched.
+    } finally {
+      setSavingMood(false);
+    }
+  };
+
+  const keptToday = today.filter((e) => e.channel === 'mentor_notes');
+  // A bare mood check-in (body === its own mood value) is shown on the mood row, not as writing.
+  const wroteToday = today.filter(
+    (e) => e.channel !== 'mentor_notes' && e.body.trim().length > 0 && e.body !== e.meta.mood,
   );
 
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.lg }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.xl }}>
         <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
-          {t('journals.title')}
+          {t('journals.hubTitle')}
         </Text>
-        <Text style={[type.body, { color: colors.inkMuted, marginBottom: space.md }]}>
-          {t('journals.sub')}
-        </Text>
+        <Text style={[type.body, { color: colors.inkMuted, marginBottom: space.lg }]}>{t('journals.hubSub')}</Text>
 
-        <PressKey
-          onPress={() => router.push('/journal/organize')}
-          edge={colors.accentEdge}
-          accessibilityLabel={t('journals.aiCta')}
-          testID="journal-ai-organize"
-          style={[styles.aiCard, { backgroundColor: colors.surfaceAlt }]}
-        >
-          <View style={styles.aiHead}>
-            <IconBadge icon="sparkles" size={40} />
-            <View style={{ flex: 1 }}>
-              <View style={styles.aiTitleRow}>
-                <Text style={[styles.aiTitle, { color: colors.ink }]}>{t('journals.aiTitle')}</Text>
-                <View style={[styles.newBadge, { backgroundColor: colors.surface }]}>
-                  <Text style={[styles.newBadgeText, { color: colors.accent }]}>{t('journals.beta')}</Text>
+        {/* Today — one card that reads as a story: kept guidance, then the member's own words. */}
+        <Entrance index={0}>
+          <View style={styles.todayWrap}>
+            <View style={styles.companion} pointerEvents="none">
+              <Companion animal={animal ?? null} size={64} />
+            </View>
+            <EdgeSurface edge={colors.edgeSurface} radius={radius.lg} style={[styles.card, { backgroundColor: colors.surface }]} testID="journal-today">
+              <Text style={[styles.cardTitle, { color: colors.ink }]}>{t('journals.today')}</Text>
+
+              {keptToday.length > 0 ? (
+                <View style={styles.block}>
+                  <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>{t('journals.kept')}</Text>
+                  {keptToday.map((e) => (
+                    <PressKey
+                      key={e.id}
+                      onPress={() =>
+                        e.meta.conversation_id
+                          ? router.push({ pathname: '/chat/[id]', params: { id: String(e.meta.conversation_id) } })
+                          : router.push({ pathname: '/journal/[channel]', params: { channel: 'mentor-notes' } })
+                      }
+                      edge={colors.accentEdge}
+                      travel={3}
+                      intent="navigate"
+                      radius={radius.md}
+                      accessibilityLabel={t('journals.keptFrom', { name: e.meta.listener_persona ?? t('chat.yourListener') })}
+                      style={[styles.kept, { backgroundColor: colors.accentTint }]}
+                    >
+                      <Text style={[type.body, { color: colors.ink }]}>{e.body}</Text>
+                      <Text style={[type.caption, { color: colors.accent, fontFamily: font.sansBold }]}>
+                        {t('journals.keptFrom', { name: e.meta.listener_persona ?? t('chat.yourListener') })}
+                      </Text>
+                    </PressKey>
+                  ))}
+                </View>
+              ) : null}
+
+              {wroteToday.length > 0 ? (
+                <View style={styles.block}>
+                  <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>{t('journals.youWrote')}</Text>
+                  {wroteToday.map((e) => (
+                    <Text key={e.id} style={[type.body, { color: colors.ink }]}>
+                      {e.body}
+                    </Text>
+                  ))}
+                </View>
+              ) : null}
+
+              {entries !== null && keptToday.length === 0 && wroteToday.length === 0 ? (
+                <Text style={[type.body, { color: colors.inkMuted }]}>{t('journals.todayEmpty')}</Text>
+              ) : null}
+
+              <View style={[styles.moodBlock, { borderTopColor: colors.border }]}>
+                <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>
+                  {moodToday
+                    ? t('journals.moodLogged', {
+                        mood: MOOD_LABELS[moodToday as Mood] ? t(MOOD_LABELS[moodToday as Mood]) : String(moodToday),
+                      })
+                    : t('journals.moodToday')}
+                </Text>
+                <View style={styles.moodRow}>
+                  {MOODS.map((m) => {
+                    const on = moodToday === m;
+                    return (
+                      <PressKey
+                        key={m}
+                        onPress={() => void logMood(m)}
+                        edge={on ? colors.accentEdge : colors.edgeAlt}
+                        travel={3}
+                        intent="select"
+                        radius={radius.md}
+                        disabled={savingMood}
+                        accessibilityLabel={t(MOOD_LABELS[m])}
+                        accessibilityState={{ selected: on }}
+                        testID={`journal-mood-${m.toLowerCase()}`}
+                        containerStyle={styles.moodCell}
+                        style={[styles.moodKey, { backgroundColor: on ? colors.accentTint : colors.surfaceAlt }]}
+                      >
+                        <Ionicons name={MOOD_ICONS[m]} size={20} color={on ? colors.accent : colors.inkMuted} />
+                        <Text numberOfLines={1} style={[styles.moodLabel, { color: on ? colors.accent : colors.inkMuted }]}>
+                          {t(MOOD_LABELS[m])}
+                        </Text>
+                      </PressKey>
+                    );
+                  })}
                 </View>
               </View>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {t('journals.aiBody')}
-              </Text>
-              <View style={styles.aiCtaRow}>
-                <Text style={[styles.aiCta, { color: colors.accent }]}>{t('journals.aiCta')}</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.accent} />
-              </View>
-            </View>
+            </EdgeSurface>
           </View>
-          <View style={styles.aiArt}>
-            <LottieTile name="notebook" fallback="journalsAi" size={84} />
+        </Entrance>
+
+        {failed ? (
+          <Text style={[type.caption, { color: colors.inkMuted, marginTop: space.sm }]}>{t('journals.loadError')}</Text>
+        ) : null}
+
+        {/* Write — the per-channel screens remain the writing surfaces. */}
+        <Entrance index={1}>
+          <Text style={[styles.section, { color: colors.ink }]}>{t('journals.writeTitle')}</Text>
+          <View style={styles.writeRow}>
+            <PressKey
+              onPress={() => router.push({ pathname: '/journal/[channel]', params: { channel: 'gratitude' } })}
+              edge={colors.edgeSurface}
+              accessibilityLabel={t('journals.writeGratitude')}
+              testID="journal-gratitude"
+              containerStyle={styles.writeCell}
+              style={[styles.writeKey, { backgroundColor: colors.surface }]}
+            >
+              <IconBadge icon="leaf-outline" tone="orange" size={40} />
+              <Text style={[styles.writeLabel, { color: colors.ink }]}>{t('journals.writeGratitude')}</Text>
+            </PressKey>
+            <PressKey
+              onPress={() => router.push({ pathname: '/journal/[channel]', params: { channel: 'mood' } })}
+              edge={colors.edgeSurface}
+              accessibilityLabel={t('journals.writeMood')}
+              testID="journal-mood"
+              containerStyle={styles.writeCell}
+              style={[styles.writeKey, { backgroundColor: colors.surface }]}
+            >
+              <IconBadge icon="heart-outline" tone="danger" size={40} />
+              <Text style={[styles.writeLabel, { color: colors.ink }]}>{t('journals.writeMood')}</Text>
+            </PressKey>
           </View>
-        </PressKey>
+        </Entrance>
 
-        <View style={styles.sectionRow}>
-          <Text style={[styles.section, { color: colors.ink }]}>{t('journals.my')}</Text>
-        </View>
+        {/* Past days — a shelf to glance along. A day with nothing written is simply not there. */}
+        {shelf.length > 0 ? (
+          <Entrance index={2}>
+            <Text style={[styles.section, { color: colors.ink }]}>{t('journals.pastDays')}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelf}>
+              {shelf.map((day) => (
+                <EdgeSurface
+                  key={day[0].id}
+                  edge={colors.edgeAlt}
+                  radius={radius.lg}
+                  containerStyle={styles.dayCell}
+                  style={[styles.dayCard, { backgroundColor: colors.surfaceAlt }]}
+                >
+                  <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>{dayLabel(day[0].created_at)}</Text>
+                  {day.slice(0, 2).map((e) => (
+                    <View key={e.id} style={styles.dayLine}>
+                      <Ionicons
+                        name={e.channel === 'mentor_notes' ? 'bookmark' : e.channel === 'mood' ? 'heart-outline' : 'leaf-outline'}
+                        size={14}
+                        color={e.channel === 'mentor_notes' ? colors.accent : colors.inkMuted}
+                      />
+                      <Text numberOfLines={2} style={[type.caption, { color: colors.ink, flex: 1 }]}>
+                        {e.meta.mood && e.body === e.meta.mood && MOOD_LABELS[e.meta.mood as Mood]
+                          ? t(MOOD_LABELS[e.meta.mood as Mood])
+                          : e.body}
+                      </Text>
+                    </View>
+                  ))}
+                </EdgeSurface>
+              ))}
+            </ScrollView>
+          </Entrance>
+        ) : null}
 
-        {JOURNALS.map((j) => (
+        {/* Kept guidance — everything saved from chats, across mentors. */}
+        <Entrance index={3}>
+          <View style={styles.sectionRow}>
+            <Text style={[styles.section, styles.sectionInline, { color: colors.ink }]}>{t('journals.keptAll')}</Text>
+            <PressKey
+              onPress={() => router.push({ pathname: '/journal/[channel]', params: { channel: 'mentor-notes' } })}
+              edge={colors.edgeAlt}
+              travel={2}
+              intent="navigate"
+              radius={radius.pill}
+              accessibilityLabel={t('journals.seeAll')}
+              testID="journal-mentor-notes"
+              style={[styles.seeAll, { backgroundColor: colors.surfaceAlt }]}
+            >
+              <Text style={[styles.seeAllText, { color: colors.accent }]}>{t('journals.seeAll')}</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.accent} />
+            </PressKey>
+          </View>
+          {kept.length === 0 ? (
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('journals.emptyMentorNotes')}</Text>
+          ) : (
+            kept.slice(0, KEPT_PREVIEW).map((e) => (
+              <EdgeSurface
+                key={e.id}
+                edge={colors.edgeSurface}
+                travel={2}
+                radius={radius.md}
+                containerStyle={styles.keptRowSpacing}
+                style={[styles.keptRow, { backgroundColor: colors.surface }]}
+              >
+                <Ionicons name="bookmark" size={16} color={colors.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text numberOfLines={2} style={[type.body, { color: colors.ink }]}>
+                    {e.body}
+                  </Text>
+                  {e.meta.listener_persona ? (
+                    <Text style={[type.caption, { color: colors.inkMuted }]}>{e.meta.listener_persona}</Text>
+                  ) : null}
+                </View>
+              </EdgeSurface>
+            ))
+          )}
+        </Entrance>
+
+        {/* Quiet links: the AI helper is never the hero; Finance is honestly not ready. */}
+        <Entrance index={4}>
           <PressKey
-            key={j.channel}
-            onPress={() => router.push({ pathname: '/journal/[channel]', params: { channel: j.route } })}
-            edge={colors.edgeSurface}
-            accessibilityLabel={t(j.title)}
-            testID={`journal-${j.route}`}
-            style={[styles.row, { backgroundColor: colors.surface }]}
-            containerStyle={styles.rowSpacing}
+            onPress={() => router.push('/journal/organize')}
+            edge={colors.edgeAlt}
+            travel={2}
+            intent="navigate"
+            radius={radius.md}
+            accessibilityLabel={t('journals.aiCta')}
+            testID="journal-ai-organize"
+            containerStyle={styles.quietSpacing}
+            style={[styles.quiet, { backgroundColor: colors.surfaceAlt }]}
           >
-            <IconBadge icon={j.icon} tone={j.tone} size={48} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.rowTitle, { color: colors.ink }]}>{t(j.title)}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{t(j.body)}</Text>
+            <Ionicons name="sparkles-outline" size={16} color={colors.accent} />
+            <Text style={[styles.quietText, { color: colors.ink }]}>{t('journals.threads')}</Text>
+            <View style={[styles.tag, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.tagText, { color: colors.accent }]}>{t('journals.beta')}</Text>
             </View>
-            {counts[j.channel] ? (
-              <View style={[styles.count, { backgroundColor: colors.surfaceAlt }]}>
-                <Text style={[styles.countText, { color: colors.accent }]}>{counts[j.channel]}</Text>
-              </View>
-            ) : null}
-            <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
           </PressKey>
-        ))}
 
-        <EdgeSurface edge={colors.edgeAlt} travel={2} radius={radius.md} style={[styles.privacy, { backgroundColor: colors.surfaceAlt }]}>
-          <Ionicons name="lock-closed-outline" size={15} color={colors.accentSoft} />
-          <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
-            {t('journals.privacy')}
-          </Text>
-        </EdgeSurface>
+          {hasFinance ? (
+            <PressKey
+              onPress={() => router.push({ pathname: '/journal/[channel]', params: { channel: 'finance' } })}
+              edge={colors.edgeAlt}
+              travel={2}
+              intent="navigate"
+              radius={radius.md}
+              accessibilityLabel={t('journals.financeEarlier')}
+              testID="journal-finance"
+              containerStyle={styles.quietSpacing}
+              style={[styles.quiet, { backgroundColor: colors.surfaceAlt }]}
+            >
+              <Ionicons name="wallet-outline" size={16} color={colors.inkMuted} />
+              <Text style={[styles.quietText, { color: colors.ink }]}>{t('journals.financeEarlier')}</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.inkMuted} />
+            </PressKey>
+          ) : (
+            <View style={[styles.soon, { borderColor: colors.border }]} testID="journal-finance-soon">
+              <Ionicons name="wallet-outline" size={16} color={colors.inkMuted} />
+              <Text style={[styles.quietText, { color: colors.inkMuted }]}>{t('journals.financeSoon')}</Text>
+              <View style={[styles.tag, { backgroundColor: colors.surfaceAlt }]}>
+                <Text style={[styles.tagText, { color: colors.inkMuted }]}>{t('journals.comingSoon')}</Text>
+              </View>
+            </View>
+          )}
+        </Entrance>
       </ScrollView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  aiCard: { borderRadius: radius.lg, padding: space.md, gap: space.sm },
-  aiHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
-  aiTitleRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' },
-  aiTitle: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24 },
-  newBadge: { borderRadius: radius.pill, paddingVertical: 2, paddingHorizontal: space.sm },
-  newBadgeText: { fontFamily: font.sansBold, fontSize: 11, lineHeight: 16 },
-  aiCtaRow: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: space.xs },
-  aiCta: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
-  aiArt: { alignItems: 'flex-end' },
-  sectionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: space.md,
-    marginBottom: space.sm,
-  },
-  section: { fontFamily: font.sansBold, fontSize: 18, lineHeight: 25 },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.lg,
-    padding: space.sm + 2,
-  },
-  rowSpacing: { marginBottom: space.sm },
-  rowTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 23 },
-  count: {
-    minWidth: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: space.xs,
-  },
-  countText: { fontFamily: font.sansBold, fontSize: 13 },
-  privacy: {
+  todayWrap: { paddingTop: 36 },
+  // The companion perches on the Today card's top edge (decor only — flow is untouched).
+  companion: { position: 'absolute', right: space.md, top: -14, zIndex: 2 },
+  card: { borderRadius: radius.lg, padding: space.md, gap: space.md },
+  cardTitle: { fontFamily: font.sansHeavy, fontSize: 22, lineHeight: 28 },
+  block: { gap: space.sm },
+  eyebrow: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 16, letterSpacing: 0.5, textTransform: 'uppercase' },
+  kept: { borderRadius: radius.md, padding: space.sm + 4, gap: space.xs },
+  moodBlock: { borderTopWidth: 1, paddingTop: space.md, gap: space.sm },
+  moodRow: { flexDirection: 'row', gap: space.xs },
+  moodCell: { flex: 1 },
+  moodKey: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 56, paddingHorizontal: 2 },
+  moodLabel: { fontFamily: font.sansBold, fontSize: 11, lineHeight: 14 },
+  section: { fontFamily: font.sansBold, fontSize: 18, lineHeight: 25, marginTop: space.lg, marginBottom: space.sm },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space.lg, marginBottom: space.sm },
+  sectionInline: { marginTop: 0, marginBottom: 0 },
+  writeRow: { flexDirection: 'row', gap: space.sm },
+  writeCell: { flex: 1 },
+  writeKey: { borderRadius: radius.lg, padding: space.sm + 4, gap: space.sm, minHeight: 104 },
+  writeLabel: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20 },
+  shelf: { gap: space.sm, paddingRight: space.lg },
+  dayCell: { width: 184 },
+  dayCard: { borderRadius: radius.lg, padding: space.sm + 4, gap: space.sm, minHeight: 112 },
+  dayLine: { flexDirection: 'row', alignItems: 'flex-start', gap: space.xs },
+  seeAll: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: radius.pill, paddingHorizontal: space.sm + 4, minHeight: 44 },
+  seeAllText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
+  keptRow: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm, borderRadius: radius.md, padding: space.sm + 4 },
+  keptRowSpacing: { marginBottom: space.sm },
+  quiet: { flexDirection: 'row', alignItems: 'center', gap: space.sm, borderRadius: radius.md, paddingHorizontal: space.sm + 4, minHeight: 48 },
+  quietSpacing: { marginTop: space.md },
+  quietText: { flex: 1, fontFamily: font.sansSemi, fontSize: 14, lineHeight: 20 },
+  tag: { borderRadius: radius.pill, paddingVertical: 2, paddingHorizontal: space.sm },
+  tagText: { fontFamily: font.sansBold, fontSize: 11, lineHeight: 16 },
+  soon: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     borderRadius: radius.md,
-    padding: space.sm,
-    marginTop: space.xs,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingHorizontal: space.sm + 4,
+    minHeight: 48,
+    marginTop: space.md,
   },
 });

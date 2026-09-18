@@ -265,7 +265,7 @@
     "savedToNotes": "Saved to Mentor Notes ✓",
     "savedA11y": "Saved to Mentor Notes",
     "saveHint": "Add this to your journal under \"Mentor Notes\"",
-    "savedHint": "Find it in Journals → Mentor Notes.",
+    "savedHint": "Find it in your Journal, under Kept guidance.",
     "actionsHintA11y": "Shows message actions like save to Mentor Notes",
     "wasHelpful": "Was this helpful?",
     "helpfulA11y": "Mark as helpful",
@@ -437,7 +437,7 @@
   "tabs": {
     "chats": "Chats",
     "path": "Path",
-    "journals": "Journals",
+    "journals": "Journal",
     "profile": "Profile"
   },
   "chats": {
@@ -494,7 +494,7 @@
     "change": "Change my path"
   },
   "journals": {
-    "title": "Journals",
+    "title": "Journal",
     "sub": "A space for your thoughts, reflections and everything in between.",
     "aiTitle": "AI Journal Assistant",
     "comingSoon": "Coming soon",
@@ -542,7 +542,26 @@
     "catRent": "Rent",
     "catOther": "Other",
     "whatWasIt": "What was it? (optional)",
-    "gratitudePlaceholder": "Today I'm grateful for…"
+    "gratitudePlaceholder": "Today I'm grateful for…",
+    "hubTitle": "Journal",
+    "hubSub": "Yours alone. Never shared.",
+    "today": "Today",
+    "kept": "Guidance you kept",
+    "keptFrom": "From your chat with %{name}",
+    "youWrote": "Then you wrote",
+    "todayEmpty": "Nothing here yet today, and that is fine. Save something a mentor says, or write a line of your own.",
+    "moodToday": "How is today?",
+    "moodLogged": "Today feels %{mood}",
+    "pastDays": "Past days",
+    "keptAll": "Kept guidance",
+    "seeAll": "See all",
+    "writeTitle": "Write",
+    "writeGratitude": "One good thing",
+    "writeMood": "Mood, with a note",
+    "threads": "Find the threads",
+    "financeSoon": "Finance journal",
+    "financeEarlier": "Your earlier finance notes",
+    "loadError": "We couldn't load your journal. Please check your connection."
   },
   "profile": {
     "title": "Profile",
