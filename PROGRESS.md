@@ -64,7 +64,13 @@
 
 **Host note:** `87.232.72.79` is the Mento VPS (key login + passwordless sudo from this machine); the `72.61.253.224` entry in this machine's `~/.ssh/config` is an unrelated box.
 
-**Next:** unchanged from session 33 — founder device pass on OTA `01a076b5`. Session-34 commits are local; `git push origin master` when ready.
+**Specs drafted (founder rulings, same session):** "normalize domains + routing, one unified experience, domain must be swappable" and "fix the web view on browsers too" → two drafts awaiting founder review: `docs/superpowers/specs/2026-09-19-unified-domains-routes-design.md` (host map `app.` / `api.` / `admin.` with `console.` + apex redirecting, one `deploy/domains.env`, role-neutral routes: unified `/chat/[id]` + `/chat/[id]/about`, `/mentoring`, `/signin#token=`, single `/apply`, legacy redirects, token-only mentor home) and `…/2026-09-19-desktop-web-layout-design.md` (centered 480 column via a root `WebFrame`, mentor two-pane workspace with the rail above the navigator). Found while scoping: `app.agentin.chat` already has an A record → the VPS (no site/cert yet); the web build has **no** desktop layout (doors ~1,400 px wide at 1440×900) and it is public now.
+
+**In-progress:** spec review by founder → then `writing-plans` per spec. Suggested build order: domains (routes spec step 1) → desktop frame (layout spec step A) → app routes → server links → mentor workspace → cleanup/delete the old `/listener` console.
+
+**Founder action needed for step 1:** an `admin` A record → `87.232.72.79` (apex record optional).
+
+**Next:** founder reviews the two specs; device pass on OTA `01a076b5` still pending from session 33. Session-34 commits are local; `git push origin master` when ready.
 
 ---
 
