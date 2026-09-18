@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-09-18 (session 34) — `console.agentin.chat/` no longer dead-ends ⏳ (committed `f1d5483`, **not yet live**)
+
+**Context:** founder typed the bare console domain and got nginx's `404 Not Found`. Nothing was down — DNS/TLS fine, `/apply` `/admin` `/listener` 200, API health 200. The 404 at `/` was the session-28 lockdown's catch-all working as designed.
+
+**Done:** `deploy/nginx/mento-console.conf` gains an exact-match `location = / { return 302 /apply; }` above the catch-all; the bundle is still never served at `/`, so the member flow stays unreachable from this domain. `docs/DEPLOYMENT_VPS.md` lockdown note updated. Proof in a throwaway `nginx:1.22` container (TLS lines stripped, location blocks identical): `nginx -t` ok; `/` and `/?x=1` → 302 `/apply`; `/apply` `/admin` `/listener` `/_expo/*` → 200; `/onboarding` `/chat/abc` → 404.
+
+**Next:** push the conf to the VPS and reload nginx (the two commands under "Adding a route to the allow-list later" in `docs/DEPLOYMENT_VPS.md`), then `curl -I https://console.agentin.chat/` should show `302` → `/apply`.
+
+**Open decisions (founder veto):** redirect target is `/apply` (the only public page) and it's a `302`, not a `301` — kept temporary so the bare domain can point somewhere else later without fighting browser caches.
+
+---
+
 ## 2026-09-06 (session 33) — Chat profiles (mentor "two in the room", member "context for care") + pillow-key composer ✅ (branch `feat/chat-profiles-composer` → master `9d86b72`)
 
 **Context:** founder asked for ideas for both chat-header profiles and a better chat input, three variations each, plus a web-console inventory. Mockup page (nine phone mockups in Mento tokens) → founder picked **B, B** and "continue" (= the recommended composer A). DECISIONS §K.13. Spec `docs/superpowers/specs/2026-09-06-chat-profiles-composer-design.md`, plan `…/plans/2026-09-06-chat-profiles-composer.md`; subagent-driven (Sonnet), every task spec- and quality-reviewed with fixes looped back, final branch review before merge.
