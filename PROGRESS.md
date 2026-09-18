@@ -40,6 +40,8 @@
 14. **Distribution:** Play Store closed testing (invite-only testers, required testing period) first; iOS after. Company incorporation / legal is unowned — neither side knows the steps.
 15. **Principle he stated:** once real people use it they will ask questions nobody anticipated, so *limit options now* and expect the path to change.
 
+**Rulings received 2026-09-19 → DECISIONS §L** (relayed by the dev): (1) Mento is a guidance app with communities inside; UPSC is the first community, *not* the product, and non-UPSC people are served too; (2) member allowance = 3 in a row + 10 per day, crisis-flagged traffic never blocked or counted, admin dashboard shows the counts (numbers only); (3) email stays optional until an email service exists; (4) "Vetted by the Mento team" → "Reviewed and approved by the Mento team" (shipped, EN + HI; `mentor-profile.e2e.js` PASS both runs). **Still open:** instant connection vs reply-when-free (call item 5), rotating mentor names vs favourites (item 7). Full requirements review + 9-phase plan lives outside the repo at `Desktop/Mento-private/` (partner asked that call content not be shared).
+
 **Next:** founder picks a direction + confirms the landing/role-fork treatment → port to the app on a branch (landing: Lottie + Reanimated stage; role fork: playground asset). Merge `feat/companions-dog-cat-capybara` after a device look at the new animals (picker rail, Ready, chat header, Profile).
 
 **How to resume:** stack per `mento-stack` — note `apps/mobile/.env` points `EXPO_PUBLIC_API_URL` at a Tailscale-style IP; for web/e2e start Expo with `$env:EXPO_PUBLIC_API_URL='http://localhost:8000/api/v1'` (process env wins, no file edit). Playwright for e2e: `NODE_PATH=~/.claude/skills/playwright-skill/node_modules`.
