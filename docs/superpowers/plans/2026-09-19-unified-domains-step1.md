@@ -922,7 +922,6 @@ git commit -m "feat(deploy): deploy-web.sh + CI read hosts from domains.env; dep
 **Files:**
 - Modify: `docs/DEPLOYMENT_VPS.md` (§5 env list, §11, new "Changing the domain" section)
 - Modify: `CLAUDE.md` (stack row "Mobile", repo-layout `deploy/` lines, key env vars)
-- Modify: `docs/superpowers/specs/2026-09-19-unified-domains-routes-design.md` (§3.2, §4.5 — two facts this plan refined)
 
 - [ ] **Step 1: `docs/DEPLOYMENT_VPS.md` §5** — in the "Set at minimum" sentence replace `` `CORS_ORIGINS`, `CONSOLE_BASE_URL`, `` with `` `APP_BASE_URL`, `ADMIN_BASE_URL`, `CORS_ORIGINS` (hosts from `deploy/domains.env`), ``.
 
@@ -1007,16 +1006,11 @@ Old hosts keep redirecting for as long as their DNS records and certs live.
                             LIVE: api.<root>, app.<root>, admin.<root>; console.<root> redirects; runbook docs/DEPLOYMENT_VPS.md)
 ```
 
-- [ ] **Step 4: Spec touch-ups** in `docs/superpowers/specs/2026-09-19-unified-domains-routes-design.md`:
-
-- §3.2, the `mento-web.conf.template` bullet → "three site templates — `deploy/nginx/mento-{app,admin,redirect}.conf.template` (one site per file, like `mento-api.conf`), rendered by `deploy/render-nginx.sh app|admin|legacy <host>|apex`; `deploy/test-nginx.sh` is the committed proof."
-- §4.5, append: "Step 1 already routes all three builders through `app/services/links.py` on the app/admin origins; step 3 is then a one-line path change there."
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 4: Commit** (the spec's §3.2 / §4.5 were already synced with this plan when it was written)
 
 ```bash
 git add docs CLAUDE.md
-git commit -m "docs: web build served from app/admin hosts; domain-change runbook; spec refinements"
+git commit -m "docs: web build served from app/admin hosts; domain-change runbook"
 ```
 
 ---
