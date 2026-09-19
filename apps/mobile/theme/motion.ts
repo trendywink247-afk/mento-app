@@ -198,3 +198,26 @@ export type Motion = typeof motion;
 /** Mentor hand-off (board A34 "auto / continue"): once the session exists the screen holds
  * long enough to be read, then goes to Mentor Home by itself; the key goes at once. */
 export const handoff = { hold: 3200 } as const;
+
+/**
+ * The letter on its way (board A04, request sent). The note lands once, tilted, a moment
+ * after the headline; a small envelope then flies the dotted arc from the member's companion
+ * to the mentor, one crossing per `fly` with a long rest at the far end; the postmark ripples
+ * twice per breath, half a breath apart. Reduced motion: none of it — the envelope rests at
+ * the top of the arc, the note is simply there, no ripples.
+ */
+export const letter = {
+  land: { duration: 800, delay: 250, from: { rise: -22, tilt: -5 }, tilt: -1.2 },
+  landEase: Easing.bezier(0.2, 0.7, 0.2, 1),
+  fly: { period: 7800, delay: 1200 },
+  /** Envelope keyframes along the arc: progress through the loop → (share of the arc's
+   * width travelled, lift in px). It is visible between `show` and `hide`. */
+  flyStops: [0, 0.07, 0.175, 0.35, 0.525, 0.63, 0.7, 1],
+  flyX: [0, 0.085, 0.229, 0.5, 0.771, 0.915, 1, 1],
+  flyY: [0, -8, -17, -22, -17, -8, 0, 0],
+  flyShow: 0.07,
+  flyFade: 0.63,
+  flyHide: 0.7,
+  ripple: { period: 5200, delays: [1100, 3700], grow: 2.4, peak: 0.7, peakAt: 0.12 },
+  rippleEase: Easing.bezier(0.2, 0.6, 0.3, 1),
+} as const;

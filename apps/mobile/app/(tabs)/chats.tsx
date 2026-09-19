@@ -19,6 +19,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api, type ConversationListItem, type InTouchItem, type InTouchList } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { relativeTime } from '@/lib/format';
+import { requestLetter } from '@/lib/requestLetter';
 import { useI18n } from '@/lib/i18n';
 import { screenCache, type ChatPreview, type WaitingQuestion } from '@/lib/screenCache';
 import { getPersona, getStreamToken } from '@/lib/session';
@@ -232,6 +233,22 @@ export default function ChatsTab() {
     }
   };
 
+  /** An open question: its letter (board A04), painted at once from what the row holds. */
+  const openQuestion = (w: WaitingQuestion) => {
+    requestLetter.put({
+      request: {
+        id: w.id,
+        status: 'pending',
+        target_listener_id: w.listenerId,
+        intro_message: w.intro,
+        conversation_id: null,
+        created_at: w.createdAt,
+      },
+      mentor: { id: w.listenerId, name: w.name, avatar: w.avatar },
+    });
+    router.push({ pathname: '/request-sent/[id]', params: { id: w.id } });
+  };
+
   const openNewChat = () => router.push('/new-chat');
 
   const needle = query.trim().toLowerCase();
@@ -316,7 +333,7 @@ export default function ChatsTab() {
           time={relativeTime(w.createdAt, t)}
           unreadLabel={t('chatsList.newMessageA11y')}
           accessibilityLabel={t('chatsList.waitingA11y', { name: w.name })}
-          onPress={() => router.push({ pathname: '/mentor/[id]', params: { id: w.listenerId } })}
+          onPress={() => openQuestion(w)}
         />
       );
     } else {

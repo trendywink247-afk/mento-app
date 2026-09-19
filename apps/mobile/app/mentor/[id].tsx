@@ -13,10 +13,10 @@ import {
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
-import { Panda } from '@/components/art/Panda';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { ApiError, api, type Listener } from '@/lib/api';
 import { formatTopic } from '@/lib/format';
+import { requestLetter } from '@/lib/requestLetter';
 import { useI18n } from '@/lib/i18n';
 import { TOPICS } from '@/lib/topics';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -24,7 +24,7 @@ import { font, radius, space, type } from '@/theme/tokens';
 
 
 /** Mentor profile (#50/51, anonymity-safe: persona avatar instead of photo covers,
- * no star ratings) → intro composer (#52) → request sent (#53). */
+ * no star ratings) → intro composer (#52) → the letter on its way (board A04, app/request-sent). */
 export default function MentorProfile() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
@@ -34,7 +34,7 @@ export default function MentorProfile() {
   const { id, topic: topicParam } = useLocalSearchParams<{ id: string; topic?: string }>();
   const [listener, setListener] = useState<Listener | null>(null);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState<'profile' | 'compose' | 'sent'>('profile');
+  const [step, setStep] = useState<'profile' | 'compose'>('profile');
   const [intro, setIntro] = useState('');
   const [topic, setTopic] = useState<string | null>(topicParam ?? null);
   const [busy, setBusy] = useState(false);
@@ -61,8 +61,14 @@ export default function MentorProfile() {
     setBusy(true);
     setError(null);
     try {
-      await api.requestListener(listener.id, intro.trim(), topic);
-      setStep('sent');
+      const sent = await api.requestListener(listener.id, intro.trim(), topic);
+      // The letter (board A04) paints from what we already hold, then re-reads the server.
+      requestLetter.put({
+        request: sent,
+        mentor: { id: listener.id, name: listener.persona_name, avatar: listener.persona_avatar },
+      });
+      // `replace`: back from the letter returns to Browse, never to a sent intro.
+      router.replace({ pathname: '/request-sent/[id]', params: { id: sent.id } });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
     } finally {
@@ -88,38 +94,6 @@ export default function MentorProfile() {
           <Text style={[type.body, { color: colors.inkMuted }]}>
             We couldn't find this mentor.
           </Text>
-        </View>
-      </Screen>
-    );
-  }
-
-  if (step === 'sent') {
-    return (
-      <Screen
-        bg="lavender"
-        footer={
-          <PrimaryButton label="Back to Mentors" onPress={() => router.back()} testID="back-to-mentors" />
-        }
-      >
-        <View style={styles.center}>
-          <PersonaAvatar name={listener.persona_name} size={88} />
-          <Text style={[styles.sentTitle, { color: colors.ink }]} testID="request-sent">
-            Request sent to {listener.persona_name}
-          </Text>
-          <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
-            Your intro message has been sent. The mentor will review it and get back to you soon
-            — you'll see the conversation appear in My Chats.
-          </Text>
-          <View style={[styles.patienceCard, { backgroundColor: colors.surface }, elevation.sm]}>
-            <Panda pose="shield" size={56} />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>Please be patient</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>
-                Mentors receive many requests and may take some time to respond. Thank you for
-                your understanding.
-              </Text>
-            </View>
-          </View>
         </View>
       </Screen>
     );
@@ -260,25 +234,8 @@ export default function MentorProfile() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
-  centerText: { textAlign: 'center' },
   composeHead: { alignItems: 'center', gap: space.xs, marginVertical: space.md },
   name: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 33 },
-  sentTitle: {
-    fontFamily: font.serifBold,
-    fontSize: 24,
-    lineHeight: 31,
-    textAlign: 'center',
-    marginTop: space.sm,
-  },
-  patienceCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.lg,
-    padding: space.md,
-    marginTop: space.md,
-    alignSelf: 'stretch',
-  },
   label: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 22, marginTop: space.md, marginBottom: space.xs },
   textarea: {
     minHeight: 110,
