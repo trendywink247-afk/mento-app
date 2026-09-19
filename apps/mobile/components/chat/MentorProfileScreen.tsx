@@ -12,6 +12,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
 import { MentorFace, MentorFaceFigure } from '@/components/art/MentorFace';
 import { DeepArrival } from '@/components/motion/DeepArrival';
+import { FlyFrom } from '@/components/motion/FlyFrom';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { useBreathing } from '@/components/motion/useBreathing';
@@ -20,6 +21,7 @@ import { ApiError, api, type ConversationMentor, type PathTree, type StayInTouch
 import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
 import { useI18n } from '@/lib/i18n';
 import { pendingOption } from '@/lib/pendingOption';
+import { mentorHeroKey } from '@/lib/originStore';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { COMPANION_COLORS } from '@/theme/companion';
@@ -171,9 +173,15 @@ export default function MentorProfileScreen() {
           <View style={styles.hero}>
             <View style={styles.figures} pointerEvents="none">
               {profile ? (
-                <Animated.View style={[styles.mentorFigure, mentorBreath]}>
-                  <MentorFaceFigure animal={face.animal} width={96} height={110} />
-                </Animated.View>
+                <FlyFrom
+                  originKey={conversationId ? mentorHeroKey(conversationId) : undefined}
+                  testID="mentor-hero-figure"
+                  style={styles.mentorFigure}
+                >
+                  <Animated.View style={mentorBreath}>
+                    <MentorFaceFigure animal={face.animal} width={96} height={110} />
+                  </Animated.View>
+                </FlyFrom>
               ) : null}
               {animal ? (
                 <View style={styles.memberFigure}>
