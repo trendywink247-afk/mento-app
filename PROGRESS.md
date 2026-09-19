@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-09-19 (session 36) — Board port, unit 1 SHIPPED: the first run as on the board + allowance / stay in touch / feedback API ✅ — lanes 2–4 in progress
+
+- **master `8da848f`, pushed.** Gate on the merged branch: pytest `377 passed` (isolated DB `mento_wt`), `alembic check` clean, ruff + black clean, tsc clean, **21 e2e specs + 2 unit tests exit 0** (normal + reduced motion, 0 page errors) incl. new `age-gate` and the role-fork film assertions.
+- **Prod API:** backup `/opt/mento-backups/mento-20260919-092137.sql.gz`, then `deploy.sh`; alembic head `034abb526d75` (3 new migrations: message allowance, stay in touch + rotating names, product feedback). `/health` + `/health/ready` 200; new routes answer 403 unauthenticated. **`ALLOWANCE_ENFORCED=false`** set explicitly on the box (counting on, holding off until the A22 note ships). Mentor names start rotating at the next 04:00 IST — tell the mentors.
+- **Prod web:** `deploy-web.sh` from `8da848f`; hosts verified; live check of the role fork: the playground film plays inline (`currentTime 2.31 → 3.81` over 1.5 s, muted, 0 page errors).
+- **Phone:** OTA `01a0b9da` (preview, commit `8da848f`).
+- **In progress (see `docs/superpowers/plans/2026-09-19-board-port-lanes.md`):** lane u2 (conversation screens), u3 (tabs — Journal deeper pages A28/A29/A30 done), u4 (mentor side), all relaunched on Opus from their last commits after the Fable credits ran low.
+
 ## 2026-09-19 (session 35, close) — SHIPPED: everything merged, pushed, API + web live on prod, phone update published ✅
 
 **Founder: update and test this.** Open the app on the phone → shake (or Profile → Check for updates) → it restarts into OTA `01a0b94a` (preview channel, runtime 0.1.0, commit `aa87660`). The new APK is only needed for the oat splash / icon background (app.json) — the JS is identical. Web: https://app.agentin.chat (members + mentors), https://admin.agentin.chat/admin (sign in once there — token storage is per origin; an old `console…/admin#token=` link still works through the redirect).
