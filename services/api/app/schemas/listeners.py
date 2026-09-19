@@ -46,6 +46,9 @@ class ListenerProfileOut(BaseModel):
     is_favourite: bool  # DEPRECATED — see ListenerOut
     in_touch: bool = False
     first_met_as: str | None = None
+    # The member-facing words for `categories`, same order (services/categories.py), so
+    # the app never shows a raw slug. Additive.
+    category_labels: list[str] = []
 
 
 class ConversationMentorOut(ListenerProfileOut):

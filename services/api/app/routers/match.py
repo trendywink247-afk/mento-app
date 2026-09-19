@@ -12,7 +12,7 @@ from app.models.listener import ListenerProfile
 from app.models.user import User
 from app.schemas import MatchRequest, MatchResult
 from app.security import current_user_id
-from app.services import mentor_names
+from app.services import mentor_names, open_question
 from app.services.matching import NoListenerAvailable, match_general
 
 router = APIRouter(prefix="/match", tags=["match"])
@@ -39,6 +39,11 @@ def create_match(
             status.HTTP_400_BAD_REQUEST,
             "personal requests go through POST /listeners/{listener_id}/request",
         )
+
+    # One open question at a time (services/open_question.py): a Personal question still
+    # waiting on a mentor holds "Next available" back — never for a member the crisis
+    # scan flagged recently.
+    open_question.enforce(db, user_id)
 
     try:
         convo = match_general(db, user, category=payload.issue_category)
