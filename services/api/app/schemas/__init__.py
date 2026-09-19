@@ -51,6 +51,13 @@ from app.schemas.conversations import (
     UnlockRequest,
     VerifyPinRequest,
 )
+from app.schemas.in_touch import (
+    InTouchItem,
+    InTouchListOut,
+    InTouchSlots,
+    StayInTouchAskItem,
+    StayInTouchOut,
+)
 from app.schemas.journals import (
     JournalEntryIn,
     JournalEntryOut,
@@ -136,6 +143,9 @@ __all__ = [
     "ConversationState",
     "DevListenerItem",
     "DevTokenOut",
+    "InTouchItem",
+    "InTouchListOut",
+    "InTouchSlots",
     "JournalEntryIn",
     "JournalEntryOut",
     "ListenerApplicationIn",
@@ -178,6 +188,8 @@ __all__ = [
     "ScanRequest",
     "ScanResult",
     "StatusMaskRequest",
+    "StayInTouchAskItem",
+    "StayInTouchOut",
     "UnlockRequest",
     "VerifyPinRequest",
 ]

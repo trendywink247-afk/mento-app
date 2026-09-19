@@ -12,12 +12,13 @@ from app.models.listener import ListenerProfile
 from app.models.user import User
 from app.schemas import MatchRequest, MatchResult
 from app.security import current_user_id
+from app.services import mentor_names
 from app.services.matching import NoListenerAvailable, match_general
 
 router = APIRouter(prefix="/match", tags=["match"])
 
 
-@router.post("", response_model=MatchResult)
+@router.post("", response_model=MatchResult, dependencies=[Depends(mentor_names.fresh_names)])
 def create_match(
     payload: MatchRequest,
     user_id: str = Depends(current_user_id),

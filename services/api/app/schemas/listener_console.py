@@ -22,6 +22,9 @@ class ListenerMeOut(BaseModel):
     stream_token: str
     public_line: str | None
     availability_note: str | None
+    # Rotating names (DECISIONS §L.6): when this name is replaced (next 04:00 IST, as
+    # UTC). Null while rotation is switched off.
+    name_changes_at: str | None = None
 
 
 class ListenerProfileEditIn(BaseModel):
@@ -67,6 +70,8 @@ class ListenerConversationItem(BaseModel):
     member_masked: bool
     created_at: str
     ended_at: str | None
+    # This member and the mentor are in touch (a per-row flag — never a roster/count).
+    in_touch: bool = False
 
 
 class MemberBriefOut(BaseModel):
@@ -90,6 +95,7 @@ class MemberBriefOut(BaseModel):
     member_masked: bool
     safety_flags_open: int
     care_prompt: str
+    in_touch: bool = False
 
 
 class ListenerRequestItem(BaseModel):

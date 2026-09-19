@@ -106,3 +106,19 @@ class ListenerReportReason(str, enum.Enum):
 class PushOwnerKind(str, enum.Enum):
     member = "member"
     listener = "listener"
+
+
+class LinkStatus(str, enum.Enum):
+    """A consented "stay in touch" link between a member and a mentor (DECISIONS §L.6)."""
+
+    pending = "pending"  # the member asked; the mentor has not answered
+    accepted = "accepted"  # in touch
+    declined = "declined"  # the mentor said "not now" — quiet, no penalty
+    withdrawn = "withdrawn"  # the member took the ask back
+    ended = "ended"  # either side ended it, or a block / report / suspension did
+
+
+class LinkEndedBy(str, enum.Enum):
+    member = "member"
+    listener = "listener"
+    system = "system"  # block, report or suspension

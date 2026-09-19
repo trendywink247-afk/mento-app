@@ -55,7 +55,7 @@ from app.schemas import (
     OkResult,
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
-from app.services import allowance, audit, conversations, stream
+from app.services import allowance, audit, conversations, in_touch, stream
 from app.services.categories import AVAILABILITY_NOTES
 from app.services.links import admin_link, mentor_console_link
 from app.services.matching import reconcile_listener_capacity
@@ -312,6 +312,8 @@ def suspend_listener(
     # members are free to be matched again, the slots are released) and seal every
     # channel on Stream once the transaction is committed.
     ended = conversations.end_all_for_listener(db, listener_id)
+    # Nobody stays in touch with a mentor the team has removed (DECISIONS §L.6).
+    in_touch.end_all_for_listener(db, listener_id)
     audit.record(
         db,
         admin,

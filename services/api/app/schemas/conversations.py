@@ -40,6 +40,12 @@ class ConversationListItem(BaseModel):
     # picked or the row predates the column.
     issue_category: str | None = None
     issue_category_label: str | None = None
+    # Rotating names (DECISIONS §L.6). `listener_persona_name` is the mentor's name
+    # TODAY while the chat is active or the member is in touch with them; an ended /
+    # wiped chat with anyone else keeps the name it ended under. `first_met_as` is the
+    # name at the start of this chat, set only when it differs from the one shown.
+    in_touch: bool = False
+    first_met_as: str | None = None
 
 
 class VerifyPinRequest(BaseModel):

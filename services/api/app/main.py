@@ -9,13 +9,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app import observability
+from app import errors, observability
 from app.config import get_settings
 from app.db import init_db
 from app.routers import (
     admin_console,
     conversation,
     health,
+    in_touch,
     journals,
     listener_applications,
     listener_console,
@@ -95,6 +96,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Mento API", version="0.1.0", lifespan=lifespan)
+app.add_exception_handler(errors.ApiProblem, errors.api_problem_handler)
 
 # Added FIRST = innermost: request id + access line + JSON 500, inside GZip and CORS
 # so even an unhandled error leaves with CORS headers and a body the app can parse.
@@ -136,5 +138,6 @@ app.include_router(journals.router, prefix=API)
 app.include_router(listener_applications.router, prefix=API)
 app.include_router(listeners.router, prefix=API)
 app.include_router(listener_console.router, prefix=API)
+app.include_router(in_touch.router, prefix=API)
 app.include_router(admin_console.router, prefix=API)
 app.include_router(notifications.router, prefix=API)

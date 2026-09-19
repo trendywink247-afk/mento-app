@@ -88,6 +88,14 @@ class Settings(BaseSettings):
     allowance_crisis_exempt_hours: int = 24
     allowance_budget_ms: int = 800
 
+    # Rotating mentor names + consented "stay in touch" (DECISIONS §L.6–7,
+    # services/mentor_names.py, services/in_touch.py). Names change at 04:00 IST.
+    mentor_name_rotation_enabled: bool = True
+    in_touch_limit: int = 2
+    # After a quiet "not now", how long before the same member may ask that mentor
+    # again ("the ask is one tap and never nags").
+    in_touch_reask_days: int = 7
+
     # Conversations active longer than this are considered abandoned; the admin
     # reconcile action ends them and frees the listener's slot.
     conversation_max_age_hours: int = 24

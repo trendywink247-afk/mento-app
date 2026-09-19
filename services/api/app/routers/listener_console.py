@@ -52,7 +52,17 @@ from app.schemas import (
     RequestOut,
 )
 from app.security import current_listener_id, issue_listener_token
-from app.services import care_prompts, categories, conversations, paths, push, push_tasks, stream
+from app.services import (
+    care_prompts,
+    categories,
+    conversations,
+    in_touch,
+    mentor_names,
+    paths,
+    push,
+    push_tasks,
+    stream,
+)
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -87,6 +97,11 @@ def _me_out(li: ListenerProfile) -> ListenerMeOut:
         stream_token=stream.user_token(li.id),
         public_line=li.public_line,
         availability_note=li.availability_note,
+        name_changes_at=(
+            mentor_names.next_rotation_at(datetime.now(UTC)).isoformat()
+            if mentor_names.is_enabled()
+            else None
+        ),
     )
 
 
@@ -140,7 +155,7 @@ def dev_token(listener_id: str, db: Session = Depends(get_db)) -> DevTokenOut:
     return DevTokenOut(token=issue_listener_token(listener.id))
 
 
-@router.get("/me", response_model=ListenerMeOut)
+@router.get("/me", response_model=ListenerMeOut, dependencies=[Depends(mentor_names.fresh_names)])
 def me(listener: ListenerProfile = Depends(current_listener)) -> ListenerMeOut:
     return _me_out(listener)
 
@@ -253,6 +268,7 @@ def my_conversations(
         .limit(limit)
         .offset(offset)
     ).all()
+    linked = in_touch.listener_in_touch_user_ids(db, listener.id, {user.id for _c, user in rows})
     return [
         ListenerConversationItem(
             id=convo.id,
@@ -263,6 +279,7 @@ def my_conversations(
             member_masked=convo.status_mask is not None,
             created_at=convo.created_at.isoformat(),
             ended_at=convo.ended_at.isoformat() if convo.ended_at else None,
+            in_touch=user.id in linked,
         )
         for convo, user in rows
     ]
@@ -380,6 +397,7 @@ def member_brief(
         member_masked=convo.status_mask is not None,
         safety_flags_open=safety_flags_open,
         care_prompt=care_prompts.pick(convo.issue_category, convo.id),
+        in_touch=bool(in_touch.listener_in_touch_user_ids(db, listener.id, {member.id})),
     )
 
 
@@ -414,6 +432,8 @@ def report_conversation(
             reviewed=False,
         )
     )
+    # A report — from either side — ends any stay-in-touch link between the two.
+    in_touch.end_for_pair(db, convo.user_id, listener.id)
     db.commit()
     return OkResult(status="reported")
 

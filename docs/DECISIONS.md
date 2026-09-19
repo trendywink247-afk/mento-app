@@ -196,3 +196,19 @@ Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code al
 - **g. Fail-open has a time budget (800 ms):** a slow database delivers the message uncounted, so the hook always answers Stream in time to keep the helpline card and the redaction.
 - **h. The ledger keeps one row per member per day (counts only — no text, no message or conversation ids) for 35 days.**
 - **i. Admin numbers are audited reads** (`allowance.viewed`), like the safety conversation view.
+
+**L.6 rotating names**
+- **j. Names change at 04:00 IST, not midnight** — midnight is peak chat time for aspirants; 04:00 is the quietest hour for a header to change. (The allowance still resets at 00:00 IST.)
+- **k. An active chat follows the mentor's new name and says "first talked as <old name>"; an ended or wiped chat with a mentor the member is NOT in touch with keeps the name it ended under.** Otherwise My Chats would hand every member tomorrow's name for every mentor they ever met, and the consented link would mean nothing.
+- **l. The mentor's avatar does not rotate** ("same owl, new name", A14) — so, with the public line, a mentor stays recognisable in Browse to someone who remembers them. Rotation is a presentation rule, not unlinkability: the listener id is stable in Browse and in Stream. Rotating the avatar too, or per-conversation Stream aliases, would be the stronger version.
+- **m. Rotation is lazy (first read after 04:00), one mentor per transaction, never waits on the matcher; a new mentor keeps their first name until the next 04:00.** A newly issued name is never one a mentor carries now or one a pending / accepted link holds as "first met as" (§L.7); names from the last 30 days are avoided while the 576-name space allows.
+- **n. The Stream user's display name is renamed with the mentor** (best-effort, retried) so header and bubbles agree.
+
+**L.6–7 stay in touch**
+- **o. A waiting ask holds one of the two places.** So a mentor's "yes" can never be refused for room the member gave away meanwhile. With one mentor in touch and one ask waiting, a further ask is refused (`in_touch_waiting`) until the ask is answered or taken back.
+- **p. After "not now" the same member cannot ask that mentor again for 7 days** ("never nags"). The member sees a quiet `not_now` state; no reason is stored anywhere. Taking an ask back, or either side ending a link, carries no pause.
+- **q. No push notification for an ask** (A14: "will see it next time they are here").
+- **r. The mentor has no list and no count of who stays in touch with them** — only waiting asks, and an `in_touch` flag on each of their own conversations (where "end it" lives).
+- **s. A report from EITHER side ends the link, as does a block or an admin suspension.** A mentor report does not end the chat (unchanged), but it does end the link.
+- **t. Writing to an in-touch mentor uses what exists:** the still-active conversation, or a Personal request to that mentor. No new "open a chat without the mentor's accept" path was added; the one-open-question rule is not built server-side.
+- **u. Favourites are deprecated, not removed, and are not converted into links** (a link needs the mentor's yes). Browse order: in touch → favourites → available → rank.

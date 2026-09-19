@@ -37,7 +37,15 @@ from app.schemas import (
     VerifyPinRequest,
 )
 from app.security import current_user_id, hash_pin, verify_pin
-from app.services import allowance, categories, conversations, listener_profiles, stream
+from app.services import (
+    allowance,
+    categories,
+    conversations,
+    in_touch,
+    listener_profiles,
+    mentor_names,
+    stream,
+)
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -89,14 +97,24 @@ def _state(convo: Conversation) -> ConversationState:
     )
 
 
-@router.get("", response_model=list[ConversationListItem])
+@router.get(
+    "",
+    response_model=list[ConversationListItem],
+    dependencies=[Depends(mentor_names.fresh_names)],
+)
 def list_conversations(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ) -> list[ConversationListItem]:
-    """The user's conversations, newest first — the My Chats surface (#54/55)."""
+    """The user's conversations, newest first — the My Chats surface (#54/55).
+
+    Rotating names (DECISIONS §L.6): a row shows the mentor's name TODAY while the chat
+    is active or the member is in touch with them; an ended / wiped chat with anyone
+    else keeps the name it ended under (tomorrow's name is what the member gets by
+    asking to stay in touch, not for free). `first_met_as` = the name when this chat
+    began, only when it differs from the one shown."""
     convos = db.scalars(
         select(Conversation)
         .where(Conversation.user_id == user_id)
@@ -110,13 +128,34 @@ def list_conversations(
             select(ListenerProfile).where(ListenerProfile.id.in_({c.listener_id for c in convos}))
         ).all()
     }
+    links = in_touch.in_touch_listener_ids(db, user_id)
+    book = mentor_names.NameBook(db, listeners.keys())
+
+    def shown_name(c: Conversation) -> str:
+        li = listeners.get(c.listener_id)
+        if li is None:
+            return "Listener"
+        if c.status == ConversationStatus.active or c.listener_id in links:
+            return li.persona_name
+        return book.name_at(c.listener_id, c.ended_at, li.persona_name)
+
+    def first_met(c: Conversation) -> str | None:
+        li = listeners.get(c.listener_id)
+        if li is None:
+            return None
+        link = links.get(c.listener_id)
+        first = (
+            link.first_met_as
+            if link
+            else book.name_at(c.listener_id, c.created_at, li.persona_name)
+        )
+        return mentor_names.first_met_label(first, shown_name(c))
+
     return [
         ConversationListItem(
             id=c.id,
             status=c.status.value,
-            listener_persona_name=(
-                listeners[c.listener_id].persona_name if c.listener_id in listeners else "Listener"
-            ),
+            listener_persona_name=shown_name(c),
             listener_persona_avatar=(
                 listeners[c.listener_id].persona_avatar if c.listener_id in listeners else ""
             ),
@@ -126,12 +165,18 @@ def list_conversations(
             ended_at=c.ended_at.isoformat() if c.ended_at else None,
             issue_category=c.issue_category,
             issue_category_label=categories.label(c.issue_category),
+            in_touch=c.listener_id in links,
+            first_met_as=first_met(c),
         )
         for c in convos
     ]
 
 
-@router.get("/{convo_id}/mentor", response_model=ConversationMentorOut)
+@router.get(
+    "/{convo_id}/mentor",
+    response_model=ConversationMentorOut,
+    dependencies=[Depends(mentor_names.fresh_names)],
+)
 def conversation_mentor(
     convo_id: str,
     user_id: str = Depends(current_user_id),
@@ -144,10 +189,24 @@ def conversation_mentor(
     listener = db.get(ListenerProfile, convo.listener_id)
     if listener is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+    out = listener_profiles.profile(db, listener, user_id).model_dump()
+    links = in_touch.in_touch_listener_ids(db, user_id)
+    # An ended chat with a mentor the member is not in touch with keeps the name it
+    # ended under — the same rule as list_conversations.
+    out["persona_name"] = in_touch.name_for_conversation(
+        db, convo, listener, linked=listener.id in links
+    )
+    if out.get("first_met_as") is None:
+        book = mentor_names.NameBook(db, [listener.id])
+        out["first_met_as"] = mentor_names.first_met_label(
+            book.name_at(listener.id, convo.created_at, listener.persona_name),
+            out["persona_name"],
+        )
     return ConversationMentorOut(
-        **listener_profiles.profile(db, listener, user_id).model_dump(),
+        **out,
         issue_category=convo.issue_category,
         issue_category_label=categories.label(convo.issue_category),
+        stay_in_touch=in_touch.standing(db, user_id, listener, convo),
     )
 
 
@@ -342,6 +401,8 @@ def _file_moderation_and_end(
         )
     )
     conversations.end(db, convo, ConversationEndedBy.member)
+    # A block or a report ends any stay-in-touch link (or waiting ask) between the two.
+    in_touch.end_for_pair(db, user_id, convo.listener_id)
 
 
 @router.post("/{convo_id}/report", response_model=OkResult)

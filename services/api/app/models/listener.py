@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import JSON, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, Date, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -42,3 +42,13 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     # PUT /listener/me/profile; admin can clear public_line but not set it.
     public_line: Mapped[str | None] = mapped_column(String(120), nullable=True)
     availability_note: Mapped[str | None] = mapped_column(String(60), nullable=True)
+
+    # Rotating names (DECISIONS §L.6, services/mentor_names.py). The rotation day the
+    # current persona_name belongs to — NULL = not stamped yet (the next pass stamps it
+    # WITHOUT renaming, so a new mentor keeps their first name for the rest of its day).
+    persona_name_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # False while Stream still shows the previous name (the rename is pushed after the
+    # commit, best-effort; the next pass retries).
+    persona_stream_synced: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default="true"
+    )
