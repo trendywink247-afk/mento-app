@@ -59,6 +59,7 @@ from app.services import (
     categories,
     conversations,
     in_touch,
+    mentor_face,
     mentor_names,
     paths,
     push,
@@ -105,6 +106,8 @@ def _me_out(li: ListenerProfile) -> ListenerMeOut:
             if mentor_names.is_enabled()
             else None
         ),
+        companion_animal=mentor_face.face(li)[0],
+        companion_colour=mentor_face.face(li)[1],
     )
 
 
@@ -297,6 +300,8 @@ def my_conversations(
             ended_at=convo.ended_at.isoformat() if convo.ended_at else None,
             in_touch=user.id in linked,
             snoozed_until=snooze.snoozed_until_iso(convo, now),
+            user_companion_animal=user.companion_animal,
+            user_companion_colour=user.companion_colour,
         )
         for convo, user in rows
     ]
@@ -323,6 +328,9 @@ def my_pending_requests(
             issue_category=req.issue_category,
             requester_persona_name=user.persona_name,
             created_at=req.created_at.isoformat(),
+            requester_companion_animal=user.companion_animal,
+            requester_companion_colour=user.companion_colour,
+            issue_category_label=categories.label(req.issue_category),
         )
         for req, user in rows
     ]

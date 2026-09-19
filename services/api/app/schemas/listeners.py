@@ -24,6 +24,10 @@ class ListenerOut(BaseModel):
     # these first. `first_met_as` is set once the mentor's name has changed since.
     in_touch: bool = False
     first_met_as: str | None = None
+    # One mentor, one face (services/mentor_face.py): the companion animal + wash colour
+    # every screen draws for this mentor. Stable — never rotates with the name (§L.6 l).
+    companion_animal: str = "Owl"
+    companion_colour: str = "sage"
 
 
 class ListenerProfileOut(BaseModel):
@@ -46,6 +50,10 @@ class ListenerProfileOut(BaseModel):
     is_favourite: bool  # DEPRECATED — see ListenerOut
     in_touch: bool = False
     first_met_as: str | None = None
+    # One mentor, one face (services/mentor_face.py): the companion animal + wash colour
+    # every screen draws for this mentor. Stable — never rotates with the name (§L.6 l).
+    companion_animal: str = "Owl"
+    companion_colour: str = "sage"
 
 
 class ConversationMentorOut(ListenerProfileOut):
@@ -75,3 +83,7 @@ class RequestOut(BaseModel):
     intro_message: str | None
     conversation_id: str | None
     created_at: str
+    # The mentor this request went to, as every screen draws them (a Personal request's
+    # target; null for anything else). Lets the A04 letter paint the right face.
+    listener_companion_animal: str | None = None
+    listener_companion_colour: str | None = None

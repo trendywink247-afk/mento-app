@@ -15,7 +15,7 @@ from app.models.favourite import FavouriteListener
 from app.models.listener import ListenerProfile
 from app.models.mentor_link import MentorLink
 from app.schemas import ListenerOut, ListenerProfileOut
-from app.services import in_touch, mentor_names
+from app.services import in_touch, mentor_face, mentor_names
 
 # Conversation statuses that count toward "conversations held" on a mentor
 # profile — spec 2026-09-06 §3.3: the count is about the mentor's experience,
@@ -45,6 +45,8 @@ def card(
         first_met_as=(
             mentor_names.first_met_label(link.first_met_as, li.persona_name) if link else None
         ),
+        companion_animal=mentor_face.face(li)[0],
+        companion_colour=mentor_face.face(li)[1],
     )
 
 
@@ -76,4 +78,6 @@ def profile(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOu
         first_met_as=(
             mentor_names.first_met_label(link.first_met_as, li.persona_name) if link else None
         ),
+        companion_animal=mentor_face.face(li)[0],
+        companion_colour=mentor_face.face(li)[1],
     )

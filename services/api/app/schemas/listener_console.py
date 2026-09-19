@@ -25,6 +25,10 @@ class ListenerMeOut(BaseModel):
     # Rotating names (DECISIONS §L.6): when this name is replaced (next 04:00 IST, as
     # UTC). Null while rotation is switched off.
     name_changes_at: str | None = None
+    # The mentor's own face — the SAME animal + wash members see for them (Mentor Home's
+    # presence card, the mentor chat's peek). services/mentor_face.py.
+    companion_animal: str = "Owl"
+    companion_colour: str = "sage"
 
 
 class ListenerProfileEditIn(BaseModel):
@@ -75,6 +79,10 @@ class ListenerConversationItem(BaseModel):
     # Snooze 24 h (board A10): when the snooze ends (ISO UTC) while it is open; null
     # otherwise. Snoozed rows sort after the un-snoozed active ones.
     snoozed_until: str | None = None
+    # The MEMBER's growth companion in their colour (board A10 rows) — the same two
+    # values the member brief carries. Never the companion's name (private, lane u7).
+    user_companion_animal: str | None = None
+    user_companion_colour: str | None = None
 
 
 class SnoozeOut(BaseModel):
@@ -114,6 +122,11 @@ class ListenerRequestItem(BaseModel):
     issue_category: str | None
     requester_persona_name: str
     created_at: str
+    # The member's companion in their colour (board A10's request card) and the topic's
+    # human label ("Exam stress", never the slug). Never the companion's name.
+    requester_companion_animal: str | None = None
+    requester_companion_colour: str | None = None
+    issue_category_label: str | None = None
 
 
 class ListenerReportIn(BaseModel):

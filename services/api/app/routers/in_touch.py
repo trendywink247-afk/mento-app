@@ -40,7 +40,7 @@ from app.schemas import (
     StayInTouchOut,
 )
 from app.security import current_user_id
-from app.services import in_touch, mentor_names
+from app.services import in_touch, mentor_face, mentor_names
 
 router = APIRouter(tags=["stay-in-touch"])
 
@@ -129,6 +129,8 @@ def _item(
         conversation_id=convo.id if convo else None,
         conversation_status=convo.status.value if convo else None,
         stream_channel_id=convo.stream_channel_id if convo else None,
+        companion_animal=mentor_face.face(li)[0],
+        companion_colour=mentor_face.face(li)[1],
     )
 
 

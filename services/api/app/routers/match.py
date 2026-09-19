@@ -12,7 +12,7 @@ from app.models.listener import ListenerProfile
 from app.models.user import User
 from app.schemas import MatchRequest, MatchResult
 from app.security import current_user_id
-from app.services import mentor_names
+from app.services import mentor_face, mentor_names
 from app.services.matching import NoListenerAvailable, match_general
 
 router = APIRouter(prefix="/match", tags=["match"])
@@ -54,4 +54,6 @@ def create_match(
         stream_channel_id=convo.stream_channel_id,
         listener_persona_name=listener.persona_name,
         listener_persona_avatar=listener.persona_avatar,
+        listener_companion_animal=mentor_face.face(listener)[0],
+        listener_companion_colour=mentor_face.face(listener)[1],
     )

@@ -43,6 +43,7 @@ from app.services import (
     conversations,
     in_touch,
     listener_profiles,
+    mentor_face,
     mentor_names,
     snooze,
     stream,
@@ -169,6 +170,8 @@ def list_conversations(
             in_touch=c.listener_id in links,
             first_met_as=first_met(c),
             reply_within_a_day=snooze.is_snoozed(c),
+            listener_companion_animal=mentor_face.face(listeners.get(c.listener_id))[0],
+            listener_companion_colour=mentor_face.face(listeners.get(c.listener_id))[1],
         )
         for c in convos
     ]

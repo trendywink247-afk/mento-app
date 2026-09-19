@@ -28,7 +28,15 @@ from app.models.request import ConversationRequest
 from app.routers.admin_console import current_admin
 from app.schemas import ListenerOut, ListenerProfileOut, OkResult, PersonalRequestIn, RequestOut
 from app.security import current_user_id
-from app.services import audit, in_touch, listener_profiles, locks, mentor_names, push_tasks
+from app.services import (
+    audit,
+    in_touch,
+    listener_profiles,
+    locks,
+    mentor_face,
+    mentor_names,
+    push_tasks,
+)
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -41,7 +49,9 @@ from app.services.matching import (
 router = APIRouter(prefix="/listeners", tags=["listeners"])
 
 
-def _request_out(r: ConversationRequest) -> RequestOut:
+def _request_out(r: ConversationRequest, db: Session) -> RequestOut:
+    target = db.get(ListenerProfile, r.target_listener_id) if r.target_listener_id else None
+    animal, colour = mentor_face.face(target) if target is not None else (None, None)
     return RequestOut(
         id=r.id,
         status=r.status.value,
@@ -49,6 +59,8 @@ def _request_out(r: ConversationRequest) -> RequestOut:
         intro_message=r.intro_message,
         conversation_id=r.conversation_id,
         created_at=r.created_at.isoformat(),
+        listener_companion_animal=animal,
+        listener_companion_colour=colour,
     )
 
 
@@ -196,7 +208,7 @@ def create_personal_request(
         )
     ).first()
     if existing:
-        return _request_out(existing)  # one pending request per pair — idempotent
+        return _request_out(existing, db)  # one pending request per pair — idempotent
 
     req = ConversationRequest(
         kind=RequestKind.personal,
@@ -210,7 +222,7 @@ def create_personal_request(
     db.commit()
     db.refresh(req)
     background.add_task(push_tasks.notify_request_created_safe, req.id)
-    return _request_out(req)
+    return _request_out(req, db)
 
 
 @router.get("/requests/mine", response_model=list[RequestOut])
@@ -227,7 +239,7 @@ def my_requests(
         .limit(limit)
         .offset(offset)
     ).all()
-    return [_request_out(r) for r in reqs]
+    return [_request_out(r, db) for r in reqs]
 
 
 @router.post("/requests/{request_id}/accept", response_model=RequestOut)
@@ -252,7 +264,7 @@ def accept_request(
     )
     db.commit()
     background.add_task(push_tasks.notify_request_accepted_safe, request_id)
-    return _request_out(req)
+    return _request_out(req, db)
 
 
 @router.post("/requests/{request_id}/decline", response_model=OkResult)

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import JSON, Boolean, Date, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, Date, DateTime, Integer, String, event
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -52,3 +52,18 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     persona_stream_synced: Mapped[bool] = mapped_column(
         Boolean, default=True, server_default="true"
     )
+
+    # One mentor, one face (services/mentor_face.py): the companion animal + wash colour
+    # every member-facing surface and Mentor Home draw for this mentor. Dealt once from
+    # the listener id (insert hook below / backfill migration); never rotates with the
+    # name (DECISIONS §L.6 l).
+    companion_animal: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    companion_colour: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+
+@event.listens_for(ListenerProfile, "before_insert")
+def _deal_face(_mapper, _connection, target: ListenerProfile) -> None:
+    # Every creation path (admin approval, admin provisioning, seeds, tests) gets a face.
+    from app.services import mentor_face
+
+    mentor_face.assign(target)

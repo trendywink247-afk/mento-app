@@ -19,3 +19,6 @@ class MatchResult(BaseModel):
     stream_channel_id: str | None
     listener_persona_name: str
     listener_persona_avatar: str
+    # The mentor's face (services/mentor_face.py) — the connecting orb's "found" mentor.
+    listener_companion_animal: str = "Owl"
+    listener_companion_colour: str = "sage"
