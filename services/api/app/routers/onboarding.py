@@ -65,6 +65,7 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
         email=payload.email,
         companion_animal=payload.companion_animal,
         companion_colour=payload.companion_colour,
+        companion_name=payload.companion_name,
     )
     db.add(user)
     db.commit()

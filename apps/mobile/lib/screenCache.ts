@@ -50,6 +50,8 @@ type Shape = {
   journal: { entries: JournalEntry[]; hasFinance: boolean };
   mentors: Listener[];
   application: ListenerApplication | null;
+  /** The member's own name for their companion (Profile) — cleared with the identity. */
+  companionName: string | null;
 };
 
 /** The one definition of "this conversation was wiped" for a loaded chat list — shared by

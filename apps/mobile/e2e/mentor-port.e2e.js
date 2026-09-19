@@ -62,7 +62,13 @@ async function world() {
   const members = [];
   for (const [animal, colour] of [['Cat', 'sky'], ['Fox', 'rose'], ['Panda', 'sage']]) {
     const u = await session();
-    await j('/me/companion', { token: u.session_token, method: 'PUT', body: { companion_animal: animal, companion_colour: colour } });
+    // Each member has also NAMED their companion — a name only they may ever see (founder
+    // ruling 2026-09-19); the mentor-side screens below must never show it.
+    await j('/me/companion', {
+      token: u.session_token,
+      method: 'PUT',
+      body: { companion_animal: animal, companion_colour: colour, companion_name: companionNameFor(animal) },
+    });
     const r = await j(`/listeners/${cs.listener_id}/request`, {
       token: u.session_token,
       method: 'POST',
@@ -75,6 +81,16 @@ async function world() {
   const asks = await j('/listener/me/stay-in-touch', { token: lt });
   for (const mem of members) mem.ask = asks.find((a) => a.conversation_id === mem.convoId);
   return { m, cs, lt, members };
+}
+
+/** The private companion names the members give (never shown to the mentor). */
+function companionNameFor(animal) {
+  return `Quillon ${animal}`;
+}
+function assertNoCompanionName(text, where, label) {
+  for (const animal of ['Cat', 'Fox', 'Panda']) {
+    expect(!text.includes(companionNameFor(animal)), `${label}: ${where} shows a member's private companion name`);
+  }
 }
 
 async function asMentor(ctx, w) {
@@ -155,6 +171,8 @@ async function pass(browser, reduced) {
   const sheetText = await tid('intouch-sheet').innerText();
   expect(sheetText.includes(yes.user.persona_name), `${label}: the sheet does not name ${yes.user.persona_name}`);
   expect(!sheetText.includes(yes.user.id) && !/@|\b(19|20)\d\d\b|\bage\b/i.test(sheetText), `${label}: the sheet shows more than a persona: ${sheetText}`);
+  assertNoCompanionName(sheetText, 'the stay-in-touch sheet', label);
+  assertNoCompanionName(await page.evaluate(() => document.body.innerText), 'Mentor Home', label);
   const art = await page.evaluate(() =>
     [...document.querySelectorAll('[data-testid="intouch-sheet"] img')].map((i) => i.currentSrc || i.src)
   );
@@ -212,6 +230,10 @@ async function pass(browser, reduced) {
 
   await tid('member-header').click();
   await tid('brief-ready').waitFor({ timeout: 30000 });
+  assertNoCompanionName(await tid('brief-ready').innerText(), 'the member brief (A36)', label);
+  const briefJson = JSON.stringify(await j(`/listener/me/conversations/${vb.id}/brief`, { token: w.lt }));
+  assertNoCompanionName(briefJson, 'GET …/brief', label);
+  console.log(`${label}: OK the brief (screen and API) never shows the member's companion name`);
   // Mentor Home stays mounted under the stack on web, so scope to the brief.
   await tid('brief-ready').locator(`[data-testid="mentor-intouch-${viaBrief.ask.id}"]`).click();
   const sheet = page.locator('[data-testid="intouch-sheet"]:visible').first();

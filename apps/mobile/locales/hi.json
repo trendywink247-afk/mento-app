@@ -246,7 +246,24 @@
       "headline": "आपकी जगह तैयार हो रही है…",
       "sub": "आपकी पहचान आपकी ही रहती है — और हर मेंटॉर की भी।"
     },
-    "stepOf": "चरण %{n} / %{total}"
+    "stepOf": "चरण %{n} / %{total}",
+    "companionName": {
+      "label": "अपने साथी को नाम दें",
+      "optional": "(वैकल्पिक)",
+      "a11y": "अपने साथी को नाम दें (वैकल्पिक)",
+      "invalid": "यहाँ बस एक नाम ठीक रहेगा, लिंक, ईमेल या फ़ोन नंबर के बिना।",
+      "readyName": " · %{name}",
+      "suggestAny": "शायद सनी",
+      "suggestPanda": "शायद बाओ",
+      "suggestDog": "शायद कोको",
+      "suggestCat": "शायद मिसो",
+      "suggestFox": "शायद जूनो",
+      "suggestCapybara": "शायद टोफ़ू",
+      "suggestElephant": "शायद मोमो",
+      "suggestTurtle": "शायद टोटो",
+      "suggestDeer": "शायद कीकी",
+      "suggestOwl": "शायद ऑली"
+    }
   },
   "connecting": {
     "headlineBusy": "अभी थोड़ी भीड़ है।\nअगली बारी आपकी है",
@@ -877,7 +894,17 @@
     "namesNote": "नाम हर दिन बदलते हैं। जिस मेंटॉर से आप संपर्क में हैं, वे किसी भी नाम से आप तक पहुँच में रहते हैं। मेंटॉर आपके जैसे साथी हैं, थेरेपिस्ट नहीं।"
   },
   "profilePage": {
-    "private": "निजी"
+    "private": "निजी",
+    "companionNameNone": "अभी कोई नाम नहीं",
+    "companionNameAdd": "नाम दें",
+    "companionNameEdit": "नाम बदलें",
+    "companionNameSave": "सहेजें",
+    "companionNameCancel": "रद्द करें",
+    "companionNameRemove": "नाम हटाएँ",
+    "companionNameOnlyYou": "यह नाम सिर्फ़ आप देखते हैं।",
+    "companionNameFailed": "अभी सहेजा नहीं जा सका। कृपया फिर से कोशिश करें।",
+    "companionNameA11y": "आपके साथी का नाम: %{name}",
+    "companionNameEditA11y": "अपने साथी का नाम बदलें"
   },
   "pathHome": {
     "titleLead": "आपकी ",

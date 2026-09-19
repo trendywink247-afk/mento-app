@@ -15,7 +15,7 @@ from app.errors import ApiProblem
 from app.models.user import User
 from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut, OkResult
 from app.security import current_user_id
-from app.services import allowance, erasure
+from app.services import allowance, companions, erasure
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -41,6 +41,7 @@ def _out(user: User) -> MeOut:
         companion_colour=user.companion_colour,
         has_dob=user.dob is not None,
         member_setup_complete=user.dob is not None and user.companion_animal is not None,
+        companion_name=user.companion_name,
     )
 
 
@@ -72,6 +73,21 @@ def update_companion(
         f"companion:{user.id}", 30, 3600, detail="Too many changes — please try again in a bit."
     )
     fields = payload.model_fields_set
+    # The name is checked before anything changes, so a refused name saves nothing.
+    # It is the member's own and is returned here and by GET /me — nowhere else.
+    if "companion_name" in fields and payload.companion_name is not None:
+        try:
+            name: str | None = companions.clean_name(payload.companion_name)
+        except companions.CompanionNameInvalid:
+            raise ApiProblem(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                companions.NAME_INVALID_CODE,
+                companions.NAME_INVALID_DETAIL,
+            ) from None
+    else:
+        name = None
+    if "companion_name" in fields:
+        user.companion_name = name
     if "companion_animal" in fields:
         user.companion_animal = payload.companion_animal
     if "companion_colour" in fields:

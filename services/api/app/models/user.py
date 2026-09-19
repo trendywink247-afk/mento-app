@@ -28,6 +28,9 @@ class User(UUIDMixin, TimestampMixin, Base):
     # Growth companion (personalization/theme; NEVER the chat handle).
     companion_animal: Mapped[str | None] = mapped_column(String(32), nullable=True)
     companion_colour: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # The member's own name for it (services/companions.clean_name). Only the member
+    # reads it back — never a mentor, Stream, analytics or the admin dashboard.
+    companion_name: Mapped[str | None] = mapped_column(String(24), nullable=True)
 
     # Path (Communities): coarse, self-declared, clearable — a matching lens, not PII.
     community_slug: Mapped[str | None] = mapped_column(String(32), nullable=True)

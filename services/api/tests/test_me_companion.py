@@ -123,6 +123,7 @@ def test_me_returns_persona_and_companion_and_nothing_private(client, db_session
         "companion_colour": "plum",
         "has_dob": True,
         "member_setup_complete": True,
+        "companion_name": None,
     }
 
 
