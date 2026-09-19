@@ -798,5 +798,27 @@
     "readingPageBody": "The Mento team is writing a short reading on how we mentor here. It will appear in Mentor Home when it is ready.",
     "readingPageHold": "Until then, the four things from the start still hold: listen, then share what helped. A mentor, not a therapist. You are not alone with it. Your name rotates.",
     "readingBack": "Back to Mentor Home"
+  },
+  "publicApply": {
+    "forMentors": "For mentors",
+    "headline": "Be the steady voice for someone on the same ",
+    "headlineAccent": "road.",
+    "sub": "On Mento, people in a hard stretch talk privately with someone who has already walked it.",
+    "row1Title": "What mentoring is",
+    "row1Body": "You listen, and share what helped you on the same road.",
+    "row2Title": "The time it takes",
+    "row2Body": "A few hours a week, when it suits you. You reply when you are free.",
+    "row3Title": "Voluntary and unpaid",
+    "row3Body": "Nobody is paid to mentor here. You give the time you can.",
+    "peers": "Mentors are peers, not therapists.",
+    "note": "For people 18 and older. No app needed to apply.",
+    "cta": "Apply to mentor",
+    "ageHeadline": "First, a quick ",
+    "ageHeadlineAccent": "check.",
+    "ageSub": "Mento is for people 18 and older. Pick your date of birth.",
+    "doneChip": "Sent",
+    "doneHeadline": "Thank you. Your application is with the ",
+    "doneHeadlineAccent": "Mento team.",
+    "doneBody": "Reviewed by the Mento team, usually within a few days. If you left an email, that is where the answer will come."
   }
 }
