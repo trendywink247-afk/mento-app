@@ -25,6 +25,8 @@ import { font } from '@/theme/tokens';
 export type KitThread = {
   /** The mentor's latest message — the one that carries the save key. */
   lastTheirsId: string | null;
+  /** …or the one the options sheet's "Save to Journal" opened. */
+  openSaveId: string | null;
   /** Every message of this thread that is in Mentor Notes. */
   savedIds: ReadonlySet<string>;
   /** …and the ones kept during this visit (their chip settles in). */
@@ -36,6 +38,7 @@ export type KitThread = {
 
 export const KitThreadContext = createContext<KitThread>({
   lastTheirsId: null,
+  openSaveId: null,
   savedIds: new Set(),
   savedNow: new Set(),
   run: null,
@@ -49,10 +52,15 @@ export function KitMessageFooter() {
   const { isMyMessage, showMessageStatus, readBy, message } = useMessageContext();
 
   if (!isMyMessage) {
-    if (message.id !== thread.lastTheirsId || thread.savedIds.has(message.id) || !message.text) return null;
+    const open = message.id === thread.lastTheirsId || message.id === thread.openSaveId;
+    if (!open || thread.savedIds.has(message.id) || !message.text) return null;
     return (
       <View style={styles.save}>
-        <SaveKey onPress={() => thread.onSave(message)} nudge testID={`save-card-${message.id}`} />
+        <SaveKey
+          onPress={() => thread.onSave(message)}
+          nudge={message.id === thread.lastTheirsId}
+          testID={`save-card-${message.id}`}
+        />
       </View>
     );
   }

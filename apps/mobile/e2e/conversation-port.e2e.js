@@ -271,6 +271,63 @@ async function run(browser, reduced) {
     psql(`UPDATE conversations SET member_streak=0 WHERE id='${conversationId}';`);
   }
 
+  // ---------------------------------------------------------------- A20: the options sheet
+  await reopen(page);
+  await tid('open-options').click();
+  await tid('options-sheet').waitFor({ timeout: 15000 });
+  const sheet = (await tid('options-sheet').innerText()).replace(/\s+/g, ' ');
+  for (const words of [
+    'Conversation options',
+    'Lock with a PIN',
+    'Away Mask',
+    'Quiet Pause',
+    'Save to Journal',
+    'Report or block',
+    'END CONVERSATION · TWO WAYS',
+    'The chat closes. Your saved notes stay.',
+    'End and wipe',
+    'Deleted from your device and from our servers.',
+  ]) {
+    if (!sheet.toLowerCase().includes(words.toLowerCase())) throw new Error(`[${label}] options sheet is missing "${words}": ${sheet}`);
+  }
+  if (/coffee|support the|contribut|₹|donat/i.test(sheet) || (await tid('opt-coffee').count())) {
+    throw new Error(`[${label}] money inside a conversation: ${sheet}`);
+  }
+  if ((await tid('opt-end').count()) !== 1 || (await tid('opt-end-wipe').count()) !== 1) throw new Error(`[${label}] the two End keys are not both on the sheet`);
+  for (const sw of ['opt-status', 'opt-pause']) {
+    if ((await tid(sw).getAttribute('role')) !== 'switch') throw new Error(`[${label}] ${sw} is not a switch`);
+    if ((await tid(sw).getAttribute('aria-checked')) !== 'false') throw new Error(`[${label}] ${sw} should start off`);
+  }
+  // Depth: the chat behind has settled back (scaled) — or, reduced, has not moved at all.
+  await page.waitForTimeout(900);
+  const backScale = await page.evaluate(() => {
+    const card = document.querySelector('[data-testid="chat-header-card"]');
+    let scale = 1;
+    for (let n = card; n && n instanceof Element; n = n.parentElement) {
+      const tf = getComputedStyle(n).transform;
+      if (tf && tf !== 'none') scale *= Number(tf.split('(')[1].split(',')[0]);
+    }
+    return Math.round(scale * 1000) / 1000;
+  });
+  if (reduced ? backScale !== 1 : Math.abs(backScale - 0.96) > 0.005) throw new Error(`[${label}] chat behind the sheet is at scale ${backScale}`);
+  // Quiet Pause is a real switch: on through its plain-words flow, off with one tap.
+  await tid('opt-pause').click();
+  await tid('opt-confirm').click();
+  await tid('opt-modal-done').click();
+  await tid('options-sheet').waitFor({ timeout: 15000 });
+  await page.waitForFunction(() => document.querySelector('[data-testid="opt-pause"]')?.getAttribute('aria-checked') === 'true', null, { timeout: 15000 });
+  await tid('opt-pause').click();
+  await page.waitForFunction(() => document.querySelector('[data-testid="opt-pause"]')?.getAttribute('aria-checked') === 'false', null, { timeout: 15000 });
+  // End and wipe opens its honest confirmation; Cancel returns to the sheet.
+  await tid('opt-end-wipe').click();
+  await page.waitForSelector('text=Yes, wipe it clean', { timeout: 15000 });
+  await tid('opt-cancel').click();
+  await tid('options-sheet').waitFor({ timeout: 15000 });
+  // The scrim closes it, and the sheet really goes away.
+  await tid('options-backdrop').click({ position: { x: 20, y: 20 } });
+  await page.waitForSelector('[data-testid="options-sheet"]', { state: 'detached', timeout: 15000 });
+  console.log(`[${label}] OK A20 sheet: rows as drawn, no money row, both End keys, switches, chat behind at ${backScale}`);
+
   // The kind key goes to the Journal — on the tabs that are already there. (The in-flight
   // crisis payload is not in Stream's history, so a fresh load is an ordinary held chat.)
   try {

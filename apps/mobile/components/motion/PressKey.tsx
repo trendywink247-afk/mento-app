@@ -125,6 +125,11 @@ export function PressKey({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ ...accessibilityState, disabled }}
+      // react-native-web does not read `accessibilityState`; a switch / radio key needs the
+      // aria-* twin or a screen reader (and a spec) cannot tell whether it is on.
+      aria-checked={accessibilityState?.checked}
+      aria-selected={accessibilityState?.selected}
+      aria-expanded={accessibilityState?.expanded}
       testID={testID}
       style={[{ paddingBottom: travel }, containerStyle]}
     >

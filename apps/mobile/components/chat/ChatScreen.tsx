@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps } from 'react';
 import type { Channel as ChannelType, Event } from 'stream-chat';
@@ -23,6 +24,7 @@ import { KitMessageFooter, KitThreadContext, type KitThread } from '@/components
 import { KitSavedHeader } from '@/components/chat/KitSavedHeader';
 import { KitTyping } from '@/components/chat/KitTyping';
 import { MessageText, OwnBubbleToneContext } from '@/components/chat/MessageText';
+import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
@@ -115,6 +117,10 @@ export default function ChatScreen() {
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // The options sheet rises over a chat that settles back (board A20) — one shared value.
+  const depth = useSheetDepth(optionsOpen);
+  // "Save to Journal" on that sheet: the save key opens on this mentor message.
+  const [openSaveId, setOpenSaveId] = useState<string | null>(null);
   // Set right before pendingOption.take() opens the sheet with the Report flow
   // pre-selected (the mentor-profile screen's "Report or block" hand-off) — cleared
   // on close so a later, ordinary open of the sheet starts fresh.
@@ -397,22 +403,29 @@ export default function ChatScreen() {
   const thread = useMemo<KitThread>(
     () => ({
       lastTheirsId,
+      openSaveId,
       savedIds: new Set([...savedMessageIds, ...savedNow]),
       savedNow,
       run: note === 'in_a_row' && allowance ? allowance.in_a_row : null,
       onSave: saveNote,
     }),
-    [lastTheirsId, savedMessageIds, savedNow, note, allowance, saveNote],
+    [lastTheirsId, openSaveId, savedMessageIds, savedNow, note, allowance, saveNote],
   );
   const clearHeldDraft = useCallback(() => setHeldDraft(null), []);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: depth.shown ? colors.dotIdle : colors.bg }]}
+      edges={['top', 'bottom']}
+    >
       <CompanionPerches placement={perch}>
       <ComposerPerchContext.Provider value={note ? null : COMPOSER_PERCH}>
       <ComposerChromeContext.Provider value={chrome}>
       <KitThreadContext.Provider value={thread}>
       <OwnBubbleToneContext.Provider value="accent">
+      <Animated.View
+        style={[styles.back, { backgroundColor: colors.bg }, depth.shown && styles.backSettled, depth.backStyle]}
+      >
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the web chat. */}
       <ChatHeaderCard
         name={headerName}
@@ -473,9 +486,19 @@ export default function ChatScreen() {
         </View>
       )}
 
+      </Animated.View>
       <ConversationOptions
         conversationId={conversationId}
         visible={optionsOpen}
+        depth={depth}
+        onSaveToJournal={() => {
+          // Open the save key on the mentor's most recent message that is not kept yet.
+          const me = getStreamClient().userID;
+          const target = [...(channel?.state.messages ?? [])]
+            .reverse()
+            .find((m) => m.user?.id !== me && !!m.text && !thread.savedIds.has(m.id));
+          setOpenSaveId(target?.id ?? null);
+        }}
         onClose={() => {
           setOptionsOpen(false);
           setPendingInitial(undefined);
@@ -495,5 +518,8 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  back: { flex: 1 },
+  // Under the sheet the chat is a card on a darker ground: rounded, clipped.
+  backSettled: { borderRadius: radius.lg, overflow: 'hidden' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
 });

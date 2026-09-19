@@ -10,6 +10,7 @@ import {
   type NativeSyntheticEvent,
   type TextInputKeyPressEventData,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 
@@ -28,6 +29,7 @@ import { ThreadRow, type ThreadMsg } from '@/components/chat/ThreadRow';
 import { TypingDots } from '@/components/chat/TypingDots';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { SceneTile } from '@/components/art/SceneTile';
+import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
@@ -41,7 +43,7 @@ import { CRISIS_EXEMPT_MS, noteFor, useAllowance, type HeldAllowance } from '@/l
 import { useChatHeader } from '@/lib/useChatHeader';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, space, type } from '@/theme/tokens';
+import { font, radius, space, type } from '@/theme/tokens';
 
 /**
  * WEB chat (best-effort surface). Uses the stream-chat JS client directly with a custom
@@ -204,6 +206,8 @@ export default function ChatScreenWeb() {
   const { refreshSaved, savedMessageIds } = header;
   const headerName = listener ?? header.profile?.persona_name ?? listenerName;
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // The options sheet rises over a chat that settles back (board A20) — one shared value.
+  const depth = useSheetDepth(optionsOpen);
   // Set right before pendingOption.take() opens the sheet with the Report flow
   // pre-selected (the mentor-profile screen's "Report or block" hand-off) — cleared
   // on close so a later, ordinary open of the sheet starts fresh.
@@ -464,8 +468,14 @@ export default function ChatScreenWeb() {
   }, [allowance, note, exempt, leadName, router, t]);
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: depth.shown ? colors.dotIdle : colors.bg }]}
+      edges={['top', 'bottom']}
+    >
       <CompanionPerches placement={perch}>
+      <Animated.View
+        style={[styles.back, { backgroundColor: colors.bg }, depth.shown && styles.backSettled, depth.backStyle]}
+      >
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the native chat. */}
       <ChatHeaderCard
         name={headerName}
@@ -579,9 +589,18 @@ export default function ChatScreenWeb() {
         </View>
       )}
 
+      </Animated.View>
       <ConversationOptions
         conversationId={conversationId}
         visible={optionsOpen}
+        depth={depth}
+        onSaveToJournal={() => {
+          // Open the save key on the mentor's most recent message that is not kept yet.
+          const target = [...messages]
+            .reverse()
+            .find((m) => !m.mine && !saved.has(m.id) && !savedMessageIds.has(m.id));
+          if (target) setActionsFor(target.id);
+        }}
         onClose={() => {
           setOptionsOpen(false);
           setPendingInitial(undefined);
@@ -597,6 +616,9 @@ export default function ChatScreenWeb() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  back: { flex: 1 },
+  // Under the sheet the chat is a card on a darker ground: rounded, clipped.
+  backSettled: { borderRadius: radius.lg, overflow: 'hidden' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
   // Board: 12 / 16 / 8, rows 10 apart, resting on the composer. The extra bottom room keeps
   // the last bubble clear of the companion on the footer's edge.
