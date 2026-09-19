@@ -21,6 +21,49 @@ async function run(browser, reduced) {
 
   await page.goto(WEB, { waitUntil: 'networkidle', timeout: 180000 });
   await tid('start').click();
+  // The fork arrives as ONE sequence: the footer line is the LAST Entrance item, so on the
+  // frame it first exists it must not be ahead of the headline (it used to sit outside the
+  // stagger, at full strength before anything else had faded in).
+  const arrival = await page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        // Opacity BELOW the two nodes' common ancestor — the step's own layer fade (shared by
+        // both) is excluded, so this reads each item's place in the Entrance sequence only.
+        const eff = (el, stop) => {
+          let o = 1;
+          for (let n = el; n && n !== stop; n = n.parentElement) o *= Number(getComputedStyle(n).opacity);
+          return o;
+        };
+        const t0 = performance.now();
+        const tick = () => {
+          const footer = document.querySelector('[data-testid="role-footer"]');
+          const headline = document.querySelector('[role="heading"]');
+          if (footer && headline) {
+            let common = footer.parentElement;
+            while (common && !common.contains(headline)) common = common.parentElement;
+            return resolve({ footer: eff(footer, common), headline: eff(headline, common) });
+          }
+          if (performance.now() - t0 > 60000) return reject(new Error('role fork never mounted'));
+          requestAnimationFrame(tick);
+        };
+        tick();
+      })
+  );
+  if (arrival.footer > arrival.headline + 0.01) {
+    throw new Error(`role footer (${arrival.footer}) arrived ahead of the headline (${arrival.headline})`);
+  }
+  if (!reduced && arrival.footer > 0.5) {
+    throw new Error(`role footer is outside the entrance sequence: opacity ${arrival.footer} on its first frame`);
+  }
+  await page.waitForFunction(() => {
+    let o = 1;
+    for (let n = document.querySelector('[data-testid="role-footer"]'); n && n.nodeType === 1; n = n.parentElement)
+      o *= Number(getComputedStyle(n).opacity);
+    return o > 0.99;
+  }, null, { timeout: 15000 });
+  console.log(
+    `${label}: OK role fork arrives as one sequence (first frame: headline ${arrival.headline.toFixed(2)}, footer ${arrival.footer.toFixed(2)}; footer settles at 1)`
+  );
   await tid('role-listen').waitFor({ timeout: 60000 });
   await tid('role-listen').click();
   await page.waitForSelector('text=How old are you?', { timeout: 30000 });

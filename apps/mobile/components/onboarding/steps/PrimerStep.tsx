@@ -24,6 +24,7 @@ export function PrimerStep({ onNext }: { onNext: () => void }) {
 
   return (
     <StepScaffold
+      footerIndex={1 + LINES.length}
       footer={
         <PrimaryButton
           label={t('onboarding.primer.cta')}

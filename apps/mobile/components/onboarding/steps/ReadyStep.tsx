@@ -39,6 +39,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
 
   return (
     <StepScaffold
+      footerIndex={4}
       footer={
         <>
           <PrimaryButton

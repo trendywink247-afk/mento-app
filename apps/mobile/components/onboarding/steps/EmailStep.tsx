@@ -34,6 +34,7 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
 
   return (
     <StepScaffold
+      footerIndex={4}
       footer={
         <>
           <PrimaryButton

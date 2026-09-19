@@ -104,6 +104,7 @@ export function CompanionStep({
 
   return (
     <StepScaffold
+      footerIndex={4}
       footer={
         <>
           <PrimaryButton
