@@ -14,12 +14,13 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import case, func, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.config import get_settings
 from app.db import get_db
+from app.errors import ApiProblem
 from app.models.conversation import Conversation
 from app.models.enums import (
     ConversationEndedBy,
@@ -50,6 +51,7 @@ from app.schemas import (
     PushTokenDeleteIn,
     PushTokenIn,
     RequestOut,
+    SnoozeOut,
 )
 from app.security import current_listener_id, issue_listener_token
 from app.services import (
@@ -61,6 +63,7 @@ from app.services import (
     paths,
     push,
     push_tasks,
+    snooze,
     stream,
 )
 from app.services.matching import (
@@ -257,12 +260,25 @@ def my_conversations(
     """Active first, newest within each group — ordered IN SQL, so the page limit can
     never cut an old conversation that is still active (a Python sort after a
     newest-first LIMIT would)."""
+    now = datetime.now(UTC)
     rows = db.execute(
         select(Conversation, User)
         .join(User, User.id == Conversation.user_id)
         .where(Conversation.listener_id == listener.id)
         .order_by(
-            case((Conversation.status == ConversationStatus.active, 0), else_=1),
+            # Active and awake first, then active but snoozed (board A10), then ended.
+            case(
+                (
+                    and_(
+                        Conversation.status == ConversationStatus.active,
+                        Conversation.snoozed_until.is_not(None),
+                        Conversation.snoozed_until > now,
+                    ),
+                    1,
+                ),
+                (Conversation.status == ConversationStatus.active, 0),
+                else_=2,
+            ),
             Conversation.created_at.desc(),
         )
         .limit(limit)
@@ -280,6 +296,7 @@ def my_conversations(
             created_at=convo.created_at.isoformat(),
             ended_at=convo.ended_at.isoformat() if convo.ended_at else None,
             in_touch=user.id in linked,
+            snoozed_until=snooze.snoozed_until_iso(convo, now),
         )
         for convo, user in rows
     ]
@@ -452,6 +469,54 @@ def end_conversation(
     conversations.end(db, convo, ConversationEndedBy.listener)
     db.commit()
     return OkResult(status="ended")
+
+
+def _snooze_target(db: Session, convo_id: str, listener: ListenerProfile) -> Conversation:
+    """Row-locked, this mentor's own, ACTIVE conversation — or an opaque 404 (someone
+    else's) / 409 `not_active` (ended or wiped: nothing to snooze)."""
+    ratelimit.enforce(
+        f"listener-snooze:{listener.id}",
+        30,
+        3600,
+        detail="Too many snooze changes — try again in a little while.",
+    )
+    convo = conversations.lock(db, convo_id)
+    if convo is None or convo.listener_id != listener.id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
+    if convo.status != ConversationStatus.active:
+        raise ApiProblem(
+            status.HTTP_409_CONFLICT, "not_active", "This conversation has already ended."
+        )
+    return convo
+
+
+@router.post("/me/conversations/{convo_id}/snooze", response_model=SnoozeOut)
+def snooze_conversation(
+    convo_id: str,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> SnoozeOut:
+    """Board A10 "Snooze 24 h" — the mentor's "I can't reply today" for one chat. No
+    pushes for it and no stale sweep while it lasts; a crisis-flagged member message
+    or the mentor's own reply ends it (services/snooze.py). Idempotent: snoozing again
+    never extends the window."""
+    convo = _snooze_target(db, convo_id, listener)
+    until = snooze.snooze(convo)
+    db.commit()
+    return SnoozeOut(id=convo_id, snoozed_until=until.isoformat())
+
+
+@router.delete("/me/conversations/{convo_id}/snooze", response_model=SnoozeOut)
+def wake_conversation(
+    convo_id: str,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> SnoozeOut:
+    """Undo a snooze. Idempotent."""
+    convo = _snooze_target(db, convo_id, listener)
+    snooze.wake(convo)
+    db.commit()
+    return SnoozeOut(id=convo_id, snoozed_until=None)
 
 
 @router.delete("/me/push-token", response_model=OkResult)

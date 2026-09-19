@@ -100,6 +100,10 @@ class Settings(BaseSettings):
     # reconcile action ends them and frees the listener's slot.
     conversation_max_age_hours: int = 24
 
+    # Snooze (DECISIONS §L, founder 2026-09-19): how long a mentor's "Snooze 24 h"
+    # quiets one waiting conversation.
+    snooze_hours: int = 24
+
     # Public web origins (spec 2026-09-19 unified-domains §3.3). app = the one web
     # app (member + mentor sides, /apply, sign-in links); admin = the staff
     # dashboard's own origin. Links the API mints are built from these — see

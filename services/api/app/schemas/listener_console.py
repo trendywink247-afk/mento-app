@@ -72,6 +72,16 @@ class ListenerConversationItem(BaseModel):
     ended_at: str | None
     # This member and the mentor are in touch (a per-row flag — never a roster/count).
     in_touch: bool = False
+    # Snooze 24 h (board A10): when the snooze ends (ISO UTC) while it is open; null
+    # otherwise. Snoozed rows sort after the un-snoozed active ones.
+    snoozed_until: str | None = None
+
+
+class SnoozeOut(BaseModel):
+    """POST / DELETE /listener/me/conversations/{id}/snooze."""
+
+    id: str
+    snoozed_until: str | None
 
 
 class MemberBriefOut(BaseModel):

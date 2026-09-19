@@ -22,6 +22,10 @@ class ListenerApplication(UUIDMixin, TimestampMixin, Base):
     # Path lenses the applicant has walked (upsc/neet/jee/exams/life).
     communities: Mapped[list[str]] = mapped_column(JSON, default=list)
     availability: Mapped[str] = mapped_column(String(32))
+    # Times of day the applicant is usually free (board A37 chips; DECISIONS §L,
+    # founder-delegated 2026-09-19) — additive beside the single-choice commitment
+    # above. NULL for rows from builds that never sent it.
+    available_times: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     # Optional; stored for the day we can send the console link by email.
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Module B staging: interest flag only, nothing else of Module B ships.

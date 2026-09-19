@@ -46,6 +46,10 @@ class ConversationListItem(BaseModel):
     # name at the start of this chat, set only when it differs from the one shown.
     in_touch: bool = False
     first_met_as: str | None = None
+    # True while the mentor has snoozed this ACTIVE chat (board A10). The member is
+    # only ever told the kind half of it — "<mentor> will reply within a day" — never
+    # that it was snoozed.
+    reply_within_a_day: bool = False
 
 
 class VerifyPinRequest(BaseModel):

@@ -44,6 +44,7 @@ from app.services import (
     in_touch,
     listener_profiles,
     mentor_names,
+    snooze,
     stream,
 )
 
@@ -167,6 +168,7 @@ def list_conversations(
             issue_category_label=categories.label(c.issue_category),
             in_touch=c.listener_id in links,
             first_met_as=first_met(c),
+            reply_within_a_day=snooze.is_snoozed(c),
         )
         for c in convos
     ]
@@ -207,6 +209,7 @@ def conversation_mentor(
         issue_category=convo.issue_category,
         issue_category_label=categories.label(convo.issue_category),
         stay_in_touch=in_touch.standing(db, user_id, listener, convo),
+        reply_within_a_day=snooze.is_snoozed(convo),
     )
 
 

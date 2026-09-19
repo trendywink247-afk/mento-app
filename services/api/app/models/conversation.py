@@ -44,6 +44,13 @@ class Conversation(UUIDMixin, TimestampMixin, Base):
     # (services/allowance.py). A number, never content.
     member_streak: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
+    # Snooze 24 h (DECISIONS §L, founder 2026-09-19): the mentor's "I can't reply
+    # today". While in the future: the chat sorts after un-snoozed ones in the
+    # console, the mentor gets no message pushes for it, and the stale sweep leaves
+    # it alone. A crisis-flagged member message, or the mentor's own reply, ends it
+    # (services/snooze.py). Never hides a crisis.
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Who ended it: member (end/wipe/report/block), listener (mentor console End),

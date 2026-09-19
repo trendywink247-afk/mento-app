@@ -59,6 +59,8 @@ class ConversationMentorOut(ListenerProfileOut):
     # The member's stay-in-touch standing with this mentor (same payload as
     # GET /conversations/{id}/stay-in-touch) — one call draws the whole profile.
     stay_in_touch: StayInTouchOut | None = None
+    # Same as ConversationListItem.reply_within_a_day — the chat header's kind line.
+    reply_within_a_day: bool = False
 
 
 class PersonalRequestIn(BaseModel):
