@@ -5,6 +5,7 @@ import {
   Baloo2_700Bold,
   Baloo2_800ExtraBold,
 } from '@expo-google-fonts/baloo-2';
+import { Ionicons } from '@expo/vector-icons';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -34,9 +35,12 @@ export default function RootLayout() {
     Baloo2_600SemiBold,
     Baloo2_700Bold,
     Baloo2_800ExtraBold,
+    // The one icon family the app uses. Without it in this gate the tab bar (and every
+    // icon key) painted first and its glyphs popped in a beat later — empty boxes on web.
+    ...Ionicons.font,
   });
-  // Fonts are bundled locally (expo-google-fonts), so this resolves in a frame or two;
-  // the Expo splash stays up meanwhile — no flash of fallback type.
+  // Fonts are bundled locally (expo-google-fonts, vector-icons), so this resolves in a frame
+  // or two; the Expo splash stays up meanwhile — no flash of fallback type or missing icons.
   if (!fontsLoaded) return null;
 
   return (
