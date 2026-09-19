@@ -9,3 +9,9 @@ target-version = "py312"
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
 ignore = ["E501"]  # black owns line length
+
+[tool.ruff.lint.per-file-ignores]
+# Shipped migrations are never edited (CLAUDE.md) — these two predate the lint job
+# noticing them; silence here instead of rewriting history.
+"migrations/versions/1170df9bb61d_push_token_unique_per_role.py" = ["I001", "UP035", "UP007", "F401"]
+"migrations/versions/61e06b08d4df_chat_profiles_public_line_availability_.py" = ["I001", "UP035", "UP007"]

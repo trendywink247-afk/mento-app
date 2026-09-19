@@ -97,7 +97,9 @@ def test_seasonal_cards_never_overlap():
     for slug, community in COMMUNITIES.items():
         cards = sorted(community.get("seasonal", []), key=lambda c: c["from"])
         for earlier, later in zip(cards, cards[1:]):
-            assert earlier["to"] < later["from"], f"{slug}: {earlier['title']} overlaps {later['title']}"
+            assert (
+                earlier["to"] < later["from"]
+            ), f"{slug}: {earlier['title']} overlaps {later['title']}"
 
 
 def test_tree_endpoint_shape(client):
