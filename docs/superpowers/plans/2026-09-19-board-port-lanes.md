@@ -37,3 +37,10 @@ Each agent commits ONE SCREEN PER COMMIT, proven (tsc + the specs that touch it,
 7. Write the unit into `PROGRESS.md` (top entry), commit, push.
 
 Production SSH and deploys were approved by the founder on 2026-09-19 for this work; a new session should confirm before its first production action.
+
+## After lanes u6–u8 land (founder, 2026-09-19): re-arrange the design board to match the app
+"Once everything is done, rearrange the board how it is wired right now, and what's left to build or navigate."
+1. Capture every screen of the SHIPPED app (web build, 390×844) with a Playwright walker in the style of the session-35 app-map capture (`scratchpad/appmap/capture.js` — recreate it if the scratchpad is gone): member first run, the unified mentor path (each state), inside a conversation, the four tabs and what is behind them, the mentor side, sheets.
+2. Re-lay the board (https://claude.ai/artifact/SWQyjqF1e5nBwDuCWZcjyr) in the ACTUAL navigation order, one row per flow, each app screenshot beside its board artboard, with arrows/labels for how you get from one to the next (the real routes, incl. the unified mentor loop and "I'd rather talk today").
+3. A clear "Left to build or wire" row: board artboards with no app screen yet, screens that differ from the board (from each lane's "differs" list), dead ends or doors that lead nowhere, and open founder decisions — each as a card.
+Publish rules: read the live index first, change only our keys, batch the publish (see memory note `final-design-board`).
