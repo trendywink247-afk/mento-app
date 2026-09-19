@@ -9,7 +9,7 @@
  * 0 page errors in both.
  */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const NEW_ANIMALS = ['dog', 'cat', 'capybara'];
 
 async function assertNoAnonymous(page, where) {

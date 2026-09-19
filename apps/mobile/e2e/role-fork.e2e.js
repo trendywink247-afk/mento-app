@@ -3,7 +3,7 @@
  * Chats. Then a fresh page with the same stored session must land on Mentor Home
  * straight from `/`. Runs once normally and once under reducedMotion: 'reduce'. */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 
 /** What the SERVER holds for this session (GET /me) — read from Node, not the page. */

@@ -17,8 +17,8 @@
  */
 const { chromium } = require('playwright');
 
-const WEB = 'http://localhost:8081';
-const API = 'http://localhost:8000/api/v1';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
+const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 const ADMIN = process.env.MENTO_ADMIN_TOKEN;
 const MENTOR_MSG = 'I am here. Tell me about the nights.';
 

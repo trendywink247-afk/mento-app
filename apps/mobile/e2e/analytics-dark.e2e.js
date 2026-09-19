@@ -3,7 +3,7 @@
  * PostHog host. Flow coverage (incl. reduced motion) lives in
  * connecting-experience.e2e.js — this script asserts the network stays dark. */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const errors = [];

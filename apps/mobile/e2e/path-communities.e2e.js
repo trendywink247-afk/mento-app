@@ -7,7 +7,7 @@
  */
 const { chromium } = require('playwright');
 
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 async function onboard(page) {
   const tid = (id) => page.locator(`[data-testid="${id}"]`);

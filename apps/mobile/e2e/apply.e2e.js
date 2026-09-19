@@ -3,8 +3,8 @@
  * mints a throwaway anonymous member (onboarding/start) → application form → submit.
  * Optional: set MENTO_ADMIN_TOKEN to also drive the admin queue leg. */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
-const API = 'http://localhost:8000/api/v1';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
+const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 
 const fill = async (tid, dob, page) => {
   await page.locator('select[aria-label="Year of birth"]').selectOption(String(dob));

@@ -7,7 +7,7 @@
  * then run:  $env:ADMIN_TOKEN="<jwt>"; node e2e/admin-dashboard.e2e.js
  */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const TOKEN = process.env.ADMIN_TOKEN;
 const TABS = ['overview', 'safety', 'moderation', 'listeners', 'contributions', 'health', 'admins'];
 

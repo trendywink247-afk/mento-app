@@ -19,12 +19,12 @@
  */
 const { execSync } = require('child_process');
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 const KEPT = 'Freezing does not erase three years of work.';
 
 function psql(sql) {
-  return execSync(`docker exec mento-postgres psql -U mento -d mento -t -A -c "${sql}"`, { encoding: 'utf8' }).trim();
+  return execSync(`docker exec mento-postgres psql -U mento -d ${process.env.MENTO_DB || 'mento'} -t -A -c "${sql}"`, { encoding: 'utf8' }).trim();
 }
 
 /** Persona names are seeded, fixed strings — still, only ever interpolate a safe one. */

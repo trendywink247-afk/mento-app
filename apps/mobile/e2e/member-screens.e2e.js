@@ -8,7 +8,7 @@
  * under reducedMotion (must stay static AND complete).
  */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 async function onboard(page, tid) {
   await page.goto(WEB, { waitUntil: 'networkidle', timeout: 180000 });

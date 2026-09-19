@@ -10,16 +10,16 @@
  */
 const { execSync } = require('child_process');
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 /** ConnectingStep: MAX_RETRIES (3) × RETRY_DELAY_MS (8000) + request time. */
 const ERROR_STATE_TIMEOUT_MS = 60000;
 
 function sql(statement) {
-  execSync(`docker exec mento-postgres psql -U mento -d mento -c "${statement}"`, { stdio: 'pipe' });
+  execSync(`docker exec mento-postgres psql -U mento -d ${process.env.MENTO_DB || 'mento'} -c "${statement}"`, { stdio: 'pipe' });
 }
 function resetRateLimits() {
-  execSync('docker exec mento-redis redis-cli FLUSHDB', { stdio: 'pipe' });
+  execSync(`docker exec mento-redis redis-cli -n ${process.env.MENTO_REDIS_DB || '0'} FLUSHDB`, { stdio: 'pipe' });
 }
 
 async function driveToReady(page, tid) {

@@ -2,7 +2,7 @@
  * Also guards the WS-1b polish: the "found your listener" beat must read as one
  * deliberate moment (>= MIN_FOUND_DWELL_MS on screen), never a sub-second flash. */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 /** The found-persona card must hold at least this long before we navigate to chat.
  * ConnectingStep FOUND_CRESCENDO (1100) + OnboardingJourney FOUND_BEAT (1000) ≈ 2.1s;

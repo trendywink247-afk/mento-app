@@ -7,7 +7,7 @@
  *  - press-and-hold keeps stepping (a birth year is many steps away)
  * Once normally, once under reducedMotion: 'reduce'. 0 page errors. */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 async function run(browser, reduced) {
   const label = reduced ? 'reduced-motion' : 'normal';

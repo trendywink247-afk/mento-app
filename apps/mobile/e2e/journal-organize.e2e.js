@@ -4,7 +4,7 @@
  * friendly "not switched on yet" notice — asserted here. Normal + reduced-motion.
  */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 async function onboard(page, tid) {
   await page.goto(WEB, { waitUntil: 'networkidle', timeout: 180000 });
