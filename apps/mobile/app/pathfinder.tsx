@@ -194,7 +194,9 @@ export default function Pathfinder() {
     }
   };
 
-  const question = tree?.nodes[tree.root]?.question ?? '';
+  // The board's own headline (A26). The server tree's root question ("What brings you here
+  // these days?") still leads the onboarding-side walk; this page asks it the board's way.
+  const question = tree ? t('pathfinder.headline') : '';
   const disc = (i: number) => DISC[i % DISC.length];
 
   const renderRoute = (r: RouteRow, i: number) => {
@@ -208,7 +210,10 @@ export default function Pathfinder() {
           ? t('pathfinder.routeLife')
           : communityLabel(tree, r.community)
         : r.kind === 'branch'
-          ? r.option.label
+          ? // reason: the board's wording for the exam route; any other branch keeps the tree's label
+            r.next === 'q_exam'
+            ? t('pathfinder.routeExam')
+            : r.option.label
           : t('pathfinder.routeUnsure');
     const sub =
       r.kind === 'group'
@@ -467,7 +472,8 @@ function tree_find(tree: PathTree, nodeId: string, want: (o: PathOption) => bool
 }
 
 const GUTTER = space.md + space.xs; // 20 — the board's side margin on deeper pages
-const FOOTER_FADE = 150;
+// Tall enough to sit under the whole footer when the note wraps to two lines (Hindi at 360).
+const FOOTER_FADE = 190;
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },

@@ -822,7 +822,9 @@
     "unsureBody": "Say what's on your mind in your own words. A mentor will help you find the question. Mentors are peers, not therapists.",
     "onlyTunes": "This only tunes who you meet. You can clear it anytime.",
     "notNow": "Not now",
-    "use": "Use this path"
+    "use": "Use this path",
+    "headline": "What's on your mind lately?",
+    "routeExam": "An exam I'm preparing for"
   },
   "journalPage": {
     "backA11y": "Back to your Journal",

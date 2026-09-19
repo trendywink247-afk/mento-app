@@ -43,7 +43,7 @@ async function onboard(page) {
   await page.goto(`${WEB}/path`, { waitUntil: 'networkidle', timeout: 60000 });
   await page.waitForSelector('text=Every road feels lighter', { timeout: 30000 });
   await page.locator('[data-testid="path-start"]').click();
-  await page.waitForSelector('text=What brings you here these days?', { timeout: 30000 });
+  await page.waitForSelector("text=What's on your mind lately?", { timeout: 30000 });
   console.log('OK pathfinder root question');
 
   // Board A26: one page — route row → segment → moment → "Use this path". Every label is
@@ -53,7 +53,7 @@ async function onboard(page) {
     console.error('FAIL "Use this path" must wait for a choice');
     process.exit(1);
   }
-  await page.locator("text=I'm preparing for an exam").click();
+  await page.locator("text=An exam I'm preparing for").click();
   await page.waitForSelector('text=Which road are you on?', { timeout: 30000 });
   await page.locator('[data-testid="pathfinder-seg-0"]', { hasText: 'UPSC' }).click();
   await page.waitForSelector('text=Where are you on the road?', { timeout: 30000 });
@@ -93,7 +93,7 @@ async function onboard(page) {
   // ---------- Change path → life ----------
   await page.goto(`${WEB}/path`, { waitUntil: 'networkidle', timeout: 60000 });
   await page.locator('[data-testid="path-change"]').click();
-  await page.waitForSelector('text=What brings you here these days?', { timeout: 30000 });
+  await page.waitForSelector("text=What's on your mind lately?", { timeout: 30000 });
   // "Change" opens on the path the member already has: its moments are showing and the key
   // is live before anything is tapped.
   await page.locator('[data-testid="pathfinder-moment-upsc-prelims_wait"]').waitFor({ timeout: 30000 });
@@ -119,7 +119,7 @@ async function onboard(page) {
   await onboard(rm);
   await rm.goto(`${WEB}/path`, { waitUntil: 'networkidle', timeout: 60000 });
   await rm.locator('[data-testid="path-start"]').click();
-  await rm.waitForSelector('text=What brings you here these days?', { timeout: 30000 });
+  await rm.waitForSelector("text=What's on your mind lately?", { timeout: 30000 });
   await rm.locator('[data-testid="pathfinder-route-life"]').click();
   await rm.locator('text=I just want someone to talk to').click();
   await rm.locator('[data-testid="pathfinder-use"]').click();

@@ -75,7 +75,7 @@ async function run(browser, reduced) {
 
   await page.goto(`${WEB}/path`, { waitUntil: 'networkidle', timeout: 60000 });
   await tid('path-start').click();
-  await page.locator("text=I'm preparing for an exam").click();
+  await page.locator("text=An exam I'm preparing for").click();
   await page.locator('[data-testid="pathfinder-seg-0"]', { hasText: 'UPSC' }).click();
   await page.locator('text=Waiting after prelims').click();
   await tid('pathfinder-use').click();
