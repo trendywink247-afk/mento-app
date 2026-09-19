@@ -13,14 +13,16 @@ import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius } from '@/theme/tokens';
 
-export function FeedbackPill({ testID }: { testID: string }) {
+/** `screen`: the ROUTE TEMPLATE to report (`request-sent/[id]`) when the path carries a real
+ * id — the feedback API refuses ids and the sheet promises nothing else is attached. */
+export function FeedbackPill({ testID, screen }: { testID: string; screen?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const { colors } = useTheme();
   const { t } = useI18n();
   return (
     <PressKey
-      onPress={() => router.push({ pathname: '/feedback', params: { from: pathname } })}
+      onPress={() => router.push({ pathname: '/feedback', params: { from: screen ?? pathname } })}
       edge={colors.edgeSurface}
       travel={3}
       radius={radius.pill}

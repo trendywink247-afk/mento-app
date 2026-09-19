@@ -8,8 +8,10 @@ import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { useTheme } from '@/theme/ThemeProvider';
 
-export function GroundFade({ height }: { height: number }) {
+/** `color`: the ground to dissolve into when the screen is not on `colors.bg` (A04's oat). */
+export function GroundFade({ height, color }: { height: number; color?: string }) {
   const { colors } = useTheme();
+  const ground = color ?? colors.bg;
   // reason: SVG gradient ids are document-global on web — mounted tabs must not share one.
   const id = `ground-fade-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
@@ -17,9 +19,9 @@ export function GroundFade({ height }: { height: number }) {
       <Svg width="100%" height={height} viewBox="0 0 100 100" preserveAspectRatio="none">
         <Defs>
           <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={colors.bg} stopOpacity={0} />
-            <Stop offset="0.22" stopColor={colors.bg} stopOpacity={0.95} />
-            <Stop offset="1" stopColor={colors.bg} stopOpacity={1} />
+            <Stop offset="0" stopColor={ground} stopOpacity={0} />
+            <Stop offset="0.22" stopColor={ground} stopOpacity={0.95} />
+            <Stop offset="1" stopColor={ground} stopOpacity={1} />
           </LinearGradient>
         </Defs>
         <Rect x="0" y="0" width="100" height="100" fill={`url(#${id})`} />

@@ -1250,5 +1250,29 @@
     "title": "Paid mentoring sessions",
     "soon": "Coming soon",
     "body": "We have not confirmed this yet. Nothing changes for you today."
+  },
+  "requestSent": {
+    "titleLead": "Your question is\non its ",
+    "titleAccent": "way",
+    "eyebrow": "Your question, to %{name}",
+    "sent": "Sent %{when} · private",
+    "stepSent": "Sent",
+    "stepSeen": "Seen",
+    "stepReplying": "Replying",
+    "stripA11ySent": "Step one of three. Sent is done. Seen and Replying come next.",
+    "stripA11ySeen": "Step two of three. Sent and Seen are done. Replying comes next.",
+    "oneAtATime": "One question goes to one mentor at a time. %{name} replies when they are free, and we will notify you.",
+    "accepted": "%{name} said yes. Your chat with them is open.",
+    "closed": "%{name} could not take this one. You can ask another mentor, or talk with whoever is free.",
+    "meanwhile": "Meanwhile",
+    "journal": "Write in your journal",
+    "prompt": "Read a warm-up prompt",
+    "goChats": "Go to My Chats",
+    "openChat": "Open the chat",
+    "companionA11y": "Your companion, sitting on the note it just sent",
+    "mentorA11y": "%{name}'s companion",
+    "postmarkA11y": "Sent through Mento",
+    "notFound": "We could not find this question. It may have been closed.",
+    "loadError": "We could not load your question just now. It is still on its way."
   }
 }
