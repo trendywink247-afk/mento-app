@@ -80,28 +80,35 @@ function mixPalette(from: Palette, to: Palette, t: number): Palette {
 // Frozen clock value (seconds) under reduced motion — an arbitrary pleasant pose.
 const FROZEN_T = 40;
 
+// One sky time for the whole app. Every canvas reads the SAME clock (ms since this module
+// loaded), so the sky a route mounts is at exactly the phase of the sky the last route was
+// showing — landing → journey no longer restarts the drift from zero.
+const SKY_EPOCH = Date.now();
+
 export function AuroraCanvas() {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const { width, height } = useWindowDimensions();
   const clock = useClock();
 
+  // `useClock` counts from this canvas's mount; the offset turns it into shared sky time.
+  const [mountOffset] = useState(() => Date.now() - SKY_EPOCH);
+
   // Focus pause: expo-router keeps the previous screen mounted underneath the next
-  // one, so two shader canvases would animate at once. Reuse the frozen-clock
-  // mechanism — while unfocused the shader time holds still, and the blurred span
-  // is subtracted on refocus so the sky resumes exactly where it paused (no jump).
+  // one, so two shader canvases would animate at once. While unfocused the shader time
+  // holds still (constant uniforms = no redraws). On refocus it rejoins the shared sky
+  // time — which is where the sky on the screen you just came back FROM had got to, so
+  // there is no jump in either direction.
   const isFocused = useIsFocused();
   const pausedAt = useSharedValue(-1); // clock ms when the screen blurred; -1 = running
-  const skipped = useSharedValue(0); // total ms spent blurred, excluded from shader time
 
   useEffect(() => {
     if (!isFocused) {
       if (pausedAt.value < 0) pausedAt.value = clock.value;
-    } else if (pausedAt.value >= 0) {
-      skipped.value += clock.value - pausedAt.value;
+    } else {
       pausedAt.value = -1;
     }
-  }, [isFocused, clock, pausedAt, skipped]);
+  }, [isFocused, clock, pausedAt]);
 
   const effect = useMemo(() => {
     const e = Skia.RuntimeEffect.Make(SKSL);
@@ -134,7 +141,7 @@ export function AuroraCanvas() {
   const { from, to } = palettes;
   const uniforms = useDerivedValue(() => {
     const clockMs = pausedAt.value >= 0 ? pausedAt.value : clock.value;
-    const t = reduced ? FROZEN_T : (clockMs - skipped.value) / 1000;
+    const t = reduced ? FROZEN_T : (clockMs + mountOffset) / 1000;
     const k = progress.value;
     const mix4 = (a: Rgba, b: Rgba) => [
       a[0] + (b[0] - a[0]) * k,
@@ -151,7 +158,7 @@ export function AuroraCanvas() {
       uB: mix4(from.b, to.b),
       uC: mix4(from.c, to.c),
     };
-  }, [reduced, width, height, from, to]);
+  }, [reduced, width, height, from, to, mountOffset]);
 
   return (
     <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
