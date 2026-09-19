@@ -82,6 +82,7 @@ from app.schemas.listener_console import (
     ListenerRequestItem,
     ListenerStatusIn,
     MemberBriefOut,
+    SnoozeOut,
 )
 from app.schemas.listeners import (
     ConversationMentorOut,
@@ -168,6 +169,7 @@ __all__ = [
     "ListenerReportIn",
     "ListenerRequestItem",
     "ListenerStatusIn",
+    "SnoozeOut",
     "LockRequest",
     "MatchRequest",
     "MatchResult",

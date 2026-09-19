@@ -14,9 +14,15 @@ import { colors as base, radius, space, type, wash, washEdge } from '@/theme/tok
 
 // Must match services/api/app/services/paths_data.py COMMUNITIES (server validates; drift = submit-time 422).
 const COMMUNITIES = ['upsc', 'neet', 'jee', 'exams', 'life'] as const;
-// Must match ListenerApplicationIn.availability (one of four; the server contract is unchanged).
+// Must match ListenerApplicationIn.availability — the single-choice commitment, kept in the
+// contract (DECISIONS §L, founder-delegated 2026-09-19) and drawn as the board's quiet
+// caption "A few hours a week" beside the chips; tapping it steps through the four.
 const AVAILABILITY = ['few_hours', 'most_evenings', 'weekends', 'varies'] as const;
 type Availability = (typeof AVAILABILITY)[number];
+// Board A37's time-of-day chips (multi-select, at least one). The server also accepts
+// afternoons / late_nights for later; the board draws these three.
+const TIMES = ['mornings', 'evenings', 'weekends'] as const;
+type Time = (typeof TIMES)[number];
 const MIN_WHY = 40;
 
 // Same shape as components/onboarding/steps/EmailStep.tsx — a friendly client-side
@@ -36,28 +42,33 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
   const { t } = useI18n();
   const [motivation, setMotivation] = useState('');
   const [communities, setCommunities] = useState<string[]>([]);
-  const [availability, setAvailability] = useState<Availability | null>(null);
+  const [availability, setAvailability] = useState<Availability>('few_hours');
+  const [times, setTimes] = useState<Time[]>([]);
   const [email, setEmail] = useState('');
   const [pledged, setPledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const whyLeft = Math.max(0, MIN_WHY - motivation.trim().length);
-  const valid = whyLeft === 0 && availability !== null && pledged;
+  const valid = whyLeft === 0 && times.length > 0 && pledged;
   // The one line under Submit names the first thing still missing — the pledge first.
   const gate = !pledged
     ? t('mentorApply.gatePledge')
     : whyLeft > 0
       ? t('mentorApply.gateWhy', { count: whyLeft })
-      : availability === null
+      : times.length === 0
         ? t('mentorApply.gateAvailability')
         : null;
 
   const toggleCommunity = (slug: string) =>
     setCommunities((cs) => (cs.includes(slug) ? cs.filter((c) => c !== slug) : [...cs, slug]));
+  const toggleTime = (slot: Time) =>
+    setTimes((ts) => (ts.includes(slot) ? ts.filter((x) => x !== slot) : [...ts, slot]));
+  const nextCommitment = () =>
+    setAvailability((a) => AVAILABILITY[(AVAILABILITY.indexOf(a) + 1) % AVAILABILITY.length]);
 
   const submit = async () => {
-    if (!valid || submitting || availability === null) return;
+    if (!valid || submitting) return;
     const trimmedEmail = email.trim();
     if (trimmedEmail && !EMAIL_RE.test(trimmedEmail)) {
       setError(t('mentorApply.emailInvalid'));
@@ -70,6 +81,7 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         motivation: motivation.trim(),
         communities,
         availability,
+        available_times: TIMES.filter((slot) => times.includes(slot)),
         email: trimmedEmail ? trimmedEmail : null,
         // The board has no paid-mentoring opt-in (never hint at a paid tier); the
         // server field stays, always false from this form.
@@ -147,16 +159,36 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
       <Entrance index={2} style={styles.group}>
         <View style={styles.labelRow}>
           <Text style={[type.rowTitle, styles.shrink, { color: colors.ink }]}>{t('mentorApply.availabilityLabel')}</Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.availabilityHint')}</Text>
+          {/* reason: the board draws this as a quiet caption, not a card — the key's face and
+              edge are both the page ground (no visible lip); its 44 px tap height is taken
+              back by negative margins so the label row keeps the board's rhythm. */}
+          <PressKey
+            onPress={nextCommitment}
+            edge={colors.bg}
+            travel={2}
+            radius={radius.sm}
+            intent="select"
+            accessibilityLabel={t('availabilityTimes.commitmentA11y', {
+              value: t(`mentorApply.availability_${availability}` as TKey),
+            })}
+            testID="apply-commitment"
+            containerStyle={styles.commitmentWrap}
+            style={[styles.commitment, { backgroundColor: colors.bg }]}
+          >
+            <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+              {t(`mentorApply.availability_${availability}` as TKey)}
+            </Text>
+            <Ionicons name="chevron-expand-outline" size={14} color={colors.inkMuted} />
+          </PressKey>
         </View>
         <View style={styles.chips}>
-          {AVAILABILITY.map((key) =>
+          {TIMES.map((slot) =>
             chip(
-              key,
-              t(`mentorApply.availability_${key}` as TKey),
-              availability === key,
-              () => setAvailability(key),
-              `apply-availability-${key}`,
+              slot,
+              t(`availabilityTimes.time_${slot}` as TKey),
+              times.includes(slot),
+              () => toggleTime(slot),
+              `apply-time-${slot}`,
             ),
           )}
         </View>
@@ -260,6 +292,8 @@ const styles = StyleSheet.create({
   form: { gap: 14 },
   group: { gap: 6 },
   labelRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.sm },
+  commitmentWrap: { marginVertical: -12, flexShrink: 1 },
+  commitment: { flexDirection: 'row', alignItems: 'center', gap: 2, paddingVertical: 12, paddingLeft: space.xs },
   shrink: { flexShrink: 1 },
   bare: { padding: 0 },
   field: { borderWidth: 1, borderRadius: radius.md, ...type.body, fontSize: 15, lineHeight: 22 },

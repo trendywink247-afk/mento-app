@@ -343,7 +343,8 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
     admin audit record can land in the same transaction.
 
     1. Sweep stale conversations: anything active longer than
-       `conversation_max_age_hours` (abandoned chats), and any active conversation
+       `conversation_max_age_hours` (abandoned chats — except one the mentor
+       snoozed, while its window is open), and any active conversation
        that still has no Stream channel after ORPHAN_GRACE (a crash between
        open_conversation's phases), is marked ended.
     2. Recompute every listener's `active_conversations` from the actual count of
@@ -390,7 +391,12 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
             # listener) — or whose listener row no longer exists at all.
             or_(Conversation.listener_id.in_(held), ~listener_exists),
             or_(
-                Conversation.created_at < cutoff,
+                # Abandoned by age — unless the mentor snoozed it and the window is
+                # still open ("I can't reply today" must not end the chat under them).
+                and_(
+                    Conversation.created_at < cutoff,
+                    or_(Conversation.snoozed_until.is_(None), Conversation.snoozed_until <= now),
+                ),
                 # A crash between open_conversation's phases: the reservation was
                 # committed but the Stream channel never arrived. Nobody can talk in
                 # it; don't let it hold a slot for a day. The grace period keeps a

@@ -115,7 +115,7 @@ async function run(browser, reduced) {
   // Fill the shared ApplicationForm (same testIDs the member flow uses).
   await tid('apply-motivation').fill(MOTIVATION);
   await tid('apply-community-upsc').click();
-  await tid('apply-availability-few_hours').click();
+  await tid('apply-time-mornings').click();
   await tid('apply-pledge').click();
   await tid('apply-submit').click();
   await tid('mentor-status').waitFor({ timeout: 30000 });

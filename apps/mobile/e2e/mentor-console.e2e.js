@@ -54,7 +54,7 @@ async function mentorApply(page, tid) {
     'I have walked the UPSC road twice and know how lonely the wait after prelims gets.',
   );
   await tid('apply-community-upsc').click();
-  await tid('apply-availability-most_evenings').click();
+  await tid('apply-time-evenings').click();
   await tid('apply-pledge').click();
   await tid('apply-submit').click();
   await page.waitForSelector('[data-testid="mentor-status"]', { timeout: 30000 });

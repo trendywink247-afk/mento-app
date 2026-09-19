@@ -20,7 +20,7 @@ from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.schemas import ConsoleSessionOut, ListenerApplicationIn, ListenerApplicationOut
 from app.security import current_user_id, issue_listener_token
-from app.services import locks, stream
+from app.services import categories, locks, stream
 from app.services.links import mentor_console_link
 from app.services.paths_data import COMMUNITIES
 
@@ -105,6 +105,11 @@ def apply(
         motivation=payload.motivation,
         communities=payload.communities,
         availability=payload.availability,
+        available_times=(
+            categories.ordered_times(payload.available_times)
+            if payload.available_times is not None
+            else None
+        ),
         email=payload.email,
         mentor_interest=payload.mentor_interest,
         pledge_accepted_at=datetime.now(UTC),

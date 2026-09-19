@@ -33,3 +33,31 @@ AVAILABILITY_NOTES: dict[str, str] = {
     "weekends": "weekends",
     "varies": "when I can",
 }
+
+
+# Board A37's time-of-day chips (`ListenerApplicationIn.available_times`), in the
+# order a day reads, worded for the same member-facing caption "usually here {note}".
+AVAILABLE_TIMES: dict[str, str] = {
+    "mornings": "mornings",
+    "afternoons": "afternoons",
+    "evenings": "evenings",
+    "late_nights": "late nights",
+    "weekends": "weekends",
+}
+
+
+def ordered_times(times: list[str] | None) -> list[str]:
+    """Known slugs only, de-duplicated, in day order."""
+    wanted = set(times or [])
+    return [slug for slug in AVAILABLE_TIMES if slug in wanted]
+
+
+def availability_note(times: list[str] | None, commitment: str) -> str | None:
+    """The member-facing availability note an approval seeds: the chips when there are
+    any ("mornings and weekends"), else the single-choice commitment's wording. Max 60
+    characters (ListenerProfile.availability_note); all five chips fit."""
+    words = [AVAILABLE_TIMES[slug] for slug in ordered_times(times)]
+    if words:
+        note = words[0] if len(words) == 1 else f"{', '.join(words[:-1])} and {words[-1]}"
+        return note[:60]
+    return AVAILABILITY_NOTES.get(commitment, commitment.strip()[:60] or None)

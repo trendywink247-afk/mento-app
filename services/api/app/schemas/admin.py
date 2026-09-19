@@ -147,6 +147,8 @@ class AdminApplicationItem(BaseModel):
     motivation: str
     communities: list[str]
     availability: str
+    # Board A37 chips, day order; [] for an application from an older build.
+    available_times: list[str] = []
     email: str | None
     mentor_interest: bool
     status: str

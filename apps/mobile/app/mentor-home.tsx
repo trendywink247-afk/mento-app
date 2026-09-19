@@ -10,7 +10,7 @@ import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
-import { ConversationRow } from '@/components/mentor/ConversationRow';
+import { ConversationRow, isSnoozed } from '@/components/mentor/ConversationRow';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { RequestCard } from '@/components/mentor/RequestCard';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
@@ -350,6 +350,8 @@ function ConsoleBody({
   // Waiting stay-in-touch asks (no push for these: "they will see it next time they are
   // here"). Refetched on focus and after every answer.
   const [asks, setAsks] = useState<StayInTouchAsk[]>([]);
+  // The conversation whose snooze / undo just failed — one still line, never a shake.
+  const [snoozeFailed, setSnoozeFailed] = useState<string | null>(null);
   const openedFromParam = useRef<string | null>(null);
   const loadAsks = useCallback(() => {
     void listenerApi
@@ -419,9 +421,17 @@ function ConsoleBody({
     );
   }
 
+  // Board A10: awake chats first, then snoozed ones ("Snoozed · back at …"), then ended.
   const active = c.conversations.filter((conv) => conv.status === 'active');
+  const awake = active.filter((conv) => !isSnoozed(conv));
+  const snoozed = active.filter((conv) => isSnoozed(conv));
   const ended = c.conversations.filter((conv) => conv.status !== 'active');
-  const conversations = [...active, ...ended];
+  const conversations = [...awake, ...snoozed, ...ended];
+
+  const setSnooze = async (id: string, on: boolean) => {
+    setSnoozeFailed(null);
+    if (!(await c.setSnooze(id, on))) setSnoozeFailed(id);
+  };
 
   return (
     <View style={styles.console}>
@@ -472,6 +482,11 @@ function ConsoleBody({
         <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
           {t('mentor.conversationsTitle')}
         </Text>
+        {snoozeFailed ? (
+          <Text style={[type.caption, styles.pad, { color: colors.inkMuted }]} testID="mentor-snooze-error">
+            {t('mentorHomePage.snoozeError')}
+          </Text>
+        ) : null}
         {conversations.length ? (
           conversations.map((conversation) => (
             <ConversationRow
@@ -479,6 +494,8 @@ function ConsoleBody({
               conversation={conversation}
               live={conversation.stream_channel_id ? c.live[conversation.stream_channel_id] : undefined}
               onPress={() => openConversation(conversation)}
+              onSnooze={(on) => void setSnooze(conversation.id, on)}
+              snoozeBusy={c.busy === `snooze:${conversation.id}`}
             />
           ))
         ) : (

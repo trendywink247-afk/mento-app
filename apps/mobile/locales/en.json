@@ -1111,7 +1111,20 @@
     "askBody": "Yes or not now. Decide when you are ready.",
     "footer": "You are a mentor and a peer, not a therapist.",
     "companionA11y": "Your companion, perched on your presence card",
-    "conversationA11y": "Conversation with %{name}"
+    "conversationA11y": "Conversation with %{name}",
+    "waitingOnYou": "Waiting on you · %{age}",
+    "ageMinutes": "%{count} min",
+    "ageHours": "%{count} h",
+    "ageDays": "%{count} d",
+    "snooze": "Snooze 24 h",
+    "snoozeA11y": "Snooze %{name} for 24 hours. No reminders until then. Anything urgent still reaches you.",
+    "snoozedUntil": "Snoozed · back at %{time}",
+    "snoozedTomorrow": "Snoozed · back tomorrow at %{time}",
+    "wake": "Undo",
+    "wakeA11y": "Undo the snooze on %{name}",
+    "conversationWaitingA11y": "Conversation with %{name}, waiting on you",
+    "conversationSnoozedA11y": "Conversation with %{name}, snoozed",
+    "snoozeError": "That did not go through. Try again in a moment."
   },
   "mentorChatPage": {
     "member": "Member",
@@ -1201,5 +1214,15 @@
     "doneHeadline": "Thank you. Your application is with the ",
     "doneHeadlineAccent": "Mento team.",
     "doneBody": "Reviewed by the Mento team, usually within a few days. If you left an email, that is where the answer will come."
+  },
+  "replyWindow": {
+    "rowLine": "%{name} will reply within a day",
+    "header": "Replies within a day"
+  },
+  "availabilityTimes": {
+    "time_mornings": "Mornings",
+    "time_evenings": "Evenings",
+    "time_weekends": "Weekends",
+    "commitmentA11y": "How much time you can give: %{value}. Tap to change."
   }
 }

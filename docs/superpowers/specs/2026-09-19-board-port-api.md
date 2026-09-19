@@ -307,15 +307,46 @@ first. Each read writes a `feedback.viewed` audit row.
 
 ---
 
+## B4 — Snooze 24 h (DECISIONS §L.9 · board A10)
+
+The mentor's honest "I can't reply today" for one conversation that is waiting on them.
+
+| Call | Token | Does | Answers |
+|---|---|---|---|
+| `POST /listener/me/conversations/{id}/snooze` | listener | open a 24 h window (`SNOOZE_HOURS`); idempotent, **never extends** an open one | `{"id", "snoozed_until": "<ISO UTC>"}` |
+| `DELETE /listener/me/conversations/{id}/snooze` | listener | undo; idempotent | `{"id", "snoozed_until": null}` |
+
+Refusals: **404** someone else's / unknown conversation (opaque) · **409** `{"detail", "code": "not_active"}` an ended or wiped chat · **403** a suspended mentor · **429** more than 30 changes an hour.
+
+`GET /listener/me/conversations` items gain `snoozed_until` (ISO while the window is open, else `null`) and are ordered **active-awake → active-snoozed → ended** (newest first within each).
+
+While a snooze is open:
+- no message push to the mentor for that chat (suppressed as `snoozed`); the member is still pushed when the mentor writes;
+- the capacity sweep does not end the chat for age (it may once the window closes);
+- a **crisis-flagged member message ends the snooze** in the Stream hooks, after the flag is written — so that message's push does reach the mentor; the mentor's own message ends it too; a member's ordinary message does not.
+
+**What "waiting on you" is (client rule, Mentor Home).** From the watched Stream channel: the trailing run of the member's messages since the mentor last wrote (`waitingSince` = the earliest of them), shown as the waiting row **only when the mentor has read it** (`unread === 0`) — an unread message keeps the "N new" pill row. `lib/useMentorConsole.ts` keeps it live on `message.new`.
+
+**Member side (never the word "snoozed").** `GET /conversations` items and `GET /conversations/{id}/mentor` gain `reply_within_a_day: bool` — true only while the chat is active and snoozed. Render: My Chats row second line `replyWindow.rowLine` ("<mentor> will reply within a day"); chat header status `replyWindow.header` ("Replies within a day") in place of here / away.
+
+## B5 — Application availability chips (DECISIONS §L.10 · board A37)
+
+`POST /listener-applications` gains an optional `available_times: ("mornings" | "afternoons" | "evenings" | "late_nights" | "weekends")[]` (≤ 5) beside the unchanged, still-required single-choice `availability`. Unknown value → 422; missing / `null` → accepted (older builds); stored de-duplicated in day order. The app draws three chips (Mornings · Evenings · Weekends), requires at least one before Submit, and shows `availability` as the quiet caption ("A few hours a week", tap to step through the four). `mentor_interest` is always `false` from the app.
+
+`GET /admin/applications` items gain `available_times: string[]` (`[]` for older rows). Approval seeds the new mentor's member-facing `availability_note` from the chips ("mornings and weekends" → "usually here mornings and weekends"), else from the commitment ("a few hours a week").
+
+---
+
 ## Deploy notes (all three units)
 
 - Migrations, in order: `8c6073da268d` (message allowance) → `cf89dba30416` (stay in touch +
-  rotating names) → `034abb526d75` (product feedback). All additive and safe under a running
+  rotating names) → `034abb526d75` (product feedback) → `b9550a247866` (snooze +
+  application available times). All additive and safe under a running
   app. **Take a database backup first** (`deploy/backup-postgres.sh`), then `deploy.sh`.
 - New env (all optional, defaults in `services/api/.env.example`): `ALLOWANCE_ENABLED`,
   `ALLOWANCE_ENFORCED` (**false** until the app renders A22), `ALLOWANCE_IN_A_ROW`,
   `ALLOWANCE_PER_DAY`, `ALLOWANCE_CRISIS_EXEMPT_HOURS`, `MENTOR_NAME_ROTATION_ENABLED`,
-  `IN_TOUCH_LIMIT`, `IN_TOUCH_REASK_DAYS`.
+  `IN_TOUCH_LIMIT`, `IN_TOUCH_REASK_DAYS`, `SNOOZE_HOURS` (24).
 - After the deploy, names are stamped on the first Browse read and **first change at the
   next 04:00 IST**. Tell the mentors before that morning.
 - The dev uvicorn on :8000 runs without `--reload` — restart it to serve any of this.

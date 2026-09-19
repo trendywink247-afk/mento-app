@@ -59,7 +59,7 @@ from app.schemas import (
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
 from app.services import allowance, audit, conversations, in_touch, stream
-from app.services.categories import AVAILABILITY_NOTES
+from app.services.categories import availability_note, ordered_times
 from app.services.links import admin_link, mentor_console_link
 from app.services.matching import reconcile_listener_capacity
 from app.services.persona import generate_persona
@@ -488,6 +488,7 @@ def _application_item(a: ListenerApplication, persona_name: str) -> AdminApplica
         motivation=a.motivation,
         communities=a.communities or [],
         availability=a.availability,
+        available_times=ordered_times(a.available_times),
         email=a.email,
         mentor_interest=a.mentor_interest,
         status=a.status.value,
@@ -548,14 +549,12 @@ def approve_application(
         rank=0,
         active_conversations=0,
         max_concurrent=3,
-        # Seeded from the application's own answer (spec 2026-09-06 §3.3) — that
-        # question was written for this purpose, reworded to a member-facing
-        # label (AVAILABILITY_NOTES) rather than the raw enum slug. An unknown
-        # value (future enum drift) falls back to the raw text, still capped at
-        # 60. The mentor can edit it afterwards via PUT /listener/me/profile.
-        availability_note=AVAILABILITY_NOTES.get(
-            a.availability, a.availability.strip()[:60] or None
-        ),
+        # Seeded from the application's own answers (spec 2026-09-06 §3.3): the A37
+        # time-of-day chips when there are any ("mornings and weekends"), else the
+        # single-choice commitment reworded to a member-facing label
+        # (AVAILABILITY_NOTES; unknown drift falls back to the raw text, capped at
+        # 60). The mentor can edit it afterwards via PUT /listener/me/profile.
+        availability_note=availability_note(a.available_times, a.availability),
     )
     db.add(li)
     db.flush()

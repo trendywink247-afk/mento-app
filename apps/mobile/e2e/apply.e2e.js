@@ -57,7 +57,7 @@ async function flow(browser, contextOpts, label) {
     "I've supported friends through burnout before and want to make that steadiness available to strangers too."
   );
   await tid('apply-community-life').click();
-  await tid('apply-availability-weekends').click();
+  await tid('apply-time-weekends').click();
   if (!(await tid('apply-submit').isDisabled())) throw new Error(`${label}: Submit enabled before the pledge`);
   await tid('apply-pledge').click();
   await tid('apply-submit').click();

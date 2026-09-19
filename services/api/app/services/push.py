@@ -24,7 +24,7 @@ from app.models.listener import ListenerProfile
 from app.models.push_token import PushToken
 from app.models.request import ConversationRequest
 from app.models.user import User
-from app.services import stream
+from app.services import snooze, stream
 
 logger = logging.getLogger("mento.push")
 
@@ -244,6 +244,12 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
         return
     if _is_watching(convo.stream_channel_id, recipient_id):
         _suppressed("watching")
+        return
+    if recipient_kind == PushOwnerKind.listener and snooze.is_snoozed(convo):
+        # The mentor snoozed this chat ("I can't reply today"). A crisis-flagged
+        # member message has already ended the snooze in the Stream hook, so this
+        # can never silence one.
+        _suppressed("snoozed")
         return
     if recipient_kind == PushOwnerKind.member and convo.is_paused:
         _suppressed("paused")

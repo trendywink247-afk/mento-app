@@ -96,6 +96,9 @@ export type ConversationMentor = ListenerProfile & {
   /** The member's stay-in-touch standing with this mentor (same payload as
    * `GET /conversations/{id}/stay-in-touch`). */
   stay_in_touch?: StayInTouch | null;
+  /** True while the mentor snoozed this chat (board A10). The member is only ever shown
+   * the kind half: "<mentor> will reply within a day". */
+  reply_within_a_day?: boolean;
 };
 
 // --- Stay in touch (DECISIONS §L.6–7; docs/superpowers/specs/2026-09-19-board-port-api.md B2) ---
@@ -152,6 +155,8 @@ export type ConversationListItem = {
    * this chat's mentor; `first_met_as` is the earlier name, only once it differs. */
   in_touch?: boolean;
   first_met_as?: string | null;
+  /** See ConversationMentor.reply_within_a_day. */
+  reply_within_a_day?: boolean;
 };
 
 export type ConversationState = {
@@ -309,6 +314,9 @@ export type ListenerApplicationIn = {
   motivation: string;
   communities: string[];
   availability: 'few_hours' | 'most_evenings' | 'weekends' | 'varies';
+  /** Board A37's time-of-day chips (DECISIONS §L). Optional in the contract; this app
+   * always sends at least one. */
+  available_times?: Array<'mornings' | 'afternoons' | 'evenings' | 'late_nights' | 'weekends'>;
   email: string | null;
   mentor_interest: boolean;
   pledge_accepted: boolean;

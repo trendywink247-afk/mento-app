@@ -45,7 +45,7 @@ from app.config import get_settings
 from app.db import SessionLocal
 from app.models.conversation import Conversation
 from app.models.enums import SafetySignal
-from app.services import allowance, crisis, moderation, push, safety, stream
+from app.services import allowance, crisis, moderation, push, safety, snooze, stream
 from app.services.crisis import CrisisResult
 from app.services.moderation import RedactionResult
 
@@ -180,13 +180,19 @@ def _scan_event(
             conversation_id = db.execute(
                 select(Conversation.id).where(Conversation.stream_channel_id == channel_id)
             ).scalar_one_or_none()
-        return safety.scan_and_flag(
+        result = safety.scan_and_flag(
             db,
             text=text,
             user_id=user_id,
             conversation_id=conversation_id,
             stream_message_id=message_id,
         )
+        # A snooze never hides a crisis: the member's flagged message ends it, AFTER
+        # the flag is written (the scan always comes first). Runs on both hooks, so
+        # the retried async net ends it too when the sync hook degraded.
+        if snooze.end_for_crisis(db, conversation_id, user_id):
+            db.commit()
+        return result
 
 
 async def _scan_or_degrade(
@@ -394,5 +400,8 @@ async def push_webhook(request: Request, background: BackgroundTasks) -> Respons
             message_id=message.get("id"),
         )
         if channel_id:
+            # The mentor wrote: nothing is waiting on them now, so a snooze ends
+            # (before the push task, which only ever pushes the OTHER party).
+            background.add_task(snooze.end_on_mentor_reply, channel_id, sender_id)
             background.add_task(push.notify_message_safe, channel_id, sender_id)
     return Response(status_code=status.HTTP_200_OK)

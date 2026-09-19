@@ -81,6 +81,8 @@ export type AdminApplication = {
   motivation: string;
   communities: string[];
   availability: string;
+  /** Board A37 chips in day order; [] for an application from an older build. */
+  available_times?: string[];
   email: string | null;
   mentor_interest: boolean;
   status: 'pending' | 'approved' | 'declined';

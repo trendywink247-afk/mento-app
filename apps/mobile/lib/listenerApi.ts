@@ -50,6 +50,8 @@ export type ListenerConversation = {
   created_at: string;
   ended_at: string | null;
   in_touch?: boolean;
+  /** Snooze 24 h (board A10): when the snooze ends, while it is open; else null. */
+  snoozed_until?: string | null;
 };
 
 /** A member's waiting "stay in touch" ask, as the mentor sees it (board A15): the
@@ -144,6 +146,19 @@ export const listenerApi = {
       method: 'POST',
       body: JSON.stringify({ reason, note }),
     }),
+
+  /** Board A10 "Snooze 24 h" on one waiting conversation. Idempotent, never extends. */
+  snooze: (conversationId: string) =>
+    req<{ id: string; snoozed_until: string | null }>(
+      `/listener/me/conversations/${conversationId}/snooze`,
+      { method: 'POST' },
+    ),
+
+  wake: (conversationId: string) =>
+    req<{ id: string; snoozed_until: string | null }>(
+      `/listener/me/conversations/${conversationId}/snooze`,
+      { method: 'DELETE' },
+    ),
 
   end: (conversationId: string) =>
     req<{ status: string }>(`/listener/me/conversations/${conversationId}/end`, { method: 'POST' }),
