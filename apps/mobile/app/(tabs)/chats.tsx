@@ -263,6 +263,12 @@ export default function ChatsTab() {
     return out.sort((a, b) => rank(a) - rank(b) || b.at - a.at);
   }, [rows, waiting, previews, filter, needle]);
 
+  // The In touch badge's linked rings breathe on the first two badges only (motion budget).
+  const breathingBadges = useMemo(
+    () => new Set(merged.filter((r) => r.kind === 'convo' && r.convo.in_touch).slice(0, 2).map((r) => r.key)),
+    [merged],
+  );
+
   const chips: { key: Filter; label: string }[] = [
     { key: 'all', label: t('chats.filterAll') },
     { key: 'active', label: t('chats.filterActive') },
@@ -329,6 +335,7 @@ export default function ChatsTab() {
           state={s}
           stateLabel={stateLabel(s)}
           inTouch={Boolean(c.in_touch)}
+          badgeStill={!breathingBadges.has(c.id)}
           secondLine={
             c.first_met_as
               ? t('chatsList.firstTalkedAs', { name: c.first_met_as })
@@ -566,6 +573,7 @@ export default function ChatsTab() {
                       state={s}
                       stateLabel={stateLabel(s)}
                       inTouch
+                      badgeStill={index > 1}
                       secondLine={
                         item.first_met_as
                           ? t('chatsList.firstTalkedAs', { name: item.first_met_as })

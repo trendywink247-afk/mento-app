@@ -77,6 +77,7 @@ export function ChatRow({
   state,
   stateLabel,
   inTouch = false,
+  badgeStill = true,
   secondLine,
   lastLine,
   quietLine,
@@ -94,6 +95,9 @@ export function ChatRow({
   state: ChatRowState;
   stateLabel: string;
   inTouch?: boolean;
+  /** The badge's rings breathe only where the list lets them (motion budget: My Chats
+   * lets the first two). Always still under reduced motion. */
+  badgeStill?: boolean;
   /** "Your mentor · first talked as …" / "Waiting for … · they reply when free". */
   secondLine?: string | null;
   lastLine: string;
@@ -133,7 +137,7 @@ export function ChatRow({
           <Text style={[styles.name, { color: colors.ink }]} numberOfLines={1}>
             {name}
           </Text>
-          {inTouch ? <InTouchBadge still /> : null}
+          {inTouch ? <InTouchBadge still={badgeStill} /> : null}
           {state !== 'active' ? <StateChip state={state} label={stateLabel} /> : null}
           <Text style={[type.micro, styles.time, { color: colors.inkMuted }]} numberOfLines={1}>
             {time}
