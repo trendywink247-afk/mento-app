@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApplicationForm } from '@/components/ApplicationForm';
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { ApplicationStatusCard } from '@/components/mentor/ApplicationStatusCard';
@@ -34,7 +35,7 @@ import {
 } from '@/lib/mentorPath';
 import { getCompanionAnimal, getSessionToken, saveRole } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
-import { space, type } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 
 const ORDER: MentorPathStep[] = ['story', 'age', 'primer', 'form', 'status'];
 
@@ -196,12 +197,17 @@ export function MentorPathFlow({ surface }: { surface: 'public' | 'member' }) {
       const at = reapplyAt(known);
       const now = canReapply(known);
       return (
-        <View style={styles.body}>
+        <View style={styles.bodyGrow}>
           <ApplicationStatusCard state="declined" application={known} animal={animal} bare={bare} />
+          {/* The when, in its own quiet row — the same shape the In review state uses for
+              "what happens next", so a declined applicant does not meet a bare paragraph. */}
           <Entrance index={1}>
-            <Text style={[type.body, { color: colors.inkMuted }]} testID="mentor-path-cooldown">
-              {now || !at ? t('mentorPath.cooldownNow') : t('mentorPath.cooldownLater', { date: dayLabel(at, locale) })}
-            </Text>
+            <View style={[styles.when, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+              <IconBadge icon="calendar-outline" tone="indigo" size={36} />
+              <Text style={[type.body, styles.shrink, { color: colors.ink }]} testID="mentor-path-cooldown">
+                {now || !at ? t('mentorPath.cooldownNow') : t('mentorPath.cooldownLater', { date: dayLabel(at, locale) })}
+              </Text>
+            </View>
           </Entrance>
           {now ? (
             <Entrance index={2}>
@@ -214,6 +220,7 @@ export function MentorPathFlow({ surface }: { surface: 'public' | 'member' }) {
               />
             </Entrance>
           ) : null}
+          <View style={styles.grow} />
           {bare ? null : (
             <PrimaryButton label={backLabel} variant="link" onPress={() => void toMemberSide()} loading={leaving} testID="apply-back-profile" />
           )}
@@ -338,6 +345,10 @@ const styles = StyleSheet.create({
   primerHead: { paddingTop: space.sm },
   content: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.lg, gap: 12 },
   body: { gap: 14 },
+  bodyGrow: { flexGrow: 1, gap: 14 },
+  grow: { flexGrow: 1, minHeight: space.md },
+  when: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderWidth: 1, borderRadius: radius.lg },
+  shrink: { flex: 1, minWidth: 0 },
   card: { padding: space.md, borderWidth: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

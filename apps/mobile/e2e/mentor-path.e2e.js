@@ -147,14 +147,19 @@ async function pass(browser, reduced) {
   expect((await text('profile-mentor-access')).includes('Mentor access'), `${label}: no "Mentor access" chip`);
   console.log(`${label}: OK approved: "Open the mentor side" with the "Mentor access" chip`);
 
-  // Start fresh for a live mentor: the calm note, no destructive key.
+  // Start fresh for a live mentor: the calm note, no destructive key — and the two ways
+  // forward the founder asked for (lane u14): tell the team, or go back to mentoring.
   await tid('profile-start-fresh').click();
   await tid('start-fresh-mentor').waitFor({ timeout: 15000 });
   expect((await tid('start-fresh-confirm').count()) === 0, `${label}: a live mentor is offered "Delete everything"`);
-  await tid('start-fresh-cancel').click();
-  await tid('start-fresh-modal').waitFor({ state: 'detached', timeout: 15000 });
-  console.log(`${label}: OK Start fresh explains why a live mentor cannot erase from here, only "Keep my space"`);
+  await tid('start-fresh-notify').waitFor({ timeout: 15000 });
+  await tid('start-fresh-back-to-mentoring').click();
+  await page.waitForURL((u) => u.pathname.endsWith('/mentor-home'), { timeout: 30000 });
+  await tid('mentor-console').waitFor({ timeout: 60000 });
+  console.log(`${label}: OK Start fresh explains why a live mentor cannot erase from here, and leads back to mentoring`);
 
+  await page.goto(`${WEB}/profile`, { waitUntil: 'networkidle', timeout: 60000 });
+  await tid('profile-open-console').waitFor({ timeout: 30000 });
   await tid('profile-open-console').click();
   // (expo-router may add a `?__EXPO_ROUTER_key=` query on a push — match the path only)
   await page.waitForURL((u) => u.pathname.endsWith('/mentor-home'), { timeout: 30000 });

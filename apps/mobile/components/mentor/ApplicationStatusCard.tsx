@@ -57,16 +57,40 @@ export function ApplicationStatusCard({
   const who = animal ?? 'Owl';
 
   if (state === 'declined') {
+    // The same shape as the other two states — their own companion standing on the card,
+    // in its ordinary idle pose (nothing celebratory) — so a declined applicant does not
+    // land on a screen that looks like a different app.
     return (
-      <Entrance index={0}>
-        <EdgeSurface edge={colors.edgeSurface} style={[styles.card, styles.plain, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-status">
-          <Chip label={t('mentorApply.declinedChip')} bg={colors.surfaceAlt} fg={colors.ink} icon="leaf-outline" />
-          <Text style={[type.cardTitle, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
-          {/* The thanks only — the cooldown is said ONCE, with its date, right under the card
-              (MentorPathFlow). */}
-          <Text style={[type.note, { color: colors.inkMuted }]}>{t('mentorApplyCopy.declinedBody')}</Text>
-        </EdgeSurface>
-      </Entrance>
+      <View testID="apply-declined">
+        <View style={{ paddingTop: bare ? 0 : 92 }}>
+          {bare ? null : (
+            <View
+              style={[styles.companion, { height: 114, left: 20 }]}
+              pointerEvents="none"
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={t('mentorApply.companionReviewA11y')}
+            >
+              <Animated.View style={[styles.originBottom, breathing]}>
+                <Companion animal={who} size={114} awake />
+              </Animated.View>
+            </View>
+          )}
+          <Entrance index={0}>
+            <EdgeSurface
+              edge={colors.edgeSurface}
+              style={[styles.card, { paddingTop: bare ? 18 : 28, backgroundColor: colors.surface, borderColor: colors.border }]}
+              testID="mentor-status"
+            >
+              <Chip label={t('mentorApply.declinedChip')} bg={colors.surfaceAlt} fg={colors.ink} icon="leaf-outline" />
+              <Text style={[type.cardTitle, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
+              {/* The thanks only — the cooldown is said ONCE, with its date, right under the
+                  card (MentorPathFlow). */}
+              <Text style={[type.note, { color: colors.inkMuted }]}>{t('mentorApplyCopy.declinedBody')}</Text>
+            </EdgeSurface>
+          </Entrance>
+        </View>
+      </View>
     );
   }
 
