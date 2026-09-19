@@ -38,7 +38,9 @@ type Props = {
   crisis: CrisisPayload;
   /** The mentor's persona name, for "… is still here with you." (member side). */
   mentorName?: string;
-  audience?: 'member' | 'mentor';
+  /** `feedback`: crisis words typed into the feedback sheet (board A11) — the member's lines
+   * with a foot that does not speak of a mentor, and no "why" toggle about a chat message. */
+  audience?: 'member' | 'mentor' | 'feedback';
   onDismiss?: () => void;
   /** Standing on its own between the header and the thread (default) it keeps the
    * screen's gutter; inside the thread's own column (web member chat) it does not. */
@@ -63,7 +65,7 @@ export function CrisisCard({ crisis, mentorName, audience = 'member', onDismiss,
       <View style={styles.lead} accessibilityLabel={t('crisisCard.sectionA11y')}>
         <IconBadge icon="heart-outline" tone="orange" size={36} />
         <Text style={[styles.leadText, { color: colors.ink }]} accessibilityRole="header">
-          {member ? t('crisisCard.support') : t('crisisCard.mentorLead')}
+          {audience === 'mentor' ? t('crisisCard.mentorLead') : t('crisisCard.support')}
         </Text>
       </View>
 
@@ -102,7 +104,9 @@ export function CrisisCard({ crisis, mentorName, audience = 'member', onDismiss,
         <Text style={[type.caption, { color: colors.inkMuted }]}>
           {member
             ? t('crisisCard.stillHere', { name: mentorName || t('chat.yourListener') })
-            : t('crisisCard.mentorNote')}
+            : audience === 'feedback'
+              ? t('crisisCard.feedbackNote')
+              : t('crisisCard.mentorNote')}
         </Text>
         {member && whyOpen ? (
           <Text style={[type.caption, styles.why, { color: colors.ink }]} testID="crisis-why-body">

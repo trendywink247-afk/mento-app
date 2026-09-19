@@ -75,6 +75,16 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: 'transparent' },
                 }}
               />
+              {/* Board A11: the feedback sheet over whichever screen opened it — its own
+                  scrim + rise run inside (app/feedback.tsx), so the route itself does not animate. */}
+              <Stack.Screen
+                name="feedback"
+                options={{
+                  presentation: 'transparentModal',
+                  animation: 'none',
+                  contentStyle: { backgroundColor: 'transparent' },
+                }}
+              />
             </Stack>
           </WebFrame>
         </ThemeProvider>

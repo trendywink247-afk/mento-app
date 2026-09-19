@@ -12,9 +12,13 @@
     "ctaHint": "Begins onboarding"
   },
   "notFound": {
-    "title": "This road doesn't go anywhere",
-    "body": "The link you followed isn't a place in Mento. Your space is still here, exactly as you left it.",
-    "cta": "Take me back"
+    "title": "This road does not ",
+    "titleAccent": "exist",
+    "titleEnd": ".",
+    "body": "The link you followed is not a place in Mento. Your space is still here, exactly as you left it.",
+    "home": "Take me home",
+    "back": "Go back",
+    "companionA11y": "Your companion where the road stops, leaning forward to look"
   },
   "mentorHome": {
     "title": "Mentor Home",
@@ -459,17 +463,28 @@
     }
   },
   "reflection": {
-    "skipA11y": "Skip reflection",
-    "headline": "Conversation ended",
-    "sub": "You've taken a thoughtful step today.\nWe hope this space brought you some clarity and comfort.",
-    "question": "How do you feel right now?",
-    "checkin": "One quiet check-in before you go —\nno right answers.",
-    "energyA11y": "Energy level %{n} of 5",
-    "drained": "Left drained",
-    "energized": "Left energized",
-    "privateTitle": "Your feedback is private",
-    "privateBody": "It's only for us and helps improve the support experience.",
-    "finish": "Finish"
+    "skipA11y": "Skip this and go to My Chats",
+    "ended": "Conversation ended",
+    "headline": "How do you feel ",
+    "headlineAccent": "now",
+    "headlineEnd": "?",
+    "sub": "Your chat with %{name} is closed. A quiet check-in, with no right answers.",
+    "subNoName": "Your chat is closed. A quiet check-in, with no right answers.",
+    "energy": "My energy",
+    "e1": "Drained",
+    "e2": "Low",
+    "e3": "Steady",
+    "e4": "Lighter",
+    "e5": "Clear",
+    "energyA11y": "My energy: %{word}",
+    "private": "Only you see this. It is not shared with your mentor.",
+    "take": "One thing I am taking with me",
+    "optional": "Optional",
+    "takePlaceholder": "A sentence is plenty",
+    "takeNote": "If you write something, it is kept in your Journal.",
+    "done": "Done",
+    "tellUs": "Tell us how this felt",
+    "companionA11y": "Your companion, sitting quietly with you"
   },
   "chatOptions": {
     "titleAccent": "options",
@@ -478,6 +493,27 @@
     "endSection": "End conversation · two ways",
     "endWipe": "End and wipe",
     "endWipeBody": "Deleted from your device and from our servers."
+  },
+  "feedback": {
+    "a11y": "Send feedback",
+    "closeA11y": "Close feedback and go back",
+    "title": "Tell us what ",
+    "titleAccent": "happened",
+    "sub": "It goes straight to the Mento team. Your chats are never attached.",
+    "broken": "Something's broken",
+    "confusing": "This is confusing",
+    "idea": "I have an idea",
+    "label": "What were you trying to do?",
+    "placeholder": "The Finance journal won't open…",
+    "attached": "We also note the screen name and app version. Nothing else.",
+    "notNow": "Not now",
+    "send": "Send",
+    "sentTitle": "Sent to the Mento team",
+    "sentBody": "Thank you. The team reads every note.",
+    "close": "Close",
+    "crisisTitle": "You do not have to carry this alone.",
+    "pill": "Feedback",
+    "pillA11y": "Send feedback about this screen"
   },
   "crisisCard": {
     "sectionA11y": "Support lines you can call now",
@@ -489,7 +525,8 @@
     "whyBody": "Something in your last message sounded heavy, so Mento shows these lines. Your message was delivered as usual. Nothing is blocked, and nothing is counted.",
     "hide": "Hide this note",
     "mentorLead": "The person you are talking with was shown these support lines.",
-    "mentorNote": "Stay with them and encourage the call. Mentors are peers, not therapists."
+    "mentorNote": "Stay with them and encourage the call. Mentors are peers, not therapists.",
+    "feedbackNote": "What you wrote was not saved as feedback. Mentors are peers, not therapists."
   },
   "allowance": {
     "meterA11y": "Message allowance: %{left} of %{limit} left today",
