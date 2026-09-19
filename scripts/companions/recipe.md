@@ -63,3 +63,36 @@ with proportions spelled out, and the Fox reference passed **for style only**:
 - Cut with `cutout.py --size 1024 --thresh 16`. Dog was re-cut at `--size 1024 --thresh 12` from its 1024px
   renders. The original six animals are still 512px `nano_banana` art — re-rendering them on the pro model for a
   uniform HD set is ~84 credits (6 × 7 × 2) and has not been done.
+
+## Cling poses (2026-09-19 — OPTIONAL poses, Cat only so far)
+The companion now appears in a different place on every screen, holding on to the UI
+(`apps/mobile/lib/companionPlacement.ts` chooses, `components/art/PerchedCompanion.tsx` draws). Sitting
+(`idle`), leaning (`curious`) and napping (`sleepy`) work for all nine animals with the poses above. Three more
+ways of holding on need their own art — and **only the Cat has them**. An animal without the file simply never
+gets that kind of slot; adding the file + one `require` line in `assets/companions/generated/index.ts` is all it
+takes to widen its range (no code change).
+
+| Pose | File | Size | Job id | Cut flags (all `--thresh 16`, WebP q88, longest side 1024) | Contact |
+|---|---|---|---|---|---|
+| hang | `Cat/hang.webp` | 429×1024 | `0379a78b-c9da-4770-8256-23226c7489ab` | `--flush top --hole 983,200` | paws touch the TOP edge — image top = the furniture's bottom edge; grip centre x=0.47, body to y=0.94 |
+| peek | `Cat/peek.webp` | 1024×981 | `645df71f-aac5-42bb-b599-c31e42de70f5` | `--clip 0,0,2048,1262 --fill 380,1222,522,1270 --flush bottom` | BOTTOM edge is the paw line (head + paws only) — drawn ≈44px tall |
+| dangle | `Cat/dangle.webp` | 802×1024 | `a993079e-b377-4027-8dd7-bdea7d568009` | `--fill 100,1645,515,1720 --fill 1575,1645,1950,1720` | seat line at 0.84 of the height; hind feet hang to 0.945 |
+
+- Generated on Higgsfield, requested model `nano_banana_pro` (the API labels the jobs `nano_banana_2`, same as the
+  accepted HD Cat reference), 1:1, 2k, identity reference = the accepted Cat idle render
+  (`b5a482c5-47c8-49fd-a74c-7131794e6044` in `manifest.json`). Raws are 2048².
+- **Cut with `clingcut.py`, not `cutout.py`.** It imports `cutout.py` and calls its `ground_colour()` and
+  `matte()` unchanged, and adds what a contact pose needs: `--flush top|bottom` (no padding on the contact side,
+  so the contact line IS the image edge), `--clip x0,y0,x1,y1` (rectangular crop after matting — cuts off a drawn
+  ledge or the body below the paws), `--fill x0,y0,x1,y1` (repeatable: paint background-only boxes with the
+  sampled ground colour before matting), `--hole x,y` (knock out an enclosed background pocket, e.g. between
+  the raised arms). `python scripts/companions/clingcut.py <raw.png> <out.webp> --thresh 16 <flags from the table>`.
+- The contact fractions the app uses live next to the art: `contact: { hang: 0, peek: 0.979, dangle: 0.84 }` in
+  `assets/companions/generated/index.ts` (fraction of the square art box, from its top). Re-measure after any re-cut.
+- Wording that worked — hang: "hanging by its two front paws from the TOP EDGE OF THE PICTURE FRAME itself, like a
+  kitten hanging from a chin-up bar … No bar, no branch, no rope, no shelf is drawn". Peek: "the image is CUT OFF in
+  a perfectly straight horizontal line just below the paws".
+- Also generated, accepted, **not shipped** (the companion no longer travels): Cat `walk`, `climb`, `stretch`.
+  **Not delivered:** Cat `nap` lying along an edge (three attempts failed: ghost reference head / a second kitten) —
+  `nap` slots use the existing `sleepy` pose. **The other eight animals have no cling poses yet** (the Higgsfield
+  balance was ~0.5 credits after this batch): ~3 poses × 8 animals × 2 credits ≈ 48 credits on the pro model.
