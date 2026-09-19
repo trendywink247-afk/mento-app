@@ -6,8 +6,16 @@ const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 
-const fill = async (tid, dob, page) => {
-  await page.locator('select[aria-label="Year of birth"]').selectOption(String(dob));
+// Board A38: the public page shows NO animal art (founder rule) — companion art is served
+// from assets/companions; the page may only carry the two-people scene.
+const noAnimals = async (page, where) => {
+  const srcs = await page.evaluate(() =>
+    [...document.querySelectorAll('img')].map((i) => i.currentSrc || i.src).concat(
+      [...document.querySelectorAll('[style*="background-image"]')].map((n) => n.style.backgroundImage)
+    )
+  );
+  const animal = srcs.find((s) => /companions[/%]/i.test(s));
+  if (animal) throw new Error(`${where}: animal art on the public page: ${animal}`);
 };
 
 async function flow(browser, contextOpts, label) {
@@ -16,25 +24,31 @@ async function flow(browser, contextOpts, label) {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`${label}: ${String(e)}`));
   const tid = (id) => page.locator(`[data-testid="${id}"]`);
+  const year = async () => Number(await tid('dob-year-value').innerText());
   const thisYear = new Date().getFullYear();
 
   await page.goto(`${WEB}/apply`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await tid('apply-start').waitFor({ timeout: 60000 });
+  await page.waitForSelector('text=Mentors are peers, not therapists.', { timeout: 15000 });
+  await page.waitForTimeout(800);
+  await noAnimals(page, `${label} intro`);
+  console.log(`${label}: OK public page (A38): scene, three rows, peers line, no animal art`);
+  await tid('apply-start').click();
   await tid('apply-dob-continue').waitFor({ timeout: 60000 });
-  console.log(`${label}: OK landing page loaded, DOB gate visible`);
+  await page.waitForTimeout(700); // the wheels arrive in a stagger
+  console.log(`${label}: OK "Apply to mentor" leads to the age gate (the first-run wheels)`);
 
-  // Underage: set a DOB ~10 years ago, assert the block copy shows and the
-  // continue button is genuinely disabled (not just visually — Playwright
-  // refuses to click a truly-disabled element, which is itself the proof).
-  await fill(null, thisYear - 10, page);
+  // Underage: step the year to ~10 years ago, assert the block copy shows and Continue
+  // is genuinely disabled (Playwright refuses to click a truly-disabled element).
+  while ((await year()) < thisYear - 10) await tid('dob-year-down').click();
   await page.waitForSelector('text=Mento is available to people 18 and older.', { timeout: 15000 });
-  const isDisabled = await tid('apply-dob-continue').isDisabled();
-  if (!isDisabled) {
+  if (!(await tid('apply-dob-continue').isDisabled())) {
     throw new Error(`${label}: continue button was NOT disabled for an underage DOB — age gate bypassed`);
   }
   console.log(`${label}: OK underage DOB blocked, continue disabled`);
 
   // Correct to a valid adult DOB, continue — mints a throwaway anonymous member.
-  await fill(null, thisYear - 25, page);
+  while ((await year()) > thisYear - 25) await tid('dob-year-up').click();
   await tid('apply-dob-continue').click();
   await tid('apply-motivation').waitFor({ timeout: 30000 });
   console.log(`${label}: OK adult DOB accepted, application form mounted`);
@@ -44,10 +58,12 @@ async function flow(browser, contextOpts, label) {
   );
   await tid('apply-community-life').click();
   await tid('apply-availability-weekends').click();
+  if (!(await tid('apply-submit').isDisabled())) throw new Error(`${label}: Submit enabled before the pledge`);
   await tid('apply-pledge').click();
   await tid('apply-submit').click();
   await tid('apply-success').waitFor({ timeout: 30000 });
-  console.log(`${label}: OK application submitted, success panel shown`);
+  await noAnimals(page, `${label} done`);
+  console.log(`${label}: OK pledge gated Submit; application submitted, success panel shown`);
 
   await ctx.close();
   return errors;
@@ -59,8 +75,10 @@ async function desktopSmoke(browser) {
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`desktop: ${String(e)}`));
   await page.goto(`${WEB}/apply`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await page.locator('[data-testid="apply-start"]').waitFor({ timeout: 60000 });
+  await page.locator('[data-testid="apply-start"]').click();
   await page.locator('[data-testid="apply-dob-continue"]').waitFor({ timeout: 60000 });
-  console.log('desktop: OK loads at 1280x800, DOB gate visible');
+  console.log('desktop: OK loads at 1280x800, Apply leads to the DOB gate');
   await ctx.close();
   return errors;
 }

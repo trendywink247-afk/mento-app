@@ -39,10 +39,17 @@ const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
     );
     await tid('apply-community-upsc').click();
     await tid('apply-availability-most_evenings').click();
+    // The pledge is a hard gate (board A37): until it is ticked Submit is the dashed,
+    // disabled key (aria-disabled — Playwright refuses to press it, which is the proof).
+    if (!(await tid('apply-submit').isDisabled())) throw new Error('Submit is enabled before the pledge');
+    await page.waitForSelector('text=Tick the line above to submit.', { timeout: 5000 });
     await tid('apply-pledge').click();
     await tid('apply-submit').click();
+    await tid('apply-in-review').waitFor({ timeout: 30000 });
+    console.log(`${label}: OK pledge gates Submit; submitted → In review (board A37)`);
+    await tid('apply-back-profile').click();
     await tid('profile-listener-status').waitFor({ timeout: 30000 });
-    console.log(`${label}: OK application submitted, pending card visible`);
+    console.log(`${label}: OK back on Profile, pending card visible`);
 
     // Optional admin leg: approve the application this run just created
     // (GET /admin/applications returns created_at ASCENDING → ours is last).

@@ -22,6 +22,7 @@ import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { Entrance } from '@/components/motion/Entrance';
 import { ambientLift } from '@/components/motion/ambientLift';
 import { PandaStage } from '@/components/motion/PandaStage';
+import { SageSky } from '@/components/motion/SageSky';
 import { JourneyHeader } from '@/components/onboarding/JourneyHeader';
 import { StepTransition } from '@/components/motion/StepTransition';
 import { AgeStep } from '@/components/onboarding/steps/AgeStep';
@@ -52,9 +53,10 @@ const MENTEE_ORDER: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'con
 const MENTOR_ORDER: Step[] = ['role', 'age', 'email', 'primer', 'handoff'];
 const ALL_STEPS: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'connecting', 'primer', 'handoff'];
 
-/** Steps that show the back key. connecting / handoff are forward-only; `ready` shows it
- * (board A18) — hardware back already stepped from ready to the pick. */
-const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'primer'];
+/** Steps that show the back key. connecting is forward-only; `ready` shows it (board A18)
+ * and so does the mentor hand-off (board A34: back to the primer; the session it made is
+ * simply reused next time). Hardware back already stepped through both. */
+const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'primer', 'handoff'];
 
 /** The step dots (board A16–A18, A33–A34). A member's four steps start after the fork;
  * the mentor board counts the fork too ("Step 4 of 5" on the primer). The fork itself and
@@ -252,6 +254,8 @@ export function OnboardingJourney() {
     <View style={styles.root}>
       {/* The persistent sky — never unmounts across steps. */}
       <AmbientBackground />
+      {/* The mentor side's green light (board A34), over the same sky. */}
+      <SageSky on={step === 'handoff'} />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={{ paddingTop: Math.max(insets.top + space.sm, HEADER_TOP) - insets.top }}>
           {/* The header arrives once, with the fork (board T01: the back key eases up from

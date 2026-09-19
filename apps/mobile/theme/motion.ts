@@ -194,3 +194,7 @@ export const heroBreath = { scale: 0.035, lean: { from: -1, to: 0.8 }, half: 520
 
 export const motion = { duration, easing, spring, stagger, breathe, character, stage, dots, chat };
 export type Motion = typeof motion;
+
+/** Mentor hand-off (board A34 "auto / continue"): once the session exists the screen holds
+ * long enough to be read, then goes to Mentor Home by itself; the key goes at once. */
+export const handoff = { hold: 3200 } as const;

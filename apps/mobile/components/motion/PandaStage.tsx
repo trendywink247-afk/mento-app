@@ -55,8 +55,10 @@ const ANCHORS: Record<StageStep, { x: number; y: number; scale: number; opacity:
   companion: { x: 0, y: 0, scale: 1, opacity: 0 },
   ready: { x: 0, y: 0, scale: 1, opacity: 0 },
   connecting: { x: 0, y: 0, scale: 1, opacity: 0 },
-  primer: { x: 0, y: 0, scale: 1, opacity: 1 },
-  handoff: { x: 0, y: 2, scale: 1, opacity: 1 },
+  // Mentor side (board A33 / A34): the companion perches on the primer's first card and
+  // stands on the hand-off's stage, so the header one steps aside there too.
+  primer: { x: 0, y: 0, scale: 1, opacity: 0 },
+  handoff: { x: 0, y: 2, scale: 1, opacity: 0 },
 };
 
 /** Steps where arriving deserves a small wave. */

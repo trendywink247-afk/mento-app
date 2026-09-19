@@ -119,8 +119,9 @@ async function run(browser, reduced) {
   await tid('apply-pledge').click();
   await tid('apply-submit').click();
   await tid('mentor-status').waitFor({ timeout: 30000 });
-  await page.waitForSelector('text=Mentor application received', { timeout: 30000 });
-  console.log(`${label}: OK application submitted → pending status card`);
+  await tid('apply-in-review').waitFor({ timeout: 30000 });
+  await page.waitForSelector('text=In review', { timeout: 30000 });
+  console.log(`${label}: OK application submitted → In review card (board A37)`);
 
   // First switch: a mentor never chose a companion, so "I'd rather talk today" walks the
   // rest of the member journey on the SAME account — never a silent default Panda, never

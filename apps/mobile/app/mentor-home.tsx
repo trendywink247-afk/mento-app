@@ -1,22 +1,27 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApplicationForm } from '@/components/ApplicationForm';
+import { ApplicationStatusCard } from '@/components/mentor/ApplicationStatusCard';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { ConversationRow } from '@/components/mentor/ConversationRow';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { RequestCard } from '@/components/mentor/RequestCard';
+import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
+import { StayInTouchSheet } from '@/components/mentor/StayInTouchSheet';
+import { SettleBack } from '@/components/motion/SettleBack';
 import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
 import { api, type ListenerApplication } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
+import { listenerApi, type StayInTouchAsk } from '@/lib/listenerApi';
 import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
 import { setDraft } from '@/lib/onboardingDraft';
 import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
@@ -42,6 +47,11 @@ export default function MentorHome() {
   const [application, setApplication] = useState<ListenerApplication | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
   const [switching, setSwitching] = useState(false);
+  // Board A15: the stay-in-touch decision sheet over a settled-back Mentor Home.
+  const [sheet, setSheet] = useState<{ ask: StayInTouchAsk; seats: number } | null>(null);
+  const [asksVersion, setAsksVersion] = useState(0);
+  // A member brief's "asked to stay in touch" row comes back here with ?ask=<id>.
+  const { ask: askParam } = useLocalSearchParams<{ ask?: string }>();
   // null = not attempted / minting; true = a listener token is on device and
   // usable; 'unavailable' = we tried and the credential couldn't be minted.
   const [consoleReady, setConsoleReady] = useState<boolean | 'unavailable' | null>(null);
@@ -146,7 +156,29 @@ export default function MentorHome() {
   const showConsole = application?.status === 'approved' && consoleReady === true;
 
   return (
-    <Screen scroll bg="lavender">
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      <SettleBack
+        open={!!sheet}
+        onDismiss={() => setSheet(null)}
+        dismissLabel={t('mentorInTouch.later')}
+        sheetLabel={t('mentorInTouch.sheetA11y')}
+        sheet={
+          sheet ? (
+            <StayInTouchSheet
+              key={sheet.ask.id}
+              ask={sheet.ask}
+              seats={sheet.seats}
+              onAnswered={() => setAsksVersion((n) => n + 1)}
+              onClose={() => setSheet(null)}
+            />
+          ) : null
+        }
+      >
+        <ScrollView
+          contentContainerStyle={[styles.content, !showConsole && styles.contentWide]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
       {!showConsole ? (
         <Entrance index={0}>
           <View style={styles.hero} testID="mentor-home">
@@ -183,10 +215,7 @@ export default function MentorHome() {
         </Entrance>
       ) : application.status === 'declined' ? (
         <Entrance index={1}>
-          <View style={[styles.card, elevation.sm, { backgroundColor: colors.surface }]} testID="mentor-status">
-            <Text style={[type.label, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.declinedBody')}</Text>
-          </View>
+          <ApplicationStatusCard state="declined" application={application} animal={animal} />
           {/* The server owns the 30-day reapply cooldown (anchored on decline time,
               which this client doesn't have) — always offer the form and let its
               own error display surface a 409 if it's too soon, exactly like the
@@ -198,6 +227,9 @@ export default function MentorHome() {
         consoleReady === true ? (
           <ConsoleBody
             animal={animal}
+            asksVersion={asksVersion}
+            openAskId={typeof askParam === 'string' ? askParam : undefined}
+            onOpenAsk={(ask, seats) => setSheet({ ask, seats })}
             onSessionLost={() => {
               // The token's already cleared (listenerApi does that before this
               // fires) — re-mint immediately rather than stranding the mentor on
@@ -235,18 +267,19 @@ export default function MentorHome() {
           </View>
         )
       ) : (
-        <Entrance index={1}>
-          <View style={[styles.card, styles.row, elevation.sm, { backgroundColor: colors.surface }]} testID="mentor-status">
-            <IconBadge icon="ear-outline" tone="accent" size={44} />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>{t('profile.receivedTitle')}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.receivedBody')}</Text>
-            </View>
-          </View>
-        </Entrance>
+        <ApplicationStatusCard
+          state="review"
+          application={application}
+          animal={animal}
+          onRead={() => router.push('/mentor/reading')}
+        />
       )}
 
-      <Entrance index={2}>
+      <View style={styles.grow} />
+      <Entrance index={showConsole ? 5 : 2} style={styles.foot}>
+        {showConsole ? (
+          <Text style={[type.caption, styles.centerText, { color: colors.inkMuted }]}>{t('mentorHomePage.footer')}</Text>
+        ) : null}
         <PrimaryButton
           label={t('mentorHome.switchTalk')}
           variant="link"
@@ -255,7 +288,9 @@ export default function MentorHome() {
           testID="mentor-switch-talk"
         />
       </Entrance>
-    </Screen>
+        </ScrollView>
+      </SettleBack>
+    </SafeAreaView>
   );
 }
 
@@ -264,9 +299,15 @@ export default function MentorHome() {
  * yet. */
 function ConsoleBody({
   animal,
+  asksVersion,
+  openAskId,
+  onOpenAsk,
   onSessionLost,
 }: {
   animal: CompanionAnimal | null;
+  asksVersion: number;
+  openAskId?: string;
+  onOpenAsk: (ask: StayInTouchAsk, seats: number) => void;
   onSessionLost: () => void;
 }) {
   const router = useRouter();
@@ -305,6 +346,27 @@ function ConsoleBody({
   useEffect(() => {
     void registerPush('listener');
   }, []);
+
+  // Waiting stay-in-touch asks (no push for these: "they will see it next time they are
+  // here"). Refetched on focus and after every answer.
+  const [asks, setAsks] = useState<StayInTouchAsk[]>([]);
+  const openedFromParam = useRef<string | null>(null);
+  const loadAsks = useCallback(() => {
+    void listenerApi
+      .stayInTouchAsks()
+      .then(setAsks)
+      .catch(() => {});
+  }, []);
+  useFocusEffect(loadAsks);
+  useEffect(loadAsks, [asksVersion, loadAsks]);
+  useEffect(() => {
+    if (!openAskId || !c.me || openedFromParam.current === openAskId) return;
+    const hit = asks.find((a) => a.id === openAskId);
+    if (hit) {
+      openedFromParam.current = openAskId;
+      onOpenAsk(hit, c.me.max_concurrent);
+    }
+  }, [openAskId, asks, c.me, onOpenAsk]);
 
   const handleToggle = () => {
     toggles.current += 1;
@@ -362,51 +424,85 @@ function ConsoleBody({
   const conversations = [...active, ...ended];
 
   return (
-    <Entrance index={0}>
+    <View style={styles.console}>
       <PresenceHeader me={c.me} animal={animal} busy={c.busy === 'status'} swept={swept} onToggle={handleToggle} />
 
-      <Text style={[styles.section, { color: colors.ink }]}>{t('mentor.requestsTitle')}</Text>
-      {c.note ? (
-        <Text style={[type.caption, styles.note, { color: colors.warning }]} testID="mentor-note">
-          {c.note}
-        </Text>
+      {asks.length ? (
+        <Entrance index={2} style={styles.list}>
+          {asks.map((ask) => (
+            <StayInTouchRow
+              key={ask.id}
+              id={ask.id}
+              name={ask.member_persona_name}
+              onPress={() => {
+                if (c.me) onOpenAsk(ask, c.me.max_concurrent);
+              }}
+            />
+          ))}
+        </Entrance>
       ) : null}
-      {c.requests.length ? (
-        c.requests.map((request) => (
-          <RequestCard
-            key={request.id}
-            request={request}
-            busy={c.busy === request.id}
-            onAccept={() => void c.act(request.id, 'accept')}
-            onDecline={() => void c.act(request.id, 'decline')}
-          />
-        ))
-      ) : (
-        <Text style={[type.caption, { color: colors.inkMuted }]} testID="mentor-requests-empty">
-          {t('mentor.requestsEmpty')}
-        </Text>
-      )}
 
-      <Text style={[styles.section, { color: colors.ink }]}>{t('mentor.conversationsTitle')}</Text>
-      {conversations.length ? (
-        conversations.map((conversation) => (
-          <ConversationRow
-            key={conversation.id}
-            conversation={conversation}
-            live={conversation.stream_channel_id ? c.live[conversation.stream_channel_id] : undefined}
-            onPress={() => openConversation(conversation)}
-          />
-        ))
-      ) : (
-        <Text style={[type.caption, { color: colors.inkMuted }]} testID="mentor-convos-empty">
-          {t('mentor.conversationsEmpty')}
+      <Entrance index={3} style={styles.section}>
+        <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
+          {t('mentor.requestsTitle')}
         </Text>
-      )}
-    </Entrance>
+        {c.note ? (
+          <Text style={[type.caption, styles.pad, { color: colors.warning }]} testID="mentor-note">
+            {c.note}
+          </Text>
+        ) : null}
+        {c.requests.length ? (
+          c.requests.map((request) => (
+            <RequestCard
+              key={request.id}
+              request={request}
+              busy={c.busy === request.id}
+              onAccept={() => void c.act(request.id, 'accept')}
+              onDecline={() => void c.act(request.id, 'decline')}
+            />
+          ))
+        ) : (
+          <Text style={[type.caption, styles.pad, { color: colors.inkMuted }]} testID="mentor-requests-empty">
+            {t('mentor.requestsEmpty')}
+          </Text>
+        )}
+      </Entrance>
+
+      <Entrance index={4} style={styles.section}>
+        <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
+          {t('mentor.conversationsTitle')}
+        </Text>
+        {conversations.length ? (
+          conversations.map((conversation) => (
+            <ConversationRow
+              key={conversation.id}
+              conversation={conversation}
+              live={conversation.stream_channel_id ? c.live[conversation.stream_channel_id] : undefined}
+              onPress={() => openConversation(conversation)}
+            />
+          ))
+        ) : (
+          <Text style={[type.caption, styles.pad, { color: colors.inkMuted }]} testID="mentor-convos-empty">
+            {t('mentor.conversationsEmpty')}
+          </Text>
+        )}
+      </Entrance>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  content: { flexGrow: 1, paddingHorizontal: space.md, paddingTop: space.sm, paddingBottom: space.md },
+  contentWide: { paddingHorizontal: space.lg },
+  console: { gap: 12 },
+  list: { gap: 12 },
+  section: { gap: space.sm, paddingTop: space.xs },
+  h2: { fontSize: 18, lineHeight: 24, fontFamily: type.label.fontFamily, paddingHorizontal: space.sm },
+  pad: { paddingHorizontal: space.sm },
+  grow: { flexGrow: 1, minHeight: space.md },
+  foot: { alignItems: 'center' },
+  centerText: { textAlign: 'center' },
   hero: { alignItems: 'center', gap: space.xs, marginTop: space.lg, marginBottom: space.xl },
   title: { ...type.displayHeadline, textAlign: 'center' },
   center: { alignItems: 'center', paddingVertical: space.xl },
@@ -415,5 +511,4 @@ const styles = StyleSheet.create({
   intro: { marginBottom: space.md },
   unavailable: { marginTop: space.xs },
   note: { marginBottom: space.sm },
-  section: { ...type.label, fontSize: 16, lineHeight: 22, marginTop: space.md, marginBottom: space.xs },
 });

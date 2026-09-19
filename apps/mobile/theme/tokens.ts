@@ -71,6 +71,7 @@ export const wash = {
   orange: '#F5E8C4',
   green: '#DCE6DD',
   danger: '#F8DEDC',
+  /** Board port (mentor side): the sky wash behind the safety shield. */
   sky: '#DCE8F2',
 } as const;
 export type Wash = keyof typeof wash;
@@ -161,6 +162,10 @@ export const type = {
   titleSmSerif: { fontSize: 20, fontFamily: font.serifBold, lineHeight: 26 },
   /** Big cockpit stat numerals (admin overview tiles) — pair with tabular-nums. */
   stat: { fontSize: 26, fontFamily: font.serifBold, lineHeight: 32 },
+  /** Board port (mentor side): the small uppercase line over a headline or a section. */
+  eyebrow: { fontSize: 13, fontFamily: font.sansBold, lineHeight: 18, letterSpacing: 0.5, textTransform: 'uppercase' },
+  /** A card row's title on the mentor side (board 16/22 bold). */
+  cardTitle: { fontSize: 16, fontFamily: font.sansBold, lineHeight: 22 },
 } as const;
 
 /**

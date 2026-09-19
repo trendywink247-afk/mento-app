@@ -14,6 +14,8 @@ export type ListenerMe = {
   stream_token: string;
   public_line: string | null;
   availability_note: string | null;
+  /** The next 04:00 IST rename (ISO UTC); null when rotation is off. */
+  name_changes_at?: string | null;
 };
 
 /** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
@@ -33,6 +35,8 @@ export type MemberBrief = {
   member_masked: boolean;
   safety_flags_open: number;
   care_prompt: string;
+  /** The member and this mentor stay in touch (board A36; the mentor can end it). */
+  in_touch?: boolean;
 };
 
 export type ListenerConversation = {
@@ -45,6 +49,19 @@ export type ListenerConversation = {
   member_masked: boolean;
   created_at: string;
   ended_at: string | null;
+  in_touch?: boolean;
+};
+
+/** A member's waiting "stay in touch" ask, as the mentor sees it (board A15): the
+ * member's persona and companion only — nothing else about them exists here. */
+export type StayInTouchAsk = {
+  id: string;
+  member_persona_name: string;
+  member_persona_avatar: string;
+  companion_animal: string | null;
+  companion_colour: string | null;
+  conversation_id: string | null;
+  asked_at: string;
 };
 
 export type ListenerRequest = {
@@ -130,6 +147,18 @@ export const listenerApi = {
 
   end: (conversationId: string) =>
     req<{ status: string }>(`/listener/me/conversations/${conversationId}/end`, { method: 'POST' }),
+
+  /** Asks waiting for an answer, oldest first (no push for these — seen next visit). */
+  stayInTouchAsks: () => req<StayInTouchAsk[]>('/listener/me/stay-in-touch'),
+
+  acceptStayInTouch: (id: string) =>
+    req<{ status: string }>(`/listener/me/stay-in-touch/${id}/accept`, { method: 'POST' }),
+
+  notNowStayInTouch: (id: string) =>
+    req<{ status: string }>(`/listener/me/stay-in-touch/${id}/not-now`, { method: 'POST' }),
+
+  endStayInTouch: (conversationId: string) =>
+    req<{ status: string }>(`/listener/me/conversations/${conversationId}/stay-in-touch`, { method: 'DELETE' }),
 
   deletePushToken: (expo_push_token: string) =>
     req<{ status: string }>('/listener/me/push-token', {

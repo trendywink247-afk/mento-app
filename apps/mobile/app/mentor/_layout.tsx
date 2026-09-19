@@ -11,6 +11,7 @@ export default function MentorLayout() {
       <Stack.Screen name="[id]" />
       <Stack.Screen name="chat/[id]" options={{ animation: 'fade' }} />
       <Stack.Screen name="member/[id]" />
+      <Stack.Screen name="reading" />
       <Stack.Screen name="report" options={{ presentation: 'transparentModal', animation: 'fade' }} />
       <Stack.Screen name="helplines" options={{ presentation: 'transparentModal', animation: 'fade' }} />
       <Stack.Screen name="line" options={{ presentation: 'transparentModal', animation: 'fade' }} />

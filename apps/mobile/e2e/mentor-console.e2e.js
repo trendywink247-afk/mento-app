@@ -5,7 +5,7 @@
  *  A (mentor): landing → listen door → age → email → primer → Mentor Home → applies;
  *              admin approves via API; reload → Mentor Home IS the console; toggles online.
  *  B (member): onboards, browses mentors, sends a Personal request to A's persona.
- *  A: accepts → conversation row → opens the chat → mentor rail visible → replies.
+ *  A: accepts → conversation row → opens the chat → mentor helplines key visible → replies.
  *  B: opens the chat from My Chats and sees the reply.
  *  A: Report sheet files; header menu → End → back on the console with the row Ended.
  *  R (reduced motion): the console still opens for A's session, static.
@@ -130,11 +130,12 @@ async function memberOnboard(page, tid) {
   await a.waitForSelector('[data-testid^="mentor-convo-"]', { timeout: 30000 });
   await a.locator('[data-testid^="mentor-convo-"]').first().click();
   await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 60000 });
-  await a.waitForSelector('[data-testid="mentor-rail"]', { timeout: 15000 });
+  // Board A35: the rail is gone — Helplines is a labelled key in the header's path strip.
+  await a.waitForSelector('[data-testid="mentor-helplines"]', { timeout: 15000 });
   await atid('listener-composer-input').fill(MENTOR_MSG);
   await atid('listener-composer-send').click();
   await a.waitForSelector(`text=${MENTOR_MSG}`, { timeout: 20000 });
-  console.log('OK request accepted, chat open, rail visible, reply sent');
+  console.log('OK request accepted, chat open, helplines key visible, reply sent');
 
   // --- B: the reply arrives ----------------------------------------------------
   await b.goto(`${WEB}/chats`, { waitUntil: 'networkidle', timeout: 120000 });
@@ -149,9 +150,11 @@ async function memberOnboard(page, tid) {
   // --- A: member brief ("Context for care") -------------------------------------
   await atid('member-header').click();
   await a.waitForSelector('[data-testid="brief-ready"]', { timeout: 30000 });
-  await a.locator('text=Why they came').first().waitFor({ timeout: 15000 });
-  await a.locator('text=A gentle next step').first().waitFor({ timeout: 15000 });
-  console.log('OK member brief shows "Why they came" + "A gentle next step"');
+  // Board A36: the 2x2 facts and the care prompt.
+  await a.locator('text=Path and stage').first().waitFor({ timeout: 15000 });
+  await a.locator('text=A care prompt').first().waitFor({ timeout: 15000 });
+  await a.locator("text=You will never see a member's age, email or anything that identifies them.").first().waitFor({ timeout: 15000 });
+  console.log('OK member brief (A36) shows the facts, the care prompt and the identity promise');
   await atid('back').click();
   await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
 
@@ -186,7 +189,9 @@ async function memberOnboard(page, tid) {
   await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
 
   // --- A: report, then end -----------------------------------------------------
-  await atid('mentor-report').click();
+  // Board A35: Report lives in the options menu.
+  await atid('mentor-chat-menu').click();
+  await atid('mentor-menu-report').click();
   await a.waitForSelector('[data-testid="mentor-report-sheet"]', { timeout: 15000 });
   await atid('report-reason-spam').click();
   await atid('report-submit').click();

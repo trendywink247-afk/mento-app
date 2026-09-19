@@ -27,6 +27,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { breathe, easing, stage as stageMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
+import { wash, washEdge } from '@/theme/tokens';
 
 type Props = {
   size: number;
@@ -35,6 +36,9 @@ type Props = {
   ripples?: boolean;
   sheen?: boolean;
   motes?: boolean;
+  /** 'sage' = the mentor side's green stage (board A34): sage ring + tint, and a pillow
+   * rim under the disc instead of the soft accent floor shadow. Default: the accent. */
+  tone?: 'accent' | 'sage';
   children?: ReactNode;
 };
 
@@ -77,7 +81,7 @@ function Ripple({ size, offset, on, color }: { size: number; offset: number; on:
   );
 }
 
-export function Stage({ size, rings = 2, ripples = false, sheen = false, motes = false, children }: Props) {
+export function Stage({ size, rings = 2, ripples = false, sheen = false, motes = false, tone = 'accent', children }: Props) {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const on = !reduced;
@@ -87,6 +91,9 @@ export function Stage({ size, rings = 2, ripples = false, sheen = false, motes =
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const sage = COMPANION_COLORS.sage.accent;
   const plum = COMPANION_COLORS.plum.accent;
+  const green = tone === 'sage';
+  const ringColor = green ? sage : colors.accent;
+  const discTint = green ? wash.green : colors.accentTint;
 
   const spin = useLoop(stageMotion.ringSpin, on);
   const spinBack = useLoop(stageMotion.ringSpinBack, on && rings === 2);
@@ -127,6 +134,16 @@ export function Stage({ size, rings = 2, ripples = false, sheen = false, motes =
     <View style={{ width: size, height: size }} pointerEvents="box-none">
       {/* The disc's soft floor shadow (board: 0 24px 50px accent @ 0.22) — drawn, so it is
         * identical on web, iOS and Android (elevation cannot be tinted or this soft). */}
+      {green ? (
+        // The sage stage is a pillow: a rim under the disc, not a floor shadow.
+        <View
+          style={[
+            styles.abs,
+            { left: inset, top: inset + RIM, width: disc, height: disc, borderRadius: disc / 2, backgroundColor: washEdge.green },
+          ]}
+          pointerEvents="none"
+        />
+      ) : (
       <Svg
         width={size + shadowPad * 2}
         height={size + shadowPad * 2}
@@ -141,6 +158,7 @@ export function Stage({ size, rings = 2, ripples = false, sheen = false, motes =
         </Defs>
         <Circle cx={c + shadowPad} cy={c + shadowPad} r={disc / 2 + shadowPad * 0.7} fill={`url(#stageShadow${uid})`} />
       </Svg>
+      )}
 
       <View
         style={[styles.abs, styles.clip, { left: inset, top: inset, width: disc, height: disc, borderRadius: disc / 2 }]}
@@ -151,10 +169,17 @@ export function Stage({ size, rings = 2, ripples = false, sheen = false, motes =
             <RadialGradient id={`stageDisc${uid}`} cx="50%" cy="38%" r="62%" fx="50%" fy="38%">
               <Stop offset="0" stopColor={colors.surface} />
               <Stop offset="0.38" stopColor={colors.surface} />
-              <Stop offset="1" stopColor={colors.accentTint} />
+              <Stop offset="1" stopColor={discTint} />
             </RadialGradient>
           </Defs>
-          <Circle cx={disc / 2} cy={disc / 2} r={disc / 2} fill={`url(#stageDisc${uid})`} />
+          <Circle
+            cx={disc / 2}
+            cy={disc / 2}
+            r={disc / 2 - (green ? 0.5 : 0)}
+            fill={`url(#stageDisc${uid})`}
+            stroke={green ? washEdge.green : undefined}
+            strokeWidth={green ? 1 : 0}
+          />
         </Svg>
         {sheen && on ? (
           <Animated.View style={[styles.abs, { left: 0, top: -40 * k, width: 70 * k, height: 420 * k }, sheenStyle]}>
@@ -174,9 +199,9 @@ export function Stage({ size, rings = 2, ripples = false, sheen = false, motes =
 
       <Animated.View style={[styles.abs, styles.fill, spinStyle]} pointerEvents="none" renderToHardwareTextureAndroid>
         <Svg width={size} height={size} viewBox="0 0 360 360">
-          <Circle cx={180} cy={180} r={176} fill="none" stroke={colors.accent} strokeOpacity={0.38} strokeWidth={1.25 / k} strokeDasharray={[2 / k, 9 / k]} strokeLinecap="round" />
-          <Circle cx={180} cy={4} r={5} fill={colors.accent} />
-          <Circle cx={332} cy={268} r={3.5} fill={sage} />
+          <Circle cx={180} cy={180} r={176} fill="none" stroke={ringColor} strokeOpacity={0.38} strokeWidth={1.25 / k} strokeDasharray={[2 / k, 9 / k]} strokeLinecap="round" />
+          <Circle cx={180} cy={4} r={5} fill={ringColor} />
+          <Circle cx={332} cy={268} r={3.5} fill={green ? colors.accent : sage} />
         </Svg>
       </Animated.View>
 
@@ -213,6 +238,9 @@ export function Stage({ size, rings = 2, ripples = false, sheen = false, motes =
     </View>
   );
 }
+
+/** The sage stage's pillow rim (board A34: 0 5px 0). */
+const RIM = 5;
 
 const styles = StyleSheet.create({
   abs: { position: 'absolute' },
