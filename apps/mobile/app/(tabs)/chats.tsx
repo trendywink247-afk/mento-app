@@ -334,11 +334,14 @@ export default function ChatsTab() {
           inTouch={Boolean(c.in_touch)}
           badgeStill={!breathingBadges.has(c.id)}
           secondLine={
-            c.first_met_as
-              ? t('chatsList.firstTalkedAs', { name: c.first_met_as })
-              : c.in_touch
-                ? t('chatsList.yourMentor')
-                : null
+            // The mentor snoozed this chat: the member reads only the kind half (board A10).
+            s === 'active' && c.reply_within_a_day
+              ? t('replyWindow.rowLine', { name: c.listener_persona_name })
+              : c.first_met_as
+                ? t('chatsList.firstTalkedAs', { name: c.first_met_as })
+                : c.in_touch
+                  ? t('chatsList.yourMentor')
+                  : null
           }
           lastLine={s === 'wiped' ? t('chats.wiped') : p?.text || t('chats.sayHello')}
           time={relativeTime((p?.at ?? new Date(c.created_at)).toISOString(), t)}

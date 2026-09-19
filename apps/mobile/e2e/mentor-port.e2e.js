@@ -114,7 +114,7 @@ async function pass(browser, reduced) {
     await page.goto(`${WEB}/listener-apply`, { waitUntil: 'networkidle', timeout: 120000 });
     await tid('apply-motivation').fill('I sat the exam three times and know how lonely the second attempt gets.');
     await tid('apply-community-upsc').click();
-    await tid('apply-availability-few_hours').click();
+    await tid('apply-time-mornings').click();
     expect(await tid('apply-submit').isDisabled(), `${label}: Submit is enabled before the pledge`);
     expect((await tid('apply-gate').innerText()).includes('Tick the line above'), `${label}: the gate line does not name the pledge`);
     await tid('apply-pledge').click();

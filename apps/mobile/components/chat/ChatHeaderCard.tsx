@@ -52,6 +52,9 @@ type Props = {
   name: string;
   /** The mentor's availability; `null` while unknown — never assumed. */
   status: 'online' | 'away' | 'offline' | null;
+  /** The mentor snoozed this chat (board A10): the status reads "Mentor · replies within a
+   * day" instead of here / away — the kind half only, never "snoozed". */
+  replyWithinADay?: boolean;
   /** The mentor's community as a member reads it ("UPSC"), when they have one. */
   community?: string | null;
   /** The conversation's topic as the server words it for a member ("Exam stress" —
@@ -123,6 +126,7 @@ function HeaderGlow({ color }: { color: string }) {
 export function ChatHeaderCard({
   name,
   status,
+  replyWithinADay = false,
   community,
   topic,
   savedCount,
@@ -135,7 +139,13 @@ export function ChatHeaderCard({
   const online = status === 'online';
 
   const statusLine = [
-    status === null ? t('chat.header.mentor') : online ? t('chat.header.here') : t('chat.header.away'),
+    replyWithinADay
+      ? t('replyWindow.header')
+      : status === null
+        ? t('chat.header.mentor')
+        : online
+          ? t('chat.header.here')
+          : t('chat.header.away'),
     community,
   ]
     .filter(Boolean)

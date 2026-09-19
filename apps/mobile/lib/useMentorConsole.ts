@@ -23,7 +23,31 @@ export type ChannelLive = {
   unread: number;
   preview: string | null;
   typing: boolean;
+  /** Board A10 "Waiting on you": when the member's oldest unanswered message was sent
+   * (ms since epoch) — the start of the trailing run of the member's messages since the
+   * mentor last wrote. Null once the mentor has replied (or nobody has written yet). */
+  waitingSince: number | null;
 };
+
+type LiveMessage = { type?: string; user?: { id?: string } | null; created_at?: string | Date | null };
+
+/** Only real messages count toward "waiting" — never a system line or an error echo. */
+const counts = (m: LiveMessage) => !m.type || m.type === 'regular' || m.type === 'reply';
+
+const at = (m: LiveMessage): number | null => (m.created_at ? new Date(m.created_at).getTime() : null);
+
+/** Walk back from the newest message while the member is the author; the earliest of that
+ * run is when they started waiting. The mentor's own last word means nobody waits. */
+function waitingSinceOf(messages: readonly LiveMessage[], selfId: string | undefined): number | null {
+  let since: number | null = null;
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const m = messages[i];
+    if (!counts(m)) continue;
+    if (m.user?.id === selfId) break;
+    since = at(m) ?? since;
+  }
+  return since;
+}
 
 export type MentorConsole = {
   me: ListenerMe | null;
@@ -36,10 +60,12 @@ export type MentorConsole = {
   refresh: () => Promise<void>;
   toggleStatus: () => Promise<void>;
   act: (requestId: string, action: 'accept' | 'decline') => Promise<void>;
+  /** Board A10: snooze (true) or undo (false) one conversation; false on failure. */
+  setSnooze: (conversationId: string, on: boolean) => Promise<boolean>;
   busy: string | null;
 };
 
-const EMPTY_LIVE: ChannelLive = { unread: 0, preview: null, typing: false };
+const EMPTY_LIVE: ChannelLive = { unread: 0, preview: null, typing: false, waitingSince: null };
 
 export function useMentorConsole(atCapacityText: string): MentorConsole {
   const [me, setMe] = useState<ListenerMe | null>(null);
@@ -115,18 +141,29 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
           unread: ch.countUnread(),
           preview: lastMessage?.text ?? null,
           typing: false,
+          waitingSince: waitingSinceOf(messages, client.userID),
         };
 
         const onMessageNew = (e: Event) => {
           if (!live()) return;
-          setLive((prev) => ({
-            ...prev,
-            [channelId]: {
-              ...(prev[channelId] ?? EMPTY_LIVE),
-              unread: ch.countUnread(),
-              preview: e.message?.text ?? prev[channelId]?.preview ?? null,
-            },
-          }));
+          const m = (e.message ?? {}) as LiveMessage;
+          setLive((prev) => {
+            const was = prev[channelId] ?? EMPTY_LIVE;
+            const waitingSince = !counts(m)
+              ? was.waitingSince
+              : m.user?.id === client.userID
+                ? null
+                : (was.waitingSince ?? at(m) ?? Date.now());
+            return {
+              ...prev,
+              [channelId]: {
+                ...was,
+                unread: ch.countUnread(),
+                preview: e.message?.text ?? was.preview ?? null,
+                waitingSince,
+              },
+            };
+          });
         };
         const onMessageRead = () => {
           if (!live()) return;
@@ -234,5 +271,25 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
     [busy, refresh, atCapacityText],
   );
 
-  return { me, requests, conversations, live, loading, error, note, refresh, toggleStatus, act, busy };
+  const setSnooze = useCallback(
+    async (conversationId: string, on: boolean) => {
+      if (busy) return false;
+      setBusy(`snooze:${conversationId}`);
+      try {
+        const out = on ? await listenerApi.snooze(conversationId) : await listenerApi.wake(conversationId);
+        setConversations((cs) =>
+          cs.map((c) => (c.id === conversationId ? { ...c, snoozed_until: out.snoozed_until } : c)),
+        );
+        return true;
+      } catch {
+        // Still on failure (T&S #11): the row stays exactly as it was; the caller says so.
+        return false;
+      } finally {
+        setBusy(null);
+      }
+    },
+    [busy],
+  );
+
+  return { me, requests, conversations, live, loading, error, note, refresh, toggleStatus, act, setSnooze, busy };
 }

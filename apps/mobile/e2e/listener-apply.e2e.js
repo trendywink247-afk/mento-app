@@ -38,7 +38,7 @@ const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
       "I've walked the UPSC road twice and know how lonely the wait after prelims gets."
     );
     await tid('apply-community-upsc').click();
-    await tid('apply-availability-most_evenings').click();
+    await tid('apply-time-evenings').click();
     // The pledge is a hard gate (board A37): until it is ticked Submit is the dashed,
     // disabled key (aria-disabled — Playwright refuses to press it, which is the proof).
     if (!(await tid('apply-submit').isDisabled())) throw new Error('Submit is enabled before the pledge');

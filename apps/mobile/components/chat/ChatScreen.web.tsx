@@ -480,6 +480,7 @@ export default function ChatScreenWeb() {
       <ChatHeaderCard
         name={headerName}
         status={header.profile?.status ?? null}
+        replyWithinADay={Boolean(header.profile?.reply_within_a_day)}
         community={header.community}
         topic={header.topic}
         savedCount={header.savedCount}

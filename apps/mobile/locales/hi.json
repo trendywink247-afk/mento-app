@@ -1111,7 +1111,20 @@
     "askBody": "हाँ या अभी नहीं। जब तैयार हों, तब तय करें।",
     "footer": "आप मेंटर और साथी हैं, थेरेपिस्ट नहीं।",
     "companionA11y": "आपका साथी, आपके उपस्थिति कार्ड पर बैठा हुआ",
-    "conversationA11y": "%{name} के साथ बातचीत"
+    "conversationA11y": "%{name} के साथ बातचीत",
+    "waitingOnYou": "जवाब का इंतज़ार · %{age}",
+    "ageMinutes": "%{count} मिनट",
+    "ageHours": "%{count} घंटे",
+    "ageDays": "%{count} दिन",
+    "snooze": "24 घंटे टालें",
+    "snoozeA11y": "%{name} को 24 घंटे के लिए टालें। तब तक कोई याद नहीं दिलाई जाएगी। कुछ ज़रूरी हो, तो वह फिर भी आप तक पहुँचेगा।",
+    "snoozedUntil": "टाला गया · %{time} पर वापस",
+    "snoozedTomorrow": "टाला गया · कल %{time} पर वापस",
+    "wake": "वापस लें",
+    "wakeA11y": "%{name} को टालना वापस लें",
+    "conversationWaitingA11y": "%{name} के साथ बातचीत, आपके जवाब का इंतज़ार",
+    "conversationSnoozedA11y": "%{name} के साथ बातचीत, टाली गई",
+    "snoozeError": "यह अभी नहीं हो पाया। थोड़ी देर में फिर कोशिश करें।"
   },
   "mentorChatPage": {
     "member": "सदस्य",
@@ -1201,5 +1214,15 @@
     "doneHeadline": "शुक्रिया। आपका आवेदन ",
     "doneHeadlineAccent": "Mento टीम के पास है।",
     "doneBody": "Mento टीम इसे देखती है, आमतौर पर कुछ ही दिनों में। अगर आपने ईमेल दिया है, तो जवाब वहीं आएगा।"
+  },
+  "replyWindow": {
+    "rowLine": "%{name} एक दिन के भीतर जवाब देंगे",
+    "header": "एक दिन के भीतर जवाब देंगे"
+  },
+  "availabilityTimes": {
+    "time_mornings": "सुबह",
+    "time_evenings": "शाम",
+    "time_weekends": "सप्ताहांत",
+    "commitmentA11y": "आप कितना समय दे सकते हैं: %{value}। बदलने के लिए टैप करें।"
   }
 }

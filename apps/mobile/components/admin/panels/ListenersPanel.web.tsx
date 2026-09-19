@@ -235,7 +235,12 @@ export default function ListenersPanel() {
                 <View style={{ flex: 1 }}>
                   <Text style={[type.bodySemi, { color: colors.ink }]}>{app.persona_name}</Text>
                   <Text style={[type.caption, styles.rosterNums, { color: colors.inkMuted }]}>
-                    {formatTopic(app.availability)} · {formatTimestamp(app.created_at)}
+                    {[
+                      formatTopic(app.availability),
+                      // Board A37 time-of-day chips (older applications have none).
+                      ...(app.available_times ?? []).map(formatTopic),
+                      formatTimestamp(app.created_at),
+                    ].join(' · ')}
                   </Text>
                 </View>
                 {app.mentor_interest ? (
