@@ -27,6 +27,7 @@ export function IconBadge({
     orange: COMPANION_COLORS.mustard.accent,
     green: COMPANION_COLORS.sage.accent,
     danger: colors.danger,
+    sky: COMPANION_COLORS.sky.accent,
   };
   const bg = tone === 'accent' ? colors.accentTint : wash[tone];
   return (

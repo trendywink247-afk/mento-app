@@ -704,5 +704,34 @@
     "hoursAgo": "%{count} hr ago",
     "yesterday": "yesterday",
     "daysAgo": "%{count} days ago"
+  },
+  "mentorPrimer": {
+    "eyebrow": "Before you mentor",
+    "headline": "Mentoring here,\nin plain ",
+    "headlineAccent": "words.",
+    "sub": "Four things to hold on to.",
+    "row1Title": "Listen, then share what helped",
+    "row1Body": "You speak from your own road. You do not diagnose or treat.",
+    "row2Title": "A mentor, not a therapist",
+    "row2Body": "You are someone who has walked this road. That is what you offer.",
+    "row3Title": "You are not alone with it",
+    "row3Body": "If someone may be in danger, Mento shows them helplines and flags the chat for our safety team.",
+    "row4Title": "Your name rotates",
+    "row4Body": "It changes every day. Members only ever see a persona, never you.",
+    "footer": "Mentors are peers, not therapists.",
+    "companionA11y": "Your companion, perched on the first card and listening along"
+  },
+  "mentorHandoff": {
+    "chip": "The mentor side",
+    "headline": "Thank you for wanting to be here for ",
+    "headlineAccent": "someone.",
+    "sub": "Next is a short application. It is reviewed and approved by the Mento team before your first conversation.",
+    "stepsA11y": "What happens next",
+    "step1": "A short application",
+    "step2": "Reviewed by the Mento team",
+    "step3": "Your first conversation",
+    "cta": "Go to Mentor Home",
+    "companionA11y": "Your companion has walked onto a soft green round stage and greets you",
+    "errorHeadline": "That did not go through."
   }
 }
