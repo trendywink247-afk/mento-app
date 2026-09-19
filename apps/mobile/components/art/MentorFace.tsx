@@ -3,6 +3,7 @@
  * A14 / A25 / A35): their companion animal standing in a soft round wash disc, with an
  * optional presence dot. Never a face, a photo, a landscape or a badge.
  *
+ * Every mentor is an Owl (founder, 2026-09-20); the wash colour tells mentors apart.
  * Which animal and which wash come from the SERVER (`companion_animal` / `companion_colour`
  * on every mentor payload — `services/api/app/services/mentor_face.py`). They are dealt
  * once from the listener id and never rotate with the daily name ("same owl, new name",

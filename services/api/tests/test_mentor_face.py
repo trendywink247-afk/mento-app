@@ -10,6 +10,7 @@ along; the mentor's console rows carry the member's companion + colour, never it
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import uuid
 from datetime import UTC, date, datetime, timedelta
@@ -110,27 +111,42 @@ def _face(listener_id: str) -> tuple[str, str]:
 # --- the deal ------------------------------------------------------------------------
 
 
-def test_derive_is_deterministic_and_inside_the_drawable_sets():
+def test_derive_is_deterministic_and_every_mentor_is_an_owl():
+    """Founder, 2026-09-20: the Owl is the mentor side's animal; the wash colour still
+    tells mentors apart."""
     ids = [str(uuid.uuid4()) for _ in range(200)]
     for lid in ids:
         a, c = mentor_face.derive(lid)
         assert (a, c) == mentor_face.derive(lid)
-        assert a in companions.ANIMALS
+        assert a == "Owl"
         assert c in companions.COLOURS
-    # A real spread, not one animal for everybody.
-    assert len({mentor_face.derive(lid)[0] for lid in ids}) >= 6
+    # A real spread of colours, not one wash for everybody.
+    assert len({mentor_face.derive(lid)[1] for lid in ids}) >= 6
 
 
-def test_the_backfill_migration_deals_the_same_face_as_the_app():
+def _migration(prefix: str):
     path = next(
-        (Path(__file__).resolve().parents[1] / "migrations" / "versions").glob("4b971bd4faaa_*.py")
+        (Path(__file__).resolve().parents[1] / "migrations" / "versions").glob(f"{prefix}_*.py")
     )
-    spec = importlib.util.spec_from_file_location("mentor_face_migration", path)
+    spec = importlib.util.spec_from_file_location(f"migration_{prefix}", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    return module
+
+
+def test_the_owl_migration_keeps_every_older_mentors_colour():
+    """4b971bd4faaa dealt (animal, colour); d14a0owl0001 turns the animal into the Owl and
+    leaves the colour — which must be the colour the app deals the same id today."""
+    first = _migration("4b971bd4faaa")
+    owls = _migration("d14a0owl0001")
+    assert owls.down_revision == "4b971bd4faaa"
     for _ in range(100):
         lid = str(uuid.uuid4())
-        assert module._derive(lid) == mentor_face.derive(lid)
+        assert first._derive(lid)[1] == mentor_face.derive(lid)[1]
+        # The downgrade restores exactly the animal the first backfill dealt.
+        digest = hashlib.sha256(f"mento-mentor-face:{lid}".encode()).digest()
+        old = owls._OLD_ANIMALS[int.from_bytes(digest[:4], "big") % len(owls._OLD_ANIMALS)]
+        assert old == first._derive(lid)[0]
 
 
 def test_the_face_never_depends_on_the_name_or_the_avatar_seed():
@@ -145,6 +161,7 @@ def test_every_new_mentor_is_dealt_a_face_on_insert(db_session):
     lid = _mentor(db_session)
     db_session.commit()
     assert _face(lid) == mentor_face.derive(lid)
+    assert _face(lid)[0] == "Owl"
 
 
 @requires_postgres
@@ -282,6 +299,7 @@ def test_approval_deals_a_face_from_the_listener_id_not_the_members_companion(cl
     with TestSession() as s:
         li = s.query(ListenerProfile).filter_by(vetting_status=VettingStatus.approved).one()
         assert (li.companion_animal, li.companion_colour) == mentor_face.derive(li.id)
+        assert li.companion_animal == "Owl"  # never the member's Cat
 
 
 @requires_postgres
