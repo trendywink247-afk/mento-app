@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-09-20 (session 36, part 3) — LIVE: Start fresh erases on our servers, one mentor path, talk-today, the question letter, companion names ✅
+
+**Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0bb02` (preview, commit `1f0029e`). Web: https://app.agentin.chat · https://admin.agentin.chat/admin.
+
+- **Merged:** `1db76cb` lane u6 (`DELETE /me` erasure + the Start fresh sheet; one mentor path for every door — `lib/mentorPath.ts`; Profile button states; talk-today asks only what is missing; paid "coming soon" placeholder at mentor signup), `523894c` lane u8 (A04 letter after a Personal request; the companion never stands on the last bubble), `15dfa5d` lane u7 (companion name, private to the member — 39 privacy tests). Migrations `9c5ada714a88` (erasure detaches safety records) → `3a56447b2ab6` (companion name).
+- **Gate:** pytest `450 passed`, alembic check clean, ruff + black clean, tsc clean, EN/HI 1155 = 1155, e2e 31 + 2 green; `path-question` and `request-sent` failed only late in the long run (no chat opened within 60 s) and PASSED when re-run alone with fresh seats. Two earlier gate attempts were void: (1) a stopped gate kept running and a second one reset the same DB under it; (2) ~12 finished-lane servers exhausted RAM and killed the main Expo mid-run — finished lanes' servers were stopped (lanes u2–u9).
+- **Prod:** backup `mento-20260919-144630.sql.gz` → `deploy.sh` (alembic head `3a56447b2ab6`, `/health` + `/health/ready` 200) → `deploy-web.sh` → OTA `01a0bb02`. `ALLOWANCE_ENFORCED=true` on prod.
+- **Board:** Version 51 re-laid by a walker over the shipped app: 7 new rows ("The app today, as wired: …" + "Left to build or wire", 89 real captures). 
+- **In progress (round 3, see the lanes plan):** u10 (busy dead end, one open question, composer growth, pre-ask page + compose, empty-thread art, "Save to Journal"), u11 (one face per mentor, Mentor Home rows, Your line sheet, mentor chat Owl, application copy — the only migration), u12 DONE (companion pick copy + clipping, Profile "Support the team", My Chats empty state, admin Allowance + Feedback panels) — not merged yet.
+
 ## 2026-09-19 (session 36, part 2) — THE WHOLE BOARD IS LIVE: every screen of the final design in the app ✅ (+ Snooze 24 h and the availability chips, shipping next)
 
 **Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0ba59` (preview, commit `6a051c5` — the whole board + Snooze 24 h + availability chips). Prod API on `6a051c5`, alembic head `b9550a247866` (backup `mento-20260919-114110.sql.gz` first; the first deploy attempt hit a one-off GitHub fetch failure on the box, retried clean). Web: https://app.agentin.chat and https://admin.agentin.chat/admin.
