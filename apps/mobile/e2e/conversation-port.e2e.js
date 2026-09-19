@@ -403,7 +403,8 @@ async function run(browser, reduced) {
   console.log(`[${label}] OK A11 feedback: posts (200 received, screen=reflection, no ids), crisis words → still helplines 14416 + 1800-599-0019`);
 
   // Done → My Chats, one tab navigator; the sentence went to the Journal.
-  const TAKE = `taking the minute before it happens ${label}`;
+  // Unique per run: the dev database is shared across runs, so a fixed sentence would count old rows too.
+  const TAKE = `taking the minute before it happens ${label} ${Date.now().toString(36)}`;
   await tid('reflection-take').fill(TAKE);
   await tid('reflection-finish').click();
   await page.waitForURL('**/chats', { timeout: 30000 });
