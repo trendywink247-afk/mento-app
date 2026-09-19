@@ -9,11 +9,12 @@
  * their own text state and guard/async logic and just hand it primitives.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { createContext, useContext, useRef, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Platform,
   StyleSheet,
+  Text,
   TextInput,
   View,
   type TextInputProps,
@@ -29,8 +30,12 @@ const FIELD_RADIUS = radius.md; // 14
 const FIELD_HEIGHT = 52;
 const SEND_SIZE = 52;
 const INPUT_VERTICAL_PADDING = 14; // (52 − one 24px line) / 2
-const MAX_LINES = 4;
-const MAX_INPUT_HEIGHT = MAX_LINES * typeTokens.body.lineHeight + INPUT_VERTICAL_PADDING * 2;
+/** The field grows with its words up to this many lines, then scrolls inside (board A05's
+ * composer): a pre-filled two-line starter from the question builder is never clipped. */
+const MAX_LINES = 5;
+const LINE = typeTokens.body.lineHeight; // 24
+const INPUT_PAD = INPUT_VERTICAL_PADDING - 1; // the field's 1px border
+const MAX_INPUT_HEIGHT = MAX_LINES * LINE + INPUT_VERTICAL_PADDING * 2;
 
 /** Something small that sits ON the field's top edge, at its right end — the member chat's
  * companion (components/art/PerchedCompanion.tsx). Provided by the member chat screens only;
@@ -88,6 +93,12 @@ export function ComposerField({
   const perch = useContext(ComposerPerchContext);
   const chrome = useContext(ComposerChromeContext);
   const held = chrome.held === true;
+  // Web only: react-native-web's <textarea> never grows by itself (it is pinned to one row
+  // below), so an invisible twin of the words measures the wrapped height and the field is
+  // sized from it — one line to MAX_LINES. It shrinks again as words are deleted. Native
+  // multiline inputs grow on their own up to `maxHeight`.
+  const [webLines, setWebLines] = useState(1);
+  const webHeight = Math.min(MAX_LINES, Math.max(1, webLines)) * LINE + INPUT_PAD * 2;
 
   // A browser focuses a pre-filled textarea with the caret at the START; typing would
   // then land in front of the draft. Native already puts it at the end. Once only, so
@@ -114,6 +125,18 @@ export function ComposerField({
           style={[styles.field, { backgroundColor: colors.surface, borderColor: colors.border }]}
           containerStyle={styles.fieldContainer}
         >
+          {Platform.OS === 'web' ? (
+            <Text
+              aria-hidden
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              onLayout={(e) => setWebLines(Math.round(e.nativeEvent.layout.height / LINE))}
+              style={[typeTokens.body, styles.mirror]}
+            >
+              {/* A zero-width tail so a trailing newline still counts as a line. */}
+              {`${value}​`}
+            </Text>
+          ) : null}
           <TextInput
             value={value}
             onChangeText={onChangeText}
@@ -128,7 +151,12 @@ export function ComposerField({
             // on Android the same prop would pin the field to one line for good.
             {...(Platform.OS === 'web' ? { numberOfLines: 1 } : null)}
             maxFontSizeMultiplier={1.3}
-            style={[typeTokens.body, styles.input, { color: colors.ink, maxHeight: MAX_INPUT_HEIGHT }]}
+            style={[
+              typeTokens.body,
+              styles.input,
+              { color: colors.ink, maxHeight: MAX_INPUT_HEIGHT },
+              Platform.OS === 'web' ? { height: webHeight } : null,
+            ]}
             testID={`${testIDPrefix}-input`}
             accessibilityLabel={placeholder}
           />
@@ -190,9 +218,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   input: {
-    paddingVertical: INPUT_VERTICAL_PADDING - 1, // the field's 1px border
+    paddingVertical: INPUT_PAD,
     margin: 0,
   },
+  // The web twin: same words, same type, same width as the input, never seen or read.
+  mirror: { position: 'absolute', left: space.md, right: space.md, top: 0, opacity: 0, pointerEvents: 'none' },
   send: {
     width: SEND_SIZE,
     height: SEND_SIZE,

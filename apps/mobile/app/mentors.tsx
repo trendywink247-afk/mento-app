@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DeepHeader } from '@/components/DeepHeader';
 import { GroundFade } from '@/components/GroundFade';
+import { OpenQuestionNote } from '@/components/OpenQuestionNote';
 import { InTouchBadge } from '@/components/InTouchBadge';
 import { MentorFace } from '@/components/art/MentorFace';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
@@ -17,6 +18,7 @@ import type { PlacementSlot } from '@/lib/companionPlacement';
 import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
+import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { screenCache } from '@/lib/screenCache';
 import { topicLabelKey } from '@/lib/topics';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -45,7 +47,9 @@ export default function BrowseMentors() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { topic } = useLocalSearchParams<{ topic?: string }>();
+  // `question`: a draft carried from the first-question builder when nobody was free — it
+  // travels on to the mentor page's question step, never sent by itself.
+  const { topic, question } = useLocalSearchParams<{ topic?: string; question?: string }>();
   // Last-loaded list first, quiet refresh on focus; spinner only with nothing to show yet
   // (lib/screenCache.ts). Presence moves, so the refresh always runs.
   const cachedMentors = screenCache.get('mentors');
@@ -54,6 +58,8 @@ export default function BrowseMentors() {
   const [, setDetailTick] = useState(0);
   const [filter, setFilter] = useState<Filter>('all');
   const [note, setNote] = useState<string | null>(null);
+  /** One open question at a time (server 409 `question_open`): a still note, never a dead end. */
+  const [openQ, setOpenQ] = useState<OpenQuestion | null>(null);
   const [matching, setMatching] = useState(false);
   const perch = useCompanionPlacement('mentors', PERCHES, { still: note !== null });
 
@@ -98,6 +104,7 @@ export default function BrowseMentors() {
     if (matching) return;
     setMatching(true);
     setNote(null);
+    setOpenQ(null);
     try {
       const match = await api.match({ kind: 'general', issue_category: topic ?? null });
       router.push({
@@ -109,7 +116,10 @@ export default function BrowseMentors() {
         },
       });
     } catch (e) {
-      setNote(e instanceof ApiError && e.status === 503 ? t('common.allBusy') : t('common.networkError'));
+      const open = openQuestionFrom(e);
+      if (open) setOpenQ(open);
+      // Nobody free: the list below IS the other way (board A19 "Send your question instead").
+      else setNote(e instanceof ApiError && e.status === 503 ? t('askFlow.busyBody') : t('common.networkError'));
     } finally {
       setMatching(false);
     }
@@ -166,7 +176,10 @@ export default function BrowseMentors() {
     const card = (
       <PressKey
         onPress={() =>
-          router.push({ pathname: '/mentor/[id]', params: topic ? { id: l.id, topic } : { id: l.id } })
+          router.push({
+            pathname: '/mentor/[id]',
+            params: { id: l.id, ...(topic ? { topic } : {}), ...(question ? { question } : {}) },
+          })
         }
         edge={colors.edgeSurface}
         radius={radius.lg}
@@ -291,7 +304,16 @@ export default function BrowseMentors() {
             contentContainerStyle={styles.list}
             testID="browse-list"
             ListHeaderComponent={
-              note ? (
+              openQ ? (
+                <OpenQuestionNote
+                  question={openQ}
+                  onClosed={() => {
+                    setOpenQ(null);
+                    setNote(t('askFlow.openClosed'));
+                  }}
+                  testID="browse-open"
+                />
+              ) : note ? (
                 // Still on purpose (T&S #11).
                 <Text style={[type.note, styles.note, { color: colors.ink, backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} testID="browse-note">
                   {note}

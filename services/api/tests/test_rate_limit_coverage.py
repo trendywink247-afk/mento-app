@@ -113,12 +113,16 @@ def test_personal_requests_are_capped_per_member(client, db_session, limiter_on)
             s.flush()
             listener_ids.append(li.id)
         s.commit()
-    statuses = [
-        client.post(
+    statuses = []
+    for lid in listener_ids:
+        r = client.post(
             f"/api/v1/listeners/{lid}/request", json={"intro_message": "hello"}, headers=_auth(uid)
-        ).status_code
-        for lid in listener_ids
-    ]
+        )
+        statuses.append(r.status_code)
+        if r.status_code == 200:
+            # One open question at a time: close it so the next ask meets the limiter,
+            # not the question_open rule. Closing is never rate-limited.
+            client.delete(f"/api/v1/listeners/requests/{r.json()['id']}", headers=_auth(uid))
     assert statuses == [200] * 10 + [429]
 
 

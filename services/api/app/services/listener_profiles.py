@@ -15,6 +15,7 @@ from app.models.favourite import FavouriteListener
 from app.models.listener import ListenerProfile
 from app.models.mentor_link import MentorLink
 from app.schemas import ListenerOut, ListenerProfileOut
+from app.services import categories as issue_categories
 from app.services import in_touch, mentor_face, mentor_names
 
 # Conversation statuses that count toward "conversations held" on a mentor
@@ -80,4 +81,14 @@ def profile(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOu
         ),
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
+        category_labels=category_labels(li.categories or []),
     )
+
+
+def category_labels(slugs: list[str]) -> list[str]:
+    """Member-facing words for a mentor's categories; an unknown slug reads as words."""
+    return [
+        issue_categories.label(slug) or slug.replace("_", " ").strip().capitalize()
+        for slug in slugs
+        if slug
+    ]

@@ -217,8 +217,8 @@ A waiting ask **holds a place** (so a mentor's yes can never bounce). `GET /in-t
 ```
 `items` are oldest-link-first so the two rows never swap places. To **write to an in-touch
 mentor**: open `conversation_id` when `conversation_status` is `active`; otherwise send a
-Personal request to `listener_id` (existing flow). The "one open question" rule is not
-built server-side, so nothing blocks this today.
+Personal request to `listener_id` (existing flow). The one-open-question rule (B6) never
+blocks a request to an in-touch mentor.
 
 After "not now" the member sees `state: "not_now"` with the ask disabled — quiet, no reason
 exists anywhere. After the mentor *ends* a link, or the member takes an ask back, asking
@@ -351,6 +351,37 @@ mentor's own member companion. Draw it only with `components/art/MentorFace`
 | `POST /listeners/{id}/request`, `GET /listeners/requests/mine` | `listener_companion_animal`, `listener_companion_colour` (null when there is no target) |
 | `GET /listener/me/conversations` items | `user_companion_animal`, `user_companion_colour` — the MEMBER's companion (null if none); never its name |
 | `GET /listener/me/requests` items | `requester_companion_animal`, `requester_companion_colour`, `issue_category_label` ("Exam stress") |
+
+---
+
+## B6 — One open question at a time (recovered-call item 6 · §L.7 · boards A24, A04)
+
+**Rule.** A member's *open question* is a Personal request still `pending` with a mentor
+they are **not** in touch with (and who is still reachable — approved, not blocked by the
+member). While one is open:
+
+- `POST /match` (General) → **409** `{"detail", "code": "question_open", "request_id",
+  "listener_id", "mentor_name", "mentor_avatar"}`;
+- `POST /listeners/{id}/request` to **another** mentor → the same 409. The same mentor
+  stays idempotent (the existing request comes back, 200).
+
+Never held: a request to an **in-touch** mentor (and a question waiting on one is not an open
+question); anything inside an existing conversation; a member the crisis scan flagged in the
+last `ALLOWANCE_CRISIS_EXEMPT_HOURS` (24 h) — **the crisis path is never rationed**.
+`detail` (EN; localise from `code`): "You have a question open with <name>. You can ask
+another once they reply or you close it."
+
+### `DELETE /listeners/requests/{id}` — member token
+
+Closes the member's own open question: `pending` → `expired` (the existing terminal status;
+no migration). Idempotent — an answered or closed request comes back unchanged (a close never
+undoes a mentor's yes). 404 for someone else's or an unknown request. Answers `RequestOut`.
+The mentor's inbox drops it at once (it lists `pending` only).
+
+### `GET /listeners/{id}` (and `GET /conversations/{id}/mentor`) gain `category_labels`
+
+`string[]`, the member-facing words for `categories`, same order (`services/categories.py`;
+an unknown slug reads as words). Additive.
 
 ---
 

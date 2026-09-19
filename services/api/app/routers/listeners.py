@@ -35,6 +35,7 @@ from app.services import (
     locks,
     mentor_face,
     mentor_names,
+    open_question,
     push_tasks,
 )
 from app.services.matching import (
@@ -209,6 +210,10 @@ def create_personal_request(
     ).first()
     if existing:
         return _request_out(existing, db)  # one pending request per pair — idempotent
+    # One open question at a time: a question still waiting on ANOTHER mentor holds this
+    # one back — unless this mentor is in touch with the member, or the crisis scan flagged
+    # the member recently (services/open_question.py).
+    open_question.enforce(db, user_id, target_listener_id=listener_id)
 
     req = ConversationRequest(
         kind=RequestKind.personal,
@@ -240,6 +245,31 @@ def my_requests(
         .offset(offset)
     ).all()
     return [_request_out(r, db) for r in reqs]
+
+
+@router.delete("/requests/{request_id}", response_model=RequestOut)
+def withdraw_my_request(
+    request_id: str,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> RequestOut:
+    """The member closes their own open question ("You can ask another once they reply or
+    you close it"). Idempotent: a request already answered or closed comes back as it is —
+    a withdrawal never undoes a mentor's yes. 404 for anyone else's request (opaque)."""
+    locks.serialize_member(db, user_id)
+    req = db.execute(
+        select(ConversationRequest)
+        .where(ConversationRequest.id == request_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
+    if req is None or req.requester_id != user_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "request not found")
+    if req.status == RequestStatus.pending:
+        req.status = RequestStatus.expired
+        db.commit()
+        db.refresh(req)
+    return _request_out(req, db)
 
 
 @router.post("/requests/{request_id}/accept", response_model=RequestOut)

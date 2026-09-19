@@ -54,6 +54,9 @@ class ListenerProfileOut(BaseModel):
     # every screen draws for this mentor. Stable — never rotates with the name (§L.6 l).
     companion_animal: str = "Owl"
     companion_colour: str = "sage"
+    # The member-facing words for `categories`, same order (services/categories.py), so
+    # the app never shows a raw slug. Additive.
+    category_labels: list[str] = []
 
 
 class ConversationMentorOut(ListenerProfileOut):

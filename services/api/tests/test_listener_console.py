@@ -187,13 +187,16 @@ def test_request_scoping_accept_decline_and_capacity(client, db_session):
     with TestSession() as s:
         uid1 = _seed_user(s, name="Misty Vale")
         uid2 = _seed_user(s, name="Still Pond")
+        # A third member asks the other listener: one open question per member
+        # (services/open_question.py) would refuse uid1 a second one.
+        uid3 = _seed_user(s, name="Low Tide")
         lid = _seed_listener(s, cap=1)
         other = _seed_listener(s, name="Calm Grove")
         s.commit()
 
     req1 = _request(client, uid1, lid, "one")
     req2 = _request(client, uid2, lid, "two")
-    other_req = _request(client, uid1, other, "for the other listener")
+    other_req = _request(client, uid3, other, "for the other listener")
 
     inbox = client.get("/api/v1/listener/me/requests", headers=_listener_auth(lid)).json()
     assert [r["id"] for r in inbox] == [req1, req2]  # own pending only, oldest first
