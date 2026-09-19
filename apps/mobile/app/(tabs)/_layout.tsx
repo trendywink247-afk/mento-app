@@ -122,8 +122,6 @@ export default function TabsLayout() {
       {TABS.map((tab) => (
         <Tabs.Screen key={tab.name} name={tab.name} options={{ title: t(tab.label) }} />
       ))}
-      {/* Routable but off the bar — reached via Path → Browse and existing deep links. */}
-      <Tabs.Screen name="mentors" options={{ title: 'Mentors', href: null }} />
     </Tabs>
   );
 }

@@ -17,23 +17,26 @@ import { Panda } from '@/components/art/Panda';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { ApiError, api, type Listener } from '@/lib/api';
 import { formatTopic } from '@/lib/format';
+import { useI18n } from '@/lib/i18n';
+import { TOPICS } from '@/lib/topics';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
-// Topic chips lean life/emotional (SCOPE §4) — never UPSC-only.
-const TOPICS = ['Family', 'Relationships', 'Self-esteem', 'Loneliness', 'Focus'];
 
 /** Mentor profile (#50/51, anonymity-safe: persona avatar instead of photo covers,
  * no star ratings) → intro composer (#52) → request sent (#53). */
 export default function MentorProfile() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { t: tr } = useI18n();
+  // `topic` arrives from the New chat sheet via Browse: the chip picked there is already lit
+  // here, and travels on as the request's `issue_category` (lib/topics.ts).
+  const { id, topic: topicParam } = useLocalSearchParams<{ id: string; topic?: string }>();
   const [listener, setListener] = useState<Listener | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<'profile' | 'compose' | 'sent'>('profile');
   const [intro, setIntro] = useState('');
-  const [topic, setTopic] = useState<string | null>(null);
+  const [topic, setTopic] = useState<string | null>(topicParam ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -169,15 +172,15 @@ export default function MentorProfile() {
 
         <Text style={[styles.label, { color: colors.ink }]}>Topic (optional)</Text>
         <View style={styles.chips}>
-          {TOPICS.map((t) => {
-            const selected = topic === t;
+          {TOPICS.map(({ slug, label }) => {
+            const selected = topic === slug;
             return (
               <Pressable
-                key={t}
-                onPress={() => setTopic(selected ? null : t)}
+                key={slug}
+                onPress={() => setTopic(selected ? null : slug)}
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
-                testID={`topic-${t.toLowerCase()}`}
+                testID={`topic-${slug}`}
                 style={[
                   styles.chip,
                   selected
@@ -186,7 +189,7 @@ export default function MentorProfile() {
                 ]}
               >
                 <Text style={[styles.chipText, { color: selected ? colors.onAccent : colors.accent }]}>
-                  {t}
+                  {tr(label)}
                 </Text>
               </Pressable>
             );

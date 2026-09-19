@@ -146,7 +146,7 @@ export function OnboardingJourney() {
     clearDraft();
     router.dismissAll();
     router.replace('/chats');
-    router.push('/(tabs)/mentors');
+    router.push('/mentors');
   }, [router]);
 
   // The matched moment: success haptic, panda celebrates, the sky lifts toward the

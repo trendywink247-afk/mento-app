@@ -64,9 +64,28 @@ export function LinkedRings({ color, size = 12, still = false }: { color: string
   );
 }
 
-export function InTouchBadge({ still = false, testID = 'in-touch-badge' }: { still?: boolean; testID?: string }) {
+export function InTouchBadge({
+  still = false,
+  flat = false,
+  testID = 'in-touch-badge',
+}: {
+  still?: boolean;
+  /** Browse (board A25) draws the quieter mark: a tint pill, no border, no edge. */
+  flat?: boolean;
+  testID?: string;
+}) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  if (flat) {
+    return (
+      <View style={[styles.flat, { backgroundColor: colors.accentTint }]} testID={testID}>
+        <LinkedRings color={colors.accent} size={10} still />
+        <Text style={[styles.flatLabel, { color: colors.accent }]} numberOfLines={1}>
+          {t('inTouch.badge')}
+        </Text>
+      </View>
+    );
+  }
   return (
     <View style={styles.wrap} testID={testID}>
       <View pointerEvents="none" style={[styles.edge, { backgroundColor: colors.accent }]} />
@@ -93,5 +112,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 1.5,
   },
+  flat: {
+    height: 20,
+    paddingHorizontal: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.pill,
+    flexShrink: 0,
+  },
+  flatLabel: { fontFamily: font.sansBold, fontSize: 11, lineHeight: 14 },
   label: { fontFamily: font.sansHeavy, fontSize: 11, lineHeight: 16, letterSpacing: 0.2 },
 });

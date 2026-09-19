@@ -9,7 +9,8 @@ import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
-import { useI18n, type TKey } from '@/lib/i18n';
+import { TOPICS } from '@/lib/topics';
+import { useI18n } from '@/lib/i18n';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
@@ -27,15 +28,6 @@ import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
  *
  * A screens-backed `transparentModal` route, not an RN <Modal> (blank on Android new arch).
  */
-const TOPICS: { slug: string; label: TKey }[] = [
-  { slug: 'feeling_stuck', label: 'newChat.topicStuck' },
-  { slug: 'exam_stress', label: 'newChat.topicExam' },
-  { slug: 'motivation', label: 'newChat.topicMotivation' },
-  { slug: 'family', label: 'newChat.topicFamily' },
-  { slug: 'loneliness', label: 'newChat.topicLoneliness' },
-  { slug: 'life', label: 'newChat.topicTalk' },
-];
-
 const PERCHES: PlacementSlot[] = [{ id: 'sheetEdge', type: 'top', level: 'mid', home: true }];
 
 export default function NewChatSheet() {
@@ -78,7 +70,7 @@ export default function NewChatSheet() {
     if (matching) return;
     sheet.current?.close(() => {
       router.back();
-      router.push({ pathname: '/(tabs)/mentors', params: topic ? { topic } : {} });
+      router.push({ pathname: '/mentors', params: topic ? { topic } : {} });
     });
   };
 

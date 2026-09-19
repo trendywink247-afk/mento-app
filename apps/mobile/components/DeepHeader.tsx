@@ -22,6 +22,7 @@ export function BackKey({ onPress, label, testID = 'back' }: { onPress: () => vo
       radius={radius.pill}
       accessibilityLabel={label ?? t('common.goBack')}
       testID={testID}
+      containerStyle={styles.backBox}
       style={[styles.back, { backgroundColor: colors.surface, borderColor: colors.border }]}
     >
       <Ionicons name="chevron-back" size={22} color={colors.ink} />
@@ -62,7 +63,8 @@ export function DeepHeader({
 }
 
 const styles = StyleSheet.create({
-  row: { minHeight: 50, paddingHorizontal: space.md, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  row: { minHeight: 50, paddingTop: space.xs, paddingHorizontal: space.md, flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  backBox: { alignSelf: 'flex-start', flexShrink: 0 },
   titles: { flex: 1, minWidth: 0 },
 });
