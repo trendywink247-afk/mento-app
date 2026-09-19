@@ -160,6 +160,16 @@ async function memberOnboard(page, tid) {
   // expo-router's fade keeps the outgoing chat mounted for a beat (same gotcha as
   // the report/end wait below) — wait for a VISIBLE console, not just an attached one.
   await a.locator('[data-testid="mentor-console"]:visible').first().waitFor({ timeout: 30000 });
+  // Leaving pops back to the Mentor Home that was already there (`dismissTo`). It used to
+  // `replace` the chat with a SECOND Mentor Home stacked on the first — two consoles mounted.
+  await a.waitForFunction(
+    () => document.querySelectorAll('[data-testid="mentor-chat-ready"]').length === 0,
+    null,
+    { timeout: 15000 },
+  );
+  const homes = await a.locator('[data-testid="mentor-console"]').count();
+  if (homes !== 1) throw new Error(`leaving a mentor chat left ${homes} Mentor Home screens mounted (expected 1)`);
+  console.log('OK leaving a mentor chat returns to the one Mentor Home (no second copy stacked)');
   await a.locator('[data-testid="your-line"]:visible').first().click();
   await a.waitForSelector('[data-testid="line-sheet"]', { timeout: 15000 });
   await atid('line-input').fill('I mostly just listen.');

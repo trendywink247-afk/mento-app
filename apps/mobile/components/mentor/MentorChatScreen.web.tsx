@@ -24,6 +24,7 @@ import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { listenerApi } from '@/lib/listenerApi';
 import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
 import { getSessionToken } from '@/lib/session';
+import { leaveToMentorHome } from '@/lib/leaveToChats';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -229,7 +230,7 @@ export default function MentorChatScreenWeb() {
     setEnding(true);
     try {
       await listenerApi.end(id);
-      router.replace(home);
+      leaveToMentorHome(router, home);
     } catch {
       // Stay still and silent (T&S: no shaking/buzzing at a struggling user) —
       // release the spinner and fold the menu back rather than surface an error.
@@ -243,7 +244,7 @@ export default function MentorChatScreenWeb() {
       {/* Member header — persona only, anonymity holds both ways. */}
       <View style={[styles.header, { backgroundColor: colors.surface }, elevation.sm]}>
         <ConsolePressable
-          onPress={() => router.replace(home)}
+          onPress={() => leaveToMentorHome(router, home)}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityLabel={t('mentor.chat.back')}

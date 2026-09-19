@@ -48,6 +48,7 @@ import {
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useSessionGuard } from '@/lib/useSessionGuard';
+import { leaveToPath } from '@/lib/leaveToChats';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -139,7 +140,7 @@ export default function PathQuestion() {
     // Opened without a starter (a stray deep link): take the path's first one, or
     // go back to the Path tab — there is nothing to build from.
     if (prompts.length > 0) setStarter(prompts[0]);
-    else router.replace('/(tabs)/path');
+    else leaveToPath(router);
   }, [pathLoaded, starter, prompts, router]);
 
   const community = params.community ?? path?.community?.slug ?? null;
