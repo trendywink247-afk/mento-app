@@ -766,7 +766,8 @@
     "blockedCooldown": "They said not now. You can ask again after %{date}.",
     "blockedCooldownPlain": "They said not now. You can ask again a little later.",
     "blockedUnavailable": "This mentor cannot be reached right now.",
-    "tooMany": "You have asked a few times in a row. Please try again in a little while."
+    "tooMany": "You have asked a few times in a row. Please try again in a little while.",
+    "viewLine": "Mentors who said yes. They stay reachable under any name."
   },
   "newChat": {
     "titleLead": "Who would you like to ",
