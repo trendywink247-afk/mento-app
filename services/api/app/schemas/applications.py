@@ -33,6 +33,9 @@ class ListenerApplicationOut(BaseModel):
     # Declined only: when the server's 30-day cooldown lets them apply again (ISO time).
     # Additive; older builds ignore it.
     reapply_after: str | None = None
+    # Approved only: when this mentor asked the team to step their mentor side back
+    # (POST /listener-applications/me/step-back). Additive; null otherwise.
+    step_back_requested_at: str | None = None
 
 
 class ConsoleSessionOut(BaseModel):
@@ -46,3 +49,15 @@ class ConsoleSessionOut(BaseModel):
     persona_avatar: str
     stream_token: str
     expires_at: str
+
+
+class StepBackIn(BaseModel):
+    """A live mentor asks the team to step their mentor side back (board A32 / 409).
+    The reason is optional and bounded; only the admin Listeners panel ever shows it."""
+
+    reason: str | None = Field(default=None, max_length=280)
+
+
+class StepBackOut(BaseModel):
+    status: Literal["requested"] = "requested"
+    requested_at: str

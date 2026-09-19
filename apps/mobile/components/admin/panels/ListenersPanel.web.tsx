@@ -14,7 +14,7 @@ import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminApplication, type AdminListener } from '@/lib/adminApi';
 import { formatTimestamp, formatTopic } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
-import { radius, space, type } from '@/theme/tokens';
+import { radius, space, type, wash, washInk } from '@/theme/tokens';
 
 /**
  * Listener roster + provisioning. Owners create listeners (categories + capacity),
@@ -336,6 +336,22 @@ export default function ListenersPanel() {
                 </View>
               </View>
 
+              {li.step_back_requested_at ? (
+                <View
+                  style={[styles.stepBack, { backgroundColor: approved ? wash.danger : colors.surfaceAlt }]}
+                  testID={`admin-listener-${li.id}-step-back`}
+                >
+                  <Text style={[type.label, { color: approved ? washInk.danger : colors.inkMuted }]}>
+                    {approved
+                      ? `Asked to step back · ${new Date(li.step_back_requested_at).toLocaleString()} — suspend to step their mentor side back; then they can Start fresh.`
+                      : `Asked to step back · ${new Date(li.step_back_requested_at).toLocaleString()} — done.`}
+                  </Text>
+                  {li.step_back_reason ? (
+                    <Text style={[type.caption, { color: colors.ink }]}>“{li.step_back_reason}”</Text>
+                  ) : null}
+                </View>
+              ) : null}
+
               <Text
                 style={[
                   type.caption,
@@ -451,6 +467,7 @@ const styles = StyleSheet.create({
   rosterHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   rosterNums: { fontVariant: ['tabular-nums'] },
   publicLine: { fontStyle: 'italic' },
+  stepBack: { borderRadius: radius.md, paddingVertical: space.sm, paddingHorizontal: space.md, gap: 2 },
   disabledBtn: { opacity: 0.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
   chip: {

@@ -1257,7 +1257,7 @@
     "failed": "Your chats have ended, but the rest is not deleted yet. Nothing has left this device. Please try again in a moment.",
     "unreachable": "We could not reach Mento, so nothing is confirmed as deleted. Nothing has left this device. Please try again.",
     "retry": "Try deleting again",
-    "mentorActive": "You are also a mentor here. Deleting everything would leave the people you talk with mid-conversation, so it cannot be done from here yet. Ask the Mento team to close your mentor side first. After that, Start fresh deletes everything."
+    "mentorActive": "You are also a mentor here. Deleting everything would leave the people you talk with mid-conversation, so it cannot be done from here yet. Let the Mento team know, and they will step your mentor side back first. After that, Start fresh deletes everything."
   },
   "mentorPath": {
     "cooldownLater": "You can apply again from %{date}. The team keeps a month between applications.",
@@ -1352,5 +1352,12 @@
       "feeling_stuck": "Feeling stuck",
       "motivation": "Motivation"
     }
+  },
+  "stepBack": {
+    "notify": "Notify the Mento team",
+    "backToMentoring": "Back to mentoring",
+    "done": "We have let the team know. They will step your mentor side back, then you can start fresh.",
+    "failed": "We could not reach Mento, so the team has not been told yet. Please try again.",
+    "retry": "Try again"
   }
 }
