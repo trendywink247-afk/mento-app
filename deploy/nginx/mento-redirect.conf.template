@@ -1,0 +1,27 @@
+# A host that only redirects (a legacy name, or the apex until it has a page).
+# Rendered by deploy/render-nginx.sh. Keeps its own cert — the redirect is served
+# over TLS. Browsers carry a #fragment across a redirect whose Location has none,
+# so old private links (…/listener#token=…) keep signing people in.
+server {
+    listen 443 ssl;
+    server_name SITE_HOST;
+
+    ssl_certificate /etc/letsencrypt/live/SITE_HOST/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/SITE_HOST/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location /admin {
+        return REDIRECT_CODE https://ADMIN_HOST$request_uri;
+    }
+
+    location / {
+        return REDIRECT_CODE https://APP_HOST$request_uri;
+    }
+}
+
+server {
+    listen 80;
+    server_name SITE_HOST;
+    return 301 https://$host$request_uri;
+}

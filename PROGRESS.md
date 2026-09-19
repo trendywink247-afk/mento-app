@@ -89,6 +89,57 @@
 **Next:** founder plays the board (Motion row first) and rules on the open items → then port in this order: shared transition plumbing (sky context + origin store + companion overlay + tab interpolator), the remaining transition-polish list above, then plan units 4–9 (`docs/superpowers/plans/2026-09-19-port-picked-screens.md`). `feat/chat-header-and-builder` (units 2–3 + the two motion fixes) is unmerged and unpushed.
 
 **How to resume:** stack per `mento-stack` — note `apps/mobile/.env` points `EXPO_PUBLIC_API_URL` at a Tailscale-style IP; for web/e2e start Expo with `$env:EXPO_PUBLIC_API_URL='http://localhost:8000/api/v1'` (process env wins, no file edit). Playwright for e2e: `NODE_PATH=~/.claude/skills/playwright-skill/node_modules`.
+## 2026-09-19 (session 34, part 3) — Desktop web frame built ⏳ (branch `feat/desktop-web-frame`, stacked on `worktree-unified-domains`; **not merged, not deployed**)
+
+**Context:** founder: "let's fix web view on browsers too" → layout spec step A. The web build is public (`app.agentin.chat`) and had no desktop layout: measured at 1440×900 the role-fork doors were **1,408 px** wide and the Start key 1,392 px.
+
+**Done:** `components/WebFrame(.web).tsx` wraps the root `<Stack>` — above `layout.columnMax` (480, `theme/layout.ts`) the whole app sits in a centered column over the still `StaticAmbient` ground; the navigator lives inside the column, so the tab bar, transparent-modal sheets and absolutely-positioned art are contained for free. Tree shape is constant (only styles change) so a resize or a visit to `/admin` never remounts the navigator; no animation in the frame. `useFrameSize()` (`lib/useFrameSize.ts`) replaces `useWindowDimensions` in the two callers (`app/index.tsx` mountains, `AuroraCanvas`); grep-proven that only the frame + the hook read the window now. `/admin` exempt. Native + phone-width web = passthrough. CLAUDE.md gains the "never size from the window on web" convention.
+
+**Proof:** `npx tsc --noEmit` clean. New `e2e/desktop-frame.e2e.js` (`MENTO_WEB` selects the server; read-only, submits nothing) — **48/48 checks** over phone 390×844 / tablet 768×1024 / desktop 1440×900, each normal + `reducedMotion: 'reduce'`: column box (width, centred, full height), Start key and role-fork doors inside it, `/start-fresh` sheet inside it, `/admin` unframed, landing → Start → role fork, **0 page errors**. Screenshots at 1440 read and look right. Written test-first: 40 failures before the frame existed.
+
+**Pre-merge gate (NOT run yet):** the full existing e2e suite at 390×844 against this branch. It was skipped on purpose — those scripts hardcode `:8081`, which is the other live session's dev server and code, and that session is editing them; running matching flows would also take listener slots out from under its runs. Run it once the shared stack is free (the phone-width passthrough is already asserted by the new script, so no change is expected).
+
+**Gotcha (cost ~10 min, now in CLAUDE.md):** starting Expo with `CI=1` makes Metro disable file watching — it silently served the bundle from *before* the edits and the proof kept failing with the frame "missing". The startup log says so ("Metro is running in CI mode, reloads are disabled"); read it.
+
+**Crisis webhook follow-up (read-only triage, same session):** Stream is still configured to call `https://api.agentin.chat/api/v1/stream/{before-message-send,webhook}` (hook enabled, `message.new`), both endpoints answer 401 to an unsigned POST (alive, correctly rejecting), and nginx logs show the last webhook hits on 10 Sep matching the stale stamp. Two conversations were created on prod on 18 Sep with **zero** webhook hits that day — consistent with "opened, nothing typed", but only one real test message proves the path end-to-end. Founder's call; still no uptime monitor on `/health/crisis`.
+
+**Open decisions (founder veto):** `columnMax` 480 · static (not live) ground outside the column · hairline side edge on the column, no shadow · members stay single-column on desktop.
+
+**Next:** deploy the frame = merge → `./deploy/deploy-web.sh` (+ OTA is a no-op for native). Then routes-spec step 2 (hold until `feat/companions-dog-cat-capybara` is on master — same files), then the mentor workspace (layout spec B → C).
+
+**How to resume:** worktree `.claude/worktrees/unified-domains`; its own Expo web on **:8082** (`npx expo start --web --port 8082`, no `CI=1`); `apps/mobile/.env` there is a copy of the main checkout's (gitignored).
+
+---
+
+## 2026-09-19 (session 34, part 2) — Unified domains step 1: hosts LIVE on prod ✅, API code on branch `worktree-unified-domains` ⏳ (not merged)
+
+**Context:** founder rulings, same session: "domains and all the routing should be normalized… single unified experience", domain is `agentin.chat` *for now and must be swappable*, route cleanup level A, and "fix web view on browsers too" (centered column + mentor two-pane). Two specs (`docs/superpowers/specs/2026-09-19-unified-domains-routes-design.md`, `…-desktop-web-layout-design.md`) and the step-1 plan (`docs/superpowers/plans/2026-09-19-unified-domains-step1.md`). **Worked in a git worktree** (`.claude/worktrees/unified-domains`) because a second Claude session (`mento-1e`, companions + copy pass) was live in the main checkout on `feat/companions-dog-cat-capybara` — two earlier docs commits of this session (`1af8a9c` specs, `ae59b9c` PROGRESS) landed on that branch by accident and ride along with its merge; the specs are also here (`29912fe`, identical content).
+
+**Done (plan Tasks 0–6, all local):**
+- `deploy/domains.env` is the **only** place a hostname or the VPS address is written (grep-proven across `deploy/` + `.github/`). `deploy/render-nginx.sh app|admin|legacy <host>|apex` renders three site templates (`nginx/mento-{app,admin,redirect}.conf.template`); hardcoded `mento-console.conf` deleted.
+- Host map: `app.<root>` = the whole app (`/admin` 404, strict `/_expo/` + `/assets/`); `admin.<root>` = only `/admin` (`/` → 302 `/admin`, rest 404); legacy `console.<root>` = 301s (path + query kept, `/admin*` → admin host); apex = 302 → app.
+- `deploy/test-nginx.sh` — committed proof: every site in a throwaway `nginx:1.22`, **21 assertions held**; re-run with `ROOT_DOMAIN=example.test` also held (a domain change is one line).
+- API: `APP_BASE_URL` / `ADMIN_BASE_URL` with `CONSOLE_BASE_URL` as deprecated fallback (deploy-before-env-edit safe), CORS derived from both; every minted link built in `app/services/links.py` (3 call sites; paths unchanged — `/signin` is routes-spec step 3).
+- `deploy-console.sh` → `deploy-web.sh` (wrapper kept one release); CI workflow reads `domains.env`. Runbook §11 rewritten + new §12 "Changing the domain" (6 steps; **step 6 = re-run `configure_stream`, the crisis webhook is dead until then**).
+- Proof: pytest **263 passed, 0 skipped** on an isolated DB (`mento_wt` — the shared dev DB kept its 16 listeners, so **no re-seed needed**), `alembic check` clean, ruff + black clean, `bash -n` on all four scripts.
+
+**Shipped to prod (plan Task 7a–7f, founder-approved, 2026-09-19 ~00:20 IST):**
+- Certs for `app.` + `admin.` (expire 2026-12-17, certbot auto-renews). Founder added the `admin` A record.
+- Prod `CORS_ORIGINS` = console + app + admin (env only; API container restarted, a few seconds; `.env` backup `services/api/.env.bak-20260918-185101` on the box).
+- Sites `mento-app.conf` + `mento-admin.conf` installed from the rendered templates; `mento-console.conf` replaced by the redirect site (previous conf: `/opt/mento-console/mento-console.conf.bak-20260918-185520`). Every change `nginx -t`-gated.
+- Live proof: `app.` `/` `/onboarding` `/apply` `/chat/abc` → 200, `/admin` → 404, missing asset → 404 · `admin.` `/` → 302 `/admin`, `/admin` → 200, member routes → 404 · `console.` → 301 to `app.` (path + query kept), `/admin` → 301 `admin.` · browser smoke on `https://app.agentin.chat/` at 390×844 normal + reduced motion: landing → Start → role fork, **0 page/console errors, 0 failed requests, 0 API writes** · real-browser cross-origin GET to the API succeeds from all three origins (with preflight) · a `#token=` fragment **survives** the `console.` 301 on both `/listener` and `/admin` (checked with JS off), so every private link already handed out still signs in.
+
+**Founder needs to know:** the admin token lives in per-origin browser storage — the dashboard at `admin.agentin.chat/admin` asks for sign-in once. An existing `…/admin#token=…` link still works (it redirects with the token); otherwise mint a fresh one: `ssh mento-ops@87.232.72.79 'cd /opt/mento && docker compose -f deploy/docker-compose.prod.yml exec api python -m scripts.issue_admin_token --admin-id <uuid>'` (then swap the host to `admin.` until Task 7g lands).
+
+**⚠ Found, NOT caused by this work — needs a look:** `GET /health/crisis` is **503 `stale`**: last Stream webhook stamped **2026-09-10 14:17 UTC** (8 days). That is either "no chat message sent on prod for 8 days" or "the Stream webhook stopped reaching the API" — indistinguishable from outside. The webhook targets `api.`, untouched here. Prove it with one real message per the `mento-crisis-webhook` skill; if it does not stamp, re-run `scripts.configure_stream`. No uptime monitor is pointed at this endpoint yet (runbook §10 launch gate).
+
+**Next (plan Task 7g):** merge this branch to `master` + push (the VPS deploys from `origin/master`) → `backup-postgres.sh` + `deploy.sh` → set `APP_BASE_URL` / `ADMIN_BASE_URL`, drop `console.` from `CORS_ORIGINS` → confirm a newly issued mentor link starts with `https://app.agentin.chat/`. Until then minted links still say `console.…` and work via the redirect. Apex record still optional (Task 8).
+
+**Then:** desktop frame (layout spec step A — the stretched desktop layout is public today) → app routes (hold until `feat/companions-dog-cat-capybara` is on master; it edits the same files) → server links → mentor workspace → delete the old `/listener` console.
+
+**Open decisions (founder veto):** `/mentoring` as the mentor home's name · apex 302 → app · `columnMax` 480 / `workspaceMin` 900 / rail 360 · static backdrop outside the column · members stay single-column on desktop · the web member flow is public (ruling 2026-09-19) → `docs/PRIVACY.md` needs a web-surface line before the URL is shared widely.
+
+**How to resume:** `EnterWorktree path=.claude/worktrees/unified-domains`; API tests with `DATABASE_URL=postgresql+psycopg://mento:mento@localhost:5432/mento_wt` and the main checkout's venv python; never run pytest against the shared `mento` DB while another session is live.
 
 ---
 

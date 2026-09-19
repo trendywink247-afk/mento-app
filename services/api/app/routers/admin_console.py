@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
 from app.db import get_db
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.conversation import Conversation
@@ -54,6 +53,7 @@ from app.schemas import (
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
 from app.services import audit, conversations, stream
 from app.services.categories import AVAILABILITY_NOTES
+from app.services.links import admin_link, mentor_console_link
 from app.services.matching import reconcile_listener_capacity
 from app.services.persona import generate_persona
 
@@ -464,10 +464,9 @@ def listener_console_link(
     if li is None or li.vetting_status != VettingStatus.approved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "approved listener not found")
     token = issue_listener_token(li.id)
-    base = get_settings().console_base_url
     audit.record(db, admin, "listener.link_issued", subject_type="listener", subject_id=listener_id)
     db.commit()
-    return AdminConsoleLinkOut(url=f"{base}/listener#token={token}")
+    return AdminConsoleLinkOut(url=mentor_console_link(token))
 
 
 # --- Listener applications (spec 2026-07-24) ----------------------------------
@@ -684,7 +683,7 @@ def create_admin(
     db.commit()
     db.refresh(a)
     token = issue_admin_token(a.id)
-    return AdminCreatedOut(id=a.id, url=f"{get_settings().console_base_url}/admin#token={token}")
+    return AdminCreatedOut(id=a.id, url=admin_link(token))
 
 
 @router.post("/admins/{admin_id}/revoke", response_model=OkResult)

@@ -57,3 +57,6 @@ mento-crisis-card.png
 
 # brainstorming visual-companion sessions (local mockups, never shipped)
 .superpowers/
+
+# Claude Code session worktrees (isolated checkouts, never commit)
+.claude/worktrees/

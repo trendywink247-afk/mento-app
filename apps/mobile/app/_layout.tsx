@@ -12,6 +12,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProviders } from '@/components/AppProviders';
+import { WebFrame } from '@/components/WebFrame';
 import { installNotificationHandler, useNotificationTaps } from '@/lib/notifications';
 import { useShakeToUpdate } from '@/lib/useShakeToUpdate';
 import { ThemeProvider } from '@/theme/ThemeProvider';
@@ -50,29 +51,32 @@ export default function RootLayout() {
         {/* Per-user companion-colour accent theme over the neutral light base. */}
         <ThemeProvider>
           <StatusBar style="dark" />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.bg },
-              animation: 'slide_from_right',
-            }}
-          >
-            {/* Designed seams: landing → journey → chat crossfade as one continuous
-                shot; everything else keeps the default push. */}
-            <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
-            <Stack.Screen name="chat/[id]" options={{ animation: 'fade' }} />
-            {/* Mentor branch hand-off crossfades in like the chat does (DECISIONS §K.7). */}
-            <Stack.Screen name="mentor-home" options={{ animation: 'fade' }} />
-            {/* Confirm dialog as a screens-backed transparent modal (see app/start-fresh.tsx). */}
-            <Stack.Screen
-              name="start-fresh"
-              options={{
-                presentation: 'transparentModal',
-                animation: 'fade',
-                contentStyle: { backgroundColor: 'transparent' },
+          {/* Web: centered app column on wide windows (passthrough on native + phones). */}
+          <WebFrame>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.bg },
+                animation: 'slide_from_right',
               }}
-            />
-          </Stack>
+            >
+              {/* Designed seams: landing → journey → chat crossfade as one continuous
+                  shot; everything else keeps the default push. */}
+              <Stack.Screen name="onboarding/index" options={{ animation: 'fade' }} />
+              <Stack.Screen name="chat/[id]" options={{ animation: 'fade' }} />
+              {/* Mentor branch hand-off crossfades in like the chat does (DECISIONS §K.7). */}
+              <Stack.Screen name="mentor-home" options={{ animation: 'fade' }} />
+              {/* Confirm dialog as a screens-backed transparent modal (see app/start-fresh.tsx). */}
+              <Stack.Screen
+                name="start-fresh"
+                options={{
+                  presentation: 'transparentModal',
+                  animation: 'fade',
+                  contentStyle: { backgroundColor: 'transparent' },
+                }}
+              />
+            </Stack>
+          </WebFrame>
         </ThemeProvider>
       </AppProviders>
     </SafeAreaProvider>

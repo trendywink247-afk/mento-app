@@ -77,12 +77,19 @@ class Settings(BaseSettings):
     # reconcile action ends them and frees the listener's slot.
     conversation_max_age_hours: int = 24
 
-    # Base URL the admin dashboard prints into copyable console links.
+    # Public web origins (spec 2026-09-19 unified-domains §3.3). app = the one web
+    # app (member + mentor sides, /apply, sign-in links); admin = the staff
+    # dashboard's own origin. Links the API mints are built from these — see
+    # app/services/links.py. Empty = fall back to console_base_url.
+    app_base_url: str = ""
+    admin_base_url: str = ""
+
+    # DEPRECATED single-origin setting, kept as the fallback for both URLs above so
+    # a deploy that lands before the env is edited cannot break link minting.
     console_base_url: str = "http://localhost:8081"
 
-    # Comma-separated browser origins allowed by CORS outside dev (the listener
-    # console and admin dashboard are web-only and call this API cross-origin).
-    # Empty = fall back to console_base_url's origin so consoles work out of the box.
+    # Comma-separated browser origins allowed by CORS outside dev (the web build
+    # calls this API cross-origin). Empty = derive from the two base URLs above.
     cors_origins: str = ""
 
     stream_api_key: str = ""
@@ -116,6 +123,14 @@ class Settings(BaseSettings):
         return self.env == "dev"
 
     @property
+    def resolved_app_base_url(self) -> str:
+        return (self.app_base_url or self.console_base_url).rstrip("/")
+
+    @property
+    def resolved_admin_base_url(self) -> str:
+        return (self.admin_base_url or self.console_base_url).rstrip("/")
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
@@ -124,16 +139,21 @@ class Settings(BaseSettings):
         """Origins the CORS middleware should allow.
 
         Dev: wildcard (auth is bearer-token, credentials off, so "*" is valid).
-        Otherwise: the configured CORS_ORIGINS list; if empty, derive the origin
-        of console_base_url so the web consoles work without extra config.
+        Otherwise: the configured CORS_ORIGINS list; if empty, the origins of the
+        app and admin base URLs (deduped, app first) so the web build works
+        without extra config.
         """
         if self.is_dev:
             return ["*"]
         configured = self.cors_origin_list
         if configured:
             return configured
-        fallback = origin_of(self.console_base_url)
-        return [fallback] if fallback else []
+        derived: list[str] = []
+        for url in (self.resolved_app_base_url, self.resolved_admin_base_url):
+            origin = origin_of(url)
+            if origin and origin not in derived:
+                derived.append(origin)
+        return derived
 
     @property
     def helplines(self) -> list[dict]:

@@ -1,0 +1,49 @@
+# The Mento staff dashboard — its own origin, serving ONLY /admin from the same
+# build as the app. Rendered by deploy/render-nginx.sh; TLS as in the app template.
+# Own origin = the admin token's localStorage is unreadable from the consumer app,
+# and this host can later be IP-restricted without touching the app.
+server {
+    listen 443 ssl;
+    server_name SITE_HOST;
+
+    root /opt/mento-console/current;
+    index index.html;
+
+    ssl_certificate /etc/letsencrypt/live/SITE_HOST/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/SITE_HOST/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # try_files' fallback re-enters location matching; this exact match lets
+    # /index.html resolve instead of hitting the catch-all 404 below.
+    location = /index.html {
+    }
+    location = /favicon.ico {
+        try_files $uri =404;
+    }
+    location /_expo/ {
+        try_files $uri =404;
+    }
+    location /assets/ {
+        try_files $uri =404;
+    }
+
+    location /admin {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location = / {
+        return 302 /admin;
+    }
+
+    # The member app is deliberately not reachable from the staff origin.
+    location / {
+        return 404;
+    }
+}
+
+server {
+    listen 80;
+    server_name SITE_HOST;
+    return 301 https://$host$request_uri;
+}

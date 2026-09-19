@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   runOnJS,
@@ -24,6 +24,7 @@ import { useBreathing } from '@/components/motion/useBreathing';
 import { capture } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
 import { hasPendingTap } from '@/lib/notifications';
+import { useFrameSize } from '@/lib/useFrameSize';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getRole, getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -38,7 +39,8 @@ export default function Landing() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { width } = useWindowDimensions();
+  // The frame, not the window: on a wide browser the app draws into a 480 column.
+  const { width } = useFrameSize();
   const reduced = useReducedMotion();
   const breathing = useBreathing();
   // Returning users (existing anonymous session) skip onboarding and land on My Chats;
