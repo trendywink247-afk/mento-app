@@ -6,7 +6,7 @@ Additive: one nullable column, safe under a running app.
   the admin dashboard (tests/test_companion_name.py). Validated in services/companions.
 
 Revision ID: 3a56447b2ab6
-Revises: b9550a247866
+Revises: 9c5ada714a88
 Create Date: 2026-09-19 22:10:00.000000
 """
 
@@ -19,7 +19,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "3a56447b2ab6"
-down_revision: str | None = "b9550a247866"
+down_revision: str | None = "9c5ada714a88"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
