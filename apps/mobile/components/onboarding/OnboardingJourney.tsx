@@ -11,17 +11,17 @@
  * connecting route applied), so invalid deep links snap safely back to the start.
  * Browser back exits to the landing rather than stepping — web is best-effort.
  */
-import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BackHandler, Pressable, StyleSheet, View } from 'react-native';
+import { BackHandler, StyleSheet, View } from 'react-native';
 import { withTiming } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { ambientLift } from '@/components/motion/ambientLift';
 import { PandaStage } from '@/components/motion/PandaStage';
+import { JourneyHeader } from '@/components/onboarding/JourneyHeader';
 import { StepTransition } from '@/components/motion/StepTransition';
 import { AgeStep } from '@/components/onboarding/steps/AgeStep';
 import { CompanionStep } from '@/components/onboarding/steps/CompanionStep';
@@ -32,12 +32,10 @@ import { PrimerStep } from '@/components/onboarding/steps/PrimerStep';
 import { ReadyStep } from '@/components/onboarding/steps/ReadyStep';
 import { RoleStep } from '@/components/onboarding/steps/RoleStep';
 import { haptic } from '@/lib/haptics';
-import { useI18n } from '@/lib/i18n';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { saveRole, type Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
-import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
 /** The hard cap on the "found someone" beat — theatre never spends the <30s promise.
@@ -56,15 +54,19 @@ const ALL_STEPS: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'connec
 /** Steps that show the back chevron. ready / connecting / handoff are forward-only. */
 const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'primer'];
 
-/** The mockups' "ritual" steps (companion + ready) keep their white-circle chevron
- * styling; the background mood itself is now carried by the ambient aurora. */
-const LAVENDER: Step[] = ['companion', 'ready'];
+/** The step dots (board A16–A18, A33–A34). A member's four steps start after the fork;
+ * the mentor board counts the fork too ("Step 4 of 5" on the primer). The fork itself and
+ * the connecting step show no dots. */
+const MENTEE_DOTS: Step[] = ['age', 'email', 'companion', 'ready'];
+const MENTOR_DOTS: Step[] = ['role', 'age', 'email', 'primer', 'handoff'];
+
+/** The board's 44 of air above the header doubles as the status-bar allowance. */
+const HEADER_TOP = 44;
 
 export function OnboardingJourney() {
   const router = useRouter();
   const params = useLocalSearchParams<{ step?: string }>();
-  const { colors } = useTheme();
-  const { t } = useI18n();
+  const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const [celebrate, setCelebrate] = useState(0);
   // The chosen animal — the star from the moment of choice (DECISIONS §I.5).
@@ -231,28 +233,20 @@ export function OnboardingJourney() {
     [goNext, step, onMatched, onRolePicked, onMentorReady]
   );
 
-  const lavender = LAVENDER.includes(step);
   const backable = BACKABLE.includes(step);
+  const dots = role === 'mentor' ? MENTOR_DOTS : MENTEE_DOTS;
+  const dotIndex = step === 'role' ? -1 : dots.indexOf(step);
 
   return (
     <View style={styles.root}>
       {/* The persistent sky — never unmounts across steps. */}
       <AmbientBackground />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-        <View style={styles.header}>
-          {backable ? (
-            <Pressable
-              onPress={goBack}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel={t('common.goBack')}
-              testID="back"
-              // Ritual screens float the chevron in a white circle (mockup #58).
-              style={lavender && [styles.backCircle, { backgroundColor: colors.surface }]}
-            >
-              <Ionicons name="chevron-back" size={26} color={lavender ? colors.accent : colors.ink} />
-            </Pressable>
-          ) : null}
+        <View style={{ paddingTop: Math.max(insets.top + space.sm, HEADER_TOP) - insets.top }}>
+          <JourneyHeader
+            onBack={backable ? goBack : undefined}
+            progress={dotIndex >= 0 ? { index: dotIndex + 1, total: dots.length } : undefined}
+          />
         </View>
         <View style={styles.stage}>
           <StepTransition activeKey={step} render={renderStep} />
@@ -267,20 +261,5 @@ export function OnboardingJourney() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   safe: { flex: 1, backgroundColor: 'transparent' },
-  header: {
-    minHeight: 44 + space.sm + space.xs,
-    paddingHorizontal: space.md,
-    paddingTop: space.sm,
-    paddingBottom: space.xs,
-    justifyContent: 'center',
-  },
-  backCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'flex-start',
-  },
   stage: { flex: 1 },
 });

@@ -6,6 +6,7 @@
  */
 import { ReactNode, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Entrance } from '@/components/motion/Entrance';
 import { space } from '@/theme/tokens';
@@ -29,6 +30,10 @@ export function StepScaffold({ children, footer, footerIndex }: Props) {
   // overflow: ReadyStep, CompanionStep, ConnectingStep's reduced-motion list, and
   // EmailStep needs keyboard avoidance) but only ENABLE scrolling once measured
   // content actually exceeds the viewport. Until then it's a static, non-bouncing view.
+  // The board's 28 under the last key doubles as the home-indicator allowance (the
+  // journey's SafeAreaView has already applied the inset itself).
+  const insets = useSafeAreaInsets();
+  const footerBottom = { paddingBottom: Math.max(insets.bottom + space.sm, FOOTER_BOTTOM) - insets.bottom };
   const [viewportH, setViewportH] = useState(0);
   const [contentH, setContentH] = useState(0);
   const scrollable = contentH > viewportH + 1;
@@ -50,9 +55,9 @@ export function StepScaffold({ children, footer, footerIndex }: Props) {
       </ScrollView>
       {footer ? (
         footerIndex === undefined ? (
-          <View style={styles.footer}>{footer}</View>
+          <View style={[styles.footer, footerBottom]}>{footer}</View>
         ) : (
-          <Entrance index={footerIndex} style={styles.footer}>
+          <Entrance index={footerIndex} style={[styles.footer, footerBottom]}>
             {footer}
           </Entrance>
         )
@@ -61,12 +66,15 @@ export function StepScaffold({ children, footer, footerIndex }: Props) {
   );
 }
 
+const FOOTER_BOTTOM = 28;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scrollContent: { paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.lg },
+  // flexGrow: a step may hold a flexible zone (the board pins its keys to the bottom with a
+  // growing spacer); content taller than the viewport still scrolls.
+  scrollContent: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.md },
   footer: {
     paddingHorizontal: space.lg,
-    paddingBottom: space.md,
     paddingTop: space.xs,
     gap: space.xs,
   },

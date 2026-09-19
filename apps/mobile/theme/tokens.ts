@@ -109,6 +109,8 @@ export const type = {
   key: { fontSize: 18, fontFamily: font.sansBold, lineHeight: 24 },
   /** Row / card titles (promise rows, wait cards) and their quiet second line. */
   rowTitle: { fontSize: 15, fontFamily: font.sansBold, lineHeight: 20 },
+  /** A door's / card's second line (board 15/21). */
+  bodySmall: { fontSize: 15, fontFamily: font.sans, lineHeight: 21 },
   note: { fontSize: 14, fontFamily: font.sans, lineHeight: 20 },
   caption: { fontSize: 13, fontFamily: font.sans, lineHeight: 18, color: colors.inkMuted },
   /** Section headings on the web-only console surfaces (listener console, admin cockpit). */

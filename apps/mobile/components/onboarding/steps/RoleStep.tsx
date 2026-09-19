@@ -1,26 +1,81 @@
+import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
-import { LogoLockup } from '@/components/art/Logo';
+import { PLAYGROUND_ASPECT, PlaygroundBand } from '@/components/art/PlaygroundBand';
 import { Entrance } from '@/components/motion/Entrance';
-import { TiltCard } from '@/components/motion/TiltCard';
+import { PressKey } from '@/components/motion/PressKey';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { capture } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
 import { setDraft } from '@/lib/onboardingDraft';
 import { saveRole, type Role } from '@/lib/session';
+import { useFrameSize } from '@/lib/useFrameSize';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type, wash } from '@/theme/tokens';
+import { radius, space, type, type Wash } from '@/theme/tokens';
 
-/** Step zero of the journey (DECISIONS §K.7, "two doors"): one tap picks a role
- * and advances — no Continue button, so a mentee spends exactly one tap here.
- * The talk door is larger and accent-tinted (the default-safe path); the listen
- * door is smaller and sage. Role is written to device + draft before advancing.
- * No haptic fires here — this one tap is both the choice and the step forward,
- * so the journey's own `advance` haptic (fired by `onPick`) is the only one. */
+/** The board lets the band start 12px under the sub line (it is absolutely placed there,
+ * closer than the column's 16 gap). */
+const BAND_LIFT = 12;
+/** Below this the band would be a sliver — the step scrolls instead. */
+const BAND_MIN = 150;
+
+function Door({
+  title,
+  body,
+  icon,
+  tone,
+  quiet,
+  onPress,
+  testID,
+}: {
+  title: string;
+  body: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  tone: Wash;
+  /** The second door sits on the warm alt surface, a step back from the first. */
+  quiet?: boolean;
+  onPress: () => void;
+  testID: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <PressKey
+      onPress={onPress}
+      edge={quiet ? colors.edgeAlt : colors.edgeSurface}
+      travel={4}
+      radius={radius.lg}
+      accessibilityLabel={title}
+      accessibilityHint={body}
+      testID={testID}
+      style={[
+        styles.door,
+        { backgroundColor: quiet ? colors.surfaceAlt : colors.surface, borderColor: colors.border },
+      ]}
+    >
+      <IconBadge icon={icon} tone={tone} size={52} />
+      <View style={styles.doorText}>
+        <Text style={[type.title, { color: colors.ink }]}>{title}</Text>
+        <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{body}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={22} color={colors.inkMuted} />
+    </PressKey>
+  );
+}
+
+/** Step zero of the journey (DECISIONS §K.7, "two doors") — board A02: the headline, the
+ * companions at play in a full-bleed band, then the two doors pinned to the bottom and
+ * the peers-not-therapists line. One tap picks a role and advances — no Continue key,
+ * so a member spends exactly one tap here. Role is written to device + draft before
+ * advancing. No haptic fires here beyond the key's own press. */
 export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { width } = useFrameSize();
+  // The band takes the room between the headline and the doors, up to the film's own height.
+  const [zoneH, setZoneH] = useState(0);
+  const bandH = Math.min(width / PLAYGROUND_ASPECT, Math.max(BAND_MIN, zoneH + BAND_LIFT));
 
   const pick = (role: Role) => {
     setDraft({ role });
@@ -38,77 +93,65 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
         </Text>
       }
     >
-      <Entrance index={0}>
-        <View style={styles.logoZone}>
-          <LogoLockup markSize={40} />
-        </View>
-      </Entrance>
-
-      <Entrance index={1}>
-        <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+      <Entrance index={1} style={styles.head}>
+        <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
           {t('onboarding.role.headline')}
+          <Text style={{ color: colors.accent }}>{t('onboarding.role.headlineAccent')}</Text>
         </Text>
-        <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-          {t('onboarding.role.sub')}
-        </Text>
+        <Text style={[type.body, { color: colors.inkMuted }]}>{t('onboarding.role.sub')}</Text>
       </Entrance>
 
-      <Entrance index={2}>
-        <TiltCard
-          onPress={() => pick('mentee')}
-          maxTilt={5}
-          edge={colors.accentEdge}
-          accessibilityRole="button"
-          accessibilityLabel={t('onboarding.role.talkTitle')}
-          testID="role-talk"
-          style={[styles.door, styles.doorBig, { backgroundColor: colors.accentTint }]}
-          containerStyle={styles.doorSpacing}
-        >
-          <IconBadge icon="chatbubble-ellipses-outline" tone="accent" size={52} />
-          <View style={styles.doorText}>
-            <Text style={[styles.doorTitle, { color: colors.ink }]}>{t('onboarding.role.talkTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('onboarding.role.talkBody')}</Text>
+      {/* No arrival: the band is simply there, the way the sky is. */}
+      <View style={styles.zone} onLayout={(e) => setZoneH(e.nativeEvent.layout.height)}>
+        {zoneH > 0 ? (
+          <View style={[styles.band, { width, height: bandH }]}>
+            <PlaygroundBand width={width} height={bandH} />
           </View>
-        </TiltCard>
-      </Entrance>
+        ) : null}
+      </View>
 
-      <Entrance index={3}>
-        <TiltCard
-          onPress={() => pick('mentor')}
-          maxTilt={3}
-          edge={colors.edgeSurface}
-          accessibilityRole="button"
-          accessibilityLabel={t('onboarding.role.listenTitle')}
-          testID="role-listen"
-          style={[styles.door, { backgroundColor: wash.green }]}
-          containerStyle={styles.doorSpacing}
-        >
-          <IconBadge icon="ear-outline" tone="green" size={44} />
-          <View style={styles.doorText}>
-            <Text style={[styles.doorTitleSmall, { color: colors.ink }]}>{t('onboarding.role.listenTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('onboarding.role.listenBody')}</Text>
-          </View>
-        </TiltCard>
-      </Entrance>
+      <View style={styles.doors}>
+        <Entrance index={2}>
+          <Door
+            title={t('onboarding.role.talkTitle')}
+            body={t('onboarding.role.talkBody')}
+            icon="chatbubble-outline"
+            tone="accent"
+            onPress={() => pick('mentee')}
+            testID="role-talk"
+          />
+        </Entrance>
+        <Entrance index={3}>
+          <Door
+            title={t('onboarding.role.listenTitle')}
+            body={t('onboarding.role.listenBody')}
+            icon="ear-outline"
+            tone="green"
+            quiet
+            onPress={() => pick('mentor')}
+            testID="role-listen"
+          />
+        </Entrance>
+      </View>
     </StepScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  logoZone: { alignItems: 'center', marginTop: space.md, marginBottom: space.xl },
-  headline: { ...type.displayHeadline, textAlign: 'center', marginBottom: space.sm },
-  sub: { textAlign: 'center', marginBottom: space.xl, paddingHorizontal: space.sm },
+  head: { gap: 6, zIndex: 1 },
+  zone: { flexGrow: 1, minHeight: BAND_MIN - BAND_LIFT, marginVertical: space.xs },
+  // Full-bleed: steps out of the scaffold's 24 side padding, and up under the sub line.
+  band: { position: 'absolute', left: -space.lg, top: -BAND_LIFT },
+  doors: { gap: space.md, zIndex: 1 },
   door: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.md,
-    borderRadius: radius.lg,
-    padding: space.md,
+    minHeight: 104,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderWidth: 1,
   },
-  doorSpacing: { marginBottom: space.md },
-  doorBig: { paddingVertical: space.lg },
   doorText: { flex: 1, gap: 2 },
-  doorTitle: { fontFamily: font.sansHeavy, fontSize: 20, lineHeight: 26 },
-  doorTitleSmall: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 22 },
   footer: { textAlign: 'center' },
 });

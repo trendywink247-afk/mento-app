@@ -198,13 +198,15 @@
       "affirm4": "Not a race against others."
     },
     "role": {
-      "headline": "What brings you here today?",
+      "headline": "What brings you\nhere ",
       "sub": "No wrong answer. You can change this later.",
-      "talkTitle": "I need to talk",
-      "talkBody": "A real person — now if a mentor is online, or when one is free.",
-      "listenTitle": "I'm here to listen",
-      "listenBody": "Be the steady voice for someone else.",
-      "footer": "Mentors are real people, not therapists."
+      "talkTitle": "Ask a mentor",
+      "talkBody": "Right away if a mentor is online, or a reply when one is free.",
+      "listenTitle": "I want to mentor",
+      "listenBody": "Be the steady voice for someone on the same road.",
+      "footer": "Mentors are peers, not therapists. This is a peer-to-peer support space.",
+      "headlineAccent": "today?",
+      "artA11y": "The companions at play: a panda swaying on a bamboo stalk, a fox on a rope swing, a puppy chasing a butterfly, and a cat and a capybara sharing a see-saw"
     },
     "primer": {
       "headline": "Listening here, in plain words.",
@@ -216,7 +218,8 @@
     "handoff": {
       "headline": "Setting up your space…",
       "sub": "Your identity stays yours — and so does every mentor's."
-    }
+    },
+    "stepOf": "Step %{n} of %{total}"
   },
   "connecting": {
     "line1": "Reaching out to our mentors…",
