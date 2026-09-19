@@ -9,7 +9,8 @@ import {
   View,
 } from 'react-native';
 
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { MentorFace } from '@/components/art/MentorFace';
+import { MemberDisc } from '@/components/mentor/MemberDisc';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminApplication, type AdminListener } from '@/lib/adminApi';
 import { formatTimestamp, formatTopic } from '@/lib/format';
@@ -231,7 +232,7 @@ export default function ListenersPanel() {
               testID={`admin-app-${app.id}`}
             >
               <View style={styles.rosterHead}>
-                <PersonaAvatar name={app.persona_name} size={44} />
+                <MemberDisc name={app.persona_name} size={44} still />
                 <View style={{ flex: 1 }}>
                   <Text style={[type.bodySemi, { color: colors.ink }]}>{app.persona_name}</Text>
                   <Text style={[type.caption, styles.rosterNums, { color: colors.inkMuted }]}>
@@ -326,7 +327,7 @@ export default function ListenersPanel() {
               testID={`admin-listener-${li.id}`}
             >
               <View style={styles.rosterHead}>
-                <PersonaAvatar name={li.persona_name} size={44} online={li.status === 'online'} />
+                <MentorFace animal={li.companion_animal} colour={li.companion_colour} size={44} presence={li.status === 'online'} />
                 <View style={{ flex: 1 }}>
                   <Text style={[type.bodySemi, { color: colors.ink }]}>{li.persona_name}</Text>
                   <Text style={[type.caption, styles.rosterNums, { color: colors.inkMuted }]}>

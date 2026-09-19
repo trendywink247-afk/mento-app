@@ -144,6 +144,8 @@ def dev_roster(db: Session = Depends(get_db)) -> list[DevListenerItem]:
             persona_name=li.persona_name,
             persona_avatar=li.persona_avatar,
             status=li.status.value,
+            companion_animal=mentor_face.face(li)[0],
+            companion_colour=mentor_face.face(li)[1],
         )
         for li in rows
     ]

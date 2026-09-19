@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconBadge } from '@/components/IconBadge';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { MentorFace } from '@/components/art/MentorFace';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { MemberDisc } from '@/components/mentor/MemberDisc';
 import { ApiError } from '@/lib/api';
 import {
   listenerApi,
@@ -184,7 +184,7 @@ export default function ListenerConsoleWeb() {
               style={[styles.pickerRow, { backgroundColor: colors.surface }, elevation.sm]}
               hoverStyle={{ backgroundColor: colors.surfaceAlt }}
             >
-              <PersonaAvatar name={li.persona_name} size={44} online={li.status === 'online'} />
+              <MentorFace animal={li.companion_animal} colour={li.companion_colour} size={44} presence={li.status === 'online'} />
               <View style={{ flex: 1 }}>
                 <Text style={[type.label, { color: colors.ink }]}>{li.persona_name}</Text>
                 <Text style={[type.caption, { color: colors.inkMuted }]}>{li.status}</Text>
@@ -276,7 +276,13 @@ export default function ListenerConsoleWeb() {
                 testID={`request-${r.id}`}
               >
                 <View style={styles.cardHead}>
-                  <PersonaAvatar name={r.requester_persona_name} size={40} />
+                  <MemberDisc
+                    name={r.requester_persona_name}
+                    size={40}
+                    animal={r.requester_companion_animal}
+                    colour={r.requester_companion_colour}
+                    still
+                  />
                   <View style={{ flex: 1 }}>
                     <Text style={[type.bodySemi, { color: colors.ink }]}>
                       {r.requester_persona_name}
@@ -344,7 +350,13 @@ export default function ListenerConsoleWeb() {
                 ]}
                 hoverStyle={{ backgroundColor: colors.surfaceAlt }}
               >
-                <PersonaAvatar name={c.user_persona_name} size={44} online={c.status === 'active'} />
+                <MemberDisc
+                  name={c.user_persona_name}
+                  size={44}
+                  animal={c.user_companion_animal}
+                  colour={c.user_companion_colour}
+                  still
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={[type.bodySemi, { color: colors.ink }]}>{c.user_persona_name}</Text>
                   <Text style={[type.caption, { color: colors.inkMuted }]}>

@@ -34,6 +34,9 @@ export type AdminListener = {
   max_concurrent: number;
   rank: number;
   public_line: string | null;
+  /** The mentor's face (services/mentor_face.py) — drawn with `MentorFace`, as members see them. */
+  companion_animal?: string | null;
+  companion_colour?: string | null;
   /** The mentor asked the team to step their mentor side back (lane u14); the list puts
    * live mentors with a waiting ask first. Suspend handles it; reinstate clears it. */
   step_back_requested_at?: string | null;

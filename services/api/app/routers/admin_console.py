@@ -58,7 +58,7 @@ from app.schemas import (
     OkResult,
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
-from app.services import allowance, audit, conversations, in_touch, stream
+from app.services import allowance, audit, conversations, in_touch, mentor_face, stream
 from app.services.categories import availability_note, ordered_times
 from app.services.links import admin_link, mentor_console_link
 from app.services.matching import reconcile_listener_capacity
@@ -397,6 +397,8 @@ def _listener_item(li: ListenerProfile) -> AdminListenerItem:
         max_concurrent=li.max_concurrent,
         rank=li.rank,
         public_line=li.public_line,
+        companion_animal=mentor_face.face(li)[0],
+        companion_colour=mentor_face.face(li)[1],
         step_back_requested_at=(
             li.step_back_requested_at.isoformat() if li.step_back_requested_at else None
         ),
