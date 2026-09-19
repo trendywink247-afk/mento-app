@@ -68,10 +68,25 @@ def _enforce_prod_invariants() -> None:
         raise RuntimeError(f"unsafe {settings.env} configuration: " + "; ".join(problems))
 
 
+def _warn_on_risky_config() -> None:
+    """Legal but dangerous settings — boot, and say so loudly."""
+    if settings.trusted_proxy_hops <= 0:
+        # Behind nginx / a load balancer every request arrives from the proxy's
+        # address, so ALL members would share one per-IP bucket: the 11th new
+        # member in an hour, anywhere, gets a 429 on onboarding.
+        logging.getLogger(__name__).warning(
+            "TRUSTED_PROXY_HOPS=0 in %s — if this API sits behind a reverse proxy, "
+            "per-IP rate limits are keyed on the PROXY address (set it to the number "
+            "of proxies you run, e.g. 1)",
+            settings.env,
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if not settings.is_dev:
         _enforce_prod_invariants()
+        _warn_on_risky_config()
     # Dev convenience: create tables from models. Staging/prod use Alembic migrations.
     if settings.is_dev:
         init_db()
@@ -79,6 +94,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Mento API", version="0.1.0", lifespan=lifespan)
+
+# Added FIRST = innermost: request id + access line + JSON 500, inside GZip and CORS
+# so even an unhandled error leaves with CORS headers and a body the app can parse.
+app.add_middleware(observability.RequestContextMiddleware)
 
 # List payloads (conversations, listeners, journals) compress well; cheap win for
 # mobile networks. Small floor so tiny JSON bodies skip the overhead.
