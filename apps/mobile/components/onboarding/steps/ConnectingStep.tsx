@@ -136,6 +136,7 @@ export function ConnectingStep({
           email: draft.email ?? null,
           companion_animal: draft.companionAnimal ?? null,
           companion_colour: draft.companionColour ?? null,
+          companion_name: draft.companionName ?? null,
         });
         await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
         setMemberName(onboarding.user.persona_name);
@@ -151,6 +152,7 @@ export function ConnectingStep({
           .saveCompanion({
             companion_animal: draft.companionAnimal,
             ...(draft.companionColour ? { companion_colour: draft.companionColour } : {}),
+            ...(draft.companionName ? { companion_name: draft.companionName } : {}),
           })
           .catch(() => {
             /* reason: best-effort sync; the next companion/colour change retries */

@@ -246,7 +246,24 @@
       "headline": "Setting up your space…",
       "sub": "Your identity stays yours — and so does every mentor's."
     },
-    "stepOf": "Step %{n} of %{total}"
+    "stepOf": "Step %{n} of %{total}",
+    "companionName": {
+      "label": "Name your companion",
+      "optional": "(optional)",
+      "a11y": "Name your companion (optional)",
+      "invalid": "Just a name works best here, without links, emails or phone numbers.",
+      "readyName": " · %{name}",
+      "suggestAny": "Maybe Sunny",
+      "suggestPanda": "Maybe Bao",
+      "suggestDog": "Maybe Coco",
+      "suggestCat": "Maybe Miso",
+      "suggestFox": "Maybe Juno",
+      "suggestCapybara": "Maybe Tofu",
+      "suggestElephant": "Maybe Momo",
+      "suggestTurtle": "Maybe Toto",
+      "suggestDeer": "Maybe Kiki",
+      "suggestOwl": "Maybe Ollie"
+    }
   },
   "connecting": {
     "headlineBusy": "It's a busy moment.\nYou are next in line",
@@ -877,7 +894,17 @@
     "namesNote": "Names change every day. A mentor you are in touch with stays reachable under any name. Mentors are peers, not therapists."
   },
   "profilePage": {
-    "private": "Private"
+    "private": "Private",
+    "companionNameNone": "No name yet",
+    "companionNameAdd": "Name it",
+    "companionNameEdit": "Rename",
+    "companionNameSave": "Save",
+    "companionNameCancel": "Cancel",
+    "companionNameRemove": "Remove name",
+    "companionNameOnlyYou": "Only you see this name.",
+    "companionNameFailed": "We couldn't save that just now. Please try again.",
+    "companionNameA11y": "Your companion's name: %{name}",
+    "companionNameEditA11y": "Change your companion's name"
   },
   "pathHome": {
     "titleLead": "Your ",

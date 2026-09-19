@@ -36,6 +36,8 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
   // Companion is optional in the draft (Surprise Me edge / direct deep link): fall back
   // gracefully rather than blocking the path to a conversation.
   const animal = (draft.companionAnimal as CompanionAnimal | null) ?? 'Panda';
+  // The member's own name for it, when they gave one: "Terracotta Cat · Miso".
+  const companionName = draft.companionName ?? null;
   const colourLabel =
     COMPANION_COLOR_LABELS[(draft.companionColour as CompanionColor | null) ?? companionColor];
   const breathing = useBreathing();
@@ -99,7 +101,13 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
             <Text style={{ fontFamily: font.sansBold, color: colors.ink }}>
               {colourLabel} {animal}
             </Text>
-            {t('onboarding.ready.asCompanion')}
+            {companionName ? (
+              <Text style={{ fontFamily: font.sansBold, color: colors.ink }} testID="ready-companion-name">
+                {t('onboarding.companionName.readyName', { name: companionName })}
+              </Text>
+            ) : (
+              t('onboarding.ready.asCompanion')
+            )}
           </Text>
         </EdgeSurface>
       </Entrance>

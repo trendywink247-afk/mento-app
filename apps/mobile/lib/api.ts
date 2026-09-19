@@ -17,12 +17,16 @@ export type Persona = { id: string; persona_name: string; persona_avatar: string
 export type Me = Persona & {
   companion_animal: string | null;
   companion_colour: string | null;
+  /** The member's own name for the companion — only ever shown back to them. */
+  companion_name?: string | null;
 };
 
 /** `PUT /me/companion`: an omitted field is left as it is, `null` clears it. */
 export type CompanionUpdate = {
   companion_animal?: string | null;
   companion_colour?: string | null;
+  /** A refused name is a 422 with `code: 'companion_name_invalid'`; nothing is saved. */
+  companion_name?: string | null;
 };
 
 export type OnboardingResult = {
@@ -368,6 +372,7 @@ export const api = {
     email?: string | null;
     companion_animal?: string | null;
     companion_colour?: string | null;
+    companion_name?: string | null;
   }) => request<OnboardingResult>('/onboarding/start', { method: 'POST', body: JSON.stringify(body) }),
 
   // --- The member's own record (companion saved on the account, not just the device) ---

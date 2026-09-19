@@ -4,7 +4,7 @@
  * once at the journey level so the ambient background and chevron never remount).
  * Transparent by design: steps render over the journey's persistent background.
  */
-import { ReactNode, useState } from 'react';
+import { ReactNode, RefObject, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,9 +26,12 @@ type Props = {
   footerDelay?: number;
   /** How far the footer rises (px) — the board's footer lines travel less than a headline. */
   footerDistance?: number;
+  /** The step's scroll view, for a step that reveals its last part once the required
+   * choices are made (the companion pick's optional name). */
+  scrollRef?: RefObject<ScrollView>;
 };
 
-export function StepScaffold({ children, footer, footerIndex, footerDelay, footerDistance }: Props) {
+export function StepScaffold({ children, footer, footerIndex, footerDelay, footerDistance, scrollRef }: Props) {
   // A step should never bounce/scroll when its content fits — that idle rubber-band
   // is the "annoying scroll" complaint. We keep the ScrollView (some steps genuinely
   // overflow: ReadyStep, CompanionStep, ConnectingStep's reduced-motion list, and
@@ -45,6 +48,7 @@ export function StepScaffold({ children, footer, footerIndex, footerDelay, foote
   return (
     <View style={styles.root}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"

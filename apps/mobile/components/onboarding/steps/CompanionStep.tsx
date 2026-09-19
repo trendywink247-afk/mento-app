@@ -1,5 +1,5 @@
-import { type ReactNode, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { Keyboard, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,10 +7,12 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { useBreathing } from '@/components/motion/useBreathing';
+import { CompanionNameField } from '@/components/onboarding/CompanionNameField';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { Companion, type CompanionPose, type CompanionTrigger } from '@/components/art/Companion';
 import { type CompanionAnimal } from '@/components/art/Companions';
 import { capture } from '@/lib/analytics';
+import { checkCompanionName } from '@/lib/companionName';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { getDraft, setDraft } from '@/lib/onboardingDraft';
@@ -49,6 +51,9 @@ const SWATCH_MAX = 44;
 const SWATCH_GAP_MIN = 8;
 /** Everything on the step that is not the three tile rows (header, copy, swatches, keys). */
 const CHROME = 600;
+/** Air above the optional name row (founder ruling 2026-09-19). The row is not part of the
+ * resting screen — it arrives under the colours once there is a companion to name. */
+const NAME_GAP = 10;
 /** The hero's pose swap (board: idle for ~5s, a wave for ~2.8s, on a 9s loop). Cadences,
  * not animation durations — the crossfade itself is the Companion's own token timing. */
 const POSE_LOOP_MS = 9000;
@@ -87,6 +92,19 @@ export function CompanionStep({
     (draft.companionAnimal as CompanionAnimal | null) ?? null
   );
   const [colourPicked, setColourPicked] = useState(!!draft.companionColour);
+  // The companion's name — optional; skipping never blocks Continue. Only a name the
+  // server would refuse (a link, an email, a phone number) holds the key back.
+  const [name, setName] = useState(draft.companionName ?? '');
+  const nameCheck = checkCompanionName(name);
+  const nameInvalid = nameCheck.state === 'invalid';
+
+  // The name row arrives once both required choices are made — there is a companion to
+  // name, and the resting screen stays the board's A03. When it (or its still error line)
+  // lays out, the step glides to its end so it is in view: on a phone where the step
+  // scrolls it would otherwise land below the fold unseen. A no-op when everything fits.
+  const showName = Boolean(animal) && colourPicked;
+  const scrollRef = useRef<ScrollView>(null);
+  const revealName = () => scrollRef.current?.scrollToEnd({ animated: !reduced });
   // The picked animal greets — a tiny hello at the moment of choice.
   const [greet, setGreet] = useState<CompanionTrigger>(null);
 
@@ -136,9 +154,15 @@ export function CompanionStep({
   };
 
   const onContinue = () => {
-    if (!animal || !colourPicked) return;
-    setDraft({ companionAnimal: animal, companionColour: companionColor });
+    if (!animal || !colourPicked || nameInvalid) return;
+    setDraft({
+      companionAnimal: animal,
+      companionColour: companionColor,
+      companionName: nameCheck.state === 'ok' ? nameCheck.name : null,
+    });
+    // The animal only — the name is the member's own and never goes to analytics.
     capture('onboarding_companion_chosen', { companion: animal });
+    Keyboard.dismiss();
     onNext();
   };
 
@@ -154,6 +178,7 @@ export function CompanionStep({
   return (
     <StepScaffold
       footerIndex={4}
+      scrollRef={scrollRef}
       footer={
         <>
           <View style={styles.keys}>
@@ -174,7 +199,7 @@ export function CompanionStep({
                 label={t('common.continue')}
                 shape="key"
                 onPress={onContinue}
-                disabled={!animal || !colourPicked}
+                disabled={!animal || !colourPicked || nameInvalid}
                 testID="continue"
               />
             </View>
@@ -291,6 +316,26 @@ export function CompanionStep({
           })}
         </View>
       </Entrance>
+
+      {showName ? (
+        <View style={styles.nameBlock} onLayout={revealName}>
+          <Entrance>
+            <CompanionNameField
+              value={name}
+              onChangeText={setName}
+              animal={animal}
+              invalid={nameInvalid}
+              onSubmitEditing={() => Keyboard.dismiss()}
+            />
+          </Entrance>
+          {/* Still, plain words — nothing shakes (T&S #11). */}
+          {nameInvalid ? (
+            <Text style={[type.caption, { color: colors.danger }]} testID="companion-name-invalid">
+              {t('onboarding.companionName.invalid')}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
     </StepScaffold>
   );
 }
@@ -316,6 +361,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     borderWidth: 2,
   },
+  nameBlock: { marginTop: NAME_GAP, gap: 6 },
   keys: { flexDirection: 'row', gap: 12 },
   surpriseCell: { flex: 1 },
   continueCell: { flex: 1.3 },
