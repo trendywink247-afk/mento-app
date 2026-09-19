@@ -145,5 +145,12 @@ export const chat = {
   sheetBack: { scale: 0.96, shift: 8 },
 } as const;
 
+/**
+ * The board's companion breath on a still screen (A23 reflection, A39 not found): an
+ * alternating inhale of 3.5% with a one-degree lean, each half one `breathe.period` long.
+ * Reduced motion: none — the companion simply sits.
+ */
+export const heroBreath = { scale: 0.035, lean: { from: -1, to: 0.8 }, half: 5200 } as const;
+
 export const motion = { duration, easing, spring, stagger, breathe, character, stage, dots, chat };
 export type Motion = typeof motion;
