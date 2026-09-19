@@ -11,7 +11,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -288,9 +289,21 @@ def save_reflection(
     ).first()
     if existing:
         existing.energy = payload.energy
-    else:
-        db.add(ConversationReflection(conversation_id=convo_id, energy=payload.energy))
-    db.commit()
+        db.commit()
+        return OkResult(status="ok")
+    db.add(ConversationReflection(conversation_id=convo_id, energy=payload.energy))
+    try:
+        db.commit()
+    except IntegrityError:
+        # A double tap raced us to uq_reflection_conversation — the row exists now;
+        # last write wins, same as the sequential path.
+        db.rollback()
+        db.execute(
+            update(ConversationReflection)
+            .where(ConversationReflection.conversation_id == convo_id)
+            .values(energy=payload.energy)
+        )
+        db.commit()
     return OkResult(status="ok")
 
 

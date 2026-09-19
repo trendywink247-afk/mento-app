@@ -31,7 +31,7 @@ from app.models.request import ConversationRequest
 from app.routers.admin_console import current_admin
 from app.schemas import ListenerOut, ListenerProfileOut, OkResult, PersonalRequestIn, RequestOut
 from app.security import current_user_id
-from app.services import audit, push_tasks
+from app.services import audit, locks, push_tasks
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -225,6 +225,9 @@ def create_personal_request(
     if listener_id in _blocked_listener_ids(db, user_id) | _own_listener_ids(db, user_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "listener unavailable")
 
+    # One pending request per pair: a double tap must wait for the first insert,
+    # or the mentor gets two inbox rows and two pushes.
+    locks.serialize_member(db, user_id)
     existing = db.scalars(
         select(ConversationRequest).where(
             ConversationRequest.requester_id == user_id,

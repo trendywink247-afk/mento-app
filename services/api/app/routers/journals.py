@@ -25,7 +25,7 @@ from app.schemas import (
     OrganizeTheme,
 )
 from app.security import current_user_id
-from app.services import notes_ai
+from app.services import locks, notes_ai
 
 router = APIRouter(prefix="/journals", tags=["journals"])
 
@@ -70,6 +70,9 @@ def save_mentor_note(
     message twice returns the existing note (idempotent long-press)."""
     _write_budget(user_id)
     if payload.stream_message_id:
+        # The dedupe key lives inside a JSON column (no unique index to lean on), so
+        # a double long-press must wait for the first save to commit.
+        locks.serialize_member(db, user_id)
         # Dedupe in SQL — loading every note into Python scaled with the user's
         # whole archive on each save of the core talk→action loop.
         existing = db.scalars(
