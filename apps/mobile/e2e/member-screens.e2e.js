@@ -185,10 +185,13 @@ async function run(browser, reduced) {
 
   await visit('profile: coffee', async () => {
     await tid('profile-coffee').click();
-    // Coffee screen loads with the amount chips always visible.
+    // Support the team (board A31) loads with the amount keys always visible, and says
+    // BEFORE any tap that contributions are not switched on (T&S #4).
     await page.waitForSelector('[data-testid="amount-49"]', { timeout: 30000 });
-    // Tapping a method must surface the transparent "payments disabled" note (T&S #4).
-    await tid('method-upi').click();
+    await page.waitForSelector('[data-testid="payments-not-live"]', { timeout: 30000 });
+    // The primary key must surface the still "nothing was charged" note — never a thank-you.
+    await tid('amount-49').click();
+    await tid('coffee-contribute').click();
     await page.waitForSelector('[data-testid="payments-note"]', { timeout: 30000 });
     await page.goBack();
   });
