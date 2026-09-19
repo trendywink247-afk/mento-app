@@ -1,11 +1,11 @@
-/** Mentor profile — "Two in the room" (spec 2026-09-06-chat-profiles-composer-design.md §3).
- * Chat header tap → mentor profile screen (persona name renders immediately from route
- * params, then the fetched profile fills in) → favourite toggle (optimistic, "Saved"
- * label) → "Report or block" hands off to the chat: back navigation regains the still-
- * live chat AND the options sheet auto-opens straight onto the Report flow (the
- * conversation-scoped pendingOption store) → close it → Browse shows the favourite
- * first with a heart badge. Runs once normally, once under reduced motion. 0 page
- * errors in every context.
+/** Mentor profile + stay in touch (board A14, DECISIONS §L.6–7).
+ * Chat header tap → mentor profile (persona name renders immediately, then the fetched
+ * profile and the member's stay-in-touch standing fill in) → "Ask to stay in touch" (one
+ * tap → the still "Asked." confirmation, and the waiting ask holds a place) → "Take it
+ * back" frees it → "Report or block" hands off to the chat: back navigation regains the
+ * still-live chat AND the options sheet auto-opens straight onto the Report flow (the
+ * conversation-scoped pendingOption store) → close it → Browse is a deeper page with no
+ * favourite hearts. Runs once normally, once under reduced motion. 0 page errors.
  *
  * Needs: API :8000 seeded + Expo web :8081, the mento-postgres / mento-redis containers
  * (this script resets rate limits + capacity accounting through docker exec before each
@@ -62,26 +62,30 @@ async function attempt(browser, reduced) {
   console.log(`OK [${label}] onboarded into a live chat`);
 
   await tid('mentor-header').click();
-  await tid('favourite-toggle').waitFor({ timeout: 30000 });
-  const before = (await tid('favourite-toggle').textContent()) ?? '';
-  if (!/ask for/i.test(before)) {
-    throw new Error(`expected the "Ask for … next time" label before favouriting, got: "${before}"`);
-  }
-  console.log(`OK [${label}] mentor profile opened — "${before.trim()}"`);
+  await tid('stay-in-touch-ask').waitFor({ timeout: 30000 });
+  const name = ((await tid('mentor-profile-name').textContent()) ?? '').trim();
+  if (!name) throw new Error('the mentor profile has no name');
+  const free = (await tid('in-touch-places').textContent()) ?? '';
+  if (!/2 of 2 places free/i.test(free)) throw new Error(`expected both places free before asking, got: "${free}"`);
+  if (await tid('favourite-toggle').count()) throw new Error('the one-sided favourite is still on the profile');
+  console.log(`OK [${label}] mentor profile opened — ${name}, "${free.trim()}"`);
 
-  await tid('favourite-toggle').click();
-  await page.waitForFunction(
-    () => {
-      const el = document.querySelector('[data-testid="favourite-toggle"]');
-      return !!el && /saved/i.test(el.textContent || '');
-    },
-    { timeout: 15000 },
-  );
-  console.log(`OK [${label}] favourite saved`);
+  // One tap asks; the confirmation is a still state that names the mentor.
+  await tid('stay-in-touch-ask').click();
+  await tid('stay-in-touch-asked').waitFor({ timeout: 15000 });
+  const asked = (await tid('stay-in-touch-asked').textContent()) ?? '';
+  if (!asked.includes('Asked.') || !asked.includes(name)) throw new Error(`confirmation reads: "${asked}"`);
+  const held = (await tid('in-touch-places').textContent()) ?? '';
+  if (!/1 asked/i.test(held)) throw new Error(`a waiting ask should hold a place, got: "${held}"`);
+  console.log(`OK [${label}] asked — "${held.trim()}"`);
 
-  // "Report or block" hands off to the chat via the conversation-scoped pendingOption
-  // store: router.back() must land on the still-live chat AND the options sheet must
-  // auto-open straight onto the Report flow (skipping the choice sheet).
+  // Take it back → the ask key returns and the place is free again.
+  await tid('stay-in-touch-take-back').click();
+  await tid('stay-in-touch-ask').waitFor({ timeout: 15000 });
+  const again = (await tid('in-touch-places').textContent()) ?? '';
+  if (!/2 of 2 places free/i.test(again)) throw new Error(`taking it back should free the place, got: "${again}"`);
+  console.log(`OK [${label}] took it back`);
+
   await tid('report-block').click();
   await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 30000 });
   await page.waitForSelector('[data-testid="report-and-block"]', { timeout: 15000 });
@@ -96,14 +100,15 @@ async function attempt(browser, reduced) {
   await page.waitForSelector('[data-testid="options-sheet"]', { state: 'hidden', timeout: 15000 });
   console.log(`OK [${label}] options sheet closed`);
 
+  // Browse: a deeper page, no hearts anywhere (favourites are retired from the UI).
   await page.goto(`${WEB}/mentors`, { waitUntil: 'networkidle', timeout: 60000 });
-  const firstRow = page.locator('[data-testid^="mentor-"]').first();
-  await firstRow.waitFor({ timeout: 30000 });
-  const heartCount = await firstRow.locator('[data-testid^="mentor-favourite-"]').count();
-  if (heartCount < 1) {
-    throw new Error('expected the favourited mentor to sort first on Browse with a heart badge');
+  await tid('next-available').waitFor({ timeout: 30000 });
+  await page.locator('[data-testid^="mentor-"]').first().waitFor({ timeout: 30000 });
+  if (await page.locator('[data-testid^="mentor-favourite-"]').count()) {
+    throw new Error('Browse still draws a favourite heart');
   }
-  console.log(`OK [${label}] Browse shows the favourite first with a heart`);
+  if (await tid('tab-chats').count()) throw new Error('Browse is a deeper page: it must not sit inside the tab bar');
+  console.log(`OK [${label}] Browse renders as a deeper page, no favourite hearts`);
 
   await ctx.close();
   return errors;

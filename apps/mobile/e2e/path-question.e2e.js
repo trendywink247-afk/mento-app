@@ -75,9 +75,10 @@ async function run(browser, reduced) {
 
   await page.goto(`${WEB}/path`, { waitUntil: 'networkidle', timeout: 60000 });
   await tid('path-start').click();
-  await page.locator("text=I'm preparing for an exam").click();
-  await page.locator('text=UPSC').click();
+  await page.locator("text=An exam I'm preparing for").click();
+  await page.locator('[data-testid="pathfinder-seg-0"]', { hasText: 'UPSC' }).click();
   await page.locator('text=Waiting after prelims').click();
+  await tid('pathfinder-use').click();
   await page.waitForSelector(`text=${P0}`, { timeout: 30000 });
 
   // A starter opens the builder — no match, no chat, nothing sent.
@@ -88,7 +89,7 @@ async function run(browser, reduced) {
   if (((await tid('pq-lens').textContent()) ?? '').trim() !== 'UPSC · The wait after prelims') throw new Error('lens line is wrong');
   await expectPreview(P0, 'no chips');
   await page.waitForSelector('text=30 of 160 characters', { timeout: 10000 });
-  await page.waitForSelector('text=Nothing is sent until you tap Send.', { timeout: 10000 });
+  await page.waitForSelector('text=Nothing is sent for you.', { timeout: 10000 });
   await page.waitForSelector('text=A starter, not a script. Type your own anytime.', { timeout: 10000 });
   console.log(`[${label}] OK starter opens the builder: headline, lens, bare preview, 30 of 160`);
 
@@ -157,8 +158,10 @@ async function run(browser, reduced) {
   // A road that is not an exam is never offered exam chips.
   await page.goto(`${WEB}/path`, { waitUntil: 'networkidle', timeout: 60000 });
   await tid('path-change').click();
+  await tid('pathfinder-route-life').click();
   await page.locator('text=Life feels heavy right now').click();
-  await page.waitForSelector('text=Life · Heavy days', { timeout: 30000 });
+  await tid('pathfinder-use').click();
+  await page.locator('[data-testid="path-stage"]', { hasText: 'Heavy days' }).waitFor({ timeout: 30000 });
   await tid('path-prompt-0').click();
   await page.waitForURL('**/path-question**', { timeout: 30000 });
   await page.waitForSelector('[data-testid="pq-group-tried"]', { timeout: 30000 });

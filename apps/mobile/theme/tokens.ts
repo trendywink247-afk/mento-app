@@ -20,6 +20,10 @@ export const colors = {
   border: '#E6DFD3',
   onBrand: '#FFFFFF',
   scrim: 'rgba(43,43,43,0.4)',
+  /** Under a board sheet (FINAL_SPEC: 0.35 over a screen settled back to 0.96). */
+  scrimSheet: 'rgba(43,43,43,0.35)',
+  /** The sheet's grab handle. Decorative. */
+  handle: '#D9D1C2',
 
   /** Pillow-key edges (DECISIONS §K.8): the darker "underside" drawn beneath a face. */
   edgeSurface: '#E3DCCF', // under white / oat faces
@@ -54,6 +58,7 @@ export const wash = {
   orange: '#F5E8C4',
   green: '#DCE6DD',
   danger: '#F8DEDC',
+  sky: '#DCE8F2',
 } as const;
 export type Wash = keyof typeof wash;
 
@@ -61,6 +66,18 @@ export type Wash = keyof typeof wash;
 export const washEdge = {
   green: '#C3D2C5',
 } as const;
+
+/** Text ON a wash (state chips: Active / Waiting, a door's icon) — each ≥ 4.5:1 on its wash. */
+export const washInk = {
+  green: '#2C5C3C',
+  orange: '#674711',
+  /** The deep clay red: text on the danger wash, the face of a destructive key (white
+   * text on it 8.6:1), and `dangerKeyEdge` beneath it. */
+  danger: '#8E2F2A',
+} as const;
+
+/** Pillow underside of a destructive key (board A32). Decorative. */
+export const dangerKeyEdge = '#6B2320';
 
 export const space = {
   xs: 4,
@@ -76,6 +93,8 @@ export const radius = {
   md: 14,
   lg: 22,
   pill: 999,
+  /** A board sheet's top corners. */
+  xl: 28,
 } as const;
 
 /**
@@ -119,6 +138,12 @@ export const type = {
   bodySmall: { fontSize: 15, fontFamily: font.sans, lineHeight: 21 },
   note: { fontSize: 14, fontFamily: font.sans, lineHeight: 20 },
   caption: { fontSize: 13, fontFamily: font.sans, lineHeight: 18, color: colors.inkMuted },
+  /** Board small print: a row's second line, a time, a state chip, a badge. */
+  micro: { fontSize: 12, fontFamily: font.sans, lineHeight: 16 },
+  chip: { fontSize: 11, fontFamily: font.sansBold, lineHeight: 14 },
+  /** A deeper page's title (board A25 "Mentors") and a sheet's title. */
+  pageTitle: { fontSize: 26, fontFamily: font.sansHeavy, lineHeight: 32 },
+  sheetTitle: { fontSize: 24, fontFamily: font.sansHeavy, lineHeight: 32 },
   /** Section headings on the web-only console surfaces (listener console, admin cockpit). */
   titleSmSerif: { fontSize: 20, fontFamily: font.serifBold, lineHeight: 26 },
   /** Big cockpit stat numerals (admin overview tiles) — pair with tabular-nums. */

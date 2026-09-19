@@ -156,7 +156,8 @@ async function run(browser, reduced, storageState) {
     if (CLING.includes(c.pose)) throw new Error(`[${label}] ${tab}: a Fox took a cling pose (${c.pose}) it has no art for`);
     if (c.pointerEvents !== 'none' && c.slot !== 'bubble') throw new Error(`[${label}] ${tab}: slot ${c.slot} can take a tap`);
     if (c.slot !== 'bubble' && !c.hiddenFromA11y) throw new Error(`[${label}] ${tab}: slot ${c.slot} is exposed to assistive tech`);
-    if (c.slot !== 'inviteHero' && c.height > 72) throw new Error(`[${label}] ${tab}: perched companion is ${c.height}px tall (> 72)`);
+    // Two places are HERO places, not perches: Path's invite and the Profile identity card (board A09).
+    if (c.slot !== 'inviteHero' && c.slot !== 'bubble' && c.height > 72) throw new Error(`[${label}] ${tab}: perched companion is ${c.height}px tall (> 72)`);
     console.log(`[${label}] OK ${tab}: one companion — Fox, ${c.pose}, slot ${c.slot}`);
   }
 

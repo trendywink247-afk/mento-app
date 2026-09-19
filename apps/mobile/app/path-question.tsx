@@ -1,5 +1,6 @@
 /**
- * First-question builder (DECISIONS §L.8, board X07b) — reached from a Path starter.
+ * First-question builder (DECISIONS §L.8, board A27) — reached from a Path starter, or
+ * from "Ask a mentor" on the Path home (then the path's first starter is the headline).
  * The chosen starter is the headline; two OPTIONAL chip groups each add a short clause;
  * a live preview shows the assembled message in the member's accent.
  *
@@ -30,6 +31,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { Companion } from '@/components/art/Companion';
+import { DeepArrival } from '@/components/motion/DeepArrival';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api, type PathState } from '@/lib/api';
@@ -73,8 +75,8 @@ const CHIP_CLAUSE: Record<ChipId, TKey> = {
 };
 
 const GUTTER = space.md + space.xs; // 20 — the board's side margin
-const COMPANION = 72;
-const COMPANION_TUCK = 28; // how much of the companion sits behind the preview panel
+const COMPANION = 60;
+const COMPANION_TUCK = 30; // how much of the companion sits behind the preview panel
 const CARET_DIM = 0.15;
 const CARET_LIT = 0.9;
 
@@ -201,8 +203,7 @@ export default function PathQuestion() {
       <PressKey
         key={id}
         onPress={() => setChoice((c) => toggleChip(c, id))}
-        edge={on ? colors.accentEdge : colors.edgeSurface}
-        travel={3}
+        edge={on ? colors.accentTintEdge : colors.edgeSurface}
         intent="select"
         radius={radius.pill}
         disabled={busy !== null}
@@ -211,7 +212,9 @@ export default function PathQuestion() {
         testID={`pq-chip-${id}`}
         style={[
           styles.chip,
-          { backgroundColor: on ? colors.accentTint : colors.surface, borderColor: on ? colors.accent : colors.border },
+          on
+            ? { backgroundColor: colors.accentTint, borderColor: colors.accent, borderWidth: 2, paddingHorizontal: 13 }
+            : { backgroundColor: colors.surface, borderColor: colors.border },
         ]}
       >
         <Text style={[styles.chipText, { color: on ? colors.accentEdge : colors.ink }]}>{t(CHIP_LABEL[id])}</Text>
@@ -221,57 +224,60 @@ export default function PathQuestion() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      <Entrance index={0}>
-        <View style={styles.top}>
-          <PressKey
-            onPress={() => router.back()}
-            edge={colors.edgeSurface}
-            intent="navigate"
-            radius={radius.pill}
-            accessibilityLabel={t('pathQuestion.backA11y')}
-            testID="pq-back"
-            style={[styles.roundKey, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          >
-            <Ionicons name="chevron-back" size={22} color={colors.ink} />
-          </PressKey>
-          <View style={styles.topText}>
-            {lens ? (
-              <Text style={[styles.lens, { color: colors.inkMuted }]} numberOfLines={1} testID="pq-lens">
-                {lens}
-              </Text>
-            ) : null}
-            {/* Two lines allowed: beside the Another key the title must wrap, never clip. */}
-            <Text style={[styles.topTitle, { color: colors.ink }]} numberOfLines={2}>
-              {t('pathQuestion.title')}
+      {/* The back key is simply there; the titles come in from the side (board "arrDeep"). */}
+      <View style={styles.top}>
+        <PressKey
+          onPress={() => router.back()}
+          edge={colors.edgeSurface}
+          intent="navigate"
+          radius={radius.pill}
+          accessibilityLabel={t('pathQuestion.backA11y')}
+          testID="pq-back"
+          style={[styles.roundKey, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.ink} />
+        </PressKey>
+        <DeepArrival style={styles.topText}>
+          {lens ? (
+            <Text style={[styles.lens, { color: colors.inkMuted }]} numberOfLines={1} testID="pq-lens">
+              {lens}
             </Text>
-          </View>
-          {prompts.length > 1 ? (
-            <PressKey
-              onPress={another}
-              edge={colors.edgeAlt}
-              travel={3}
-              intent="select"
-              radius={radius.pill}
-              disabled={busy !== null}
-              accessibilityLabel={t('pathQuestion.anotherA11y')}
-              testID="pq-another"
-              style={[styles.anotherKey, { backgroundColor: colors.surface, borderColor: colors.border }]}
-            >
-              <Ionicons name="refresh" size={16} color={colors.inkMuted} />
-              <Text style={[styles.anotherText, { color: colors.inkMuted }]}>{t('pathQuestion.another')}</Text>
-            </PressKey>
           ) : null}
-        </View>
-      </Entrance>
+          <Text style={[styles.topTitle, { color: colors.ink }]} numberOfLines={1}>
+            {t('pathQuestion.title')}
+          </Text>
+        </DeepArrival>
+      </View>
 
+      <DeepArrival style={styles.body}>
       <ScrollView
         style={styles.body}
         contentContainerStyle={styles.bodyContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <Entrance index={1}>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('pathQuestion.notScript')}</Text>
+        <Entrance index={1} style={styles.starter}>
+          <View style={styles.starterRow}>
+            <Text style={[type.caption, styles.starterNote, { color: colors.inkMuted }]}>
+              {t('pathQuestion.notScript')}
+            </Text>
+            {prompts.length > 1 ? (
+              <PressKey
+                onPress={another}
+                edge={colors.edgeSurface}
+                travel={3}
+                intent="select"
+                radius={radius.pill}
+                disabled={busy !== null}
+                accessibilityLabel={t('pathQuestion.anotherA11y')}
+                testID="pq-another"
+                style={[styles.anotherKey, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              >
+                <Ionicons name="refresh" size={16} color={colors.inkMuted} />
+                <Text style={[styles.anotherText, { color: colors.inkMuted }]}>{t('pathQuestion.another')}</Text>
+              </PressKey>
+            ) : null}
+          </View>
           <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header" testID="pq-headline">
             {lead}
             <Text style={{ color: colors.accent }}>{word}</Text>
@@ -300,6 +306,8 @@ export default function PathQuestion() {
             {offered.tried.map(renderChip)}
           </View>
         </Entrance>
+
+        <View style={styles.spacer} />
 
         <Entrance index={4} style={styles.messageBlock}>
           <View style={styles.groupHead}>
@@ -338,7 +346,12 @@ export default function PathQuestion() {
         </Entrance>
 
         <Entrance index={5}>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('pathQuestion.editable')}</Text>
+          <View style={styles.promise}>
+            <Ionicons name="lock-closed-outline" size={15} color={colors.inkMuted} style={styles.promiseIcon} />
+            <Text style={[type.caption, styles.promiseText, { color: colors.inkMuted }]}>
+              {t('pathQuestion.editable')}
+            </Text>
+          </View>
           {assembled.dropped > 0 ? (
             <Text style={[type.caption, styles.dropped, { color: colors.ink }]} testID="pq-dropped">
               {t('pathQuestion.dropped')}
@@ -346,6 +359,7 @@ export default function PathQuestion() {
           ) : null}
         </Entrance>
       </ScrollView>
+      </DeepArrival>
 
       <View style={styles.footer}>
         {note ? (
@@ -369,12 +383,9 @@ export default function PathQuestion() {
               {busy === 'edit' ? (
                 <ActivityIndicator size="small" color={colors.ink} />
               ) : (
-                <>
-                  <Ionicons name="create-outline" size={18} color={colors.ink} />
-                  <Text style={[styles.editText, { color: colors.ink }]} numberOfLines={1}>
-                    {t('pathQuestion.edit')}
-                  </Text>
-                </>
+                <Text style={[styles.editText, { color: colors.ink }]} numberOfLines={1}>
+                  {t('pathQuestion.edit')}
+                </Text>
               )}
             </PressKey>
             <PressKey
@@ -413,32 +424,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.sm + 4,
     paddingHorizontal: GUTTER,
-    paddingTop: space.sm,
+    paddingTop: space.xs,
     paddingBottom: space.xs,
+    minHeight: 50,
   },
   roundKey: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   topText: { flex: 1, minWidth: 0 },
   lens: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
-  topTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22 },
+  topTitle: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24 },
   anotherKey: {
     height: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.xs,
-    paddingHorizontal: space.sm + 4,
+    gap: 6,
+    paddingHorizontal: 14,
     borderWidth: 1,
+    flexShrink: 0,
   },
+  starter: { gap: space.xs },
+  starterRow: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  starterNote: { flex: 1, minWidth: 0 },
+  spacer: { flexGrow: 1 },
+  promise: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
+  promiseIcon: { marginTop: 1 },
+  promiseText: { flex: 1, minWidth: 0 },
   anotherText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
   body: { flex: 1 },
-  bodyContent: { paddingHorizontal: GUTTER, paddingTop: space.sm, paddingBottom: space.md, gap: space.sm + 4 },
-  headline: { fontFamily: font.sansHeavy, fontSize: 24, lineHeight: 32, marginTop: 2 },
+  bodyContent: { flexGrow: 1, paddingHorizontal: GUTTER, paddingTop: space.xs, paddingBottom: space.sm, gap: 10 },
+  headline: { fontFamily: font.sansHeavy, fontSize: 24, lineHeight: 30 },
   groupHead: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm, marginBottom: space.xs + 2 },
   groupTitle: { fontFamily: font.sansBold, fontSize: 14, lineHeight: 18 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  chip: { height: 44, paddingHorizontal: space.sm + 6, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  chip: { height: 44, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   chipText: { fontFamily: font.sansBold, fontSize: 14, lineHeight: 20 },
   messageBlock: { marginTop: space.xs },
-  companion: { position: 'absolute', right: space.md + 2, top: -(COMPANION - COMPANION_TUCK), zIndex: 0 },
+  companion: { position: 'absolute', right: 18, top: -(COMPANION - COMPANION_TUCK), zIndex: 0 },
   panel: { zIndex: 1, borderWidth: 1, borderRadius: radius.lg, padding: space.sm + 4, alignItems: 'flex-end' },
   bubbleBox: { maxWidth: '100%' },
   bubble: { paddingHorizontal: space.sm + 6, paddingVertical: space.sm + 2 },
@@ -446,9 +466,9 @@ const styles = StyleSheet.create({
   dropped: { fontFamily: font.sansBold, marginTop: space.xs },
   footer: { paddingHorizontal: GUTTER, paddingTop: space.sm, paddingBottom: space.md },
   note: { textAlign: 'center', marginBottom: space.sm },
-  actions: { flexDirection: 'row', gap: space.sm + 4 },
+  actions: { flexDirection: 'row', gap: 12 },
   editBox: { flex: 1 },
-  continueBox: { flex: 1.4 },
+  continueBox: { flex: 1.6 },
   action: {
     height: 56,
     flexDirection: 'row',
@@ -459,6 +479,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   actionFilled: { borderWidth: 0 },
-  editText: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 24, flexShrink: 1 },
-  continueText: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24, flexShrink: 1 },
+  editText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20, flexShrink: 1 },
+  continueText: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 24, flexShrink: 1 },
 });

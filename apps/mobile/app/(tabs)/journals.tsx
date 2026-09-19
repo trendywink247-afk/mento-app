@@ -13,6 +13,7 @@ import { api, type JournalEntry } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { dayId, moodLabelKey } from '@/lib/journalDays';
 import { screenCache } from '@/lib/screenCache';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -55,10 +56,7 @@ const PERCHES: PlacementSlot[] = [
 const SHELF_DAYS = 6;
 const KEPT_PREVIEW = 3;
 
-function dayKey(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-}
+const dayKey = dayId;
 
 /** Unified journal — "today first, then the shelf" (DECISIONS §L.8). One place: what
  * the member kept from a chat sits beside what they wrote themselves. Front-end only:
@@ -179,11 +177,16 @@ export default function JournalsTab() {
                   {keptToday.map((e) => (
                     <PressKey
                       key={e.id}
-                      onPress={() =>
-                        e.meta.conversation_id
-                          ? router.push({ pathname: '/chat/[id]', params: { id: String(e.meta.conversation_id) } })
-                          : router.push({ pathname: '/journal/[channel]', params: { channel: 'mentor-notes' } })
-                      }
+                      onPress={() => {
+                        // The chat route needs its channel + the mentor's name, not just the id.
+                        const c = screenCache.get('chats')?.rows.find((r) => r.id === String(e.meta.conversation_id ?? ''));
+                        if (c && !c.is_locked && c.status !== 'wiped') {
+                          router.push({
+                            pathname: '/chat/[id]',
+                            params: { id: c.id, listener: c.listener_persona_name, channel: c.stream_channel_id ?? '' },
+                          });
+                        } else router.push({ pathname: '/journal/[channel]', params: { channel: 'mentor-notes' } });
+                      }}
                       edge={colors.accentEdge}
                       travel={3}
                       intent="navigate"
@@ -219,7 +222,8 @@ export default function JournalsTab() {
                 <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>
                   {moodToday
                     ? t('journals.moodLogged', {
-                        mood: MOOD_LABELS[moodToday as Mood] ? t(MOOD_LABELS[moodToday as Mood]) : String(moodToday),
+                        // The Write page (board A28) logs the five-step scale; both vocabularies read here.
+                        mood: moodLabelKey(String(moodToday)) ? t(moodLabelKey(String(moodToday)) as TKey) : String(moodToday),
                       })
                     : t('journals.moodToday')}
                 </Text>
@@ -287,6 +291,19 @@ export default function JournalsTab() {
               <Text style={[styles.writeLabel, { color: colors.ink }]}>{t('journals.writeMood')}</Text>
             </PressKey>
           </View>
+          {/* Today's page (board A28) — the lined writing surface. */}
+          <PressKey
+            onPress={() => router.push('/journal/write')}
+            edge={colors.accentEdge}
+            radius={radius.md}
+            accessibilityLabel={t('journalPage.writeToday')}
+            testID="journal-write"
+            containerStyle={styles.writeTodayBox}
+            style={[styles.writeToday, { backgroundColor: colors.accent }]}
+          >
+            <Ionicons name="create-outline" size={20} color={colors.onAccent} />
+            <Text style={[type.keyDense, { color: colors.onAccent }]}>{t('journalPage.writeToday')}</Text>
+          </PressKey>
         </Entrance>
 
         {/* Past days — a shelf to glance along. A day with nothing written is simply not there. */}
@@ -295,10 +312,13 @@ export default function JournalsTab() {
             <Text style={[styles.section, { color: colors.ink }]}>{t('journals.pastDays')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.shelf}>
               {shelf.map((day) => (
-                <EdgeSurface
+                <PressKey
                   key={day[0].id}
+                  onPress={() => router.push({ pathname: '/journal/day/[date]', params: { date: dayId(day[0].created_at) } })}
                   edge={colors.edgeAlt}
                   radius={radius.lg}
+                  accessibilityLabel={t('journalPage.openDayA11y', { day: dayLabel(day[0].created_at) })}
+                  testID={`journal-day-${dayId(day[0].created_at)}`}
                   containerStyle={styles.dayCell}
                   style={[styles.dayCard, { backgroundColor: colors.surfaceAlt }]}
                 >
@@ -311,13 +331,13 @@ export default function JournalsTab() {
                         color={e.channel === 'mentor_notes' ? colors.accent : colors.inkMuted}
                       />
                       <Text numberOfLines={2} style={[type.caption, { color: colors.ink, flex: 1 }]}>
-                        {e.meta.mood && e.body === e.meta.mood && MOOD_LABELS[e.meta.mood as Mood]
-                          ? t(MOOD_LABELS[e.meta.mood as Mood])
+                        {e.meta.mood && e.body === e.meta.mood && moodLabelKey(e.meta.mood)
+                          ? t(moodLabelKey(e.meta.mood) as TKey)
                           : e.body}
                       </Text>
                     </View>
                   ))}
-                </EdgeSurface>
+                </PressKey>
               ))}
             </ScrollView>
           </Entrance>
@@ -420,6 +440,8 @@ export default function JournalsTab() {
 }
 
 const styles = StyleSheet.create({
+  writeTodayBox: { marginTop: space.sm },
+  writeToday: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   todayWrap: { paddingTop: 36 },
   // Room above the Today card for whoever is perched on its top edge (decor only).
   furniture: { zIndex: 1 },

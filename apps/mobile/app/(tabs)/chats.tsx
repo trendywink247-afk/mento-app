@@ -1,91 +1,73 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { FeedbackPill } from '@/components/FeedbackPill';
+import { GroundFade } from '@/components/GroundFade';
+import { LinkedRings } from '@/components/InTouchBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Screen } from '@/components/Screen';
-import { PressKey } from '@/components/motion/PressKey';
-import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { LottieTile } from '@/components/art/LottieTile';
-import { SceneTile } from '@/components/art/SceneTile';
+import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PinPad } from '@/components/chat/options/bits';
-import { ApiError, api, type ConversationListItem } from '@/lib/api';
+import { ChatRow, type ChatRowState } from '@/components/chats/ChatRow';
+import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
+import { Entrance } from '@/components/motion/Entrance';
+import { PressKey } from '@/components/motion/PressKey';
+import { ApiError, api, type ConversationListItem, type InTouchItem, type InTouchList } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
-import { useI18n, type TFunc } from '@/lib/i18n';
-import { screenCache, type ChatPreview } from '@/lib/screenCache';
+import { relativeTime } from '@/lib/format';
+import { useI18n } from '@/lib/i18n';
+import { screenCache, type ChatPreview, type WaitingQuestion } from '@/lib/screenCache';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected } from '@/lib/streamClient';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
-/** My Chats (#54/55): search, status chips, conversation rows with Stream previews
- * + unread badges, locked-chat PIN gate, and the New Chat FAB (re-match without
- * re-onboarding). Archived is not a real state yet, so the chip set is honest:
- * All / Active / Completed. */
+/** My Chats (board A06): the header with its quiet Feedback pill, search, the
+ * All chats / In touch switch (In touch is a SEPARATE view: only mentors who said yes —
+ * `GET /in-touch`), the filter chips, richer rows, and the New chat card floating over the
+ * end of the list. Locked chats still open through the PIN gate. */
 
-/** Where the companion can be on My Chats (lib/companionPlacement.ts) — a screen that had no
- * companion before. The header corner is home (the heading keeps that corner free). The low
- * places — on the New Chat key, on the tab bar's edge, under the privacy card — only count
- * while the list is short enough that no row can be resting behind them; the filter row's
- * free end only while the filters are showing. */
-const HEADER_PERCHES: PlacementSlot[] = [{ id: 'titleCorner', type: 'top', level: 'high', home: true }];
-const FLOOR_PERCHES: PlacementSlot[] = [
-  { id: 'tabBarLeft', type: 'top', level: 'low' },
-  { id: 'tabBarNap', type: 'nap', level: 'low' },
-  { id: 'tabBarPeek', type: 'peek', level: 'low' },
-];
-const FAB_PERCHES: PlacementSlot[] = [
+/** Where the companion can be on My Chats (lib/companionPlacement.ts). Home is where the
+ * board draws it: sitting on the bottom edge of the search-and-filter block (the id keeps
+ * its old name — specs and stored placements know it). The New chat card's top edge only
+ * counts while the list is short enough that no row can be resting behind the card. */
+const HOME_PERCHES: PlacementSlot[] = [{ id: 'titleCorner', type: 'top', level: 'high', home: true }];
+const CARD_PERCHES: PlacementSlot[] = [
   { id: 'fabTop', type: 'top', level: 'low' },
   { id: 'fabDangle', type: 'dangle', level: 'low' },
-  { id: 'footerHang', type: 'hang', level: 'mid' },
 ];
-const TOOLS_PERCHES: PlacementSlot[] = [{ id: 'chipsEnd', type: 'lean', level: 'high' }];
-/** Rows that fit above the low perches on the smallest supported phone (360×740). */
-const SHORT_LIST = 3;
+/** Rows that fit above the New chat card on the smallest supported phone (360×740). */
+const SHORT_LIST = 2;
 
-type Preview = ChatPreview;
 type Filter = 'all' | 'active' | 'completed';
-
-function timeLabel(d: Date | null, t: TFunc): string {
-  if (!d) return '';
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (d.toDateString() === today.toDateString())
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-  if (d.toDateString() === yesterday.toDateString()) return t('chat.yesterday');
-  return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-}
+type View2 = 'all' | 'touch';
+type Row =
+  | { kind: 'convo'; key: string; at: number; convo: ConversationListItem }
+  | { kind: 'waiting'; key: string; at: number; ask: WaitingQuestion };
 
 export default function ChatsTab() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
+  const sheetOpen = useSheetOpen();
   // Coming back from a chat remounts this tab (see lib/screenCache.ts): start from what was
   // last on screen and refresh quietly. The spinner is for the very first load only.
   const cached = screenCache.get('chats');
   const [loading, setLoading] = useState(!cached);
   const [rows, setRows] = useState<ConversationListItem[]>(cached?.rows ?? []);
-  const [previews, setPreviews] = useState<Record<string, Preview>>(cached?.previews ?? {});
+  const [previews, setPreviews] = useState<Record<string, ChatPreview>>(cached?.previews ?? {});
+  const [waiting, setWaiting] = useState<WaitingQuestion[]>(cached?.waiting ?? []);
+  const [saved, setSaved] = useState<Record<string, number>>(cached?.saved ?? {});
+  const [touch, setTouch] = useState<InTouchList | null>(screenCache.get('inTouch') ?? null);
+  const [touchError, setTouchError] = useState(false);
+  const [view, setView] = useState<View2>('all');
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
-  const [note, setNote] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [matching, setMatching] = useState(false);
-  // New-chat picker: the FAB never mints a conversation on its own — the member
-  // chooses "whoever's free" (General match) or "choose a mentor" (browse) first.
-  const [picker, setPicker] = useState(false);
   // Locked-chat gate: which row is awaiting a PIN.
   const [gate, setGate] = useState<ConversationListItem | null>(null);
   const [pin, setPin] = useState('');
@@ -93,11 +75,61 @@ export default function ChatsTab() {
   const [pinBusy, setPinBusy] = useState(false);
 
   const load = useCallback(async () => {
+    const remember = (patch: Partial<NonNullable<ReturnType<typeof screenCache.get<'chats'>>>>) => {
+      const now = screenCache.get('chats');
+      if (now) screenCache.set('chats', { ...now, ...patch });
+    };
+
+    // In touch is its own read; its failure never blocks the list.
+    void api
+      .inTouch()
+      .then((list) => {
+        setTouch(list);
+        setTouchError(false);
+        screenCache.set('inTouch', list);
+      })
+      .catch(() => setTouchError(true));
+
     try {
       const list = await api.listConversations();
       setRows(list);
       setLoadError(null);
-      screenCache.set('chats', { rows: list, previews: screenCache.get('chats')?.previews ?? {} });
+      screenCache.set('chats', { ...(screenCache.get('chats') ?? { previews: {} }), rows: list });
+
+      // Open questions (unanswered Personal requests) joined with the mentor they went to,
+      // and what was saved from each chat. Both best-effort.
+      void Promise.all([api.myRequests(), api.listListeners()])
+        .then(([requests, mentors]) => {
+          const open: WaitingQuestion[] = [];
+          for (const r of requests) {
+            if (r.status !== 'pending' || !r.target_listener_id) continue;
+            const m = mentors.find((x) => x.id === r.target_listener_id);
+            if (!m) continue;
+            open.push({
+              id: r.id,
+              listenerId: m.id,
+              name: m.persona_name,
+              avatar: m.persona_avatar,
+              intro: r.intro_message,
+              createdAt: r.created_at,
+            });
+          }
+          setWaiting(open);
+          remember({ waiting: open });
+        })
+        .catch(() => {});
+      void api
+        .listMentorNotes()
+        .then((notes) => {
+          const counts: Record<string, number> = {};
+          for (const n of notes) {
+            const id = n.meta?.conversation_id;
+            if (id) counts[id] = (counts[id] ?? 0) + 1;
+          }
+          setSaved(counts);
+          remember({ saved: counts });
+        })
+        .catch(() => {});
 
       // Last message + unread per channel, straight from Stream client-side.
       // Previews are best-effort: their failure never blocks the list.
@@ -105,21 +137,15 @@ export default function ChatsTab() {
         const [persona, token] = await Promise.all([getPersona(), getStreamToken()]);
         // Stream caps $in filters at 30 ids; the API list is newest-first, so keep the
         // 30 most recent — older rows just fall back to their backend-only preview.
-        const channelIds = (list.map((c) => c.stream_channel_id).filter(Boolean) as string[]).slice(
-          0,
-          30,
-        );
+        const channelIds = (list.map((c) => c.stream_channel_id).filter(Boolean) as string[]).slice(0, 30);
         if (persona && token && channelIds.length) {
-          const client = await ensureConnected(
-            { id: persona.id, name: persona.persona_name },
-            token,
-          );
+          const client = await ensureConnected({ id: persona.id, name: persona.persona_name }, token);
           const channels = await client.queryChannels(
             { type: 'messaging', id: { $in: channelIds } },
             { last_message_at: -1 },
             { watch: false, state: true },
           );
-          const map: Record<string, Preview> = {};
+          const map: Record<string, ChatPreview> = {};
           for (const ch of channels) {
             const last = ch.state.messages[ch.state.messages.length - 1];
             if (ch.id) {
@@ -131,7 +157,7 @@ export default function ChatsTab() {
             }
           }
           setPreviews(map);
-          screenCache.set('chats', { rows: list, previews: map });
+          remember({ previews: map });
         }
       } catch {
         // Best-effort previews — the list stays usable from backend data alone.
@@ -167,6 +193,12 @@ export default function ChatsTab() {
     [],
   );
 
+  const pushChat = (c: { id: string; listener_persona_name: string; stream_channel_id: string | null }) =>
+    router.push({
+      pathname: '/chat/[id]',
+      params: { id: c.id, listener: c.listener_persona_name, channel: c.stream_channel_id ?? '' },
+    });
+
   const open = (c: ConversationListItem) => {
     if (c.is_locked) {
       setGate(c);
@@ -174,10 +206,14 @@ export default function ChatsTab() {
       setPinError(null);
       return;
     }
-    router.push({
-      pathname: '/chat/[id]',
-      params: { id: c.id, listener: c.listener_persona_name, channel: c.stream_channel_id ?? '' },
-    });
+    pushChat(c);
+  };
+
+  /** An in-touch mentor: the open chat if there is one, otherwise a new question to them. */
+  const openTouch = (item: InTouchItem) => {
+    const live = item.conversation_status === 'active' ? rows.find((c) => c.id === item.conversation_id) : undefined;
+    if (live) return open(live);
+    router.push({ pathname: '/mentor/[id]', params: { id: item.listener_id } });
   };
 
   const submitPin = async () => {
@@ -187,59 +223,48 @@ export default function ChatsTab() {
       await api.verifyPin(gate.id, pin);
       const target = gate;
       setGate(null);
-      router.push({
-        pathname: '/chat/[id]',
-        params: {
-          id: target.id,
-          listener: target.listener_persona_name,
-          channel: target.stream_channel_id ?? '',
-        },
-      });
+      pushChat(target);
     } catch (e) {
       setPin('');
-      setPinError(
-        e instanceof ApiError && e.status === 403
-          ? t('chats.pinWrong')
-          : t('common.somethingWrong'),
-      );
+      setPinError(e instanceof ApiError && e.status === 403 ? t('chats.pinWrong') : t('common.somethingWrong'));
     } finally {
       setPinBusy(false);
     }
   };
 
-  const newChat = async () => {
-    if (matching) return;
-    setPicker(false);
-    setMatching(true);
-    setNote(null);
-    try {
-      const match = await api.match({ kind: 'general' });
-      router.push({
-        pathname: '/chat/[id]',
-        params: {
-          id: match.conversation_id,
-          listener: match.listener_persona_name,
-          channel: match.stream_channel_id ?? '',
-        },
-      });
-    } catch (e) {
-      setNote(
-        e instanceof ApiError && e.status === 503
-          ? t('common.allBusy')
-          : t('common.networkError'),
-      );
-    } finally {
-      setMatching(false);
-    }
-  };
+  const openNewChat = () => router.push('/new-chat');
 
-  const visible = rows.filter((c) => {
-    if (filter === 'active' && c.status !== 'active') return false;
-    if (filter === 'completed' && c.status === 'active') return false;
-    if (query && !c.listener_persona_name.toLowerCase().includes(query.toLowerCase()))
-      return false;
-    return true;
-  });
+  const needle = query.trim().toLowerCase();
+  const merged: Row[] = useMemo(() => {
+    const out: Row[] = [];
+    for (const c of rows) {
+      if (filter === 'active' && c.status !== 'active') continue;
+      if (filter === 'completed' && c.status === 'active') continue;
+      if (
+        needle &&
+        !c.listener_persona_name.toLowerCase().includes(needle) &&
+        !(c.first_met_as ?? '').toLowerCase().includes(needle)
+      )
+        continue;
+      const p = c.stream_channel_id ? previews[c.stream_channel_id] : undefined;
+      out.push({ kind: 'convo', key: c.id, at: (p?.at ?? new Date(c.created_at)).getTime(), convo: c });
+    }
+    if (filter !== 'completed') {
+      for (const w of waiting) {
+        if (needle && !w.name.toLowerCase().includes(needle)) continue;
+        out.push({ kind: 'waiting', key: `ask-${w.id}`, at: new Date(w.createdAt).getTime(), ask: w });
+      }
+    }
+    // Open chats first, then open questions, then what is finished — newest first in each.
+    const rank = (r: Row) => (r.kind === 'waiting' ? 1 : r.convo.status === 'active' ? 0 : 2);
+    return out.sort((a, b) => rank(a) - rank(b) || b.at - a.at);
+  }, [rows, waiting, previews, filter, needle]);
+
+  // The In touch badge's linked rings breathe on the first two badges only (motion budget).
+  const breathingBadges = useMemo(
+    () => new Set(merged.filter((r) => r.kind === 'convo' && r.convo.in_touch).slice(0, 2).map((r) => r.key)),
+    [merged],
+  );
 
   const chips: { key: Filter; label: string }[] = [
     { key: 'all', label: t('chats.filterAll') },
@@ -247,374 +272,492 @@ export default function ChatsTab() {
     { key: 'completed', label: t('chats.filterCompleted') },
   ];
 
-  // Search + filters earn their place only once there's something to sift through
-  // (UX review 2026-07-13 #5): below ~5 conversations they're noise before utility.
-  const showTools = rows.length >= 5;
+  const hasAnything = rows.length > 0 || waiting.length > 0;
+  const showTools = hasAnything && view === 'all';
+  const slots = touch?.slots ?? null;
+  const touchFull = Boolean(slots && slots.in_touch >= slots.limit);
+  const listLength = view === 'all' ? merged.length : (touch?.items.length ?? 0);
 
   const perches = useMemo(
-    () => [
-      ...HEADER_PERCHES,
-      ...(!loading && rows.length <= SHORT_LIST ? FLOOR_PERCHES : []),
-      ...(!loading && rows.length > 0 && rows.length <= SHORT_LIST ? FAB_PERCHES : []),
-      ...(showTools ? TOOLS_PERCHES : []),
-    ],
-    [loading, rows.length, showTools],
+    () => [...HOME_PERCHES, ...(!loading && hasAnything && listLength <= SHORT_LIST ? CARD_PERCHES : [])],
+    [loading, hasAnything, listLength],
   );
-  // An honest error or "everyone is busy" note is a still state; a sheet over the list hides it.
+  // An honest error is a still state; a sheet over the list hides the companion.
   const perch = useCompanionPlacement('chats', perches, {
-    still: note !== null || loadError !== null,
-    hidden: picker || gate !== null,
+    still: loadError !== null,
+    hidden: sheetOpen || gate !== null,
   });
 
-  return (
-    <Screen>
-      <CompanionPerches placement={perch}>
-      {/* The heading keeps its right corner free: that corner is the companion's home here. */}
-      <View style={styles.head}>
-        <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
-          {t('chats.title')}
-        </Text>
-        <Text style={[type.body, { color: colors.inkMuted }]}>{t('chats.sub')}</Text>
-        <CompanionSlot id="titleCorner" size={60} attach="floor" />
-      </View>
+  const stateOf = (c: ConversationListItem): ChatRowState =>
+    c.status === 'active' ? 'active' : c.status === 'wiped' ? 'wiped' : 'completed';
+  const stateLabel = (s: ChatRowState) =>
+    s === 'active'
+      ? t('chats.statusActive')
+      : s === 'waiting'
+        ? t('chatsList.waiting')
+        : s === 'wiped'
+          ? t('chatsList.wipedChip')
+          : t('chats.statusCompleted');
 
-      {showTools ? (
-        <>
-          <View style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Ionicons name="search-outline" size={18} color={colors.inkMuted} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.ink }]}
-              placeholder={t('chats.searchPlaceholder')}
-              placeholderTextColor={colors.inkMuted}
-              value={query}
-              onChangeText={setQuery}
-              accessibilityLabel={t('chats.searchA11y')}
-              testID="chats-search"
-            />
-          </View>
-
-          <View style={styles.chips}>
-            <CompanionSlot id="chipsEnd" size={44} attach="floor" />
-            {chips.map((c) => {
-              const selected = filter === c.key;
-              return (
-                <Pressable
-                  key={c.key}
-                  onPress={() => setFilter(c.key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  testID={`filter-${c.key}`}
-                  style={[
-                    styles.chip,
-                    selected
-                      ? { backgroundColor: colors.accent }
-                      : { borderWidth: 1, borderColor: colors.accentSoft },
-                  ]}
-                >
-                  <Text style={[type.label, { color: selected ? colors.onAccent : colors.accent }]}>
-                    {c.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </>
-      ) : null}
-
-      {note ? (
-        <EdgeSurface
-          edge={colors.edgeAlt}
-          travel={2}
-          radius={radius.md}
-          style={[styles.note, { backgroundColor: colors.surfaceAlt }]}
-          containerStyle={{ marginBottom: space.sm }}
-          testID="chats-note"
-        >
-          <Text style={[type.caption, { color: colors.ink }]}>{note}</Text>
-        </EdgeSurface>
-      ) : null}
-
-      {loadError ? (
-        <EdgeSurface
-          edge={colors.edgeAlt}
-          travel={2}
-          radius={radius.md}
-          style={[styles.note, { backgroundColor: colors.surfaceAlt }]}
-          containerStyle={{ marginBottom: space.sm }}
-          testID="chats-load-error"
-        >
-          <Text style={[type.caption, { color: colors.ink }]}>{loadError}</Text>
-          <Pressable
-            onPress={() => {
-              setLoadError(null);
-              // Retry with a list on screen stays still; only an empty screen spins.
-              if (rows.length === 0) setLoading(true);
-              void load();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={t('chats.retryA11y')}
-            testID="chats-load-retry"
-            hitSlop={8}
-          >
-            <Text style={[type.label, { color: colors.accent }]}>{t('chats.retry')}</Text>
-          </Pressable>
-        </EdgeSurface>
-      ) : null}
-
-      {loading ? (
-        <View style={styles.center} testID="chats-loading">
-          <ActivityIndicator size="large" color={colors.accent} />
-        </View>
-      ) : rows.length === 0 ? (
-        <View style={styles.center}>
-          <LottieTile name="chatDots" fallback="chatsEmpty" size={140} />
-          <Text style={[styles.emptyTitle, { color: colors.ink }]}>{t('chats.emptyTitle')}</Text>
-          <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
-            {t('chats.emptyBody')}
-          </Text>
-          <View style={{ alignSelf: 'stretch', marginTop: space.sm }}>
-            <PrimaryButton
-              label={t('chats.startCta')}
-              icon="chatbubble-ellipses"
-              onPress={() => void newChat()}
-              loading={matching}
-              testID="start-from-chats"
-            />
-          </View>
-        </View>
-      ) : (
-        <FlatList
-          data={visible}
-          keyExtractor={(c) => c.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ gap: space.sm, paddingBottom: 96 }}
-          ListFooterComponent={
-            <View style={styles.privacyWrap}>
-              <CompanionSlot id="footerHang" size={56} align="left" inset={space.lg} />
-              <View style={[styles.privacyCard, { backgroundColor: colors.surfaceAlt }]}>
-                <Ionicons name="lock-closed-outline" size={18} color={colors.accentSoft} />
-                <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
-                  {t('chats.privacyFooter')}
-                </Text>
-              </View>
-            </View>
+  const renderRow = ({ item, index }: { item: Row; index: number }) => {
+    let row;
+    if (item.kind === 'waiting') {
+      const w = item.ask;
+      row = (
+        <ChatRow
+          testID={`waiting-${w.id}`}
+          avatarSeed={w.avatar}
+          name={w.name}
+          state="waiting"
+          stateLabel={stateLabel('waiting')}
+          secondLine={t('chatsList.waitingLine', { name: w.name })}
+          lastLine=""
+          quietLine={w.intro ? t('chatsList.youSaid', { text: w.intro }) : null}
+          time={relativeTime(w.createdAt, t)}
+          unreadLabel={t('chatsList.newMessageA11y')}
+          accessibilityLabel={t('chatsList.waitingA11y', { name: w.name })}
+          onPress={() => router.push({ pathname: '/mentor/[id]', params: { id: w.listenerId } })}
+        />
+      );
+    } else {
+      const c = item.convo;
+      const p = c.stream_channel_id ? previews[c.stream_channel_id] : undefined;
+      const s = stateOf(c);
+      const count = saved[c.id] ?? 0;
+      row = (
+        <ChatRow
+          testID={`convo-${c.id}`}
+          avatarSeed={c.listener_persona_avatar}
+          name={c.listener_persona_name}
+          state={s}
+          stateLabel={stateLabel(s)}
+          inTouch={Boolean(c.in_touch)}
+          badgeStill={!breathingBadges.has(c.id)}
+          secondLine={
+            c.first_met_as
+              ? t('chatsList.firstTalkedAs', { name: c.first_met_as })
+              : c.in_touch
+                ? t('chatsList.yourMentor')
+                : null
           }
-          renderItem={({ item }) => {
-            const p = item.stream_channel_id ? previews[item.stream_channel_id] : undefined;
-            const statusColor =
-              item.status === 'active'
-                ? colors.success
-                : colors.accentSoft;
-            return (
-              <PressKey
-                onPress={() => open(item)}
+          lastLine={s === 'wiped' ? t('chats.wiped') : p?.text || t('chats.sayHello')}
+          time={relativeTime((p?.at ?? new Date(c.created_at)).toISOString(), t)}
+          unread={Boolean(p && p.unread > 0) && s === 'active'}
+          unreadLabel={t('chatsList.newMessageA11y')}
+          savedLabel={s !== 'wiped' && count > 0 ? t('chatsList.savedCount', { count }) : null}
+          lockedLabel={c.is_locked ? t('chatsList.locked') : null}
+          accessibilityLabel={t('chats.convoA11y', { name: c.listener_persona_name })}
+          onPress={() => open(c)}
+        />
+      );
+    }
+    // Reading-order arrival for the first screenful only; later rows are simply there.
+    return index < 5 ? <Entrance index={index + 1}>{row}</Entrance> : row;
+  };
+
+  const footer = (
+    <Text style={[type.caption, styles.peers, { color: colors.inkMuted }]}>{t('chatsList.peersLine')}</Text>
+  );
+
+  const waitingOn = waiting[0] ?? null;
+
+  return (
+    <SettleBack>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <CompanionPerches placement={perch}>
+          <Entrance style={styles.head}>
+            <View style={styles.headRow}>
+              <Text style={[type.display, { color: colors.ink }]} accessibilityRole="header">
+                {t('chatsList.titleLead')} <Text style={{ color: colors.accent }}>{t('chatsList.titleAccent')}</Text>
+              </Text>
+              <FeedbackPill testID="chats-feedback" />
+            </View>
+            <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{t('chats.sub')}</Text>
+          </Entrance>
+
+          {/* Search, the switch and the filters: one block with a pillow underside, and the
+              companion's home on its bottom edge. It is simply there — no arrival. */}
+          <View style={[styles.tools, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}>
+            {showTools ? (
+              <EdgeSurface
                 edge={colors.edgeSurface}
-                accessibilityRole="button"
-                accessibilityLabel={t('chats.convoA11y', { name: item.listener_persona_name })}
-                testID={`convo-${item.id}`}
-                style={[styles.row, { backgroundColor: colors.surface }]}
+                travel={4}
+                radius={radius.md}
+                style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
-                <PersonaAvatar
-                  name={item.listener_persona_name}
-                  size={56}
-                  online={item.status === 'active'}
+                <Ionicons name="search-outline" size={20} color={colors.inkMuted} />
+                <TextInput
+                  style={[styles.searchInput, { color: colors.ink }]}
+                  placeholder={t('chats.searchPlaceholder')}
+                  placeholderTextColor={colors.inkMuted}
+                  value={query}
+                  onChangeText={setQuery}
+                  accessibilityLabel={t('chats.searchA11y')}
+                  testID="chats-search"
                 />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowName, { color: colors.ink }]} numberOfLines={1}>
-                    {item.listener_persona_name}
+              </EdgeSurface>
+            ) : null}
+
+            <View
+              style={[styles.switch, { backgroundColor: colors.bgLavender }]}
+              accessibilityRole="tablist"
+              accessibilityLabel={t('chatsList.switchA11y')}
+            >
+              {(['all', 'touch'] as const).map((v) => {
+                const on = view === v;
+                return (
+                  <PressKey
+                    key={v}
+                    onPress={() => setView(v)}
+                    edge={on ? colors.edgeAlt : 'transparent'}
+                    travel={3}
+                    radius={radius.pill}
+                    intent="select"
+                    accessibilityRole="tab"
+                    accessibilityState={{ selected: on }}
+                    testID={`chats-view-${v}`}
+                    containerStyle={styles.switchCell}
+                    style={[styles.switchFace, on && { backgroundColor: colors.surface }]}
+                  >
+                    {v === 'touch' ? <LinkedRings color={on ? colors.ink : colors.inkMuted} size={14} /> : null}
+                    <Text style={[styles.switchText, { color: on ? colors.ink : colors.inkMuted }]} numberOfLines={1}>
+                      {v === 'all'
+                        ? t('chatsList.allChats')
+                        : slots
+                          ? t('inTouch.tab', { used: slots.in_touch, limit: slots.limit })
+                          : t('inTouch.tabPlain')}
+                    </Text>
+                  </PressKey>
+                );
+              })}
+            </View>
+
+            {showTools ? (
+              <View style={styles.chips} accessibilityLabel={t('chatsList.filterA11y')}>
+                {chips.map((c) => {
+                  const selected = filter === c.key;
+                  return (
+                    <PressKey
+                      key={c.key}
+                      onPress={() => setFilter(c.key)}
+                      edge={selected ? colors.edgeInk : colors.edgeSurface}
+                      travel={4}
+                      radius={radius.pill}
+                      intent="select"
+                      accessibilityState={{ selected }}
+                      testID={`filter-${c.key}`}
+                      style={[
+                        styles.chip,
+                        selected
+                          ? { backgroundColor: colors.ink, borderColor: colors.ink }
+                          : { backgroundColor: colors.surface, borderColor: colors.border },
+                      ]}
+                    >
+                      <Text style={[type.label, { color: selected ? colors.onBrand : colors.ink }]}>{c.label}</Text>
+                    </PressKey>
+                  );
+                })}
+              </View>
+            ) : view === 'touch' ? (
+              // Where the filters were: one quiet line, so the block keeps its height and the
+              // companion on its edge never stands in front of the switch.
+              <View style={styles.touchLine}>
+                <Text style={[type.caption, styles.touchLineText, { color: colors.inkMuted }]}>{t('inTouch.viewLine')}</Text>
+              </View>
+            ) : (
+              // Nothing to filter yet: the same room is kept for the companion.
+              <View style={styles.touchLine} />
+            )}
+            <View style={[styles.toolsEdge, { backgroundColor: colors.edgeSurface }]} pointerEvents="none" />
+            <View style={styles.toolsFloor} pointerEvents="none">
+              <CompanionSlot id="titleCorner" size={54} inset={26} attach="floor" />
+            </View>
+          </View>
+
+          {loadError ? (
+            <EdgeSurface
+              edge={colors.edgeAlt}
+              travel={2}
+              radius={radius.md}
+              style={[styles.note, { backgroundColor: colors.surfaceAlt }]}
+              containerStyle={styles.noteBox}
+              testID="chats-load-error"
+            >
+              <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>{loadError}</Text>
+              <Pressable
+                onPress={() => {
+                  setLoadError(null);
+                  // Retry with a list on screen stays still; only an empty screen spins.
+                  if (rows.length === 0) setLoading(true);
+                  void load();
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={t('chats.retryA11y')}
+                testID="chats-load-retry"
+                hitSlop={8}
+              >
+                <Text style={[type.label, { color: colors.accent }]}>{t('chats.retry')}</Text>
+              </Pressable>
+            </EdgeSurface>
+          ) : null}
+
+          {loading ? (
+            <View style={styles.center} testID="chats-loading">
+              <ActivityIndicator size="large" color={colors.accent} />
+            </View>
+          ) : view === 'touch' ? (
+            <FlatList
+              key="touch"
+              data={touch?.items ?? []}
+              keyExtractor={(i) => i.link_id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.list}
+              testID="in-touch-list"
+              ListEmptyComponent={
+                // Still on purpose: an empty or failed view is a limit state.
+                <View style={[styles.calm, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} testID="in-touch-empty">
+                  <Text style={[type.rowTitle, { color: colors.ink }]}>
+                    {touchError && !touch ? t('inTouch.loadError') : t('inTouch.emptyTitle')}
                   </Text>
-                  <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={2}>
-                    {item.status === 'wiped'
-                      ? t('chats.wiped')
-                      : (p?.text ?? t('chats.sayHello'))}
-                  </Text>
-                  <Text style={[styles.statusLabel, { color: statusColor }]}>
-                    {item.status === 'active' ? t('chats.statusActive') : t('chats.statusCompleted')}
-                    {item.is_locked ? '  ·  🔒' : ''}
-                  </Text>
-                </View>
-                <View style={styles.rowRight}>
-                  <Text style={[type.caption, { color: colors.inkMuted }]}>
-                    {timeLabel(p?.at ?? new Date(item.created_at), t)}
-                  </Text>
-                  {p && p.unread > 0 ? (
-                    <View style={[styles.unread, { backgroundColor: colors.accent }]}>
-                      <Text style={[styles.unreadText, { color: colors.onAccent }]}>{p.unread}</Text>
-                    </View>
-                  ) : (
-                    <Ionicons name="chevron-forward" size={16} color={colors.accentSoft} />
+                  {touchError && !touch ? null : (
+                    <Text style={[type.note, { color: colors.inkMuted }]}>{t('inTouch.emptyBody')}</Text>
                   )}
                 </View>
-              </PressKey>
-            );
-          }}
-        />
-      )}
-
-      {/* The tab bar's top edge is this screen's floor. */}
-      <View style={styles.floor} pointerEvents="none">
-        <CompanionSlot id="tabBarLeft" size={56} align="left" inset={space.lg} attach="floor" />
-        <CompanionSlot id="tabBarNap" size={56} align="left" inset={space.lg} attach="floor" />
-        <CompanionSlot id="tabBarPeek" size={46} align="left" inset={space.xl} attach="floor" />
-      </View>
-
-      {rows.length > 0 ? (
-        <View style={styles.fabWrap} pointerEvents="box-none">
-          <CompanionSlot id="fabTop" size={52} align="center" nudge={4} />
-          <CompanionSlot id="fabDangle" size={56} align="center" nudge={4} />
-          <Pressable
-            onPress={() => setPicker(true)}
-            accessibilityRole="button"
-            accessibilityLabel={t('chats.newChatA11y')}
-            testID="new-chat-fab"
-            style={[styles.fab, { backgroundColor: colors.accent }, elevation.md]}
-          >
-            {matching ? (
-              <ActivityIndicator color={colors.onAccent} />
-            ) : (
-              <>
-                <Ionicons name="chatbubble-ellipses" size={22} color={colors.onAccent} />
-                <Text style={[styles.fabText, { color: colors.onAccent }]}>{t('chats.newChat')}</Text>
-              </>
-            )}
-          </Pressable>
-        </View>
-      ) : null}
-
-      {picker ? (
-        <View style={[styles.gateBackdrop, { backgroundColor: colors.scrim }]}>
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => setPicker(false)}
-            accessibilityLabel={t('chats.newChatCancel')}
-            testID="new-chat-backdrop"
-          />
-          <View style={[styles.gateCard, { backgroundColor: colors.surface }, elevation.md]} testID="new-chat-sheet">
-            <Text style={[styles.gateTitle, { color: colors.ink }]}>{t('chats.newChatTitle')}</Text>
-            <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
-              {t('chats.newChatBody')}
-            </Text>
-            {(
-              [
-                { key: 'now', icon: 'flash-outline', title: 'chats.newChatNow', sub: 'chats.newChatNowSub', go: () => void newChat() },
-                { key: 'pick', icon: 'people-outline', title: 'chats.newChatPick', sub: 'chats.newChatPickSub', go: () => { setPicker(false); router.push('/(tabs)/mentors'); } },
-              ] as const
-            ).map((o) => (
-              <PressKey
-                key={o.key}
-                onPress={o.go}
-                edge={colors.edgeAlt}
-                travel={3}
-                radius={radius.md}
-                accessibilityLabel={t(o.title)}
-                testID={`new-chat-${o.key}`}
-                style={[styles.pickRow, { backgroundColor: colors.surfaceAlt }]}
-              >
-                <View style={[styles.pickIcon, { backgroundColor: colors.accentTint }]}>
-                  <Ionicons name={o.icon} size={20} color={colors.accent} />
+              }
+              ListFooterComponent={
+                <View style={styles.footerGap}>
+                  {touchFull && slots ? (
+                    // A limit state: nothing on it animates.
+                    <View style={[styles.calm, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} testID="in-touch-full">
+                      <View style={styles.calmHead}>
+                        <View style={styles.pips}>
+                          {Array.from({ length: slots.limit }).map((_, i) => (
+                            <View key={i} style={[styles.pip, { backgroundColor: colors.accent }]} />
+                          ))}
+                        </View>
+                        <Text style={[type.rowTitle, { color: colors.ink }]}>{t('inTouch.fullTitle')}</Text>
+                      </View>
+                      <Text style={[type.note, { color: colors.inkMuted }]}>{t('inTouch.fullBody')}</Text>
+                    </View>
+                  ) : null}
+                  {footer}
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[type.label, { color: colors.ink }]}>{t(o.title)}</Text>
-                  <Text style={[type.caption, { color: colors.inkMuted }]}>{t(o.sub)}</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={16} color={colors.accentSoft} />
-              </PressKey>
-            ))}
-            <PrimaryButton
-              label={t('chats.newChatCancel')}
-              variant="link"
-              onPress={() => setPicker(false)}
-              testID="new-chat-cancel"
+              }
+              renderItem={({ item, index }) => {
+                const live = item.conversation_status === 'active';
+                const c = rows.find((r) => r.id === item.conversation_id);
+                const p = item.stream_channel_id ? previews[item.stream_channel_id] : undefined;
+                const s: ChatRowState = live ? 'active' : 'completed';
+                return (
+                  <Entrance index={index + 1}>
+                    <ChatRow
+                      testID={`in-touch-row-${item.link_id}`}
+                      avatarSeed={item.persona_avatar}
+                      name={item.persona_name}
+                      state={s}
+                      stateLabel={stateLabel(s)}
+                      inTouch
+                      badgeStill={index > 1}
+                      secondLine={
+                        item.first_met_as
+                          ? t('chatsList.firstTalkedAs', { name: item.first_met_as })
+                          : t('chatsList.yourMentor')
+                      }
+                      lastLine={
+                        c?.status === 'wiped'
+                          ? t('chats.wiped')
+                          : p?.text || (item.status === 'online' ? t('inTouch.hereNow') : t('inTouch.away'))
+                      }
+                      time={relativeTime((p?.at ?? new Date(item.since ?? item.first_met_at)).toISOString(), t)}
+                      unread={Boolean(p && p.unread > 0) && live}
+                      unreadLabel={t('chatsList.newMessageA11y')}
+                      lockedLabel={c?.is_locked ? t('chatsList.locked') : null}
+                      accessibilityLabel={t('inTouch.rowA11y', { name: item.persona_name })}
+                      onPress={() => openTouch(item)}
+                    />
+                  </Entrance>
+                );
+              }}
             />
-          </View>
-        </View>
-      ) : null}
+          ) : !hasAnything ? (
+            <View style={styles.center}>
+              <LottieTile name="chatDots" fallback="chatsEmpty" size={140} />
+              <Text style={[type.title, { color: colors.ink }]}>{t('chats.emptyTitle')}</Text>
+              <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>{t('chats.emptyBody')}</Text>
+              <View style={styles.emptyCta}>
+                <PrimaryButton
+                  label={t('chats.startCta')}
+                  icon="chatbubble-ellipses"
+                  onPress={openNewChat}
+                  testID="start-from-chats"
+                />
+              </View>
+            </View>
+          ) : (
+            <FlatList
+              key="all"
+              data={merged}
+              keyExtractor={(r) => r.key}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.list}
+              ListEmptyComponent={
+                <Text style={[type.note, styles.centerText, { color: colors.inkMuted }]}>{t('chatsList.noMatches')}</Text>
+              }
+              ListFooterComponent={<View style={styles.footerGap}>{footer}</View>}
+              renderItem={renderRow}
+            />
+          )}
 
-      {gate ? (
-        <View style={[styles.gateBackdrop, { backgroundColor: colors.scrim }]}>
-          <View style={[styles.gateCard, { backgroundColor: colors.surface }, elevation.md]}>
-            <Text style={[styles.gateTitle, { color: colors.ink }]}>{t('chats.gateTitle')}</Text>
-            <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
-              {t('chats.gateBody')}
-            </Text>
-            <PinPad value={pin} onChange={(v) => { setPin(v); setPinError(null); }} error={pinError} />
-            <PrimaryButton
-              label={t('chats.open')}
-              onPress={() => void submitPin()}
-              disabled={pin.length !== 4}
-              loading={pinBusy}
-              testID="gate-open"
-            />
-            <PrimaryButton label={t('common.cancel')} variant="link" onPress={() => setGate(null)} testID="gate-cancel" />
-          </View>
-        </View>
-      ) : null}
-      </CompanionPerches>
-    </Screen>
+          {!loading && hasAnything ? (
+            <>
+              <GroundFade height={136} />
+              <View style={styles.newChatWrap} pointerEvents="box-none">
+                <CompanionSlot id="fabTop" size={52} align="left" inset={space.lg} />
+                <CompanionSlot id="fabDangle" size={56} align="left" inset={space.lg} nudge={4} />
+                <View
+                  style={[styles.newChatCard, elevation.md, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <Text style={[type.caption, styles.newChatHelp, { color: colors.ink }]} testID="new-chat-help">
+                    {waitingOn ? t('chatsList.newChatWaiting', { name: waitingOn.name }) : t('chatsList.newChatFree')}
+                  </Text>
+                  {waitingOn ? (
+                    // A question is already open: the board draws the key dashed and quiet.
+                    // reason: it still opens the sheet — the server has no "one open question"
+                    // rule and no way to close a question, so locking it would be a dead end.
+                    <PressKey
+                      onPress={openNewChat}
+                      edge="transparent"
+                      travel={2}
+                      radius={radius.md}
+                      haptic="none"
+                      accessibilityLabel={t('chats.newChatA11y')}
+                      testID="new-chat-fab"
+                      style={[styles.newChatKey, styles.newChatDashed, { backgroundColor: colors.bgLavender, borderColor: colors.dotIdle }]}
+                    >
+                      <Ionicons name="add" size={18} color={colors.inkMuted} />
+                      <Text style={[styles.newChatText, { color: colors.inkMuted }]}>{t('chats.newChat')}</Text>
+                    </PressKey>
+                  ) : (
+                    <PressKey
+                      onPress={openNewChat}
+                      edge={colors.accentEdge}
+                      radius={radius.md}
+                      accessibilityLabel={t('chats.newChatA11y')}
+                      testID="new-chat-fab"
+                      style={[styles.newChatKey, { backgroundColor: colors.accent }]}
+                    >
+                      <Ionicons name="add" size={18} color={colors.onAccent} />
+                      <Text style={[styles.newChatText, { color: colors.onAccent }]}>{t('chats.newChat')}</Text>
+                    </PressKey>
+                  )}
+                </View>
+              </View>
+              <View style={styles.privacy} pointerEvents="none">
+                <Ionicons name="lock-closed-outline" size={15} color={colors.inkMuted} />
+                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('chats.privacyFooter')}</Text>
+              </View>
+            </>
+          ) : null}
+
+          {gate ? (
+            <View style={[styles.gateBackdrop, { backgroundColor: colors.scrim }]}>
+              <View style={[styles.gateCard, { backgroundColor: colors.surface }, elevation.md]}>
+                <Text style={[type.sheetTitle, styles.centerText, { color: colors.ink }]}>{t('chats.gateTitle')}</Text>
+                <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>{t('chats.gateBody')}</Text>
+                <PinPad
+                  value={pin}
+                  onChange={(v) => {
+                    setPin(v);
+                    setPinError(null);
+                  }}
+                  error={pinError}
+                />
+                <PrimaryButton
+                  label={t('chats.open')}
+                  onPress={() => void submitPin()}
+                  disabled={pin.length !== 4}
+                  loading={pinBusy}
+                  testID="gate-open"
+                />
+                <PrimaryButton label={t('common.cancel')} variant="link" onPress={() => setGate(null)} testID="gate-cancel" />
+              </View>
+            </View>
+          ) : null}
+        </CompanionPerches>
+      </SafeAreaView>
+    </SettleBack>
   );
 }
 
 const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  head: { paddingTop: space.xs, paddingHorizontal: space.lg, paddingBottom: 10 },
+  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  tools: { zIndex: 3, paddingHorizontal: space.md, paddingBottom: 10, gap: 10, borderBottomWidth: 1 },
+  toolsEdge: { position: 'absolute', left: 0, right: 0, bottom: -4, height: 3 },
+  toolsFloor: { position: 'absolute', left: 0, right: 0, bottom: -1, height: 0 },
   search: {
+    height: 52,
+    paddingHorizontal: space.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
+    gap: 10,
     borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: space.md,
-    height: 48,
-    marginBottom: space.sm,
   },
-  searchInput: { flex: 1, height: '100%', ...type.body },
-  chips: { flexDirection: 'row', gap: space.sm, marginBottom: space.sm },
-  chip: {
-    borderRadius: radius.pill,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.md,
-  },
-  note: { borderRadius: radius.md, padding: space.sm },
-  head: { paddingRight: 68, marginBottom: space.sm },
-  floor: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 0 },
-  privacyWrap: { marginTop: space.sm },
-  privacyCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.md,
-    padding: space.sm,
-  },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm },
+  searchInput: { flex: 1, minWidth: 0, height: 44, ...type.body },
+  switch: { flexDirection: 'row', padding: 4, borderRadius: radius.pill },
+  switchCell: { flex: 1 },
+  switchFace: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  switchText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20 },
+  chips: { flexDirection: 'row', gap: space.sm },
+  touchLine: { minHeight: 48, justifyContent: 'center', paddingLeft: space.sm, paddingRight: 96 },
+  touchLineText: {},
+  chip: { height: 44, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  note: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.sm },
+  noteBox: { marginHorizontal: space.md, marginTop: space.sm },
+  list: { paddingTop: 14, paddingHorizontal: space.md, paddingBottom: 170, gap: 10 },
+  footerGap: { gap: 10 },
+  peers: { textAlign: 'center', paddingTop: space.xs, paddingHorizontal: space.sm },
+  calm: { padding: space.md, gap: 10, borderRadius: radius.lg, borderWidth: 1 },
+  calmHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pips: { flexDirection: 'row', gap: 6 },
+  pip: { width: 28, height: 10, borderRadius: radius.pill },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: space.lg },
   centerText: { textAlign: 'center' },
-  emptyTitle: { fontFamily: font.serifBold, fontSize: 24, lineHeight: 30 },
-  row: {
+  emptyCta: { alignSelf: 'stretch', marginTop: space.sm },
+  newChatWrap: { position: 'absolute', left: space.md, right: space.md, bottom: 36 },
+  newChatCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
+    gap: 10,
+    paddingVertical: 10,
+    paddingRight: 10,
+    paddingLeft: 14,
     borderRadius: radius.lg,
-    padding: space.sm + 2,
+    borderWidth: 1,
   },
-  rowName: { fontFamily: font.serifBold, fontSize: 18, lineHeight: 24 },
-  statusLabel: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 18, marginTop: 2 },
-  rowRight: { alignItems: 'flex-end', gap: space.xs },
-  unread: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+  newChatHelp: { flex: 1, minWidth: 0 },
+  newChatKey: {
+    height: 48,
+    paddingLeft: 10,
+    paddingRight: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: radius.md,
+  },
+  newChatDashed: { borderWidth: 1, borderStyle: 'dashed' },
+  newChatText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20 },
+  privacy: {
+    position: 'absolute',
+    left: space.md,
+    right: space.md,
+    bottom: 8,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    gap: 6,
   },
-  unreadText: { fontFamily: font.sansBold, fontSize: 12 },
-  fabWrap: { position: 'absolute', right: space.lg, bottom: space.lg },
-  fab: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 2,
-  },
-  fabText: { fontFamily: font.sansBold, fontSize: 11 },
   gateBackdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 50,
@@ -622,25 +765,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: space.lg,
   },
-  gateCard: {
-    alignSelf: 'stretch',
-    borderRadius: radius.lg,
-    padding: space.lg,
-    gap: space.sm,
-  },
-  gateTitle: { fontFamily: font.serifBold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
-  pickRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.md,
-    padding: space.md,
-  },
-  pickIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  gateCard: { alignSelf: 'stretch', borderRadius: radius.lg, padding: space.lg, gap: space.sm },
 });

@@ -1,14 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
-import { Screen } from '@/components/Screen';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
+import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { api, type ListenerApplication } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
@@ -17,30 +18,105 @@ import { screenCache } from '@/lib/screenCache';
 import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
 import { checkAndApplyUpdate, runningUpdate, type UpdateStatus } from '@/lib/updates';
 import { useTheme } from '@/theme/ThemeProvider';
-import {
-  COMPANION_COLOR_LABELS,
-  COMPANION_COLORS,
-  type CompanionColor,
-} from '@/theme/companion';
-import { font, radius, space, type } from '@/theme/tokens';
+import { COMPANION_COLOR_LABELS, COMPANION_COLORS, type CompanionColor } from '@/theme/companion';
+import { font, radius, space, type, type Wash } from '@/theme/tokens';
 
 const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
 
-/** Where the companion can be on this screen (lib/companionPlacement.ts). Its bubble on the
- * companion card is home — when it is out, the bubble is simply empty and it is somewhere
- * else on the page. The other places have clear ground: beside the avatar, and the right of
- * the "Support & About" heading row (above the Language row / under the companion card). */
+/** The member's companion standing on the identity card (board A09). */
+const HERO = 132;
+const SWATCH = 44;
+const SWATCH_RING = 5; // the selected swatch's ring sits this far outside it
+
+/** Where the companion can be on this screen (lib/companionPlacement.ts). Home is where the
+ * board draws it: standing, large, on the identity card — when it is out, that corner of the
+ * card is simply empty and it is somewhere else on the page. Every other place uses the same
+ * reserved corner or the clear ground around it, so it never covers a word: on the card's
+ * top edge, on the growth card's top edge (napping there at night), or hanging under the
+ * identity card for the animals that can. `bubble` / `besideAvatar` keep their old ids —
+ * stored placements and specs know them. */
 const PERCHES: PlacementSlot[] = [
   { id: 'bubble', type: 'top', level: 'mid', home: true },
   { id: 'besideAvatar', type: 'lean', level: 'high' },
-  { id: 'languageTop', type: 'top', level: 'low' },
-  { id: 'languageNap', type: 'nap', level: 'low' },
-  { id: 'languagePeek', type: 'peek', level: 'low' },
+  { id: 'growthTop', type: 'top', level: 'mid' },
+  { id: 'growthNap', type: 'nap', level: 'mid' },
   { id: 'cardHang', type: 'hang', level: 'mid' },
 ];
 
-/** Lightweight v1 Profile: persona identity, live companion-colour switcher,
- * support & about. (Mirror/UPSC panels are deferred modules.) */
+/** One Profile row (board: 60px, 14 radius, a 36px wash disc, 16/22 title, 13/18 line). */
+function Row({
+  icon,
+  tone,
+  disc,
+  title,
+  body,
+  extra,
+  right,
+  onPress,
+  quiet = false,
+  disabled = false,
+  testID,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  tone?: Wash;
+  /** A neutral disc instead of a wash (Start fresh). */
+  disc?: boolean;
+  title: string;
+  body?: string | null;
+  extra?: ReactNode;
+  right?: ReactNode;
+  onPress?: () => void;
+  quiet?: boolean;
+  disabled?: boolean;
+  testID?: string;
+}) {
+  const { colors } = useTheme();
+  const inner = (
+    <>
+      {disc ? (
+        <View style={[styles.disc, { backgroundColor: colors.bgLavender }]}>
+          <Ionicons name={icon} size={18} color={colors.ink} />
+        </View>
+      ) : (
+        <IconBadge icon={icon} tone={tone} size={36} />
+      )}
+      <View style={styles.rowText}>
+        <Text style={[styles.rowTitle, { color: colors.ink }]}>{title}</Text>
+        {body ? <Text style={[type.caption, { color: colors.inkMuted }]}>{body}</Text> : null}
+        {extra}
+      </View>
+      {right}
+    </>
+  );
+  const face = [
+    styles.row,
+    { backgroundColor: quiet ? colors.surfaceAlt : colors.surface, borderColor: colors.border },
+  ];
+  if (!onPress) {
+    return (
+      <EdgeSurface edge={colors.edgeSurface} travel={3} radius={radius.md} style={face} testID={testID}>
+        {inner}
+      </EdgeSurface>
+    );
+  }
+  return (
+    <PressKey
+      onPress={onPress}
+      disabled={disabled}
+      edge={quiet ? colors.edgeAlt : colors.edgeSurface}
+      radius={radius.md}
+      testID={testID}
+      style={face}
+    >
+      {inner}
+    </PressKey>
+  );
+}
+
+/** Profile (board A09): the persona on its card with the companion standing on it, the live
+ * colour switcher, then the rows — language, become a mentor (or where the application
+ * stands), support the team, two plain-words notes that open in place, updates (native),
+ * start fresh. Mirror / UPSC panels are deferred modules. */
 export default function ProfileTab() {
   const router = useRouter();
   const openMentorConsole = async () => {
@@ -49,6 +125,7 @@ export default function ProfileTab() {
   };
   const { colors, companionColor, setCompanionColor } = useTheme();
   const { t, locale, setLocale } = useI18n();
+  const sheetOpen = useSheetOpen();
   // The recolour lands on the device at once (the whole app re-accents) and on the account
   // in the background — a failed save shows nothing and never undoes the choice.
   const recolour = (key: CompanionColor) => {
@@ -64,9 +141,12 @@ export default function ProfileTab() {
     screenCache.get('application') ?? null,
   );
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | 'idle'>('idle');
+  const [openNote, setOpenNote] = useState<'mentors' | 'privacy' | null>(null);
+  const [swatch, setSwatch] = useState(SWATCH);
   const running = runningUpdate();
-  // The bubble only exists once the animal is known — until then there is no home slot.
-  const perch = useCompanionPlacement('profile', animal ? PERCHES : PERCHES.slice(1));
+  // The hero place only exists once the animal is known — until then there is no home slot.
+  // A sheet over the screen (Start fresh) hides the companion.
+  const perch = useCompanionPlacement('profile', animal ? PERCHES : PERCHES.slice(1), { hidden: sheetOpen });
 
   useFocusEffect(
     useCallback(() => {
@@ -105,352 +185,338 @@ export default function ProfileTab() {
     await checkAndApplyUpdate(setUpdateStatus);
   }, []);
 
+  const chevron = <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />;
+  const noteChevron = (open: boolean) => (
+    <Ionicons name={open ? 'chevron-down' : 'chevron-forward'} size={18} color={colors.inkMuted} />
+  );
+
   return (
-    <Screen>
-      <CompanionPerches placement={perch}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.lg }}>
-        <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
-          {t('profile.title')}
-        </Text>
-
-        <View style={styles.identity}>
-          <View>
-            <PersonaAvatar name={persona?.persona_name ?? 'Mento'} size={88} />
-            {/* Beside the avatar, feet on its baseline — the furniture is the avatar itself. */}
-            <CompanionSlot id="besideAvatar" size={56} attach="floor" inset={-72} />
-          </View>
-          <Text style={[styles.name, { color: colors.ink }]}>
-            {persona?.persona_name ?? t('profile.anonymous')}
-          </Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>
-            {t('profile.identityNote')}
-          </Text>
-        </View>
-
-        <View style={styles.furniture}>
-        <CompanionSlot id="cardHang" size={56} inset={space.lg} />
-        <EdgeSurface
-          edge={colors.edgeSurface}
-          style={[styles.card, { backgroundColor: colors.surface }]}
-        >
-          <Text style={[styles.cardTitle, { color: colors.ink }]}>{t('profile.companionTitle')}</Text>
-          {animal ? (
-            <View style={styles.companionRow}>
-              <View style={[styles.companionBubble, { backgroundColor: colors.accentTint }]}>
-                <CompanionSlot id="bubble" flow reserve size={44} interactive />
-              </View>
-              <Text style={[type.bodySemi, { color: colors.ink }]}>
-                {COMPANION_COLOR_LABELS[companionColor]} {animal}
+    <SettleBack>
+      <SafeAreaView style={styles.safe} edges={['top']}>
+        <CompanionPerches placement={perch}>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+            <Entrance>
+              <Text style={[type.title, styles.title, { color: colors.ink }]} accessibilityRole="header">
+                {t('profile.title')}
               </Text>
-            </View>
-          ) : null}
-          <Text style={[type.caption, { color: colors.inkMuted }]}>
-            {t('profile.recolour')}
-          </Text>
-          <View style={styles.swatches}>
-            {COLOR_KEYS.map((key) => {
-              const selected = key === companionColor;
-              const set = COMPANION_COLORS[key];
-              return (
-                <Pressable
-                  key={key}
-                  onPress={() => recolour(key)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={t('onboarding.companion.themeA11y', { label: COMPANION_COLOR_LABELS[key] })}
-                  testID={`profile-colour-${key}`}
-                  style={[styles.swatchWrap, selected && { borderColor: set.accent, borderWidth: 2 }]}
+            </Entrance>
+
+            {/* The identity card. Its right-hand corner belongs to the companion. */}
+            <View style={styles.furniture}>
+              <Entrance index={1}>
+                <EdgeSurface
+                  edge={colors.edgeSurface}
+                  travel={3}
+                  radius={radius.lg}
+                  style={[styles.identity, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
-                  <View style={[styles.swatch, { backgroundColor: set.accent }]}>
-                    {selected ? <Ionicons name="checkmark" size={14} color={set.onAccent} /> : null}
+                  <Text style={[styles.name, { color: colors.ink }]} testID="profile-persona">
+                    {persona?.persona_name ?? t('profile.anonymous')}
+                  </Text>
+                  <View style={[styles.privatePill, { backgroundColor: colors.accentTint }]}>
+                    <Text style={[styles.privateText, { color: colors.accent }]}>{t('profilePage.private')}</Text>
                   </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        </EdgeSurface>
-        </View>
-
-        <Text style={[styles.section, { color: colors.ink }]}>{t('profile.section')}</Text>
-
-        <View style={styles.rowSpacing}>
-        <CompanionSlot id="languageTop" size={52} inset={space.md} />
-        <CompanionSlot id="languageNap" size={52} inset={space.md} />
-        <CompanionSlot id="languagePeek" size={46} inset={96} />
-        <EdgeSurface
-          edge={colors.edgeSurface}
-          style={[styles.row, { backgroundColor: colors.surface }]}
-        >
-          <IconBadge icon="language-outline" size={44} />
-          <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>{t('profile.language')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('profile.languageBody')}
-            </Text>
-          </View>
-          <View style={styles.langChips}>
-            {(['en', 'hi'] as const).map((l) => {
-              const selected = locale === l;
-              const label = l === 'en' ? t('profile.languageEnglish') : t('profile.languageHindi');
-              return (
-                <Pressable
-                  key={l}
-                  onPress={() => setLocale(l)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected }}
-                  accessibilityLabel={label}
-                  testID={`profile-lang-${l}`}
-                  style={[
-                    styles.langChip,
-                    selected
-                      ? { backgroundColor: colors.accent }
-                      : { borderWidth: 1, borderColor: colors.border },
-                  ]}
-                >
-                  <Text style={[styles.langChipText, { color: selected ? colors.onAccent : colors.inkMuted }]}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </EdgeSurface>
-        </View>
-
-        <PressKey
-          onPress={() => router.push('/coffee')}
-          edge={colors.edgeSurface}
-          testID="profile-coffee"
-          style={[styles.row, { backgroundColor: colors.surface }]}
-          containerStyle={styles.rowSpacing}
-        >
-          <IconBadge icon="cafe-outline" tone="orange" size={44} />
-          <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>{t('profile.coffeeTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('profile.coffeeBody')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-        </PressKey>
-
-        <EdgeSurface
-          edge={colors.edgeSurface}
-          style={[styles.row, { backgroundColor: colors.surface }]}
-          containerStyle={styles.rowSpacing}
-        >
-          <IconBadge icon="heart-outline" size={44} />
-          <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>{t('profile.listenersTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('profile.listenersBody')}
-            </Text>
-          </View>
-        </EdgeSurface>
-
-        <EdgeSurface
-          edge={colors.edgeSurface}
-          style={[styles.row, { backgroundColor: colors.surface }]}
-          containerStyle={styles.rowSpacing}
-        >
-          <IconBadge icon="shield-checkmark-outline" tone="green" size={44} />
-          <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>{t('profile.privacyTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('profile.privacyBody')}
-            </Text>
-          </View>
-        </EdgeSurface>
-
-        {application === null ? (
-          <PressKey
-            onPress={() => router.push('/listener-apply')}
-            edge={colors.edgeSurface}
-            testID="profile-become-listener"
-            style={[styles.row, { backgroundColor: colors.surface }]}
-            containerStyle={styles.rowSpacing}
-          >
-            <IconBadge icon="ear-outline" tone="green" size={44} />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>{t('profile.becomeTitle')}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {t('profile.becomeBody')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-          </PressKey>
-        ) : application.status === 'declined' ? (
-          /* Declined members can reapply — the server enforces the cool-down (409
-           * surfaces through the apply screen's error display). */
-          <PressKey
-            onPress={() => router.push('/listener-apply')}
-            edge={colors.edgeSurface}
-            testID="profile-listener-status"
-            style={[styles.row, { backgroundColor: colors.surface }]}
-            containerStyle={styles.rowSpacing}
-          >
-            <IconBadge icon="ear-outline" tone="accent" size={44} />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {t('profile.declinedBody')}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-          </PressKey>
-        ) : (
-          <EdgeSurface
-            edge={colors.edgeSurface}
-            style={[styles.row, { backgroundColor: colors.surface }]}
-            containerStyle={styles.rowSpacing}
-            testID="profile-listener-status"
-          >
-            <IconBadge
-              icon={application.status === 'approved' ? 'checkmark-circle-outline' : 'ear-outline'}
-              tone={application.status === 'approved' ? 'green' : 'accent'}
-              size={44}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>
-                {application.status === 'approved'
-                  ? t('profile.approvedTitle')
-                  : t('profile.receivedTitle')}
-              </Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {application.status === 'approved'
-                  ? t('profile.approvedBody')
-                  : t('profile.receivedBody')}
-              </Text>
-              {application.status === 'approved' ? (
-                <Pressable
-                  // The console lives IN the app now (DECISIONS §K.9): switch the
-                  // device's role and go to Mentor Home — never the browser link.
-                  onPress={() => void openMentorConsole()}
-                  accessibilityRole="button"
-                  testID="profile-open-console"
-                  style={{ minHeight: 44, justifyContent: 'center' }}
-                >
-                  <Text style={[type.bodySemi, { color: colors.accent }]}>
-                    {t('profile.openConsole')}
-                  </Text>
-                </Pressable>
+                  <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.identityNote')}</Text>
+                </EdgeSurface>
+              </Entrance>
+              {perch.slotId === 'bubble' ? (
+                <View style={[styles.heroGround, { backgroundColor: colors.edgeSurface }]} pointerEvents="none" />
               ) : null}
+              {/* It is simply there — no arrival class on the companion. */}
+              <View style={styles.hero} pointerEvents="box-none">
+                <CompanionSlot id="bubble" flow size={HERO} interactive />
+              </View>
+              <CompanionSlot id="besideAvatar" size={60} inset={40} />
+              <CompanionSlot id="cardHang" size={56} inset={40} />
             </View>
-          </EdgeSurface>
-        )}
 
-        {Platform.OS !== 'web' ? (
-          <PressKey
-            onPress={() => void handleCheckUpdates()}
-            disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'restarting'}
-            edge={colors.edgeSurface}
-            testID="profile-check-updates"
-            style={[styles.row, { backgroundColor: colors.surface }]}
-            containerStyle={styles.rowSpacing}
-          >
-            <IconBadge icon="cloud-download-outline" size={44} />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>{t('profile.updatesTitle')}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>
-                {updateStatus === 'checking'
-                  ? t('updates.checking')
-                  : updateStatus === 'downloading'
-                    ? t('updates.downloading')
-                    : updateStatus === 'restarting'
-                      ? t('updates.restarting')
-                      : updateStatus === 'upToDate'
-                        ? t('updates.upToDate')
-                        : updateStatus === 'checkFailed'
-                          ? t('updates.checkFailed')
-                          : t('profile.updatesBody')}
-              </Text>
-              {running.kind !== 'dev' ? (
-                <Text style={[type.caption, { color: colors.inkMuted }]} testID="profile-running-update">
-                  {running.kind === 'ota'
-                    ? t('updates.runningOta', { id: running.id ?? '?' })
-                    : t('updates.runningEmbedded')}
-                </Text>
+            <View style={styles.furniture}>
+              <CompanionSlot id="growthTop" size={56} inset={36} />
+              <CompanionSlot id="growthNap" size={56} inset={36} />
+              <Entrance index={2}>
+                <EdgeSurface
+                  edge={colors.edgeAlt}
+                  travel={3}
+                  radius={radius.lg}
+                  style={[styles.growth, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+                >
+                  <Text style={[styles.rowTitle, styles.growthText, { color: colors.ink }]}>
+                    {t('profile.companionTitle')}
+                  </Text>
+                  <View
+                    style={styles.swatches}
+                    onLayout={(e) => {
+                      // Seven 44px keys fit a 390 phone; a 360 one gets slightly smaller keys
+                      // rather than a second row. The ring's room is part of the sum.
+                      const room = e.nativeEvent.layout.width - 2 * SWATCH_RING;
+                      setSwatch(Math.min(SWATCH, Math.floor((room - (COLOR_KEYS.length - 1) * 2) / COLOR_KEYS.length)));
+                    }}
+                  >
+                    {COLOR_KEYS.map((key) => {
+                      const selected = key === companionColor;
+                      const set = COMPANION_COLORS[key];
+                      return (
+                        <View key={key} style={{ width: swatch, height: swatch + 4 }}>
+                          {selected ? (
+                            <View
+                              pointerEvents="none"
+                              style={[
+                                styles.ring,
+                                { width: swatch + 2 * SWATCH_RING, height: swatch + 2 * SWATCH_RING, borderColor: colors.ink },
+                              ]}
+                            />
+                          ) : null}
+                          <PressKey
+                            onPress={() => recolour(key)}
+                            edge={selected ? 'transparent' : set.accentEdge}
+                            radius={radius.pill}
+                            intent="select"
+                            accessibilityState={{ selected }}
+                            accessibilityLabel={t('onboarding.companion.themeA11y', { label: COMPANION_COLOR_LABELS[key] })}
+                            testID={`profile-colour-${key}`}
+                            style={{ width: swatch, height: swatch, backgroundColor: set.accent }}
+                          >
+                            {null}
+                          </PressKey>
+                        </View>
+                      );
+                    })}
+                  </View>
+                  <Text style={[type.caption, styles.growthText, { color: colors.inkMuted }]}>
+                    {t('profile.recolour')}
+                  </Text>
+                </EdgeSurface>
+              </Entrance>
+            </View>
+
+            <Entrance index={3} style={styles.rows}>
+              <Row
+                icon="globe-outline"
+                tone="sky"
+                title={t('profile.language')}
+                right={
+                  <View
+                    style={[styles.lang, { backgroundColor: colors.bgLavender }]}
+                    accessibilityLabel={t('profile.language')}
+                  >
+                    {(['en', 'hi'] as const).map((l) => {
+                      const selected = locale === l;
+                      const label = l === 'en' ? t('profile.languageEnglish') : t('profile.languageHindi');
+                      return (
+                        <PressKey
+                          key={l}
+                          onPress={() => setLocale(l)}
+                          edge="transparent"
+                          travel={2}
+                          radius={radius.pill}
+                          intent="select"
+                          accessibilityState={{ selected }}
+                          accessibilityLabel={label}
+                          testID={`profile-lang-${l}`}
+                          style={[styles.langKey, selected && { backgroundColor: colors.ink }]}
+                        >
+                          <Text style={[type.label, { color: selected ? colors.onBrand : colors.ink }]}>{label}</Text>
+                        </PressKey>
+                      );
+                    })}
+                  </View>
+                }
+              />
+
+              {application === null ? (
+                <Row
+                  icon="bulb-outline"
+                  tone="green"
+                  title={t('profile.becomeTitle')}
+                  body={t('profile.becomeBody')}
+                  right={chevron}
+                  onPress={() => router.push('/listener-apply')}
+                  testID="profile-become-listener"
+                />
+              ) : application.status === 'declined' ? (
+                /* Declined members can reapply — the server enforces the cool-down (409
+                 * surfaces through the apply screen's error display). */
+                <Row
+                  icon="bulb-outline"
+                  tone="green"
+                  title={t('profile.declinedTitle')}
+                  body={t('profile.declinedBody')}
+                  right={chevron}
+                  onPress={() => router.push('/listener-apply')}
+                  testID="profile-listener-status"
+                />
+              ) : (
+                <Row
+                  icon={application.status === 'approved' ? 'checkmark-circle-outline' : 'bulb-outline'}
+                  tone="green"
+                  title={application.status === 'approved' ? t('profile.approvedTitle') : t('profile.receivedTitle')}
+                  body={application.status === 'approved' ? t('profile.approvedBody') : t('profile.receivedBody')}
+                  testID="profile-listener-status"
+                  extra={
+                    application.status === 'approved' ? (
+                      // The console lives IN the app now (DECISIONS §K.9): switch the
+                      // device's role and go to Mentor Home — never the browser link.
+                      <PressKey
+                        onPress={() => void openMentorConsole()}
+                        edge="transparent"
+                        travel={2}
+                        radius={radius.pill}
+                        testID="profile-open-console"
+                        containerStyle={styles.consoleBox}
+                        style={styles.console}
+                      >
+                        <Text style={[type.bodySemi, { color: colors.accent }]}>{t('profile.openConsole')}</Text>
+                      </PressKey>
+                    ) : null
+                  }
+                />
+              )}
+
+              <Row
+                icon="cafe-outline"
+                tone="orange"
+                title={t('profile.coffeeTitle')}
+                body={t('profile.coffeeBody')}
+                right={chevron}
+                onPress={() => router.push('/coffee')}
+                testID="profile-coffee"
+              />
+
+              <Row
+                icon="heart-outline"
+                tone="danger"
+                title={t('profile.listenersTitle')}
+                body={openNote === 'mentors' ? t('profile.listenersBody') : null}
+                right={noteChevron(openNote === 'mentors')}
+                onPress={() => setOpenNote(openNote === 'mentors' ? null : 'mentors')}
+                testID="profile-note-mentors"
+              />
+
+              <Row
+                icon="shield-outline"
+                tone="indigo"
+                title={t('profile.privacyTitle')}
+                body={openNote === 'privacy' ? t('profile.privacyBody') : null}
+                right={noteChevron(openNote === 'privacy')}
+                onPress={() => setOpenNote(openNote === 'privacy' ? null : 'privacy')}
+                testID="profile-note-privacy"
+              />
+
+              {Platform.OS !== 'web' ? (
+                <Row
+                  icon="cloud-download-outline"
+                  tone="sky"
+                  title={t('profile.updatesTitle')}
+                  body={
+                    updateStatus === 'checking'
+                      ? t('updates.checking')
+                      : updateStatus === 'downloading'
+                        ? t('updates.downloading')
+                        : updateStatus === 'restarting'
+                          ? t('updates.restarting')
+                          : updateStatus === 'upToDate'
+                            ? t('updates.upToDate')
+                            : updateStatus === 'checkFailed'
+                              ? t('updates.checkFailed')
+                              : t('profile.updatesBody')
+                  }
+                  extra={
+                    running.kind !== 'dev' ? (
+                      <Text style={[type.caption, { color: colors.inkMuted }]} testID="profile-running-update">
+                        {running.kind === 'ota'
+                          ? t('updates.runningOta', { id: running.id ?? '?' })
+                          : t('updates.runningEmbedded')}
+                      </Text>
+                    ) : null
+                  }
+                  onPress={() => void handleCheckUpdates()}
+                  disabled={updateStatus === 'checking' || updateStatus === 'downloading' || updateStatus === 'restarting'}
+                  testID="profile-check-updates"
+                />
               ) : null}
-            </View>
-          </PressKey>
-        ) : null}
 
-        <PressKey
-          onPress={() => router.push('/start-fresh')}
-          edge={colors.edgeSurface}
-          testID="profile-start-fresh"
-          style={[styles.row, { backgroundColor: colors.surface }]}
-          containerStyle={styles.rowSpacing}
-        >
-          <IconBadge icon="leaf-outline" tone="danger" size={44} />
-          <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.danger }]}>{t('profile.startFreshTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('profile.startFreshBody')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-        </PressKey>
+              <Row
+                icon="leaf-outline"
+                disc
+                quiet
+                title={t('profile.startFreshTitle')}
+                body={t('profile.startFreshBody')}
+                onPress={() => router.push('/start-fresh')}
+                testID="profile-start-fresh"
+              />
+            </Entrance>
 
-        <Text style={[type.caption, styles.version, { color: colors.inkMuted }]}>
-          {t('profile.version')}
-        </Text>
-      </ScrollView>
-      </CompanionPerches>
-    </Screen>
+            <Entrance index={4}>
+              <Text style={[type.caption, styles.version, { color: colors.inkMuted }]}>{t('profile.version')}</Text>
+            </Entrance>
+          </ScrollView>
+        </CompanionPerches>
+      </SafeAreaView>
+    </SettleBack>
   );
 }
 
 const styles = StyleSheet.create({
-  identity: { alignItems: 'center', gap: space.xs, marginVertical: space.md },
-  name: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 33 },
+  safe: { flex: 1 },
+  scroll: { paddingHorizontal: space.md, paddingBottom: space.lg, gap: 14 },
+  title: { paddingTop: space.xs, paddingHorizontal: space.sm },
   furniture: { zIndex: 1 },
-  card: { borderRadius: radius.lg, padding: space.md, gap: space.xs },
-  cardTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 23 },
-  companionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    marginTop: space.sm,
-    marginBottom: space.xs,
+  identity: {
+    minHeight: 124,
+    paddingVertical: space.md,
+    paddingLeft: space.md,
+    paddingRight: HERO + 8,
+    alignItems: 'flex-start',
+    gap: 6,
+    borderWidth: 1,
   },
-  companionBubble: {
-    width: 56,
-    height: 56,
+  name: { fontFamily: font.sansHeavy, fontSize: 24, lineHeight: 30 },
+  privatePill: { height: 24, paddingHorizontal: 10, justifyContent: 'center', borderRadius: radius.pill },
+  privateText: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 16 },
+  // Feet on the card, 14 up from its bottom edge (the art carries ~6% of ground padding).
+  hero: { position: 'absolute', right: 4, bottom: 4, zIndex: 2 },
+  heroGround: {
+    position: 'absolute',
+    right: 22,
+    bottom: 9,
+    width: 96,
+    height: 16,
     borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    zIndex: 1,
   },
-  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
-  swatchWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
+  growth: { paddingTop: 14, paddingHorizontal: 14, paddingBottom: 12, gap: space.sm, borderWidth: 1 },
+  growthText: { paddingHorizontal: 2 },
+  swatches: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: SWATCH_RING,
+    paddingTop: SWATCH_RING,
+    paddingBottom: 2,
   },
-  swatch: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
+  ring: {
+    position: 'absolute',
+    left: -SWATCH_RING,
+    top: -SWATCH_RING,
+    borderRadius: radius.pill,
+    borderWidth: 2,
   },
-  section: { fontFamily: font.sansBold, fontSize: 18, lineHeight: 25, marginTop: space.lg, marginBottom: space.sm },
+  rows: { gap: 12 },
   row: {
+    minHeight: 60,
+    paddingVertical: space.sm,
+    paddingLeft: 14,
+    paddingRight: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.lg,
-    padding: space.sm + 2,
+    gap: 12,
+    borderWidth: 1,
   },
-  rowSpacing: { marginBottom: space.sm },
-  version: { textAlign: 'center', marginTop: space.md },
-  langChips: { flexDirection: 'row', gap: space.xs },
-  langChip: {
-    borderRadius: radius.pill,
-    paddingVertical: space.xs + 2,
-    paddingHorizontal: space.sm + 4,
-  },
-  langChipText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
+  rowText: { flex: 1, minWidth: 0 },
+  rowTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22 },
+  disc: { width: 36, height: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  lang: { flexDirection: 'row', gap: space.xs, padding: 3, borderRadius: radius.pill },
+  langKey: { height: 44, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
+  consoleBox: { alignSelf: 'flex-start' },
+  console: { minHeight: 44, justifyContent: 'center' },
+  version: { textAlign: 'center' },
 });

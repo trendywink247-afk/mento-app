@@ -119,8 +119,8 @@ async function run(browser, reduced) {
   await tid('mentor-header').click();
   await page.waitForURL('**/mentor-profile/**', { timeout: 30000 });
   // (The chat stays mounted under the pushed screen, so assert on the profile's own key.)
-  await tid('favourite-toggle').waitFor({ timeout: 30000 });
-  const ask = (await tid('favourite-toggle').textContent()) ?? '';
+  await tid('mentor-profile-name').waitFor({ timeout: 30000 });
+  const ask = (await tid('mentor-profile-name').textContent()) ?? '';
   if (!ask.includes(mentor)) throw new Error(`mentor profile is not ${mentor}'s: "${ask}"`);
   console.log(`[${label}] OK identity area opens the mentor profile`);
   await tid('back').click();
