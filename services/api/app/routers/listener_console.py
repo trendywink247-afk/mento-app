@@ -52,13 +52,12 @@ from app.schemas import (
     RequestOut,
 )
 from app.security import current_listener_id, issue_listener_token
-from app.services import care_prompts, categories, paths, push, push_tasks, stream
+from app.services import care_prompts, categories, conversations, paths, push, push_tasks, stream
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
     accept_personal_request,
     decline_personal_request,
-    release_listener_slot,
 )
 
 router = APIRouter(prefix="/listener", tags=["listener-console"])
@@ -419,16 +418,10 @@ def end_conversation(
 ) -> OkResult:
     """Mentor header menu → End. Same atomic slot release as the member end path;
     idempotent, so a double tap or a concurrent member end never double-releases."""
-    convo = db.execute(
-        select(Conversation).where(Conversation.id == convo_id).with_for_update()
-    ).scalar_one_or_none()
+    convo = conversations.lock(db, convo_id)
     if convo is None or convo.listener_id != listener.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
-    if convo.status == ConversationStatus.active:
-        convo.status = ConversationStatus.ended
-        convo.ended_at = datetime.now(UTC)
-        convo.ended_by = ConversationEndedBy.listener
-        release_listener_slot(db, convo)
+    conversations.end(db, convo, ConversationEndedBy.listener)
     db.commit()
     return OkResult(status="ended")
 

@@ -74,6 +74,24 @@ def wipe_channel(channel_id: str) -> None:
     client.delete_channels([f"messaging:{channel_id}"], hard_delete=True)
 
 
+def freeze_channel(channel_id: str) -> bool:
+    """Freeze a channel so no member can write into it again — the Stream half of
+    Report / Block / Suspend (a blocked or suspended mentor's open client, or a saved
+    Stream token, must not keep reaching the member). `frozen` can only be changed
+    server-side. Best-effort: returns False (logged, never raised) when Stream is
+    stubbed or unreachable — the safety action itself must still succeed."""
+    client = _client()
+    if client is None:
+        logger.warning("Stream not configured — skipping freeze_channel")
+        return False
+    try:
+        client.channel("messaging", channel_id).update_partial(to_set={"frozen": True})
+    except Exception as exc:  # noqa: BLE001 — best-effort by design
+        logger.warning("freeze_channel failed (%s)", type(exc).__name__)
+        return False
+    return True
+
+
 def fetch_channel_messages(channel_id: str) -> list[dict]:
     """Read-only crisis-review fetch — messages live in Stream, never stored here.
     Returns persona-tagged rows; empty in stub mode."""

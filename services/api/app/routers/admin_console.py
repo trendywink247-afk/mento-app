@@ -52,7 +52,7 @@ from app.schemas import (
     OkResult,
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
-from app.services import audit, stream
+from app.services import audit, conversations, stream
 from app.services.categories import AVAILABILITY_NOTES
 from app.services.matching import reconcile_listener_capacity
 from app.services.persona import generate_persona
@@ -291,8 +291,22 @@ def suspend_listener(
     if li is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
     li.vetting_status = VettingStatus.suspended
-    audit.record(db, admin, "listener.suspended", subject_type="listener", subject_id=listener_id)
+    # A suspended mentor can no longer open the console — and must not be able to
+    # reach members from a client that is already open. End their active chats (the
+    # members are free to be matched again, the slots are released) and seal every
+    # channel on Stream once the transaction is committed.
+    ended = conversations.end_all_for_listener(db, listener_id)
+    audit.record(
+        db,
+        admin,
+        "listener.suspended",
+        subject_type="listener",
+        subject_id=listener_id,
+        meta={"conversations_ended": len(ended)},
+    )
     db.commit()
+    for channel_id in ended:
+        conversations.seal(channel_id)
     return OkResult(status="suspended")
 
 

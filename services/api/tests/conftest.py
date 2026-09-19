@@ -63,6 +63,23 @@ def _push_off():
     push.ENABLED = previous
 
 
+@pytest.fixture(autouse=True)
+def sealed_channels(monkeypatch):
+    """Hermetic: a safety end (report / block / suspend) freezes the Stream channel,
+    and this machine's .env may carry real Stream creds. Record instead of calling —
+    tests assert on the returned list."""
+    from app.services import stream
+
+    calls: list[str] = []
+
+    def _record(channel_id: str) -> bool:
+        calls.append(channel_id)
+        return True
+
+    monkeypatch.setattr(stream, "freeze_channel", _record)
+    return calls
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _schema():
     """Build the schema from the Alembic migration (not metadata.create_all), so
