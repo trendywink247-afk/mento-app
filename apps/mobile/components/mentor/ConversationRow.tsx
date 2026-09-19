@@ -1,17 +1,18 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { MemberDisc } from '@/components/mentor/MemberDisc';
 import { PressKey } from '@/components/motion/PressKey';
 import type { ChannelLive } from '@/lib/useMentorConsole';
 import { useI18n } from '@/lib/i18n';
 import type { ListenerConversation } from '@/lib/listenerApi';
 import { useTheme } from '@/theme/ThemeProvider';
+import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, space, type } from '@/theme/tokens';
 
-/** One row in the conversation list — active conversations read live (typing/unread/
- * preview via Stream), ended ones read as a quiet, non-clickable-looking archive
- * entry (still tappable — the transcript stays reachable). */
+/** One conversation row (board A10): the member's disc, their persona, a live line
+ * (typing in sage, else the last words), and the accent "N new" pill. An ended chat is
+ * the quiet warm row with no pill — still tappable, the transcript stays reachable. */
 export function ConversationRow({
   conversation,
   live,
@@ -24,10 +25,11 @@ export function ConversationRow({
   const { colors } = useTheme();
   const { t } = useI18n();
   const active = conversation.status === 'active';
+  const typing = active && !!live?.typing;
 
   const stateLine = !active
     ? t('mentor.ended')
-    : live?.typing
+    : typing
       ? t('mentor.typing')
       : conversation.member_masked
         ? t('mentor.masked')
@@ -36,28 +38,36 @@ export function ConversationRow({
   return (
     <PressKey
       onPress={onPress}
-      edge={colors.edgeSurface}
-      accessibilityLabel={conversation.user_persona_name}
+      edge={active ? colors.edgeSurface : colors.edgeAlt}
+      travel={4}
+      radius={radius.md}
+      intent="navigate"
+      accessibilityLabel={t('mentorHomePage.conversationA11y', { name: conversation.user_persona_name })}
       testID={`mentor-convo-${conversation.id}`}
-      containerStyle={styles.rowContainer}
-      style={[styles.row, { backgroundColor: colors.surface, opacity: active ? 1 : 0.7 }]}
+      style={[
+        styles.row,
+        { backgroundColor: active ? colors.surface : colors.surfaceAlt, borderColor: colors.border },
+      ]}
     >
-      <PersonaAvatar
-        name={conversation.user_persona_name}
-        size={44}
-        online={active && !conversation.member_masked}
-      />
-      <View style={{ flex: 1 }}>
-        <Text style={[type.label, { color: colors.ink }]}>{conversation.user_persona_name}</Text>
-        <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+      <MemberDisc name={conversation.user_persona_name} size={40} />
+      <View style={styles.text}>
+        <Text style={[type.cardTitle, { color: colors.ink }]} numberOfLines={1}>
+          {conversation.user_persona_name}
+        </Text>
+        <Text
+          style={[
+            type.caption,
+            typing ? styles.typing : null,
+            { color: typing ? COMPANION_COLORS.sage.accentEdge : colors.inkMuted },
+          ]}
+          numberOfLines={1}
+        >
           {stateLine}
         </Text>
       </View>
       {live && live.unread > 0 ? (
-        <View style={[styles.unread, { backgroundColor: colors.accentTint }]} testID={`mentor-unread-${conversation.id}`}>
-          <Text style={[type.caption, { color: colors.accentEdge }]}>
-            {t('mentor.unread', { count: live.unread })}
-          </Text>
+        <View style={[styles.unread, { backgroundColor: colors.accent }]} testID={`mentor-unread-${conversation.id}`}>
+          <Text style={[styles.unreadText, { color: colors.onAccent }]}>{t('mentor.unread', { count: live.unread })}</Text>
         </View>
       ) : (
         <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
@@ -67,17 +77,17 @@ export function ConversationRow({
 }
 
 const styles = StyleSheet.create({
-  rowContainer: { marginBottom: space.sm },
   row: {
+    minHeight: 60,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.lg,
-    padding: space.sm + 2,
+    gap: 12,
+    paddingVertical: space.sm,
+    paddingHorizontal: 14,
+    borderWidth: 1,
   },
-  unread: {
-    borderRadius: radius.pill,
-    paddingVertical: 2,
-    paddingHorizontal: space.sm,
-  },
+  text: { flex: 1, minWidth: 0 },
+  typing: { fontFamily: type.bodySemi.fontFamily },
+  unread: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, justifyContent: 'center' },
+  unreadText: { fontSize: 12, lineHeight: 16, fontFamily: type.label.fontFamily },
 });
