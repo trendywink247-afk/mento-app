@@ -366,7 +366,7 @@ the tunnel process restarts, and it only exists while that process is running. F
 unblock a testing session; not a permanent answer. See also **mento-crisis-webhook**,
 which uses the same tool for a different purpose.
 
-### 8h. `build-android-release.ps1` fails to parse / Sentry upload fails the release build (2026-09-19)
+### 8j. `build-android-release.ps1` fails to parse / Sentry upload fails the release build (2026-09-19)
 
 Two separate things stopped the 2026-09-19 release build; neither is a code problem.
 
