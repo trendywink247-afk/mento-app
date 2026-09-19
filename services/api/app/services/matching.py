@@ -254,7 +254,19 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
 def _pending_request(
     db: Session, request_id: str, acting_listener_id: str | None
 ) -> ConversationRequest:
-    req = db.get(ConversationRequest, request_id)
+    """Load the request UNDER A ROW LOCK and re-check it is still pending.
+
+    Without the lock two concurrent accepts (a double tap, or the admin stand-in
+    racing the mentor) both read `pending`; they then serialise on the listener row,
+    and the loser — still holding its stale copy — opened a second conversation and
+    took a second slot for the same request. Lock order everywhere: request →
+    listener. `populate_existing` defeats a stale copy in the identity map."""
+    req = db.execute(
+        select(ConversationRequest)
+        .where(ConversationRequest.id == request_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
     if req is None or req.status != RequestStatus.pending:
         raise RequestNotPending()
     # A listener may only act on requests addressed to them; the admin path
@@ -267,16 +279,30 @@ def _pending_request(
 def accept_personal_request(
     db: Session, request_id: str, *, acting_listener_id: str | None = None
 ) -> ConversationRequest:
-    """Accept a Personal request under a row lock so capacity can't double-assign.
-    Shared by the admin stand-in and the listener console."""
+    """Accept a Personal request under row locks so neither the request nor the
+    listener's capacity can be double-spent. Shared by the admin stand-in and the
+    listener console."""
     req = _pending_request(db, request_id, acting_listener_id)
+
+    # The member blocked this mentor after asking (T&S #9): the mentor must not come
+    # back into their chats through the old request. Close it; opaque to the caller.
+    if req.target_listener_id in _blocked_listener_ids(db, req.requester_id):
+        req.status = RequestStatus.declined
+        db.commit()
+        raise RequestNotPending()
 
     listener = db.execute(
         select(ListenerProfile)
         .where(ListenerProfile.id == req.target_listener_id)
         .with_for_update()
     ).scalar_one_or_none()
-    if listener is None or listener.active_conversations >= listener.max_concurrent:
+    # The console's own dependency refuses a suspended mentor, but the admin stand-in
+    # reaches this path without it — never hand a member to an unapproved listener.
+    if listener is None or listener.vetting_status != VettingStatus.approved:
+        db.rollback()
+        raise RequestNotPending()
+    if listener.active_conversations >= listener.max_concurrent:
+        db.rollback()
         raise ListenerAtCapacity()
 
     def _mark_matched(convo: Conversation) -> None:
