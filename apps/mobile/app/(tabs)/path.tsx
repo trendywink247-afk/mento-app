@@ -1,37 +1,36 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
-import { Screen } from '@/components/Screen';
-import { Companion } from '@/components/art/Companion';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { Entrance } from '@/components/motion/Entrance';
-import { Tilt3D } from '@/components/motion/Tilt3D';
-import { TiltCard } from '@/components/motion/TiltCard';
-import { capture } from '@/lib/analytics';
-import { ApiError, api, type PathNode, type PathState, type PathTree } from '@/lib/api';
+import { PressKey } from '@/components/motion/PressKey';
+import { FeedbackPill } from '@/components/path/FeedbackPill';
+import { StageSheen } from '@/components/path/ambient';
+import { api, type PathState } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
 import { screenCache } from '@/lib/screenCache';
-import { getCompanionAnimal } from '@/lib/session';
-import type { CompanionAnimal } from '@/components/art/Companions';
-import type { CompanionTrigger } from '@/components/art/Companion';
+import { COMPANION_COLORS } from '@/theme/companion';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type } from '@/theme/tokens';
+import { font, radius, space, type, wash } from '@/theme/tokens';
 
 /**
- * Path (Communities) — SCOPE spec docs/superpowers/specs/2026-07-13-path-communities.md.
- * The Pathfinder (companion-led questions) is the door into a community; the Path home
- * is a LENS on the core loop (tuned prompts, seasonal support, same-road listeners) —
- * never a feed. Anonymity rails untouched.
+ * Path (Communities) — board A07, "home built around your stage". A LENS on the core loop
+ * (the member's community and stage, tuned starters, seasonal support, the way to a mentor) —
+ * never a feed. Everything on it is server-driven (`GET /paths/me`); nothing moves client-side.
+ *
+ *   - "Change" and the invitation's key open the Pathfinder (app/pathfinder.tsx, a deeper page);
+ *   - a starter, and "Ask a mentor", open the first-question builder — nothing is matched or
+ *     sent from this screen;
+ *   - "Browse" opens the mentors page.
  */
 /** Where the companion can be (lib/companionPlacement.ts). Two states, two lists — a slot only
- * counts while its furniture is on screen. The places it ALREADY had are the home slots: the
- * hero above the invitation, and the right of the Path home heading (that column stays
- * reserved, so the ground above the seasonal card is always clear). The Pathfinder question
- * walk keeps its own staged hero, like onboarding. */
+ * counts while its furniture is on screen. Home on the Path home is where the board draws it:
+ * perched on the stage panel, beside the community name. */
 const INVITE_PERCHES: PlacementSlot[] = [
   { id: 'inviteHero', type: 'top', level: 'high', home: true },
   { id: 'inviteCta', type: 'lean', level: 'mid' },
@@ -41,7 +40,7 @@ const INVITE_PERCHES: PlacementSlot[] = [
   { id: 'tabBarPeek', type: 'peek', level: 'low' },
 ];
 const HOME_PERCHES: PlacementSlot[] = [
-  { id: 'headRight', type: 'top', level: 'high', home: true },
+  { id: 'stageTop', type: 'top', level: 'high', home: true },
   { id: 'talkCorner', type: 'lean', level: 'mid' },
 ];
 const SEASONAL_PERCHES: PlacementSlot[] = [
@@ -59,25 +58,21 @@ export default function PathTab() {
   // the spinner is for the very first load only. A failed refresh keeps what is showing.
   const cachedPath = screenCache.get('path');
   const [loading, setLoading] = useState(!cachedPath);
-  const [state, setStateRaw] = useState<PathState | null>(cachedPath ?? null);
-  const setState = useCallback((s: PathState) => {
-    screenCache.set('path', s);
-    setStateRaw(s);
-  }, []);
-  const [tree, setTree] = useState<PathTree | null>(null);
-  const [nodeId, setNodeId] = useState<string | null>(null); // non-null = pathfinder running
-  const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
-  const [joy, setJoy] = useState<CompanionTrigger>(null);
-  const [note, setNote] = useState<string | null>(null);
-  const [matching, setMatching] = useState(false);
+  const [state, setState] = useState<PathState | null>(cachedPath ?? null);
 
   useFocusEffect(
     useCallback(() => {
       let active = true;
+      // Coming back from the Pathfinder: what it saved is already in the cache, so the new
+      // stage is on screen before the refresh lands.
+      const fresh = screenCache.get('path');
+      if (fresh) setState(fresh);
       void api
         .myPath()
         .then((s) => {
-          if (active) setState(s);
+          if (!active) return;
+          screenCache.set('path', s);
+          setState(s);
         })
         .catch(() => {})
         .finally(() => {
@@ -86,376 +81,297 @@ export default function PathTab() {
       return () => {
         active = false;
       };
-    }, [setState]),
+    }, []),
   );
 
-  useEffect(() => {
-    void getCompanionAnimal().then((a) => setAnimal(a as CompanionAnimal | null));
-  }, []);
-
-  const startPathfinder = async () => {
-    setNote(null);
-    try {
-      const t = tree ?? (await api.pathTree());
-      setTree(t);
-      setNodeId(t.root);
-    } catch {
-      setNote(t('path.loadError'));
-    }
-  };
-
-  const pick = async (opt: { next?: string; community?: string; stage?: string }) => {
-    if (opt.next) {
-      setNodeId(opt.next);
-      return;
-    }
-    if (!opt.community || !opt.stage) return;
-    try {
-      const s = await api.choosePath(opt.community, opt.stage);
-      // Community only — the journey stage stays off analytics (coarse is coarse).
-      capture('path_chosen', { community: opt.community });
-      setState(s);
-      setNodeId(null);
-      // A path chosen is a small win — the companion wiggles, doesn't hop.
-      setJoy((t) => ({ kind: 'joy', n: (t?.n ?? 0) + 1 }));
-    } catch {
-      setNote(t('path.saveError'));
-    }
-  };
-
-  const talk = async () => {
-    if (matching) return;
-    setMatching(true);
-    setNote(null);
-    try {
-      const match = await api.match({ kind: 'general' });
-      router.push({
-        pathname: '/chat/[id]',
-        params: {
-          id: match.conversation_id,
-          listener: match.listener_persona_name,
-          channel: match.stream_channel_id ?? '',
-        },
-      });
-    } catch (e) {
-      setNote(
-        e instanceof ApiError && e.status === 503
-          ? t('common.allBusy')
-          : t('path.connectError'),
-      );
-    } finally {
-      setMatching(false);
-    }
-  };
+  const openPathfinder = () => router.push('/pathfinder');
 
   const onHome = Boolean(state?.community && state.stage);
-  const perches =
-    loading || (nodeId && tree)
-      ? NO_PERCHES
-      : !onHome
-        ? INVITE_PERCHES
-        : state?.seasonal
-          ? [...HOME_PERCHES, ...SEASONAL_PERCHES]
-          : HOME_PERCHES;
-  // A failed load / save / match is a still state: the home slot, sitting (T&S #11).
-  const perch = useCompanionPlacement('path', perches, { still: note !== null });
+  const perches = loading
+    ? NO_PERCHES
+    : !onHome
+      ? INVITE_PERCHES
+      : state?.seasonal
+        ? [...HOME_PERCHES, ...SEASONAL_PERCHES]
+        : HOME_PERCHES;
+  const perch = useCompanionPlacement('path', perches);
 
   if (loading) {
     return (
-      <Screen>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
         <View style={styles.center} testID="path-loading">
           <ActivityIndicator color={colors.accent} />
         </View>
-      </Screen>
+      </SafeAreaView>
     );
   }
 
-  // --- Pathfinder (question walk) ---
-  if (nodeId && tree) {
-    const node: PathNode = tree.nodes[nodeId];
-    return (
-      <Screen scroll>
-        <Entrance index={0}>
-          <View style={styles.hero}>
-            <Tilt3D maxTilt={6}>
-              <Companion animal={animal} size={72} />
-            </Tilt3D>
-            <Text style={[styles.heroTitle, { color: colors.ink }]} accessibilityRole="header">
-              {node.question}
-            </Text>
-            <Text style={[type.caption, styles.centerText, { color: colors.inkMuted }]}>
-              {t('path.hint')}
-            </Text>
-          </View>
-        </Entrance>
-        {node.options.map((opt, i) => (
-          <Entrance key={opt.label} index={1 + i}>
-            <TiltCard
-              style={[styles.optionCard, { backgroundColor: colors.surface }]}
-              containerStyle={styles.cardSpacing}
-              edge={colors.edgeSurface}
-              onPress={() => void pick(opt)}
-              testID={`path-option-${i}`}
-            >
-              {opt.icon ? (
-                // reason: icon names come from server config, validated visually not by type
-                <Ionicons name={opt.icon as any} size={20} color={colors.accent} />
-              ) : (
-                <Ionicons name="ellipse-outline" size={20} color={colors.accentSoft} />
-              )}
-              <Text style={[styles.optionLabel, { color: colors.ink }]}>{opt.label}</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.inkMuted} />
-            </TiltCard>
-          </Entrance>
-        ))}
-        {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}
-      </Screen>
-    );
-  }
+  const header = (
+    <Entrance index={1} style={styles.head}>
+      <Text style={[type.pageTitle, styles.title, { color: colors.ink }]} accessibilityRole="header">
+        {t('pathHome.titleLead')}
+        <Text style={{ color: colors.accent }}>{t('pathHome.titleAccent')}</Text>
+      </Text>
+      <FeedbackPill testID="path-feedback" />
+    </Entrance>
+  );
 
   // --- No path yet: the invitation ---
   if (!state?.community || !state.stage) {
     return (
-      <Screen>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
         <CompanionPerches placement={perch}>
-        <View style={styles.center}>
-          <Entrance index={0}>
-            <View style={styles.hero}>
-              <CompanionSlot id="inviteHero" flow size={96} />
-              <Text style={[styles.heroTitle, { color: colors.ink }]} accessibilityRole="header">
-                {t('path.inviteTitle')}
-              </Text>
-              <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>
-                {t('path.inviteBody')}
-              </Text>
-            </View>
-          </Entrance>
-          <Entrance index={1}>
-            <View>
+          <View style={styles.inviteTop}>{header}</View>
+          <View style={styles.center}>
+            <Entrance index={2}>
+              <View style={styles.hero}>
+                <CompanionSlot id="inviteHero" flow size={96} />
+                <Text style={[type.sheetTitle, styles.centerText, { color: colors.ink }]}>{t('path.inviteTitle')}</Text>
+                <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>{t('path.inviteBody')}</Text>
+              </View>
+            </Entrance>
+            <Entrance index={3} style={styles.inviteCta}>
               <CompanionSlot id="inviteCta" size={48} inset={space.sm} />
               <CompanionSlot id="inviteCtaDangle" size={56} inset={space.sm} />
-              <Pressable
-                style={[styles.cta, { backgroundColor: colors.accent }]}
-                onPress={() => void startPathfinder()}
-                accessibilityRole="button"
+              <PressKey
+                onPress={openPathfinder}
+                edge={colors.accentEdge}
+                radius={radius.md}
                 testID="path-start"
+                style={[styles.bigKey, { backgroundColor: colors.accent }]}
               >
-                <Text style={styles.ctaLabel}>{t('path.findCta')}</Text>
-              </Pressable>
-            </View>
-          </Entrance>
-          {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}
-        </View>
-        {/* The tab bar's top edge is this screen's floor. */}
-        <View style={styles.floor} pointerEvents="none">
-          <CompanionSlot id="tabBarLeft" size={56} align="left" inset={space.lg} attach="floor" />
-          <CompanionSlot id="tabBarNap" size={56} align="left" inset={space.lg} attach="floor" />
-          <CompanionSlot id="tabBarPeek" size={46} align="left" inset={space.xl} attach="floor" />
-        </View>
+                <Text style={[type.key, { color: colors.onAccent }]}>{t('path.findCta')}</Text>
+                <Ionicons name="arrow-forward" size={20} color={colors.onAccent} />
+              </PressKey>
+            </Entrance>
+          </View>
+          {/* The tab bar's top edge is this screen's floor. */}
+          <View style={styles.floor} pointerEvents="none">
+            <CompanionSlot id="tabBarLeft" size={56} align="left" inset={space.lg} attach="floor" />
+            <CompanionSlot id="tabBarNap" size={56} align="left" inset={space.lg} attach="floor" />
+            <CompanionSlot id="tabBarPeek" size={46} align="left" inset={space.xl} attach="floor" />
+          </View>
         </CompanionPerches>
-      </Screen>
+      </SafeAreaView>
     );
   }
 
   // --- Path home ---
   const { community, stage } = state;
+  const lens = `${community.name} · ${stage.title}`;
+  const openBuilder = (starter?: string) =>
+    // The first-question builder (DECISIONS §L.8): the starter is shaped there and handed to
+    // the chat composer — nothing is matched or sent on this tap.
+    router.push({
+      pathname: '/path-question',
+      params: { ...(starter ? { starter } : {}), community: community.slug, lens },
+    });
+
   return (
-    <Screen scroll>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
       <CompanionPerches placement={perch}>
-      <Entrance index={0}>
-        <View style={styles.homeHead}>
-          <View style={{ flex: 1 }}>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('path.yourPath')}</Text>
-            <Text style={[styles.homeTitle, { color: colors.ink }]} accessibilityRole="header">
-              {community.name} · {stage.title}
-            </Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{stage.blurb}</Text>
-          </View>
-          <CompanionSlot id="headRight" flow reserve size={56} trigger={joy} />
-        </View>
-      </Entrance>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          {header}
 
-      {state.seasonal ? (
-        <Entrance index={1}>
-          <View style={styles.seasonalWrap}>
-          <CompanionSlot id="seasonalTop" size={56} />
-          <CompanionSlot id="seasonalNap" size={56} />
-          <CompanionSlot id="seasonalDangle" size={60} />
-          <View style={[styles.seasonal, { backgroundColor: colors.accentTint }]}>
-            <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: colors.ink }]}>{state.seasonal.title}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{state.seasonal.body}</Text>
-            </View>
-          </View>
-          </View>
-        </Entrance>
-      ) : null}
-
-      <Entrance index={2}>
-        <Text style={[styles.section, { color: colors.ink }]}>{t('path.promptsTitle')}</Text>
-        <Text style={[type.caption, { color: colors.inkMuted, marginBottom: space.sm }]}>
-          {t('path.promptsSub')}
-        </Text>
-        {state.prompts.map((p, i) => (
-          <TiltCard
-            key={p}
-            style={[styles.promptCard, { backgroundColor: colors.surface }]}
-            edge={colors.edgeSurface}
-            onPress={() =>
-              // The first-question builder (DECISIONS §L.8): the starter is shaped there and
-              // handed to the chat composer — nothing is matched or sent on this tap.
-              router.push({
-                pathname: '/path-question',
-                params: { starter: p, community: community.slug, lens: `${community.name} · ${stage.title}` },
-              })
-            }
-            disabled={matching}
-            testID={`path-prompt-${i}`}
-          >
-            <Text style={[styles.promptText, { color: colors.ink }]}>"{p}"</Text>
-            <Ionicons name="arrow-forward-circle" size={22} color={colors.accent} />
-          </TiltCard>
-        ))}
-      </Entrance>
-
-      <Entrance index={3}>
-        <View style={styles.talkWrap}>
-        <EdgeSurface
-          edge={colors.edgeSurface}
-          style={[styles.talkCard, { backgroundColor: colors.surface }]}
-        >
-          {/* The heading block keeps its right corner free — the companion can stand there. */}
-          <View style={styles.talkHead}>
-            <Text style={[styles.cardTitle, { color: colors.ink }]}>
-              {t('path.talkTitle')}
-            </Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {state.listeners_online > 0
-                ? t(state.listeners_online === 1 ? 'path.listenersOne' : 'path.listenersOther', {
-                    count: state.listeners_online,
-                  })
-                : t('path.listenersNone')}
-            </Text>
-            <CompanionSlot id="talkCorner" size={48} attach="floor" />
-          </View>
-          <View style={styles.talkRow}>
-            <Pressable
-              style={[styles.cta, { backgroundColor: colors.accent, flex: 1 }]}
-              onPress={() => void talk()}
-              disabled={matching}
-              accessibilityRole="button"
-              testID="path-talk"
+          <Entrance index={2} style={styles.lift}>
+            <EdgeSurface
+              edge={colors.edgeSurface}
+              travel={3}
+              radius={radius.lg}
+              style={[styles.stageCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
-              {matching ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.ctaLabel}>{t('path.talkNow')}</Text>
-              )}
-            </Pressable>
-            <Pressable
-              style={[styles.ghost, { borderColor: colors.border }]}
-              onPress={() => router.push('/(tabs)/mentors')}
-              accessibilityRole="button"
-              testID="path-browse"
+              {/* The companion's home is beside the community name; the room is only kept
+                  while it is actually standing there (it roams between arrivals). */}
+              <View style={[styles.stageTop, perch.slotId === 'stageTop' ? styles.stageTopRoom : null]}>
+                <View style={styles.stageNames}>
+                  <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>{t('pathHome.yourCommunity')}</Text>
+                  <Text style={[styles.community, { color: colors.ink }]} numberOfLines={1} testID="path-community">
+                    {community.name}
+                  </Text>
+                </View>
+                <PressKey
+                  onPress={openPathfinder}
+                  edge={colors.edgeAlt}
+                  travel={3}
+                  radius={radius.pill}
+                  accessibilityLabel={t('pathHome.changeA11y')}
+                  testID="path-change"
+                  style={[styles.change, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+                >
+                  <Ionicons name="swap-horizontal-outline" size={16} color={colors.ink} />
+                  <Text style={[type.label, { color: colors.ink }]}>{t('pathHome.change')}</Text>
+                </PressKey>
+              </View>
+              <View>
+                <CompanionSlot id="stageTop" size={64} align="left" inset={4} nudge={8} />
+                <View style={[styles.stagePanel, { backgroundColor: colors.accentTint }]}>
+                  <StageSheen />
+                  <Text style={[styles.stageTitle, { color: colors.ink }]} testID="path-stage">
+                    {stage.title}
+                  </Text>
+                  <Text style={[type.note, { color: colors.ink }]}>{stage.blurb}</Text>
+                </View>
+              </View>
+            </EdgeSurface>
+          </Entrance>
+
+          {state.seasonal ? (
+            <Entrance index={3} style={styles.lift}>
+              <CompanionSlot id="seasonalTop" size={56} inset={space.md} />
+              <CompanionSlot id="seasonalNap" size={56} inset={space.md} />
+              <CompanionSlot id="seasonalDangle" size={60} inset={space.md} />
+              <EdgeSurface
+                edge={colors.edgeAlt}
+                travel={3}
+                radius={radius.lg}
+                style={[styles.seasonal, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+                testID="path-seasonal"
+              >
+                <View style={[styles.seasonalIcon, { backgroundColor: wash.indigo }]}>
+                  <Ionicons name="calendar-outline" size={20} color={COMPANION_COLORS.plum.accentEdge} />
+                </View>
+                <View style={styles.seasonalText}>
+                  <Text style={[styles.cardTitle, { color: colors.ink }]}>{state.seasonal.title}</Text>
+                  <Text style={[type.caption, { color: colors.inkMuted }]}>{state.seasonal.body}</Text>
+                </View>
+              </EdgeSurface>
+            </Entrance>
+          ) : null}
+
+          {state.prompts.length > 0 ? (
+            <Entrance index={4} style={styles.prompts}>
+              <Text style={[styles.section, { color: colors.ink }]}>{t('path.promptsTitle')}</Text>
+              {state.prompts.map((p, i) => (
+                <PressKey
+                  key={p}
+                  onPress={() => openBuilder(p)}
+                  edge={colors.edgeSurface}
+                  radius={radius.md}
+                  testID={`path-prompt-${i}`}
+                  style={[styles.prompt, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <Text style={[styles.promptText, { color: colors.ink }]}>{p}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+                </PressKey>
+              ))}
+            </Entrance>
+          ) : null}
+
+          <Entrance index={5} style={styles.lift}>
+            <CompanionSlot id="talkCorner" size={48} inset={space.md} />
+            <EdgeSurface
+              edge={colors.edgeSurface}
+              travel={3}
+              radius={radius.lg}
+              style={[styles.talkCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
-              <Text style={[styles.ghostLabel, { color: colors.accent }]}>{t('path.browse')}</Text>
-            </Pressable>
-          </View>
-        </EdgeSurface>
-        </View>
-      </Entrance>
-
-      {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}
-
-      <Entrance index={4}>
-        <Pressable
-          style={styles.change}
-          onPress={() => void startPathfinder()}
-          accessibilityRole="button"
-          testID="path-change"
-        >
-          <Ionicons name="swap-horizontal-outline" size={14} color={colors.inkMuted} />
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('path.change')}</Text>
-        </Pressable>
-      </Entrance>
+              <View>
+                <Text style={[styles.talkTitle, { color: colors.ink }]}>{t('path.talkTitle')}</Text>
+                <View style={styles.talkLine}>
+                  <Ionicons name="time-outline" size={14} color={colors.inkMuted} />
+                  <Text style={[type.caption, { color: colors.inkMuted }]} testID="path-mentors-line">
+                    {state.listeners_online > 0
+                      ? t(state.listeners_online === 1 ? 'path.listenersOne' : 'path.listenersOther', {
+                          count: state.listeners_online,
+                        })
+                      : t('path.listenersNone')}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.talkRow}>
+                <PressKey
+                  onPress={() => openBuilder()}
+                  edge={colors.accentEdge}
+                  radius={radius.md}
+                  testID="path-talk"
+                  containerStyle={styles.askBox}
+                  style={[styles.talkKey, { backgroundColor: colors.accent }]}
+                >
+                  <Text style={[type.keyDense, { color: colors.onAccent }]} numberOfLines={1}>
+                    {t('path.talkNow')}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={18} color={colors.onAccent} />
+                </PressKey>
+                <PressKey
+                  onPress={() => router.push('/mentors')}
+                  edge={colors.edgeAlt}
+                  radius={radius.md}
+                  testID="path-browse"
+                  containerStyle={styles.browseBox}
+                  style={[styles.talkKey, styles.bordered, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+                >
+                  <Text style={[type.keyDense, { color: colors.ink }]} numberOfLines={1}>
+                    {t('path.browse')}
+                  </Text>
+                </PressKey>
+              </View>
+            </EdgeSurface>
+          </Entrance>
+        </ScrollView>
       </CompanionPerches>
-    </Screen>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg },
+  safe: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg, paddingHorizontal: space.lg },
   centerText: { textAlign: 'center' },
-  hero: { alignItems: 'center', gap: space.sm, marginTop: space.md, marginBottom: space.lg },
-  heroTitle: {
-    fontFamily: font.sansHeavy,
-    fontSize: 24,
-    lineHeight: 32,
-    textAlign: 'center',
-    marginTop: space.xs,
-  },
-  cardSpacing: { marginBottom: space.sm },
-  optionCard: {
+  content: { paddingTop: space.xs, paddingHorizontal: space.md, paddingBottom: space.lg, gap: space.sm },
+  head: {
+    minHeight: 44,
+    paddingHorizontal: space.sm,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.md,
-    borderRadius: radius.lg,
-    padding: space.md,
+    justifyContent: 'space-between',
+    gap: 12,
   },
-  optionLabel: { flex: 1, fontFamily: font.sansSemi, fontSize: 15, lineHeight: 21 },
-  cta: {
-    borderRadius: radius.lg,
-    paddingVertical: 14,
-    paddingHorizontal: space.xl,
-    alignItems: 'center',
-  },
-  ctaLabel: { color: '#fff', fontFamily: font.sansBold, fontSize: 16 },
-  ghost: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    paddingVertical: 14,
-    paddingHorizontal: space.lg,
-    alignItems: 'center',
-  },
-  ghostLabel: { fontFamily: font.sansBold, fontSize: 15 },
-  homeHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    marginTop: space.sm,
-    marginBottom: space.md,
-  },
-  homeTitle: { fontFamily: font.sansHeavy, fontSize: 21, lineHeight: 28 },
-  seasonalWrap: { marginBottom: space.md, zIndex: 1 },
+  title: { lineHeight: 34, flexShrink: 1 },
+  inviteTop: { paddingTop: space.xs, paddingHorizontal: space.md },
+  hero: { alignItems: 'center', gap: space.sm },
+  inviteCta: { alignSelf: 'stretch' },
+  bigKey: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
+  floor: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 0 },
+  lift: { zIndex: 2 },
+  stageCard: { padding: 12, gap: space.sm, borderWidth: 1 },
+  stageTop: { minHeight: 44, paddingLeft: space.xs, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  stageTopRoom: { paddingLeft: 70 },
+  stageNames: { flex: 1, minWidth: 0 },
+  eyebrow: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 16, letterSpacing: 0.5, textTransform: 'uppercase' },
+  community: { fontFamily: font.sansHeavy, fontSize: 22, lineHeight: 26 },
+  change: { height: 44, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1 },
+  stagePanel: { overflow: 'hidden', paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.md },
+  stageTitle: { fontFamily: font.sansHeavy, fontSize: 18, lineHeight: 24 },
   seasonal: {
     flexDirection: 'row',
-    gap: space.sm,
     alignItems: 'flex-start',
-    borderRadius: radius.lg,
-    padding: space.md,
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderWidth: 1,
   },
-  cardTitle: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 21 },
-  section: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24, marginTop: space.sm },
-  promptCard: {
+  seasonalIcon: { width: 36, height: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  seasonalText: { flex: 1, minWidth: 0 },
+  cardTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22 },
+  prompts: { gap: 10 },
+  section: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 20, paddingTop: 2, paddingHorizontal: space.sm },
+  prompt: {
+    minHeight: 44,
+    paddingVertical: space.sm,
+    paddingLeft: 14,
+    paddingRight: 10,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    borderRadius: radius.lg,
-    padding: space.md,
+    borderWidth: 1,
   },
-  promptText: { flex: 1, fontFamily: font.sansSemi, fontSize: 14, lineHeight: 20 },
-  talkWrap: { marginTop: space.md, zIndex: 1 },
-  talkCard: { borderRadius: radius.lg, padding: space.md, gap: space.xs },
-  talkHead: { gap: space.xs, paddingRight: 56, minHeight: 44 },
-  floor: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 0 },
-  talkRow: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
-  note: { textAlign: 'center', marginTop: space.sm },
-  change: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginVertical: space.lg,
-  },
+  promptText: { flex: 1, fontFamily: font.sansSemi, fontSize: 15, lineHeight: 20 },
+  talkCard: { paddingVertical: 10, paddingHorizontal: 14, gap: 6, borderWidth: 1 },
+  talkTitle: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 22 },
+  talkLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  talkRow: { flexDirection: 'row', gap: 12 },
+  askBox: { flex: 1.3 },
+  browseBox: { flex: 1 },
+  talkKey: { height: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
+  bordered: { borderWidth: 1 },
 });
