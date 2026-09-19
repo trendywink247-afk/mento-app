@@ -197,7 +197,7 @@
     },
     "companion": {
       "headline": "Your growth,\nyour ",
-      "sub": "Your emotional growth will be represented by an animal and a colour.",
+      "sub": "Your growth will be represented by an animal and a colour.",
       "step1": "1. Choose an animal",
       "step1Sub": "This will be your growth companion",
       "step2": "2. Choose a colour",
@@ -355,7 +355,7 @@
       "endBody": "The chat closes. Your saved notes stay.",
       "report": "Report or block",
       "reportBody": "Tell the Mento team what happened.",
-      "coffee": "Buy the Mento Team a Coffee",
+      "coffee": "Support the team",
       "coffeeBody": "Support the Mento team and help us keep this space safe and free.",
       "footerTitle": "Your well-being and safety are our priority.",
       "footerBody": "You're not alone. We're here for you."
@@ -579,7 +579,7 @@
     "retryA11y": "Retry loading conversations",
     "emptyTitle": "No conversations yet",
     "emptyBody": "When you start talking with a mentor, your conversations will live here. Always private.",
-    "startCta": "Start a Conversation",
+    "startCta": "Start a conversation",
     "privacyFooter": "Your conversations are private.",
     "wiped": "Messages wiped — gone from both sides.",
     "sayHello": "Say hello when you're ready.",
@@ -741,7 +741,7 @@
     "languageBody": "Choose the language Mento speaks with you.",
     "languageEnglish": "English",
     "languageHindi": "हिंदी",
-    "coffeeTitle": "Buy the Mento Team a Coffee",
+    "coffeeTitle": "Support the team",
     "coffeeBody": "Optional, always — it keeps this space free and safe.",
     "listenersTitle": "Mentors, not therapists",
     "listenersBody": "Mento connects you with real people who listen. For clinical support, please reach a professional — in a crisis, call Tele-MANAS (14416), free, 24×7.",
@@ -772,7 +772,7 @@
     "runningEmbedded": "Running the built-in version"
   },
   "coffee": {
-    "askTitle": "Would you like to buy the Mento team a coffee?",
+    "askTitle": "Would you like to support the team?",
     "askBody": "It keeps the team going as we build a safe space for more people."
   },
   "mentorProfile": {
@@ -1301,5 +1301,8 @@
     "postmarkA11y": "Sent through Mento",
     "notFound": "We could not find this question. It may have been closed.",
     "loadError": "We could not load your question just now. It is still on its way."
+  },
+  "chatsEmpty": {
+    "companionA11y": "Your companion, here with you"
   }
 }

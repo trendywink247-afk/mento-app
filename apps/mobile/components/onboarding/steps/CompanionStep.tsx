@@ -179,6 +179,33 @@ export function CompanionStep({
     <StepScaffold
       footerIndex={4}
       scrollRef={scrollRef}
+      // The headline and the hero companion stay put; only the picks scroll under them,
+      // so the companion is never cut by the scroll edge (not when the name row arrives,
+      // not on a short phone).
+      header={
+        <Entrance index={1} style={styles.head}>
+          <View style={styles.headText}>
+            <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
+              {t('onboarding.companion.headline')}
+              <Text style={{ color: colors.accent }}>{t('onboarding.companion.headlineAccent')}</Text>
+            </Text>
+            <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{t('onboarding.companion.sub')}</Text>
+          </View>
+          <View
+            style={styles.hero}
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={t('onboarding.companion.heroA11y', { animal: animal ?? 'Panda' })}
+          >
+            <View style={[styles.heroShelf, { backgroundColor: colors.edgeSurface }]} />
+            <View style={styles.heroArt}>
+              <Breathe on>
+                <Companion animal={animal} size={HERO_ART} pose={heroPose} trigger={greet} awake />
+              </Breathe>
+            </View>
+          </View>
+        </Entrance>
+      }
       footer={
         <>
           <View style={styles.keys}>
@@ -210,30 +237,8 @@ export function CompanionStep({
         </>
       }
     >
-      <Entrance index={1} style={styles.head}>
-        <View style={styles.headText}>
-          <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
-            {t('onboarding.companion.headline')}
-            <Text style={{ color: colors.accent }}>{t('onboarding.companion.headlineAccent')}</Text>
-          </Text>
-          <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{t('onboarding.companion.sub')}</Text>
-        </View>
-        <View
-          style={styles.hero}
-          accessible
-          accessibilityRole="image"
-          accessibilityLabel={t('onboarding.companion.heroA11y', { animal: animal ?? 'Panda' })}
-        >
-          <View style={[styles.heroShelf, { backgroundColor: colors.edgeSurface }]} />
-          <View style={styles.heroArt}>
-            <Breathe on>
-              <Companion animal={animal} size={HERO_ART} pose={heroPose} trigger={greet} awake />
-            </Breathe>
-          </View>
-        </View>
-      </Entrance>
 
-      <Entrance index={2} style={styles.section}>
+      <Entrance index={2} style={[styles.section, styles.firstSection]}>
         <View>
           <Text style={[type.bodySemi, styles.sectionTitle, { color: colors.ink }]}>
             {t('onboarding.companion.step1')}
@@ -348,6 +353,8 @@ const styles = StyleSheet.create({
   heroShelf: { position: 'absolute', left: 8, right: 8, bottom: 0, height: 22, borderRadius: radius.pill },
   heroArt: { position: 'absolute', left: (HERO_W - HERO_ART) / 2, bottom: 8, width: HERO_ART, height: HERO_ART },
   section: { gap: 10, marginTop: 18 },
+  // The board's 18 between the head and the picks: 8 under the fixed header + 10 here.
+  firstSection: { marginTop: 10 },
   sectionTitle: { lineHeight: 22 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 10, rowGap: 12 },
   // Three across: (100% − 2 gaps) / 3, as a basis so the keys share the row exactly.
