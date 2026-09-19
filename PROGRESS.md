@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-09-20 (session 36, part 4) — LIVE: the "Left to build or wire" fixes (round 3) ✅
+
+**Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0bb44` (preview, commit `17eea27`). Web: https://app.agentin.chat · https://admin.agentin.chat/admin (new tabs: Allowance, Feedback).
+
+- **Merged:** `6f1b4fb` lane u12 (companion pick copy + clipping, Profile "Support the team", My Chats empty state, admin Allowance + Feedback panels), `fe76854` lane u11 (one mentor, one face — `listener_profiles.companion_animal/colour`, migration `4b971bd4faaa`; member companions on Mentor Home; Your line sheet; mentor chat companion; application copy), `c40ba79` lane u10 (New chat busy exits; one open question at a time — 409 `question_open` + `DELETE /listeners/requests/{id}`; composer grows to 5 lines; the pre-ask mentor page + question step; empty thread; "Save to Journal"). Merge fixes: lane 10's mentor page + the open-question note now draw mentors with lane 11's `MentorFace`; the `question_open` 409 carries the waiting mentor's face (test added).
+- **Gate:** pytest `476 passed`, alembic check clean, ruff + black clean, tsc clean, EN/HI 1196 = 1196, contrast 65/65, e2e 36 + mentor-face (needs `MENTO_DB`; the gate runner now defaults it) = all green.
+- **Prod:** backup `mento-20260919-155838.sql.gz` → `deploy.sh` (alembic head `4b971bd4faaa`, health + ready 200) → `deploy-web.sh` → OTA `01a0bb44`.
+- **Open (founder):** mentors' animals are dealt at random across all 9 (board shows mostly owls) — let mentors pick, stay random, or default to owls?; lane 10's veto list (open-question definition, "Close this question" link, empty thread without art, "No star ratings" card); lane 12's (board A03/A09 artboards still show the old copy; the companion-pick scroll trade-off). Parked: companion glide, row→chat animation, living art (credits).
+
 ## 2026-09-20 (session 36, part 3) — LIVE: Start fresh erases on our servers, one mentor path, talk-today, the question letter, companion names ✅
 
 **Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0bb02` (preview, commit `1f0029e`). Web: https://app.agentin.chat · https://admin.agentin.chat/admin.
