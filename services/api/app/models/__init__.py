@@ -2,6 +2,7 @@
 
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.allowance import MessageAllowanceDay
+from app.models.chat_message import ChatMessage, ChatReadMarker
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation
 from app.models.favourite import FavouriteListener

@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Own-chat spike</title>
+<style>
+  :root { --oat:#F4EFE6; --ink:#2B2B2B; --clay:#A2533A; --sage:#7D8F7A; --card:#FBF8F2; --line:#E2DACB; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.4 system-ui, sans-serif; background:var(--oat); color:var(--ink); }
+  header { padding:14px 20px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; border-bottom:1px solid var(--line); }
+  header h1 { font-size:16px; margin:0 12px 0 0; }
+  button { font:inherit; padding:6px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); cursor:pointer; }
+  button.primary { background:var(--clay); color:#fff; border-color:var(--clay); }
+  main { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px 20px; }
+  @media (max-width:800px) { main { grid-template-columns:1fr; } }
+  .pane { background:var(--card); border:1px solid var(--line); border-radius:16px; display:flex; flex-direction:column; height:520px; }
+  .pane h2 { margin:0; padding:12px 16px; font-size:14px; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#bbb; margin-right:6px; }
+  .dot.on { background:var(--sage); }
+  .log { flex:1; overflow:auto; padding:12px 16px; display:flex; flex-direction:column; gap:6px; }
+  .msg { max-width:78%; padding:8px 12px; border-radius:14px; background:#fff; border:1px solid var(--line); align-self:flex-start; }
+  .msg.me { align-self:flex-end; background:var(--clay); color:#fff; border-color:var(--clay); }
+  .meta { font-size:11px; opacity:.7; margin-top:2px; }
+  .crisis { margin-top:6px; padding:8px 10px; border-radius:10px; background:#FFF3E8; color:var(--ink); font-size:13px; border:1px solid #E7C9A8; }
+  .note { align-self:center; font-size:12px; color:#6b6b6b; text-align:center; }
+  .typing { height:18px; padding:0 16px; font-size:12px; color:#6b6b6b; }
+  form { display:flex; gap:8px; padding:10px 12px; border-top:1px solid var(--line); }
+  input { flex:1; font:inherit; padding:8px 12px; border-radius:10px; border:1px solid var(--line); background:#fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Own-chat spike — one server, no Stream</h1>
+  <button class="primary" id="new">New conversation</button>
+  <button id="drop">Drop mentor connection</button>
+  <button id="back">Reconnect mentor</button>
+  <button id="wipe">Clean Wipe (member)</button>
+  <span id="status" class="meta"></span>
+</header>
+<main>
+  <section class="pane" id="p-member"><h2><span>Member — Quiet Cove</span><span><i class="dot"></i><span class="peer">peer offline</span></span></h2><div class="log"></div><div class="typing"></div>
+    <form><input placeholder="Type as the member… (try: i want to end my life)"><button class="primary">Send</button></form></section>
+  <section class="pane" id="p-mentor"><h2><span>Mentor — Open River</span><span><i class="dot"></i><span class="peer">peer offline</span></span></h2><div class="log"></div><div class="typing"></div>
+    <form><input placeholder="Type as the mentor…"><button class="primary">Send</button></form></section>
+</main>
+<script>
+const API = location.origin + "/api/v1";
+let session = null;
+const side = {};
+
+class Side {
+  constructor(name, pane) {
+    this.name = name; this.pane = pane; this.ws = null; this.lastSeq = 0; this.seen = new Set();
+    this.log = pane.querySelector(".log"); this.typing = pane.querySelector(".typing");
+    this.dot = pane.querySelector(".dot"); this.peer = pane.querySelector(".peer");
+    this.input = pane.querySelector("input"); this.readTo = 0; this.typingTimer = null;
+    pane.querySelector("form").addEventListener("submit", e => { e.preventDefault(); this.send(); });
+    this.input.addEventListener("input", () => {
+      this.ws && this.ws.readyState === 1 && this.ws.send(JSON.stringify({t:"typing", on:true}));
+      clearTimeout(this.typingTimer);
+      this.typingTimer = setTimeout(() => this.ws && this.ws.readyState === 1 && this.ws.send(JSON.stringify({t:"typing", on:false})), 1500);
+    });
+  }
+  connect() {
+    const who = session[this.name];
+    this.ws = new WebSocket(API.replace("http", "ws") + "/chat/ws/" + session.conversation_id);
+    this.ws.onopen = () => {
+      this.ws.send(JSON.stringify({t:"hello", token: who.token, after: this.lastSeq}));
+      clearInterval(this.pinger);  // keeps presence fresh server-side
+      this.pinger = setInterval(() => this.ws.readyState === 1 && this.ws.send(JSON.stringify({t:"ping"})), 30000);
+    };
+    this.ws.onmessage = ev => this.on(JSON.parse(ev.data));
+    this.ws.onclose = () => { this.peerState(false); this.note("connection closed"); };
+  }
+  close() { this.ws && this.ws.close(); }
+  peerState(on) { this.dot.classList.toggle("on", on); this.peer.textContent = on ? "peer online" : "peer offline"; }
+  note(text) { const d = document.createElement("div"); d.className = "note"; d.textContent = text; this.log.append(d); this.log.scrollTop = 1e9; }
+  on(f) {
+    if (f.t === "hello") { this.peerState(f.peer_online); }
+    else if (f.t === "presence") { this.peerState(f.online); }
+    else if (f.t === "typing") { this.typing.textContent = f.on ? "typing…" : ""; }
+    else if (f.t === "read") { this.pane.dataset.peerRead = f.seq; this.refreshTicks(); }
+    else if (f.t === "held") { this.note(f.allowance.text); }
+    else if (f.t === "wiped") { this.log.innerHTML = ""; this.lastSeq = 0; this.seen.clear(); this.note("Wiped — deleted from the server"); }
+    else if (f.t === "error") { this.note("error: " + f.code); }
+    else if (f.t === "message") { this.message(f.message); }
+  }
+  message(m) {
+    if (this.seen.has(m.id)) return;
+    this.seen.add(m.id); this.lastSeq = Math.max(this.lastSeq, m.seq);
+    const mine = m.sender === session[this.name].id;
+    const d = document.createElement("div"); d.className = "msg" + (mine ? " me" : ""); d.dataset.seq = m.seq;
+    d.textContent = m.text;
+    const meta = document.createElement("div"); meta.className = "meta"; meta.textContent = "#" + m.seq; d.append(meta);
+    if (m.crisis) {
+      const c = document.createElement("div"); c.className = "crisis";
+      c.innerHTML = "<b>" + m.crisis.support + "</b><br>" + m.crisis.helplines.map(h => h.name + " " + h.number).join(" · ");
+      d.append(c);
+    }
+    if (m.moderation) { meta.textContent += " · details hidden"; }
+    this.log.append(d); this.log.scrollTop = 1e9;
+    if (!mine && this.ws.readyState === 1) this.ws.send(JSON.stringify({t:"read", seq: m.seq}));
+    this.refreshTicks();
+  }
+  refreshTicks() {
+    const upto = +(this.pane.dataset.peerRead || 0);
+    this.log.querySelectorAll(".msg.me").forEach(el => {
+      const meta = el.querySelector(".meta"); const seq = +el.dataset.seq;
+      meta.textContent = meta.textContent.replace(/ · read$/, "") + (seq <= upto ? " · read" : "");
+    });
+  }
+  send() {
+    const text = this.input.value.trim(); if (!text) return;
+    this.ws.send(JSON.stringify({t:"send", client_id: crypto.randomUUID(), text})); this.input.value = "";
+  }
+}
+
+async function start() {
+  Object.values(side).forEach(s => s.close());
+  session = await (await fetch(API + "/chat/spike/session", {method:"POST"})).json();
+  for (const name of ["member", "mentor"]) {
+    const s = side[name] ||= new Side(name, document.getElementById("p-" + name));
+    s.log.innerHTML = ""; s.lastSeq = 0; s.seen.clear(); s.pane.dataset.peerRead = 0; s.connect();
+  }
+  document.getElementById("status").textContent = "conversation " + session.conversation_id.slice(0, 8);
+}
+document.getElementById("new").onclick = start;
+document.getElementById("drop").onclick = () => { side.mentor.close(); };
+document.getElementById("back").onclick = () => { side.mentor.connect(); side.mentor.note("reconnected — caught up from seq " + side.mentor.lastSeq); };
+document.getElementById("wipe").onclick = () => fetch(API + "/chat/" + session.conversation_id + "/wipe", {method:"POST", headers:{Authorization:"Bearer " + session.member.token}});
+start();
+</script>
+</body>
+</html>
