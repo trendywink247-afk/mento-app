@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="%LANG_ISO_CODE%">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>%WEB_TITLE%</title>
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+    <!-- reason: literal hex because this file is served before any JS runs. It must equal
+         `colors.bg` (oat ground) in theme/tokens.ts, and app.json's splash / adaptive-icon
+         background. First paint (cold load, the frames before Baloo 2 resolves, the gap
+         between two routes) is then the app's own ground, never browser white.
+         This is the web root for `web.output: "single"`; expo-router's `app/+html.tsx`
+         only applies to static rendering and is ignored in this mode. -->
+    <style id="mento-ground">
+      html,
+      body,
+      #root {
+        background-color: #F4EFE6;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>
+      You need to enable JavaScript to run this app.
+    </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>
