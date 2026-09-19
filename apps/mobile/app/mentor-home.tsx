@@ -12,6 +12,7 @@ import { ConversationRow, isSnoozed } from '@/components/mentor/ConversationRow'
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { RequestCard } from '@/components/mentor/RequestCard';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
+import { LineSheet } from '@/components/mentor/LineSheet';
 import { StayInTouchSheet } from '@/components/mentor/StayInTouchSheet';
 import { SettleBack } from '@/components/motion/SettleBack';
 import { Entrance } from '@/components/motion/Entrance';
@@ -19,7 +20,7 @@ import { Tilt3D } from '@/components/motion/Tilt3D';
 import { api, type ListenerApplication } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
-import { listenerApi, type StayInTouchAsk } from '@/lib/listenerApi';
+import { listenerApi, type ListenerMe, type StayInTouchAsk } from '@/lib/listenerApi';
 import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
 import { continueAsMember, loadApplication as readApplication } from '@/lib/mentorPath';
 import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
@@ -50,6 +51,9 @@ export default function MentorHome() {
   // Board A15: the stay-in-touch decision sheet over a settled-back Mentor Home.
   const [sheet, setSheet] = useState<{ ask: StayInTouchAsk; seats: number } | null>(null);
   const [asksVersion, setAsksVersion] = useState(0);
+  // "Your line" — the same sheet pattern, over the same settled-back Mentor Home.
+  const [lineMe, setLineMe] = useState<ListenerMe | null>(null);
+  const [lineVersion, setLineVersion] = useState(0);
   // A member brief's "asked to stay in touch" row comes back here with ?ask=<id>.
   const { ask: askParam } = useLocalSearchParams<{ ask?: string }>();
   // null = not attempted / minting; true = a listener token is on device and
@@ -153,12 +157,24 @@ export default function MentorHome() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
       <SettleBack
-        open={!!sheet}
-        onDismiss={() => setSheet(null)}
-        dismissLabel={t('mentorInTouch.later')}
-        sheetLabel={t('mentorInTouch.sheetA11y')}
+        open={!!sheet || !!lineMe}
+        onDismiss={() => {
+          setSheet(null);
+          setLineMe(null);
+        }}
+        dismissLabel={lineMe ? t('common.cancel') : t('mentorInTouch.later')}
+        sheetLabel={lineMe ? t('mentor.line.title') : t('mentorInTouch.sheetA11y')}
         sheet={
-          sheet ? (
+          lineMe ? (
+            <LineSheet
+              me={lineMe}
+              onClose={() => setLineMe(null)}
+              onSaved={() => {
+                setLineMe(null);
+                setLineVersion((n) => n + 1);
+              }}
+            />
+          ) : sheet ? (
             <StayInTouchSheet
               key={sheet.ask.id}
               ask={sheet.ask}
@@ -208,6 +224,8 @@ export default function MentorHome() {
           <ConsoleBody
             animal={animal}
             asksVersion={asksVersion}
+            lineVersion={lineVersion}
+            onOpenLine={setLineMe}
             openAskId={typeof askParam === 'string' ? askParam : undefined}
             onOpenAsk={(ask, seats) => setSheet({ ask, seats })}
             onSessionLost={() => {
@@ -273,12 +291,17 @@ export default function MentorHome() {
 function ConsoleBody({
   animal,
   asksVersion,
+  lineVersion,
+  onOpenLine,
   openAskId,
   onOpenAsk,
   onSessionLost,
 }: {
   animal: CompanionAnimal | null;
   asksVersion: number;
+  /** Bumped after "Your line" saves — the console re-reads `me`. */
+  lineVersion: number;
+  onOpenLine: (me: ListenerMe) => void;
   openAskId?: string;
   onOpenAsk: (ask: StayInTouchAsk, seats: number) => void;
   onSessionLost: () => void;
@@ -334,6 +357,11 @@ function ConsoleBody({
   }, []);
   useFocusEffect(loadAsks);
   useEffect(loadAsks, [asksVersion, loadAsks]);
+  // "Your line" saved: re-read `me` so the row shows the new line (skips the first render).
+  const refreshConsole = c.refresh;
+  useEffect(() => {
+    if (lineVersion > 0) void refreshConsole();
+  }, [lineVersion, refreshConsole]);
   useEffect(() => {
     if (!openAskId || !c.me || openedFromParam.current === openAskId) return;
     const hit = asks.find((a) => a.id === openAskId);
@@ -408,7 +436,14 @@ function ConsoleBody({
 
   return (
     <View style={styles.console}>
-      <PresenceHeader me={c.me} animal={animal} busy={c.busy === 'status'} swept={swept} onToggle={handleToggle} />
+      <PresenceHeader
+        me={c.me}
+        animal={animal}
+        busy={c.busy === 'status'}
+        swept={swept}
+        onToggle={handleToggle}
+        onOpenLine={() => c.me && onOpenLine(c.me)}
+      />
 
       {asks.length ? (
         <Entrance index={2} style={styles.list}>

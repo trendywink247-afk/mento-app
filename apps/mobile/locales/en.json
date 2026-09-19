@@ -1301,5 +1301,14 @@
     "postmarkA11y": "Sent through Mento",
     "notFound": "We could not find this question. It may have been closed.",
     "loadError": "We could not load your question just now. It is still on its way."
+  },
+  "mentorLineSheet": {
+    "placeholder": "For example: I sat the exam three times. I mostly just listen.",
+    "rowEmpty": "Add one sentence members will see",
+    "counterA11y": "%{count} of %{max} characters"
+  },
+  "mentorApplyCopy": {
+    "eyebrowReview": "Reviewed by the Mento team",
+    "declinedBody": "Not this time, and truly, thank you."
   }
 }
