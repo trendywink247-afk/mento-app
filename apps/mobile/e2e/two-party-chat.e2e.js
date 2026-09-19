@@ -17,6 +17,12 @@
  *
  *   Run:  $env:LISTENER_ID="<id>"; node e2e/two-party-chat.e2e.js
  *
+ *   AFTER the run, put the pool back — this spec opens the listener console, which stamps
+ *   `last_seen_at`; 15 minutes later every General match sweeps that mentor to `away`
+ *   (matching.sweep_stale_presence) and the NEXT run of this spec hangs at onboarding:
+ *
+ *      docker exec mento-postgres psql -U mento -d mento -c "UPDATE listener_profiles SET status='online', last_seen_at=NULL;"
+ *
  * NOTE: live PII-redaction / crisis enforcement additionally needs Stream's before-send
  * webhook pointed at the API (a public tunnel, see the mento-crisis-webhook skill). The
  * enforcement LOGIC is proven server-side by pytest; this spec proves the chat loop.
@@ -116,6 +122,19 @@ async function onboardMember(page, tid) {
   await lpage.waitForSelector(`text=${LISTENER_MSG}`, { timeout: 20000 });
   await mpage.waitForSelector(`text=${LISTENER_MSG}`, { timeout: 30000 });
   console.log('OK listener->member delivery confirmed');
+
+  // Core talk->action loop, live: the member keeps the mentor's message from its
+  // actions, and the header card's "In this chat" strip ticks up to "Saved 1" — the
+  // chip follows the server's count, not the tap (components/chat/ChatHeaderCard.tsx).
+  if (await mtid('chat-strip').count()) throw new Error('strip rendered before anything was saved');
+  await mpage.locator('[data-testid^="msg-"]').first().click();
+  await mpage.locator('[data-testid^="save-card-"]').first().click();
+  await mpage.waitForFunction(
+    () => /Saved 1/.test(document.querySelector('[data-testid="chat-strip-saved"]')?.textContent || ''),
+    null,
+    { timeout: 15000 },
+  );
+  console.log('OK saving a mentor message ticks the header strip to "Saved 1"');
 
   await ltid('listener-composer-input').fill(LISTENER_ENTER_MSG);
   await ltid('listener-composer-input').press('Enter');

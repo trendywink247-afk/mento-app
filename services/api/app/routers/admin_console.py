@@ -52,7 +52,7 @@ from app.schemas import (
     OkResult,
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
-from app.services import audit, stream
+from app.services import audit, conversations, stream
 from app.services.categories import AVAILABILITY_NOTES
 from app.services.matching import reconcile_listener_capacity
 from app.services.persona import generate_persona
@@ -162,28 +162,40 @@ def safety_flags(
         .scalars()
         .all()
     )
-    out = []
-    for f in rows:
-        member = listener = None
-        if f.conversation_id:
-            convo = db.get(Conversation, f.conversation_id)
-            if convo:
-                u = db.get(User, convo.user_id)
-                li = db.get(ListenerProfile, convo.listener_id)
-                member = u.persona_name if u else None
-                listener = li.persona_name if li else None
-        out.append(
-            AdminFlagItem(
-                id=f.id,
-                signal=f.signal.value,
-                conversation_id=f.conversation_id,
-                member_persona=member,
-                listener_persona=listener,
-                reviewed=f.reviewed,
-                created_at=f.created_at.isoformat(),
+    # Three batched lookups for the whole page — this was three queries PER flag.
+    convo_ids = {f.conversation_id for f in rows if f.conversation_id}
+    convos = {
+        c.id: c
+        for c in db.scalars(select(Conversation).where(Conversation.id.in_(convo_ids))).all()
+    }
+    member_names = dict(
+        db.execute(
+            select(User.id, User.persona_name).where(
+                User.id.in_({c.user_id for c in convos.values()})
             )
+        ).all()
+    )
+    listener_names = dict(
+        db.execute(
+            select(ListenerProfile.id, ListenerProfile.persona_name).where(
+                ListenerProfile.id.in_({c.listener_id for c in convos.values()})
+            )
+        ).all()
+    )
+
+    def _item(f: SafetyFlag) -> AdminFlagItem:
+        convo = convos.get(f.conversation_id) if f.conversation_id else None
+        return AdminFlagItem(
+            id=f.id,
+            signal=f.signal.value,
+            conversation_id=f.conversation_id,
+            member_persona=member_names.get(convo.user_id) if convo else None,
+            listener_persona=listener_names.get(convo.listener_id) if convo else None,
+            reviewed=f.reviewed,
+            created_at=f.created_at.isoformat(),
         )
-    return out
+
+    return [_item(f) for f in rows]
 
 
 @router.post("/safety/flags/{flag_id}/review", response_model=OkResult)
@@ -291,8 +303,22 @@ def suspend_listener(
     if li is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
     li.vetting_status = VettingStatus.suspended
-    audit.record(db, admin, "listener.suspended", subject_type="listener", subject_id=listener_id)
+    # A suspended mentor can no longer open the console — and must not be able to
+    # reach members from a client that is already open. End their active chats (the
+    # members are free to be matched again, the slots are released) and seal every
+    # channel on Stream once the transaction is committed.
+    ended = conversations.end_all_for_listener(db, listener_id)
+    audit.record(
+        db,
+        admin,
+        "listener.suspended",
+        subject_type="listener",
+        subject_id=listener_id,
+        meta={"conversations_ended": len(ended)},
+    )
     db.commit()
+    for channel_id in ended:
+        conversations.seal(channel_id)
     return OkResult(status="suspended")
 
 

@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Animated, {
   cancelAnimation,
   runOnJS,
@@ -45,7 +45,9 @@ export default function Landing() {
   // render nothing while the secure store resolves so the landing never flashes first.
   const [checked, setChecked] = useState(false);
   // Web DotLottie throws (ImageData width 0) if its canvas is alive during route
-  // teardown — swap to the still scene the moment the exit starts.
+  // teardown, so WEB swaps to the still scene — but only once the exit fade has made
+  // the hero invisible. Swapping at the tap (and on native, which never needed it) put
+  // a different picture on screen for the whole fade (session 35, frame capture).
   const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
@@ -116,8 +118,9 @@ export default function Landing() {
 
   const begin = () => {
     capture('onboarding_started');
-    const go = () => router.push('/onboarding');
-    setLeaving(true);
+    // Reduced motion already shows the still scene; native has no canvas to protect.
+    // Web pushes from the `leaving` effect below, after the still has committed.
+    const go = () => (Platform.OS === 'web' && !reduced ? setLeaving(true) : router.push('/onboarding'));
     if (reduced) {
       go();
       return;
@@ -126,6 +129,11 @@ export default function Landing() {
       if (done) runOnJS(go)();
     });
   };
+
+  // Runs after the commit that unmounted the Lottie canvas — the push is now safe.
+  useEffect(() => {
+    if (leaving) router.push('/onboarding');
+  }, [leaving, router]);
 
   if (!checked) return null;
 

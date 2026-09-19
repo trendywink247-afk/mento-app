@@ -7,3 +7,5 @@ expo-env.d.ts
 
 # notification-route test's on-the-fly tsc output (see e2e/notifications-route.test.mjs)
 .tmp-route/
+# question-builder test's on-the-fly tsc output (see e2e/question-builder.test.mjs)
+.tmp-question/

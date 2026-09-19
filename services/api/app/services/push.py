@@ -13,6 +13,7 @@ import time
 
 import httpx
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -40,27 +41,37 @@ def upsert_token(
 ) -> None:
     """One row per device token PER ROLE: re-point on reinstall, never duplicate; a
     device that is both a member and a mentor keeps one row for each role."""
-    existing = db.scalars(
-        select(PushToken)
-        .where(PushToken.expo_push_token == token, PushToken.owner_kind == kind)
-        .limit(1)
-    ).first()
-    if existing is not None:
-        existing.owner_id = owner_id
-        existing.platform = platform
-        if kind == PushOwnerKind.member:
-            existing.user_id = owner_id
-    else:
-        db.add(
-            PushToken(
-                user_id=owner_id,
-                owner_kind=kind,
-                owner_id=owner_id,
-                expo_push_token=token,
-                platform=platform,
+    for attempt in (1, 2):
+        existing = db.scalars(
+            select(PushToken)
+            .where(PushToken.expo_push_token == token, PushToken.owner_kind == kind)
+            .limit(1)
+        ).first()
+        if existing is not None:
+            existing.owner_id = owner_id
+            existing.platform = platform
+            if kind == PushOwnerKind.member:
+                existing.user_id = owner_id
+        else:
+            db.add(
+                PushToken(
+                    user_id=owner_id,
+                    owner_kind=kind,
+                    owner_id=owner_id,
+                    expo_push_token=token,
+                    platform=platform,
+                )
             )
-        )
-    db.commit()
+        try:
+            db.commit()
+            return
+        except IntegrityError:
+            # The app registers on launch AND on focus — two calls raced to
+            # uq_push_token_value_kind. The row exists now: go round once more and
+            # take the re-point branch.
+            db.rollback()
+            if attempt == 2:
+                raise
 
 
 def delete_token(db: Session, kind: PushOwnerKind, owner_id: str, token: str) -> None:

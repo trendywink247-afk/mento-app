@@ -31,8 +31,9 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
 
   return (
     <StepScaffold
+      footerIndex={4}
       footer={
-        <Text style={[type.caption, styles.footer, { color: colors.inkMuted }]}>
+        <Text style={[type.caption, styles.footer, { color: colors.inkMuted }]} testID="role-footer">
           {t('onboarding.role.footer')}
         </Text>
       }

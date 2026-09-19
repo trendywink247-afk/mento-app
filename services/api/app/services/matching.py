@@ -6,7 +6,7 @@ import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -39,7 +39,7 @@ class ListenerAtCapacity(Exception):
     """The target listener has no spare capacity right now."""
 
 
-def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
+def blocked_listener_ids(db: Session, user_id: str) -> set[str]:
     """Listeners this user has blocked — never re-match them (Trust & Safety #9)."""
     rows = (
         db.execute(
@@ -54,7 +54,7 @@ def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
     return set(rows)
 
 
-def _own_listener_ids(db: Session, user_id: str) -> set[str]:
+def own_listener_ids(db: Session, user_id: str) -> set[str]:
     """Listener profiles minted from this user's own applications (session 22
     funnel) — a member who became a listener must never be paired with themself."""
     rows = (
@@ -207,6 +207,8 @@ def release_listener_slot(db: Session, convo: Conversation) -> None:
 
 
 PRESENCE_STALE_AFTER = timedelta(minutes=15)
+# An active conversation with no Stream channel after this long is a crashed match.
+ORPHAN_GRACE = timedelta(minutes=2)
 
 
 def sweep_stale_presence(db: Session, *, now: datetime | None = None) -> int:
@@ -232,20 +234,21 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
     """Match the user to the next available listener and open a Stream channel."""
     sweep_stale_presence(db)
     db.commit()
-    blocked_ids = _blocked_listener_ids(db, user.id) | _own_listener_ids(db, user.id)
+    blocked_ids = blocked_listener_ids(db, user.id) | own_listener_ids(db, user.id)
     listener = _pick_available_listener(db, category, blocked_ids, community=user.community_slug)
     if listener is None:
         # Self-heal before giving up. Prod finding (2026-09-06): every slot was held
         # by abandoned chats older than conversation_max_age_hours, and the sweep
         # only ran when an admin pressed Reconcile — so a member was told "all our
-        # mentors are with someone" for a day. Retry once only if the sweep
-        # actually freed something; a genuinely full pool still 503s.
-        healed = reconcile_listener_capacity(db)
+        # mentors are with someone" for a day.
+        reconcile_listener_capacity(db)
         db.commit()
-        if any(healed.values()):
-            listener = _pick_available_listener(
-                db, category, blocked_ids, community=user.community_slug
-            )
+        # Retry once, whatever the sweep reported: while ANOTHER member's heal held
+        # the listener rows, our SKIP LOCKED pick saw nobody — and their sweep, not
+        # ours, is the one that freed the slot. A genuinely full pool still 503s.
+        listener = _pick_available_listener(
+            db, category, blocked_ids, community=user.community_slug
+        )
     if listener is None:
         raise NoListenerAvailable()
     return open_conversation(db, user.id, listener, issue_category=category)
@@ -254,7 +257,19 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
 def _pending_request(
     db: Session, request_id: str, acting_listener_id: str | None
 ) -> ConversationRequest:
-    req = db.get(ConversationRequest, request_id)
+    """Load the request UNDER A ROW LOCK and re-check it is still pending.
+
+    Without the lock two concurrent accepts (a double tap, or the admin stand-in
+    racing the mentor) both read `pending`; they then serialise on the listener row,
+    and the loser — still holding its stale copy — opened a second conversation and
+    took a second slot for the same request. Lock order everywhere: request →
+    listener. `populate_existing` defeats a stale copy in the identity map."""
+    req = db.execute(
+        select(ConversationRequest)
+        .where(ConversationRequest.id == request_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one_or_none()
     if req is None or req.status != RequestStatus.pending:
         raise RequestNotPending()
     # A listener may only act on requests addressed to them; the admin path
@@ -267,16 +282,30 @@ def _pending_request(
 def accept_personal_request(
     db: Session, request_id: str, *, acting_listener_id: str | None = None
 ) -> ConversationRequest:
-    """Accept a Personal request under a row lock so capacity can't double-assign.
-    Shared by the admin stand-in and the listener console."""
+    """Accept a Personal request under row locks so neither the request nor the
+    listener's capacity can be double-spent. Shared by the admin stand-in and the
+    listener console."""
     req = _pending_request(db, request_id, acting_listener_id)
+
+    # The member blocked this mentor after asking (T&S #9): the mentor must not come
+    # back into their chats through the old request. Close it; opaque to the caller.
+    if req.target_listener_id in blocked_listener_ids(db, req.requester_id):
+        req.status = RequestStatus.declined
+        db.commit()
+        raise RequestNotPending()
 
     listener = db.execute(
         select(ListenerProfile)
         .where(ListenerProfile.id == req.target_listener_id)
         .with_for_update()
     ).scalar_one_or_none()
-    if listener is None or listener.active_conversations >= listener.max_concurrent:
+    # The console's own dependency refuses a suspended mentor, but the admin stand-in
+    # reaches this path without it — never hand a member to an unapproved listener.
+    if listener is None or listener.vetting_status != VettingStatus.approved:
+        db.rollback()
+        raise RequestNotPending()
+    if listener.active_conversations >= listener.max_concurrent:
+        db.rollback()
         raise ListenerAtCapacity()
 
     def _mark_matched(convo: Conversation) -> None:
@@ -314,8 +343,9 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
     admin audit record can land in the same transaction.
 
     1. Sweep stale conversations: anything active longer than
-       `conversation_max_age_hours` (abandoned chats, crashes between
-       open_conversation's phases) is marked ended.
+       `conversation_max_age_hours` (abandoned chats), and any active conversation
+       that still has no Stream channel after ORPHAN_GRACE (a crash between
+       open_conversation's phases), is marked ended.
     2. Recompute every listener's `active_conversations` from the actual count of
        active Conversation rows — one atomic UPDATE with a correlated subquery, so
        a hand-drifted counter can't survive.
@@ -326,17 +356,54 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
     Returns counts for the admin console: {"stale_ended": n, "listeners_corrected": n,
     "presence_swept": n}.
     """
-    max_age = timedelta(hours=get_settings().conversation_max_age_hours)
-    cutoff = datetime.now(UTC) - max_age
+    # Take the listener rows we can get WITHOUT waiting (id order, SKIP LOCKED) and
+    # heal only those. Why lock at all: the recount below is
+    # `SET active = (SELECT count…)`; under READ COMMITTED an UPDATE that has to wait
+    # on a matcher's row lock re-checks the row but keeps the sub-select's ORIGINAL
+    # snapshot, so the conversation that matcher just committed was not counted and
+    # the counter landed one low (over-assignment). Holding the row first means the
+    # recount's snapshot is taken when no reservation on it can be in flight.
+    # Why SKIP LOCKED: this runs inline from match_general, and the matcher never
+    # blocks on another transaction. A row a matcher holds right now is being kept
+    # correct by that matcher; it is healed on the next pass.
+    held = list(
+        db.execute(
+            select(ListenerProfile.id)
+            .order_by(ListenerProfile.id)
+            .with_for_update(skip_locked=True)
+        ).scalars()
+    )
+    listener_exists = (
+        select(ListenerProfile.id)
+        .where(ListenerProfile.id == Conversation.listener_id)
+        .correlate(Conversation)
+        .exists()
+    )
+
+    now = datetime.now(UTC)
+    cutoff = now - timedelta(hours=get_settings().conversation_max_age_hours)
     stale = db.execute(
         update(Conversation)
         .where(
             Conversation.status == ConversationStatus.active,
-            Conversation.created_at < cutoff,
+            # Only chats whose listener we hold (sweep + recount stay one unit per
+            # listener) — or whose listener row no longer exists at all.
+            or_(Conversation.listener_id.in_(held), ~listener_exists),
+            or_(
+                Conversation.created_at < cutoff,
+                # A crash between open_conversation's phases: the reservation was
+                # committed but the Stream channel never arrived. Nobody can talk in
+                # it; don't let it hold a slot for a day. The grace period keeps a
+                # match that is mid-flight right now (Stream budget: seconds) safe.
+                and_(
+                    Conversation.stream_channel_id.is_(None),
+                    Conversation.created_at < now - ORPHAN_GRACE,
+                ),
+            ),
         )
         .values(
             status=ConversationStatus.ended,
-            ended_at=datetime.now(UTC),
+            ended_at=now,
             ended_by=ConversationEndedBy.system,
         )
     )
@@ -355,7 +422,10 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
     )
     corrected = db.execute(
         update(ListenerProfile)
-        .where(ListenerProfile.active_conversations != active_count)
+        .where(
+            ListenerProfile.id.in_(held),
+            ListenerProfile.active_conversations != active_count,
+        )
         .values(active_conversations=active_count)
     )
     swept = sweep_stale_presence(db)

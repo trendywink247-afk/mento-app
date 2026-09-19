@@ -18,10 +18,9 @@ from app.db import get_db
 from app.models.enums import ApplicationStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
-from app.models.user import User
 from app.schemas import ConsoleSessionOut, ListenerApplicationIn, ListenerApplicationOut
 from app.security import current_user_id, issue_listener_token
-from app.services import stream
+from app.services import locks, stream
 from app.services.paths_data import COMMUNITIES
 
 router = APIRouter(prefix="/listener-applications", tags=["listener-applications"])
@@ -82,7 +81,7 @@ def apply(
     # Serialize per-user apply: the check-then-insert below must not race itself
     # (two concurrent POSTs would create two pending rows). Row lock on the user,
     # same idiom as the matcher — and, like the matcher, a no-op on SQLite.
-    db.execute(select(User).where(User.id == user_id).with_for_update())
+    locks.serialize_member(db, user_id)
 
     latest = _latest(db, user_id)
     if latest is not None:

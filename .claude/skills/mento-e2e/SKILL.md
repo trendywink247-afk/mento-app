@@ -42,5 +42,8 @@ node e2e\path-communities.e2e.js
 | `headless: false` (playwright-skill's default) | Repo scripts are headless; visible browsers are for one-off debugging only |
 | Testing only the happy path | The DoD wants error/empty states too — freeze-and-dim is designed behavior, assert it |
 | Writing throwaway scripts into `e2e/` | `e2e/` is the committed proof suite, keep it green |
+| Expecting the counter reset to last | It buys **9 matches** (3 mentors × 3 seats). The 10th finds no seat, the matcher self-heals by recounting REAL active conversations (every earlier run left one), the counters jump to 20+ and everything 503s until the next reset. Reset before every suite; a suite needing >9 matches must end its chats |
+| Leaving a mentor's `last_seen_at` set (two-party / mentor-console specs open a console, which stamps it) | 15 min later every General match sweeps that mentor to `away`; onboarding hangs at matching for whoever runs next. Restore the seeded state: `UPDATE listener_profiles SET status='online', last_seen_at=NULL;` |
+| Another session editing app files while a spec runs | Fast Refresh reloads the page mid-flow (`navigated to "http://localhost:8081/"` in the timeout log) — rerun, it is not your code |
 
 Output when done: script name(s) run, pass/fail, page-error count, and whether the reduced-motion pass completed.

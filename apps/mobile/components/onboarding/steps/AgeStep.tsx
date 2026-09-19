@@ -60,6 +60,7 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
 
   return (
     <StepScaffold
+      footerIndex={4}
       footer={
         <>
           {underAge ? (

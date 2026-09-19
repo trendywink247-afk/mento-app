@@ -34,7 +34,7 @@ import { RoleStep } from '@/components/onboarding/steps/RoleStep';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
-import type { Role } from '@/lib/session';
+import { saveRole, type Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -84,7 +84,8 @@ export function OnboardingJourney() {
     // the order for the draft's role — a mentee deep-linking into 'handoff' (or
     // vice versa) is not a valid resume point.
     const requestedOrder = (getDraft().role ?? 'mentee') === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
-    return getDraft().dob && requestedOrder.includes(requested) ? requested : 'role';
+    const pastAgeGate = Boolean(getDraft().dob) || Boolean(getDraft().sessionBacked);
+    return pastAgeGate && requestedOrder.includes(requested) ? requested : 'role';
   });
 
   // Mirror the step into the URL — replace semantics, so no history spam / remounts.
@@ -104,10 +105,19 @@ export function OnboardingJourney() {
   // One press, one haptic: the key that calls this already fired its own on press-in
   // (PressKey intent) — a second one here made every Continue buzz twice.
   const goNext = useCallback(() => {
+    // A mentor switching to talk becomes a mentee the moment they confirm a companion.
+    if (getDraft().sessionBacked && step === 'companion') void saveRole('mentee');
     setStep((s) => order[Math.min(order.indexOf(s) + 1, order.length - 1)]);
-  }, [order]);
+  }, [order, step]);
 
   const goBack = useCallback(() => {
+    // Session-backed resume: there is no email/age step behind the pick — back means
+    // "never mind", and they are still a mentor.
+    if (getDraft().sessionBacked && step === 'companion') {
+      clearDraft();
+      router.replace('/mentor-home');
+      return;
+    }
     const i = order.indexOf(step);
     if (i <= 0) router.back();
     else setStep(order[i - 1]);

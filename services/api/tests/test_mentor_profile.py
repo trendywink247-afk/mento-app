@@ -104,7 +104,7 @@ def _block(s, user_id: str, listener_id: str) -> None:
 
 def _own_application(s, user_id: str, listener_id: str) -> None:
     """Mints the "this listener profile came from this member's own application"
-    link that `_own_listener_ids` reads (session 22 funnel)."""
+    link that `own_listener_ids` reads (session 22 funnel)."""
     s.add(
         ListenerApplication(
             user_id=user_id,

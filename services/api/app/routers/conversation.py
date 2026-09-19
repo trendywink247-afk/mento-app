@@ -11,7 +11,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -21,11 +22,10 @@ from app.models.enums import ConversationEndedBy, ConversationStatus, Moderation
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.reflection import ConversationReflection
-from app.routers.listeners import _profile_out
 from app.schemas import (
     ConversationListItem,
+    ConversationMentorOut,
     ConversationState,
-    ListenerProfileOut,
     LockRequest,
     OkResult,
     PauseRequest,
@@ -36,8 +36,7 @@ from app.schemas import (
     VerifyPinRequest,
 )
 from app.security import current_user_id, hash_pin, verify_pin
-from app.services import stream
-from app.services.matching import release_listener_slot
+from app.services import categories, conversations, listener_profiles, stream
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -51,9 +50,7 @@ def _owned(db: Session, convo_id: str, user_id: str, *, lock: bool = False) -> C
     of overwriting it.
     """
     if lock:
-        convo = db.execute(
-            select(Conversation).where(Conversation.id == convo_id).with_for_update()
-        ).scalar_one_or_none()
+        convo = conversations.lock(db, convo_id)
     else:
         convo = db.get(Conversation, convo_id)
     if convo is None or convo.user_id != user_id:
@@ -126,17 +123,19 @@ def list_conversations(
             is_locked=c.is_locked,
             created_at=c.created_at.isoformat(),
             ended_at=c.ended_at.isoformat() if c.ended_at else None,
+            issue_category=c.issue_category,
+            issue_category_label=categories.label(c.issue_category),
         )
         for c in convos
     ]
 
 
-@router.get("/{convo_id}/mentor", response_model=ListenerProfileOut)
+@router.get("/{convo_id}/mentor", response_model=ConversationMentorOut)
 def conversation_mentor(
     convo_id: str,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
-) -> ListenerProfileOut:
+) -> ConversationMentorOut:
     """ "Two in the room" (spec §3.3), keyed by the conversation the member is in —
     the chat route only knows the conversation id, so the listener id never has to
     travel through route params. Opaque 404 for any conversation not this member's."""
@@ -144,7 +143,11 @@ def conversation_mentor(
     listener = db.get(ListenerProfile, convo.listener_id)
     if listener is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
-    return _profile_out(db, listener, user_id)
+    return ConversationMentorOut(
+        **listener_profiles.profile(db, listener, user_id).model_dump(),
+        issue_category=convo.issue_category,
+        issue_category_label=categories.label(convo.issue_category),
+    )
 
 
 @router.post("/{convo_id}/verify-pin", response_model=OkResult)
@@ -238,11 +241,7 @@ def end_conversation(
     """End the chat. Messages are NOT deleted (this matches the in-app copy).
     Idempotent: ending an already-ended chat never double-releases the slot."""
     convo = _owned(db, convo_id, user_id, lock=True)
-    if convo.status == ConversationStatus.active:
-        convo.status = ConversationStatus.ended
-        convo.ended_at = datetime.now(UTC)
-        convo.ended_by = ConversationEndedBy.member
-        release_listener_slot(db, convo)
+    conversations.end(db, convo, ConversationEndedBy.member)
     db.commit()
     return OkResult(status="ended")
 
@@ -257,15 +256,15 @@ def wipe_conversation(
     Wiping an already-ended chat still wipes, but only an ACTIVE chat releases the
     listener's slot (it was already released when the chat ended)."""
     convo = _owned(db, convo_id, user_id, lock=True)
-    was_active = convo.status == ConversationStatus.active
     if convo.stream_channel_id:
         stream.wipe_channel(convo.stream_channel_id)
-    convo.status = ConversationStatus.wiped
+    # Releases the slot only on the active → ended transition; an already-ended
+    # chat keeps its original ended_at / ended_by.
+    conversations.end(db, convo, ConversationEndedBy.member)
     if convo.ended_at is None:
         convo.ended_at = datetime.now(UTC)
         convo.ended_by = ConversationEndedBy.member
-    if was_active:
-        release_listener_slot(db, convo)
+    convo.status = ConversationStatus.wiped
     db.commit()
     return {"status": "wiped", "deleted_from": ["device", "servers"]}
 
@@ -289,9 +288,21 @@ def save_reflection(
     ).first()
     if existing:
         existing.energy = payload.energy
-    else:
-        db.add(ConversationReflection(conversation_id=convo_id, energy=payload.energy))
-    db.commit()
+        db.commit()
+        return OkResult(status="ok")
+    db.add(ConversationReflection(conversation_id=convo_id, energy=payload.energy))
+    try:
+        db.commit()
+    except IntegrityError:
+        # A double tap raced us to uq_reflection_conversation — the row exists now;
+        # last write wins, same as the sequential path.
+        db.rollback()
+        db.execute(
+            update(ConversationReflection)
+            .where(ConversationReflection.conversation_id == convo_id)
+            .values(energy=payload.energy)
+        )
+        db.commit()
     return OkResult(status="ok")
 
 
@@ -300,7 +311,10 @@ def _file_moderation_and_end(
     db: Session, convo: Conversation, user_id: str, reason: str | None, *, blocked: bool
 ) -> None:
     """Report/Block both file a moderation event (unreviewed → human queue) and end
-    the chat (DoD: 'removes the chat and files a moderation event')."""
+    the chat (DoD: 'removes the chat and files a moderation event'). The caller holds
+    the conversation row lock (a report racing the mentor's End must not release the
+    slot twice, nor deadlock on the opposite lock order) and seals the Stream channel
+    after its commit."""
     db.add(
         ModerationEvent(
             reporter_id=user_id,
@@ -312,11 +326,7 @@ def _file_moderation_and_end(
             reviewed=False,
         )
     )
-    if convo.status == ConversationStatus.active:
-        convo.status = ConversationStatus.ended
-        convo.ended_at = datetime.now(UTC)
-        convo.ended_by = ConversationEndedBy.member
-        release_listener_slot(db, convo)
+    conversations.end(db, convo, ConversationEndedBy.member)
 
 
 @router.post("/{convo_id}/report", response_model=OkResult)
@@ -326,9 +336,11 @@ def report_conversation(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> OkResult:
-    convo = _owned(db, convo_id, user_id)
+    convo = _owned(db, convo_id, user_id, lock=True)
     _file_moderation_and_end(db, convo, user_id, payload.reason, blocked=False)
+    channel_id = convo.stream_channel_id
     db.commit()
+    conversations.seal(channel_id)
     return OkResult(status="reported")
 
 
@@ -341,7 +353,9 @@ def block_conversation(
 ) -> OkResult:
     """Block this listener: files a moderation event, ends the chat, and ensures the
     listener can never be re-matched to this user (enforced in services/matching)."""
-    convo = _owned(db, convo_id, user_id)
+    convo = _owned(db, convo_id, user_id, lock=True)
     _file_moderation_and_end(db, convo, user_id, payload.reason, blocked=True)
+    channel_id = convo.stream_channel_id
     db.commit()
+    conversations.seal(channel_id)
     return OkResult(status="blocked")

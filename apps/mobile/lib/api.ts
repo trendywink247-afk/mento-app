@@ -2,6 +2,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
+import { screenCache } from './screenCache';
 import { clearSession, getSessionToken } from './session';
 
 const BASE_URL =
@@ -69,6 +70,12 @@ export type PersonalRequest = {
   created_at: string;
 };
 
+/** `GET /conversations/{id}/mentor`: the mentor's profile plus THIS conversation's topic. */
+export type ConversationMentor = ListenerProfile & {
+  issue_category: string | null;
+  issue_category_label: string | null;
+};
+
 export type ConversationListItem = {
   id: string;
   status: 'active' | 'ended' | 'wiped';
@@ -78,6 +85,11 @@ export type ConversationListItem = {
   is_locked: boolean;
   created_at: string;
   ended_at: string | null;
+  /** What the conversation is about, set at match / accept. Null for a General match
+   * started without a topic (every member-side General match today). */
+  issue_category: string | null;
+  /** The server's member-facing words for `issue_category` ("Exam stress"). */
+  issue_category_label: string | null;
 };
 
 export type ConversationState = {
@@ -273,7 +285,7 @@ export const api = {
 
   // --- Mentor profile ("Two in the room") + favourites ---
   mentorProfile: (convoId: string) =>
-    request<ListenerProfile>(`/conversations/${convoId}/mentor`, {}, true),
+    request<ConversationMentor>(`/conversations/${convoId}/mentor`, {}, true),
 
   listenerProfile: (listenerId: string) =>
     request<ListenerProfile>(`/listeners/${listenerId}`, {}, true),
@@ -291,8 +303,12 @@ export const api = {
   endConversation: (id: string) =>
     request<{ status: string }>(`/conversations/${id}/end`, { method: 'POST' }, true),
 
-  wipeConversation: (id: string) =>
-    request<{ status: string }>(`/conversations/${id}/wipe`, { method: 'POST' }, true),
+  // A wipe drops the conversation from the tab screens' last-loaded data (lib/screenCache.ts)
+  // BEFORE the request goes out: My Chats must never repaint a wiped chat from memory.
+  wipeConversation: (id: string) => {
+    screenCache.forgetConversation(id);
+    return request<{ status: string }>(`/conversations/${id}/wipe`, { method: 'POST' }, true);
+  },
 
   // --- Conversation options sheet ---
   lockConversation: (id: string, pin: string) =>

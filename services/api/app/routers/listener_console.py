@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -52,13 +52,12 @@ from app.schemas import (
     RequestOut,
 )
 from app.security import current_listener_id, issue_listener_token
-from app.services import care_prompts, categories, paths, push, push_tasks, stream
+from app.services import care_prompts, categories, conversations, paths, push, push_tasks, stream
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
     accept_personal_request,
     decline_personal_request,
-    release_listener_slot,
 )
 
 router = APIRouter(prefix="/listener", tags=["listener-console"])
@@ -237,14 +236,24 @@ def register_push_token(
 def my_conversations(
     listener: ListenerProfile = Depends(current_listener),
     db: Session = Depends(get_db),
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ) -> list[ListenerConversationItem]:
+    """Active first, newest within each group — ordered IN SQL, so the page limit can
+    never cut an old conversation that is still active (a Python sort after a
+    newest-first LIMIT would)."""
     rows = db.execute(
         select(Conversation, User)
         .join(User, User.id == Conversation.user_id)
         .where(Conversation.listener_id == listener.id)
-        .order_by(Conversation.created_at.desc())
+        .order_by(
+            case((Conversation.status == ConversationStatus.active, 0), else_=1),
+            Conversation.created_at.desc(),
+        )
+        .limit(limit)
+        .offset(offset)
     ).all()
-    items = [
+    return [
         ListenerConversationItem(
             id=convo.id,
             status=convo.status.value,
@@ -257,8 +266,6 @@ def my_conversations(
         )
         for convo, user in rows
     ]
-    # Active first, newest within each group.
-    return sorted(items, key=lambda i: i.status != ConversationStatus.active.value)
 
 
 @router.get("/me/requests", response_model=list[ListenerRequestItem])
@@ -419,16 +426,10 @@ def end_conversation(
 ) -> OkResult:
     """Mentor header menu → End. Same atomic slot release as the member end path;
     idempotent, so a double tap or a concurrent member end never double-releases."""
-    convo = db.execute(
-        select(Conversation).where(Conversation.id == convo_id).with_for_update()
-    ).scalar_one_or_none()
+    convo = conversations.lock(db, convo_id)
     if convo is None or convo.listener_id != listener.id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
-    if convo.status == ConversationStatus.active:
-        convo.status = ConversationStatus.ended
-        convo.ended_at = datetime.now(UTC)
-        convo.ended_by = ConversationEndedBy.listener
-        release_listener_slot(db, convo)
+    conversations.end(db, convo, ConversationEndedBy.listener)
     db.commit()
     return OkResult(status="ended")
 

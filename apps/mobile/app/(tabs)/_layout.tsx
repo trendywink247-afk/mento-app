@@ -6,8 +6,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { tabSceneInterpolator, tabTransitionSpec } from '@/components/motion/tabTransition';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { registerForPushNotifications } from '@/lib/pushNotifications';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space } from '@/theme/tokens';
@@ -109,8 +111,24 @@ export default function TabsLayout() {
     void registerForPushNotifications();
   }, []);
 
+  // Tabs move sideways in bar order instead of cutting (components/motion/tabTransition.ts).
+  // Reduced motion: no transition at all — the switch is an instant, still swap.
+  const reduced = useReducedMotion();
+
   return (
-    <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <TabBar {...props} />}>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        ...(reduced
+          ? { animation: 'none' as const }
+          : {
+              animation: 'shift' as const,
+              transitionSpec: tabTransitionSpec,
+              sceneStyleInterpolator: tabSceneInterpolator,
+            }),
+      }}
+      tabBar={(props) => <TabBar {...props} />}
+    >
       {TABS.map((tab) => (
         <Tabs.Screen key={tab.name} name={tab.name} options={{ title: t(tab.label) }} />
       ))}

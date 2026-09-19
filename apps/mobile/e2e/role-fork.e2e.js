@@ -21,6 +21,49 @@ async function run(browser, reduced) {
 
   await page.goto(WEB, { waitUntil: 'networkidle', timeout: 180000 });
   await tid('start').click();
+  // The fork arrives as ONE sequence: the footer line is the LAST Entrance item, so on the
+  // frame it first exists it must not be ahead of the headline (it used to sit outside the
+  // stagger, at full strength before anything else had faded in).
+  const arrival = await page.evaluate(
+    () =>
+      new Promise((resolve, reject) => {
+        // Opacity BELOW the two nodes' common ancestor — the step's own layer fade (shared by
+        // both) is excluded, so this reads each item's place in the Entrance sequence only.
+        const eff = (el, stop) => {
+          let o = 1;
+          for (let n = el; n && n !== stop; n = n.parentElement) o *= Number(getComputedStyle(n).opacity);
+          return o;
+        };
+        const t0 = performance.now();
+        const tick = () => {
+          const footer = document.querySelector('[data-testid="role-footer"]');
+          const headline = document.querySelector('[role="heading"]');
+          if (footer && headline) {
+            let common = footer.parentElement;
+            while (common && !common.contains(headline)) common = common.parentElement;
+            return resolve({ footer: eff(footer, common), headline: eff(headline, common) });
+          }
+          if (performance.now() - t0 > 60000) return reject(new Error('role fork never mounted'));
+          requestAnimationFrame(tick);
+        };
+        tick();
+      })
+  );
+  if (arrival.footer > arrival.headline + 0.01) {
+    throw new Error(`role footer (${arrival.footer}) arrived ahead of the headline (${arrival.headline})`);
+  }
+  if (!reduced && arrival.footer > 0.5) {
+    throw new Error(`role footer is outside the entrance sequence: opacity ${arrival.footer} on its first frame`);
+  }
+  await page.waitForFunction(() => {
+    let o = 1;
+    for (let n = document.querySelector('[data-testid="role-footer"]'); n && n.nodeType === 1; n = n.parentElement)
+      o *= Number(getComputedStyle(n).opacity);
+    return o > 0.99;
+  }, null, { timeout: 15000 });
+  console.log(
+    `${label}: OK role fork arrives as one sequence (first frame: headline ${arrival.headline.toFixed(2)}, footer ${arrival.footer.toFixed(2)}; footer settles at 1)`
+  );
   await tid('role-listen').waitFor({ timeout: 60000 });
   await tid('role-listen').click();
   await page.waitForSelector('text=How old are you?', { timeout: 30000 });
@@ -46,10 +89,43 @@ async function run(browser, reduced) {
   await page.waitForSelector('text=Mentor application received', { timeout: 30000 });
   console.log(`${label}: OK application submitted → pending status card`);
 
+  // First switch: a mentor never chose a companion, so "I'd rather talk today" walks the
+  // rest of the member journey on the SAME account — never a silent default Panda, never
+  // a second account.
+  const tokenBefore = await page.evaluate(() => globalThis.localStorage.getItem('mento.session_token'));
   await tid('mentor-switch-talk').click();
-  await page.waitForURL('**/chats', { timeout: 30000 });
+  await page.waitForSelector('text=Your growth, your theme', { timeout: 30000 });
+  if ((await page.evaluate(() => globalThis.localStorage.getItem('mento.role'))) !== 'mentor') {
+    throw new Error('role flipped to mentee before a companion was confirmed');
+  }
+  // Back from the pick = "never mind": still a mentor, back on Mentor Home.
+  await tid('back').click();
+  await tid('mentor-switch-talk').waitFor({ timeout: 30000 });
+  console.log(`${label}: OK first switch opens the companion pick; back returns to Mentor Home as a mentor`);
+
+  await tid('mentor-switch-talk').click();
+  await page.waitForSelector('text=Your growth, your theme', { timeout: 30000 });
+  await tid('animal-capybara').scrollIntoViewIfNeeded();
+  await tid('animal-capybara').click();
+  await tid('colour-sage').click();
+  await tid('continue').click();
+  await page.waitForSelector('text=Your Mento space is ready.', { timeout: 30000 });
+  await tid('enter').click();
+  await page.waitForURL('**/chat/**', { timeout: 60000 });
+  await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
+  const after = await page.evaluate(() => ({
+    token: globalThis.localStorage.getItem('mento.session_token'),
+    role: globalThis.localStorage.getItem('mento.role'),
+    animal: globalThis.localStorage.getItem('mento.companion_animal'),
+  }));
+  if (after.token !== tokenBefore) throw new Error('switching to talk minted a second account');
+  if (after.role !== 'mentee') throw new Error(`role is ${after.role}, expected mentee`);
+  if (after.animal !== 'Capybara') throw new Error(`companion is ${after.animal}, expected the one they picked`);
+  console.log(`${label}: OK companion → ready → live chat on the same account, as the chosen Capybara`);
+
+  await page.goto(`${WEB}/chats`, { waitUntil: 'networkidle', timeout: 60000 });
   await tid('tab-chats').waitFor({ timeout: 30000 });
-  console.log(`${label}: OK switch to talking → Chats tab renders`);
+  console.log(`${label}: OK Chats tab renders`);
 
   await ctx.close();
   return errors;

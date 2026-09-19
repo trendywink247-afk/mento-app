@@ -5,7 +5,8 @@ Prereqs: backend on :8000 (seeded), Expo web on :8081.
 Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
 
 - path-communities.e2e.js — Pathfinder walk → UPSC placement → Path home →
-  prompt pre-fills chat composer (never auto-sent) → re-path → reduced-motion run.
+  prompt → first-question builder → continue → pre-fills chat composer (never
+  auto-sent) → re-path → reduced-motion run.
 - connecting-experience.e2e.js — searching story (staged copy + card carousel) →
   found crescendo (persona card) → chat. 0 page errors.
 - listener-apply.e2e.js — profile → become-a-listener application → pending card;
@@ -35,3 +36,20 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   badge. Resets rate limits + capacity accounting (docker exec) before each run and
   retries once on a 503/429/missing-listener flake. Normal + reduced-motion, 0 page
   errors.
+- chat-header.e2e.js — the member chat's header card + "In this chat" strip (DECISIONS
+  §L.8): mentor name + "here now" with the presence ring/dot; no strip while nothing is
+  kept; a mentor note seeded for THIS conversation → back in the chat → "Saved 1" (a note
+  from another conversation is not counted); identity area → mentor profile → back; the
+  mentor flipped to away (docker exec, restored in `finally`) → "Mentor · away", no ring,
+  no dot. `SHOT=<path>` writes a screenshot. Normal + reduced-motion, 0 page errors. The
+  live save-from-message tick-up is asserted in two-party-chat.e2e.js.
+- path-question.e2e.js — the first-question builder (DECISIONS §L.8): a Path starter opens
+  the builder (no match on the tap); chips change the live preview deterministically;
+  "Another" cycles the path's starters; BOTH actions reach the chat with the assembled
+  text IN the composer and nothing sent (transcript still empty, re-checked 2 s later) —
+  "Edit in chat" also arrives with the composer focused, caret at the end; the Life path
+  is never offered exam chips; past 160 characters the last clause is dropped whole with
+  an honest note. `SHOT=` / `SHOT_CHAT=` write screenshots. Normal + reduced-motion, 0
+  page errors.
+- question-builder.test.mjs — NOT a browser spec: a Node unit test of the pure sentence
+  assembly + chip rules (`lib/questionBuilder.ts`). Run `npm run test:question`.

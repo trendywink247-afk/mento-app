@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,6 +17,7 @@ from app.security import issue_session_token
 from app.services import stream
 from app.services.persona import generate_persona
 
+logger = logging.getLogger("mento.onboarding")
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
 
 
@@ -72,7 +74,19 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
     # phasing discipline as services/matching.py).
     db.commit()
 
-    stream.upsert_user(user.id, user.persona_name, user.persona_avatar)
+    try:
+        stream.upsert_user(user.id, user.persona_name, user.persona_avatar)
+    except Exception as exc:  # noqa: BLE001 — any Stream fault takes the same exit
+        # Without a Stream user the member can never be put in a channel, so this
+        # account is useless — and every retry would mint another one. Undo it and
+        # say so honestly; the app's retry starts clean.
+        logger.warning("onboarding: Stream upsert failed (%s) — rolled back", type(exc).__name__)
+        db.delete(user)
+        db.commit()
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "We couldn't set things up just now. Please try again in a moment.",
+        ) from None
 
     return OnboardingResult(
         session_token=issue_session_token(user.id),

@@ -3,6 +3,8 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
+import { screenCache } from './screenCache';
+
 const SESSION_KEY = 'mento.session_token';
 const STREAM_KEY = 'mento.stream_token';
 const PERSONA_KEY = 'mento.persona';
@@ -40,6 +42,8 @@ export async function saveSession(
   streamToken: string,
   persona: Persona,
 ): Promise<void> {
+  // A new identity never inherits the previous one's last-loaded tab data.
+  screenCache.clear();
   await store.setItemAsync(SESSION_KEY, sessionToken);
   await store.setItemAsync(STREAM_KEY, streamToken);
   await store.setItemAsync(PERSONA_KEY, JSON.stringify(persona));
@@ -86,6 +90,7 @@ export async function getRole(): Promise<Role> {
 }
 
 export async function clearSession(): Promise<void> {
+  screenCache.clear();
   // Tear down the Stream websocket too — otherwise the singleton keeps the old
   // identity connected and the next persona's first chat fails.
   // reason: dynamic import avoids a require cycle (streamClient never imports session).

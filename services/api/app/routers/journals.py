@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app import ratelimit
 from app.db import get_db
 from app.models.enums import JournalChannel
 from app.models.journal import JournalEntry
@@ -24,13 +25,28 @@ from app.schemas import (
     OrganizeTheme,
 )
 from app.security import current_user_id
-from app.services import notes_ai
+from app.services import locks, notes_ai
 
 router = APIRouter(prefix="/journals", tags=["journals"])
 
 # Only the user's OWN reflective channels may be sent to the note-sorting AI —
 # never mentor_notes (the other party's words), never chat content (T&S #6/#7).
 _ORGANIZABLE = {JournalChannel.mood, JournalChannel.finance, JournalChannel.gratitude}
+
+# Generous for a person, ruinous for a loop: every write is a row of up to 4 KB.
+JOURNAL_WRITES_PER_HOUR = 120
+# Each call is a paid model request that can hold a worker thread for 20 s.
+ORGANIZE_PER_HOUR = 5
+
+
+def _write_budget(user_id: str) -> None:
+    """One budget for every journal write — manual entries and Mentor Notes alike."""
+    ratelimit.enforce(
+        f"journal-write:{user_id}",
+        JOURNAL_WRITES_PER_HOUR,
+        3600,
+        detail="That's a lot of writing in one hour — please try again in a little while.",
+    )
 
 
 def _out(e: JournalEntry) -> JournalEntryOut:
@@ -52,7 +68,11 @@ def save_mentor_note(
 ) -> JournalEntryOut:
     """Save a mentor message to the user's Mentor Notes. Saving the same Stream
     message twice returns the existing note (idempotent long-press)."""
+    _write_budget(user_id)
     if payload.stream_message_id:
+        # The dedupe key lives inside a JSON column (no unique index to lean on), so
+        # a double long-press must wait for the first save to commit.
+        locks.serialize_member(db, user_id)
         # Dedupe in SQL — loading every note into Python scaled with the user's
         # whole archive on each save of the core talk→action loop.
         existing = db.scalars(
@@ -106,6 +126,7 @@ def create_entry(
 ) -> JournalEntryOut:
     """Manual journal entry (mood / finance / gratitude). Mentor Notes go through
     their own idempotent endpoint."""
+    _write_budget(user_id)
     if payload.channel == JournalChannel.mentor_notes.value:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "use /journals/mentor-notes")
     try:
@@ -180,6 +201,13 @@ def organize_notes(
         raise HTTPException(
             status.HTTP_400_BAD_REQUEST, "need at least a couple of entries to organize"
         )
+    # Counted only for calls that will actually reach the model.
+    ratelimit.enforce(
+        f"journal-organize:{user_id}",
+        ORGANIZE_PER_HOUR,
+        3600,
+        detail="You've sorted your notes a few times this hour — please try again later.",
+    )
     try:
         result = notes_ai.organize(list(bodies))
     except notes_ai.NotesAiDisabled:
@@ -195,20 +223,45 @@ def organize_notes(
     )
 
 
+def _mentor_notes_where(user_id: str, conversation_id: str | None) -> list:
+    clauses = [
+        JournalEntry.user_id == user_id,
+        JournalEntry.channel == JournalChannel.mentor_notes,
+    ]
+    if conversation_id:
+        clauses.append(JournalEntry.meta["conversation_id"].as_string() == conversation_id)
+    return clauses
+
+
+@router.get("/mentor-notes/count", response_model=dict)
+def count_mentor_notes(
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+    conversation_id: str | None = Query(default=None, max_length=36),
+) -> dict:
+    """Exact count — the chat header's "Saved N" counted a page client-side, which is
+    wrong past the page size. Optionally for one conversation."""
+    count = db.scalar(
+        select(func.count())
+        .select_from(JournalEntry)
+        .where(*_mentor_notes_where(user_id, conversation_id))
+    )
+    return {"count": count or 0}
+
+
 @router.get("/mentor-notes", response_model=list[JournalEntryOut])
 def list_mentor_notes(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    conversation_id: str | None = Query(default=None, max_length=36),
 ) -> list[JournalEntryOut]:
-    """Newest-first Mentor Notes for the journals surface."""
+    """Newest-first Mentor Notes for the journals surface; `conversation_id` narrows
+    to the notes kept from one chat."""
     entries = db.scalars(
         select(JournalEntry)
-        .where(
-            JournalEntry.user_id == user_id,
-            JournalEntry.channel == JournalChannel.mentor_notes,
-        )
+        .where(*_mentor_notes_where(user_id, conversation_id))
         .order_by(JournalEntry.created_at.desc())
         .limit(limit)
         .offset(offset)

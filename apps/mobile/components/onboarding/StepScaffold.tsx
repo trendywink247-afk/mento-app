@@ -7,9 +7,23 @@
 import { ReactNode, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { Entrance } from '@/components/motion/Entrance';
 import { space } from '@/theme/tokens';
 
-export function StepScaffold({ children, footer }: { children: ReactNode; footer?: ReactNode }) {
+type Props = {
+  children: ReactNode;
+  footer?: ReactNode;
+  /**
+   * The footer's place in the step's `Entrance` sequence — pass the index AFTER the last
+   * body item so the step arrives as one sequence, top to bottom, footer last. Without it
+   * the footer sits outside the stagger and is at full strength before the headline.
+   * Leave it unset for a footer that only appears later (an error's retry key): that one
+   * should simply be there, still (T&S #11).
+   */
+  footerIndex?: number;
+};
+
+export function StepScaffold({ children, footer, footerIndex }: Props) {
   // A step should never bounce/scroll when its content fits — that idle rubber-band
   // is the "annoying scroll" complaint. We keep the ScrollView (some steps genuinely
   // overflow: ReadyStep, CompanionStep, ConnectingStep's reduced-motion list, and
@@ -34,7 +48,15 @@ export function StepScaffold({ children, footer }: { children: ReactNode; footer
       >
         {children}
       </ScrollView>
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
+      {footer ? (
+        footerIndex === undefined ? (
+          <View style={styles.footer}>{footer}</View>
+        ) : (
+          <Entrance index={footerIndex} style={styles.footer}>
+            {footer}
+          </Entrance>
+        )
+      ) : null}
     </View>
   );
 }

@@ -9,7 +9,7 @@
     "newArchEnabled": true,
     "splash": {
       "resizeMode": "contain",
-      "backgroundColor": "#F6F4FB"
+      "backgroundColor": "#F4EFE6"
     },
     "ios": {
       "supportsTablet": false,
@@ -19,7 +19,7 @@
       "package": "com.mento.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#F6F4FB"
+        "backgroundColor": "#F4EFE6"
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",

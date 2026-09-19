@@ -251,8 +251,14 @@
   },
   "chat": {
     "yourListener": "Your mentor",
-    "statusLine": "Here to listen and support",
-    "connectedA11y": "Connected",
+    "header": {
+      "mentor": "Mentor",
+      "here": "Mentor · here now",
+      "away": "Mentor · away",
+      "inThisChat": "In this chat",
+      "saved": "Saved %{count}",
+      "savedA11y": "%{count} saved to your journal from this chat"
+    },
     "leaveA11y": "Leave conversation",
     "optionsA11y": "Conversation options",
     "privacy": "This conversation is private. Your identity is never shared.",
@@ -484,7 +490,7 @@
     "findCta": "Find my path",
     "yourPath": "Your path",
     "promptsTitle": "Not sure how to start?",
-    "promptsSub": "Tap one — it starts a conversation for you.",
+    "promptsSub": "Tap one to shape it into your first message. Nothing is sent for you.",
     "talkTitle": "Talk to someone who's walked it",
     "listenersOne": "%{count} mentor around right now",
     "listenersOther": "%{count} mentors around right now",
@@ -492,6 +498,47 @@
     "talkNow": "Talk now",
     "browse": "Browse",
     "change": "Change my path"
+  },
+  "pathQuestion": {
+    "title": "Shape your first question",
+    "backA11y": "Back to your path",
+    "another": "Another",
+    "anotherA11y": "Show another starter",
+    "notScript": "A starter, not a script. Type your own anytime.",
+    "whereTitle": "Where I am",
+    "whereHint": "optional · adds a few words",
+    "triedTitle": "What I've tried",
+    "triedHint": "optional",
+    "messageTitle": "Your message",
+    "count": "%{used} of %{max} characters",
+    "previewA11y": "Your message so far: %{message}",
+    "editable": "You can edit this before it goes. Nothing is sent until you tap Send.",
+    "dropped": "A first message stays short, so the last detail was left out. You can add it in the chat.",
+    "edit": "Edit in chat",
+    "editA11y": "Edit this message in the chat before sending",
+    "continue": "Take it to a mentor",
+    "continueA11y": "Find a mentor and bring this message to the chat, unsent",
+    "chips": {
+      "first": "First attempt",
+      "second": "Second attempt",
+      "third": "Third or more",
+      "working": "Working alongside",
+      "break": "Taking a break",
+      "prep": "Started interview prep",
+      "none": "Nothing yet"
+    },
+    "clauses": {
+      "first": "this was my first attempt",
+      "second": "this was my second attempt",
+      "third": "this was at least my third attempt",
+      "working": "I'm working alongside",
+      "break": "I've been taking a break",
+      "prep": "I've started interview prep",
+      "none": "I haven't tried anything yet"
+    },
+    "joinList": ", ",
+    "joinLast": ", and ",
+    "stop": "."
   },
   "journals": {
     "title": "Journal",

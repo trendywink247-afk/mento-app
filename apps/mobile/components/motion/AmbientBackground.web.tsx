@@ -18,11 +18,16 @@ const CANVASKIT_CDN = 'https://cdn.jsdelivr.net/npm/canvaskit-wasm@0.39.1/bin/fu
 const AuroraCanvas = lazy(() => import('@/components/motion/AuroraCanvas'));
 
 let skiaReady: Promise<boolean> | null = null;
+// True once CanvasKit is in memory. A sky mounted after that (the next route's) starts WITH
+// its aurora at full strength — only the app's first sky waits for idle and fades up from
+// the flat gradient. Without this every route change restarted the sky from flat.
+let skiaLoaded = false;
 function loadSkia(): Promise<boolean> {
   skiaReady ??= (async () => {
     try {
       const { LoadSkiaWeb } = await import('@shopify/react-native-skia/lib/module/web');
       await LoadSkiaWeb({ locateFile: (file: string) => CANVASKIT_CDN + file });
+      skiaLoaded = true;
       return true;
     } catch (e) {
       console.warn('Ambient aurora unavailable (CanvasKit failed to load); static gradient stays.', e);
@@ -33,10 +38,11 @@ function loadSkia(): Promise<boolean> {
 }
 
 export function AmbientBackground() {
-  const [ready, setReady] = useState(false);
-  const opacity = useSharedValue(0);
+  const [ready, setReady] = useState(skiaLoaded);
+  const opacity = useSharedValue(skiaLoaded ? 1 : 0);
 
   useEffect(() => {
+    if (skiaLoaded) return;
     let cancelled = false;
     const start = () => {
       void loadSkia().then((ok) => {

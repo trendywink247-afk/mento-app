@@ -8,6 +8,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.main import app
 from app.models.admin import AdminAccount
@@ -272,3 +273,84 @@ def test_personal_accept_stores_the_requests_issue_category(client, db_session):
 
     with TestSession() as s:
         assert s.get(Conversation, convo_id).issue_category == "loneliness"
+
+
+@requires_postgres
+def test_reconcile_racing_a_matcher_keeps_the_new_conversation_counted(db_session):
+    """Audit F6. The self-heal runs inline from match_general exactly when matchers
+    are busiest. Its recount `UPDATE … SET active = (SELECT count…)` used to wait on a
+    matcher's row lock and then write a count taken from its ORIGINAL snapshot — the
+    conversation the matcher had just committed was not in it, so the counter landed
+    one low and the listener could be over-assigned."""
+    import threading
+    import time
+
+    from app.services.matching import reconcile_listener_capacity
+
+    with TestSession() as s:
+        lid = _seed_listener(s, active=3, max_concurrent=5)
+        _seed_active_convo(s, _seed_user(s), lid)
+        _seed_active_convo(s, _seed_user(s), lid)
+        stale = datetime.now(UTC) - timedelta(hours=25)
+        _seed_active_convo(s, _seed_user(s), lid, created_at=stale)
+        newcomer = _seed_user(s)
+        s.commit()
+
+    def _reconcile() -> None:
+        with TestSession() as r:
+            reconcile_listener_capacity(r)
+            r.commit()
+
+    with TestSession() as matcher:
+        li = matcher.execute(
+            select(ListenerProfile).where(ListenerProfile.id == lid).with_for_update()
+        ).scalar_one()
+        li.active_conversations += 1
+        _seed_active_convo(matcher, newcomer, lid)
+        worker = threading.Thread(target=_reconcile)
+        worker.start()
+        time.sleep(0.8)  # reconcile runs while the matcher holds the listener row
+        matcher.commit()
+    worker.join(timeout=15)
+
+    def _counter_and_real() -> tuple[int, int]:
+        with TestSession() as s:
+            real = (
+                s.query(Conversation)
+                .filter(Conversation.listener_id == lid, Conversation.status == "active")
+                .count()
+            )
+            return s.get(ListenerProfile, lid).active_conversations, real
+
+    # The busy listener was skipped whole (sweep AND recount), never half-healed:
+    # counter and reality agree, with the matcher's conversation counted.
+    assert _counter_and_real() == (4, 4)
+
+    # …and the next pass, with nobody holding the row, finishes the job.
+    _reconcile()
+    assert _counter_and_real() == (3, 3)
+
+
+@requires_postgres
+def test_reconcile_frees_a_slot_leaked_by_a_crash_between_match_phases(client, db_session):
+    """Audit F7. open_conversation commits the reservation, then calls Stream. A crash
+    in between leaves an active conversation with no channel holding a slot — for 24 h
+    before this; now for two minutes."""
+    with TestSession() as s:
+        uid = _seed_user(s)
+        lid = _seed_listener(s, active=2)
+        orphan = _seed_active_convo(
+            s, uid, lid, created_at=datetime.now(UTC) - timedelta(minutes=5)
+        )
+        in_flight = _seed_active_convo(s, uid, lid)  # seconds old: a match mid-flight
+        admin_h = _admin_auth(s)
+        s.commit()
+
+    r = client.post("/api/v1/admin/listeners/reconcile", headers=admin_h)
+    assert r.status_code == 200
+    assert r.json()["stale_ended"] == 1
+
+    with TestSession() as s:
+        assert s.get(Conversation, orphan).status == ConversationStatus.ended
+        assert s.get(Conversation, in_flight).status == ConversationStatus.active
+        assert s.get(ListenerProfile, lid).active_conversations == 1

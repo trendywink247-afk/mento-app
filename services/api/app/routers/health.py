@@ -1,6 +1,9 @@
-"""Liveness + the crisis-webhook staleness probe.
+"""Liveness, readiness + the crisis-webhook staleness probe.
 
-/health           — plain liveness for load balancers.
+/health           — plain liveness (the process answers). Never touches a dependency.
+/health/ready     — readiness: 503 when Postgres is unreachable (nothing works without
+    it). Redis and Stream are REPORTED but never fail the probe — the limiter fails
+    open and a Stream outage must not take the whole API out of rotation.
 /health/crisis    — ACTIVE alerting hook for the fail-open crisis scan (T&S #1).
     The scan fails open by design, so a dead webhook is silent by default. The
     admin Health tab shows staleness, but only when someone looks. This endpoint
@@ -17,7 +20,9 @@ from datetime import UTC, datetime, timedelta
 
 import redis
 from fastapi import APIRouter, Response, status
+from sqlalchemy import text
 
+from app.db import SessionLocal
 from app.services import stream
 
 logger = logging.getLogger("mento.health")
@@ -32,6 +37,39 @@ STALE_AFTER = timedelta(minutes=30)
 @router.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+def _db_ok() -> bool:
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+        return True
+    except Exception as exc:  # noqa: BLE001 — a probe reports, it never raises
+        logger.warning("readiness: database unreachable (%s)", type(exc).__name__)
+        return False
+
+
+def _redis_ok() -> bool:
+    try:
+        from app import ratelimit
+
+        return bool(ratelimit._redis().ping())
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("readiness: redis unreachable (%s)", type(exc).__name__)
+        return False
+
+
+@router.get("/health/ready")
+def ready(response: Response) -> dict:
+    db_ok = _db_ok()
+    if not db_ok:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return {
+        "status": "ok" if db_ok else "unavailable",
+        "db": db_ok,
+        "redis": _redis_ok(),  # degraded, not fatal: rate limits fail open
+        "stream_configured": stream.is_configured(),
+    }
 
 
 @router.get("/health/crisis")

@@ -11,6 +11,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { Entrance } from '@/components/motion/Entrance';
 import { capture } from '@/lib/analytics';
 import { api, type ListenerProfile, type PathTree } from '@/lib/api';
+import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
 import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { pendingOption } from '@/lib/pendingOption';
@@ -34,41 +35,6 @@ function monthYear(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric' }).format(d);
-}
-
-// Community labels only need the tree once per app session — cache the in-flight/
-// resolved promise at module scope so reopening the profile never re-fetches it.
-// Cleared on failure so a later open can still retry.
-let pathTreePromise: ReturnType<typeof api.pathTree> | null = null;
-function cachedPathTree(): ReturnType<typeof api.pathTree> {
-  if (!pathTreePromise) {
-    pathTreePromise = api.pathTree().catch((e) => {
-      pathTreePromise = null;
-      throw e;
-    });
-  }
-  return pathTreePromise;
-}
-
-function titleCase(slug: string): string {
-  return slug
-    .split('_')
-    .map((w) => (w ? w.charAt(0).toUpperCase() + w.slice(1) : w))
-    .join(' ');
-}
-
-/** Best-effort community label: scan the (lazily fetched) paths tree for the option
- * whose `community` matches the slug. Falls back to a title-cased slug — never blocks
- * the profile on a second network round trip succeeding. */
-function communityLabel(tree: PathTree | null, slug: string): string {
-  if (tree) {
-    for (const node of Object.values(tree.nodes)) {
-      for (const opt of node.options) {
-        if (opt.community === slug) return opt.label;
-      }
-    }
-  }
-  return titleCase(slug);
 }
 
 function FactRow({

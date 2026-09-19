@@ -1,0 +1,173 @@
+"""Request/response models (Pydantic v2), one module per surface.
+
+Everything is re-exported here, so `from app.schemas import X` keeps working for
+every router and service — add a model to its surface module AND to this list.
+"""
+
+from app.schemas.admin import (
+    AdminAccountItem,
+    AdminApplicationDeclineIn,
+    AdminApplicationItem,
+    AdminAuditItem,
+    AdminConsoleLinkOut,
+    AdminContributionItem,
+    AdminCreatedOut,
+    AdminCreateIn,
+    AdminFlagItem,
+    AdminFlagReviewIn,
+    AdminHealthOut,
+    AdminListenerCreateIn,
+    AdminListenerItem,
+    AdminListenerPatchIn,
+    AdminMeOut,
+    AdminMessageItem,
+    AdminOverviewOut,
+    AdminReconcileOut,
+    AttentionItem,
+    ModerationItem,
+)
+from app.schemas.applications import (
+    ConsoleSessionOut,
+    ListenerApplicationIn,
+    ListenerApplicationOut,
+)
+from app.schemas.common import (
+    OkResult,
+)
+from app.schemas.conversations import (
+    ConversationListItem,
+    ConversationState,
+    LockRequest,
+    PauseRequest,
+    ReflectionIn,
+    ReportRequest,
+    StatusMaskRequest,
+    UnlockRequest,
+    VerifyPinRequest,
+)
+from app.schemas.journals import (
+    JournalEntryIn,
+    JournalEntryOut,
+    MentorNoteIn,
+    OrganizeIn,
+    OrganizeOut,
+    OrganizeTheme,
+)
+from app.schemas.listener_console import (
+    DevListenerItem,
+    DevTokenOut,
+    ListenerConversationItem,
+    ListenerMeOut,
+    ListenerProfileEditIn,
+    ListenerReportIn,
+    ListenerRequestItem,
+    ListenerStatusIn,
+    MemberBriefOut,
+)
+from app.schemas.listeners import (
+    ConversationMentorOut,
+    ListenerOut,
+    ListenerProfileOut,
+    PersonalRequestIn,
+    RequestOut,
+)
+from app.schemas.matching import (
+    MatchRequest,
+    MatchResult,
+)
+from app.schemas.onboarding import (
+    CompanionUpdateIn,
+    MeOut,
+    OnboardingResult,
+    OnboardingStart,
+    PersonaOut,
+)
+from app.schemas.paths import (
+    PathChoice,
+    PathCommunityOut,
+    PathSeasonalOut,
+    PathStageOut,
+    PathState,
+    PathTree,
+)
+from app.schemas.push import (
+    PushTokenDeleteIn,
+    PushTokenIn,
+)
+from app.schemas.safety import (
+    ScanRequest,
+    ScanResult,
+)
+
+__all__ = [
+    "AdminAccountItem",
+    "AdminApplicationDeclineIn",
+    "AdminApplicationItem",
+    "AdminAuditItem",
+    "AdminConsoleLinkOut",
+    "AdminContributionItem",
+    "AdminCreateIn",
+    "AdminCreatedOut",
+    "AdminFlagItem",
+    "AdminFlagReviewIn",
+    "AdminHealthOut",
+    "AdminListenerCreateIn",
+    "AdminListenerItem",
+    "AdminListenerPatchIn",
+    "AdminMeOut",
+    "AdminMessageItem",
+    "AdminOverviewOut",
+    "AdminReconcileOut",
+    "AttentionItem",
+    "CompanionUpdateIn",
+    "ConsoleSessionOut",
+    "ConversationListItem",
+    "ConversationMentorOut",
+    "ConversationState",
+    "DevListenerItem",
+    "DevTokenOut",
+    "JournalEntryIn",
+    "JournalEntryOut",
+    "ListenerApplicationIn",
+    "ListenerApplicationOut",
+    "ListenerConversationItem",
+    "ListenerMeOut",
+    "ListenerOut",
+    "ListenerProfileEditIn",
+    "ListenerProfileOut",
+    "ListenerReportIn",
+    "ListenerRequestItem",
+    "ListenerStatusIn",
+    "LockRequest",
+    "MatchRequest",
+    "MatchResult",
+    "MeOut",
+    "MemberBriefOut",
+    "MentorNoteIn",
+    "ModerationItem",
+    "OkResult",
+    "OnboardingResult",
+    "OnboardingStart",
+    "OrganizeIn",
+    "OrganizeOut",
+    "OrganizeTheme",
+    "PathChoice",
+    "PathCommunityOut",
+    "PathSeasonalOut",
+    "PathStageOut",
+    "PathState",
+    "PathTree",
+    "PauseRequest",
+    "PersonaOut",
+    "PersonalRequestIn",
+    "PushTokenDeleteIn",
+    "PushTokenIn",
+    "ReflectionIn",
+    "ReportRequest",
+    "RequestOut",
+    "ScanRequest",
+    "ScanResult",
+    "StatusMaskRequest",
+    "UnlockRequest",
+    "VerifyPinRequest",
+]

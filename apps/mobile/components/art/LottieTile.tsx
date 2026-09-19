@@ -9,10 +9,12 @@
  * "Failed to construct 'ImageData': source width is zero" when its canvas is
  * alive on a hidden/tearing-down screen (same bug the landing guards with its
  * `leaving` state) — a stack push from any tab collapses the canvas to 0×0.
+ * That guard is WEB ONLY: on native the animation keeps playing while the screen slides
+ * away, instead of snapping to a different still mid-transition (session 35).
  */
 import { useIsFocused } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import { SceneTile } from '@/components/art/SceneTile';
 import type { ComponentProps } from 'react';
@@ -44,7 +46,7 @@ export function LottieTile({
 
   // Still art when motion is unwelcome OR the screen is leaving/behind a push —
   // the DotLottie canvas must never be alive on an unfocused web screen.
-  if (reduced || !focused) return <SceneTile name={fallback} size={size} />;
+  if (reduced || (Platform.OS === 'web' && !focused)) return <SceneTile name={fallback} size={size} />;
   return (
     <View
       style={{

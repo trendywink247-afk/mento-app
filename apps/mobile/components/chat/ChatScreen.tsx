@@ -12,18 +12,19 @@ import { Channel, Chat, MessageComposer, MessageList, useMessageComposer, WithCo
 type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
 import { IconBadge } from '@/components/IconBadge';
+import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { Composer } from '@/components/chat/Composer';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { MessageText } from '@/components/chat/MessageText';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
-import { PressKey } from '@/components/motion/PressKey';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
+import { leaveToChats } from '@/lib/leaveToChats';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
+import { useChatHeader } from '@/lib/useChatHeader';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -77,6 +78,11 @@ export default function ChatScreen() {
     starter?: string;
   }>();
   const listenerName = listener ?? t('chat.yourListener');
+  // Presence, community and the saved count for the header card. The header may know
+  // the mentor's name even when the route did not carry it (a notification tap).
+  const header = useChatHeader(conversationId);
+  const { refreshSaved } = header;
+  const headerName = listener ?? header.profile?.persona_name ?? listenerName;
 
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
@@ -131,7 +137,10 @@ export default function ChatScreen() {
                 listener_persona: listenerName,
                 stream_message_id: message.id,
               })
-              .then(() => haptic.success())
+              .then(() => {
+                haptic.success();
+                refreshSaved(); // the "Saved N" chip follows the server, not the tap
+              })
               .catch(() => {});
             dismissOverlay();
           },
@@ -143,7 +152,7 @@ export default function ChatScreen() {
         quotedReply,
       ];
     },
-    [conversationId, listenerName, t],
+    [conversationId, listenerName, refreshSaved, t],
   );
 
   // Theme the Stream kit (v9 semantics tokens) to the mockup chat language: oat app
@@ -240,63 +249,22 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      {/* Mentor header card (mockup #7) */}
-      <View style={[styles.header, { backgroundColor: colors.surface }]}>
-        <Pressable
-          onPress={() => router.replace('/chats')}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.leaveA11y')}
-        >
-          <Ionicons name="chevron-back" size={26} color={colors.ink} />
-        </Pressable>
-        {/* reason: this row is header chrome, not a card — face + edge are both
-            colors.surface (flush with the header background, no visible lip) so the
-            pillow travel + haptic on press are the only cue it's tappable. */}
-        <PressKey
-          onPress={() =>
-            router.push({
-              pathname: '/mentor-profile/[id]',
-              params: { id: conversationId ?? '', name: listenerName },
-            })
-          }
-          edge={colors.surface}
-          travel={2}
-          testID="mentor-header"
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.mentorHeaderA11y', { name: listenerName })}
-          style={[styles.headerPressFace, { backgroundColor: colors.surface }]}
-          containerStyle={styles.headerPressContainer}
-        >
-          <PersonaAvatar name={listenerName} size={52} online />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-              {listenerName}
-            </Text>
-            <View style={styles.statusRow}>
-              <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
-              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-                {t('chat.statusLine')}
-              </Text>
-            </View>
-          </View>
-        </PressKey>
-        <View
-          style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
-          accessibilityLabel={t('chat.connectedA11y')}
-        >
-          <View style={[styles.dot, { backgroundColor: colors.success }]} />
-        </View>
-        <Pressable
-          onPress={() => setOptionsOpen(true)}
-          hitSlop={12}
-          testID="open-options"
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.optionsA11y')}
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
-        </Pressable>
-      </View>
+      {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the web chat. */}
+      <ChatHeaderCard
+        name={headerName}
+        status={header.profile?.status ?? null}
+        community={header.community}
+        topic={header.topic}
+        savedCount={header.savedCount}
+        onBack={() => leaveToChats(router)}
+        onOpenProfile={() =>
+          router.push({
+            pathname: '/mentor-profile/[id]',
+            params: { id: conversationId ?? '', name: headerName },
+          })
+        }
+        onOpenOptions={() => setOptionsOpen(true)}
+      />
 
       {/* Dismissible first-run privacy line (mockup #20 shows it collapsed) */}
       {privacyNote ? (
@@ -354,7 +322,7 @@ export default function ChatScreen() {
           setOptionsOpen(false);
           setPendingInitial(undefined);
         }}
-        onLeft={() => router.replace('/chats')}
+        onLeft={() => leaveToChats(router)}
         listenerName={listenerName}
         initial={pendingInitial}
       />
@@ -403,32 +371,16 @@ function CrisisCard({
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderBottomLeftRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
-  },
-  personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  headerPressContainer: { flex: 1 },
-  headerPressFace: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  connectedDot: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    padding: 6,
-  },
-  dot: { width: 8, height: 8, borderRadius: radius.pill },
+  // Inset + rounded to sit under the floating header card (same 12px gutter).
   privacy: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
+    marginHorizontal: space.sm + 4,
+    marginTop: space.xs,
+    borderRadius: radius.md,
+    paddingVertical: space.xs + 2,
+    paddingHorizontal: space.sm + 4,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   crisis: {

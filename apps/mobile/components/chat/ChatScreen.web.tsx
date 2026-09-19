@@ -18,6 +18,7 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PressKey } from '@/components/motion/PressKey';
+import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { ComposerField } from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
@@ -28,9 +29,11 @@ import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TFunc } from '@/lib/i18n';
+import { leaveToChats } from '@/lib/leaveToChats';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
+import { useChatHeader } from '@/lib/useChatHeader';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { duration, easing } from '@/theme/motion';
@@ -256,6 +259,8 @@ type ComposerProps = {
   /** Resolves when the message is accepted by the server; rejects on failure. */
   onSend: (body: string) => Promise<void>;
   onTyping: () => void;
+  /** "Edit in chat" from the first-question builder: open with the field focused. */
+  autoFocus?: boolean;
 };
 
 /** Pillow-key composer (spec §5.2 — same anatomy/tokens as the native
@@ -268,7 +273,7 @@ type ComposerProps = {
  * so Enter-to-send is wired through `onKeyPress` instead, reading the DOM
  * KeyboardEvent's `shiftKey` off `nativeEvent` (present at runtime; not in RN's
  * official TextInputKeyPressEventData type, hence the narrow cast below). */
-const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
+const Composer = memo(function Composer({ onSend, onTyping, initialDraft, autoFocus }: ComposerProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const [draft, setDraft] = useState(initialDraft ?? '');
@@ -325,6 +330,7 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
         sending={sending}
         placeholder={t('chat.placeholder')}
         testIDPrefix="composer"
+        autoFocus={autoFocus}
       />
     </View>
   );
@@ -337,13 +343,20 @@ export default function ChatScreenWeb() {
   useSessionGuard();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { id: conversationId, listener, channel: channelId, starter } = useLocalSearchParams<{
+  const { id: conversationId, listener, channel: channelId, starter, edit } = useLocalSearchParams<{
     id: string;
     listener?: string;
     channel?: string;
     starter?: string;
+    /** '1' = arrive with the composer focused (first-question builder, "Edit in chat"). */
+    edit?: string;
   }>();
   const listenerName = listener ?? t('chat.yourListener');
+  // Presence, community and the saved count for the header card. The header may know
+  // the mentor's name even when the route did not carry it (a notification tap).
+  const header = useChatHeader(conversationId);
+  const { refreshSaved } = header;
+  const headerName = listener ?? header.profile?.persona_name ?? listenerName;
   const [optionsOpen, setOptionsOpen] = useState(false);
   // Set right before pendingOption.take() opens the sheet with the Report flow
   // pre-selected (the mentor-profile screen's "Report or block" hand-off) — cleared
@@ -510,12 +523,13 @@ export default function ChatScreenWeb() {
             stream_message_id: m.id,
           });
           setSaved((prev) => new Set(prev).add(m.id));
+          refreshSaved(); // the "Saved N" chip follows the server, not the tap
         } catch {
           // Soft-fail: keep the tooltip open so the user can retry.
         }
       })();
     },
-    [conversationId, listenerName],
+    [conversationId, listenerName, refreshSaved],
   );
 
   const toggleActions = useCallback(
@@ -544,68 +558,22 @@ export default function ChatScreenWeb() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      {/* Mentor header card (mockup #7) */}
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.surface, borderBottomWidth: 1.5, borderBottomColor: colors.border },
-        ]}
-      >
-        <Pressable
-          onPress={() => router.replace('/chats')}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.leaveA11y')}
-        >
-          <Ionicons name="chevron-back" size={26} color={colors.ink} />
-        </Pressable>
-        {/* reason: this row is header chrome, not a card — face + edge are both
-            colors.surface (flush with the header background, no visible lip) so the
-            pillow travel + haptic on press are the only cue it's tappable. */}
-        <PressKey
-          onPress={() =>
-            router.push({
-              pathname: '/mentor-profile/[id]',
-              params: { id: conversationId ?? '', name: listenerName },
-            })
-          }
-          edge={colors.surface}
-          travel={2}
-          testID="mentor-header"
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.mentorHeaderA11y', { name: listenerName })}
-          style={[styles.headerPressFace, { backgroundColor: colors.surface }]}
-          containerStyle={styles.headerPressContainer}
-        >
-          <PersonaAvatar name={listenerName} size={52} online />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-              {listenerName}
-            </Text>
-            <View style={styles.statusRow}>
-              <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
-              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-                {t('chat.statusLine')}
-              </Text>
-            </View>
-          </View>
-        </PressKey>
-        <View
-          style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
-          accessibilityLabel={t('chat.connectedA11y')}
-        >
-          <View style={[styles.dot, { backgroundColor: colors.success }]} />
-        </View>
-        <Pressable
-          onPress={() => setOptionsOpen(true)}
-          hitSlop={12}
-          testID="open-options"
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.optionsA11y')}
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
-        </Pressable>
-      </View>
+      {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the native chat. */}
+      <ChatHeaderCard
+        name={headerName}
+        status={header.profile?.status ?? null}
+        community={header.community}
+        topic={header.topic}
+        savedCount={header.savedCount}
+        onBack={() => leaveToChats(router)}
+        onOpenProfile={() =>
+          router.push({
+            pathname: '/mentor-profile/[id]',
+            params: { id: conversationId ?? '', name: headerName },
+          })
+        }
+        onOpenOptions={() => setOptionsOpen(true)}
+      />
 
       {/* Dismissible first-run privacy line (mockup #20 shows it collapsed) */}
       {privacyNote ? (
@@ -677,7 +645,7 @@ export default function ChatScreenWeb() {
           {/* Presence-only typing bubble — Focus physics: three dots breathing. */}
           {typing ? <TypingDots testID="typing-indicator" /> : null}
 
-          <Composer onSend={send} onTyping={onTyping} initialDraft={starter} />
+          <Composer onSend={send} onTyping={onTyping} initialDraft={starter} autoFocus={edit === '1'} />
         </View>
       )}
 
@@ -688,7 +656,7 @@ export default function ChatScreenWeb() {
           setOptionsOpen(false);
           setPendingInitial(undefined);
         }}
-        onLeft={() => router.replace('/chats')}
+        onLeft={() => leaveToChats(router)}
         listenerName={listenerName}
         initial={pendingInitial}
       />
@@ -698,32 +666,16 @@ export default function ChatScreenWeb() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderBottomLeftRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
-  },
-  personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  headerPressContainer: { flex: 1 },
-  headerPressFace: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  connectedDot: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    padding: 6,
-  },
-  dot: { width: 8, height: 8, borderRadius: radius.pill },
+  // Inset + rounded to sit under the floating header card (same 12px gutter).
   privacy: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
+    marginHorizontal: space.sm + 4,
+    marginTop: space.xs,
+    borderRadius: radius.md,
+    paddingVertical: space.xs + 2,
+    paddingHorizontal: space.sm + 4,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
   list: { padding: space.md, gap: space.xs },
