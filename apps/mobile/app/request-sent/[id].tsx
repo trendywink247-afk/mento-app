@@ -181,7 +181,7 @@ export default function RequestSentScreen() {
         : t('requestSent.oneAtATime', { name });
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bgLavender }]} edges={['top', 'bottom']} testID="request-sent">
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']} testID="request-sent">
       <View style={styles.body}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.top}>

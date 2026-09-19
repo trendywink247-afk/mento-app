@@ -6,21 +6,26 @@ import {
   Baloo2_800ExtraBold,
 } from '@expo-google-fonts/baloo-2';
 import { Ionicons } from '@expo/vector-icons';
+import { DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProviders } from '@/components/AppProviders';
+import { SkyGround } from '@/components/motion/SkyGround';
 import { WebFrame } from '@/components/WebFrame';
 import { installNotificationHandler, useNotificationTaps } from '@/lib/notifications';
 import { useShakeToUpdate } from '@/lib/useShakeToUpdate';
 import { ThemeProvider } from '@/theme/ThemeProvider';
-import { colors } from '@/theme/tokens';
 
 // Foreground banners without sound + tap routing (spec 2026-09-05 push §6). Web
 // resolves to lib/notifications.web.ts, a no-op — the web console/app never receives pushes.
 installNotificationHandler();
+
+// The navigators' own ground is transparent: every card and scene lies on the one sky
+// (components/motion/SkyGround.tsx). Without this react-navigation paints its default grey.
+const SKY_NAV_THEME = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: 'transparent' } };
 
 export default function RootLayout() {
   // Device-testing affordance: shake anywhere to check EAS Update. No-op in
@@ -53,11 +58,20 @@ export default function RootLayout() {
           <StatusBar style="dark" />
           {/* Web: centered app column on wide windows (passthrough on native + phones). */}
           <WebFrame>
+            {/* One sky behind every member screen (components/motion/SkyGround.tsx); the
+                screens are transparent over it, so it never restarts between routes. */}
+            <SkyGround />
+            <NavigationThemeProvider value={SKY_NAV_THEME}>
             <Stack
               screenOptions={{
                 headerShown: false,
-                contentStyle: { backgroundColor: colors.bg },
-                animation: 'slide_from_right',
+                // Transparent: the one sky shows through. Screens that need an opaque
+                // ground (mentor side, admin) paint their own.
+                contentStyle: { backgroundColor: 'transparent' },
+                // Over one still sky a page crossfades (native) while its content column
+                // comes in from the side (DeepArrival) — a sliding transparent page would
+                // drag its words across the previous page's words.
+                animation: 'fade',
               }}
             >
               {/* Designed seams: landing → journey → chat crossfade as one continuous
@@ -97,6 +111,7 @@ export default function RootLayout() {
                 }}
               />
             </Stack>
+            </NavigationThemeProvider>
           </WebFrame>
         </ThemeProvider>
       </AppProviders>

@@ -11,7 +11,6 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { HandUnderline } from '@/components/art/HandUnderline';
 import { LogoWordmark } from '@/components/art/Logo';
 import { FloatingChatCard } from '@/components/landing/FloatingChatCard';
-import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { Entrance } from '@/components/motion/Entrance';
 import { GroundGlow } from '@/components/motion/GroundGlow';
 import { Stage } from '@/components/motion/Stage';
@@ -190,8 +189,6 @@ export default function Landing() {
 
   return (
     <View style={styles.root}>
-      <AmbientBackground />
-
       <View style={styles.fill}>
         {/* The stage has no arrival — it is simply already there, which reads as continuity. */}
         <Animated.View style={[styles.stage, { top: stageTop, left: stageLeft }, sceneExit]} pointerEvents="none">

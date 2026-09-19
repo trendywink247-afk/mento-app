@@ -18,7 +18,6 @@ import { withTiming } from 'react-native-reanimated';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { CompanionAnimal } from '@/components/art/Companions';
-import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { Entrance } from '@/components/motion/Entrance';
 import { ambientLift } from '@/components/motion/ambientLift';
 import { PandaStage } from '@/components/motion/PandaStage';
@@ -295,8 +294,7 @@ export function OnboardingJourney() {
 
   return (
     <View style={styles.root}>
-      {/* The persistent sky — never unmounts across steps. */}
-      <AmbientBackground />
+      {/* The sky is the app's one sky (components/motion/SkyGround.tsx, in the root layout). */}
       {/* The mentor side's green light (board A34), over the same sky. */}
       <SageSky on={step === 'handoff'} />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>

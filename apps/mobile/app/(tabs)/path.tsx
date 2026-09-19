@@ -98,7 +98,7 @@ export default function PathTab() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <View style={styles.center} testID="path-loading">
           <ActivityIndicator color={colors.accent} />
         </View>
@@ -119,7 +119,7 @@ export default function PathTab() {
   // --- No path yet: the invitation ---
   if (!state?.community || !state.stage) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={['top']}>
         <CompanionPerches placement={perch}>
           <View style={styles.inviteTop}>{header}</View>
           <View style={styles.center}>
@@ -168,7 +168,7 @@ export default function PathTab() {
     });
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
       <CompanionPerches placement={perch}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
           {header}

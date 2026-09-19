@@ -137,7 +137,7 @@ export default function MentorBeforeAsk() {
 
   if (loading || !mentor) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.page}>
           <BackKey onPress={back} label={t('askFlow.mentorBackA11y')} />
           <View style={styles.center}>
@@ -174,7 +174,7 @@ export default function MentorBeforeAsk() {
   if (step === 'compose') {
     const count = intro.length;
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={styles.top}>
           <PressKey
             onPress={() => setStep('profile')}
@@ -383,7 +383,7 @@ export default function MentorBeforeAsk() {
     .join(' · ');
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <BackKey onPress={back} label={t('askFlow.mentorBackA11y')} />
 

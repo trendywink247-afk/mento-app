@@ -470,12 +470,12 @@ export default function ChatScreenWeb() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: depth.shown ? colors.dotIdle : colors.bg }]}
+      style={styles.safe}
       edges={['top', 'bottom']}
     >
       <CompanionPerches placement={perch}>
       <Animated.View
-        style={[styles.back, { backgroundColor: colors.bg }, depth.shown && styles.backSettled, depth.backStyle]}
+        style={[styles.back, depth.shown && styles.backSettled, depth.backStyle]}
       >
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the native chat. */}
       <ChatHeaderCard

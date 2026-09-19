@@ -114,7 +114,7 @@ export function ComposerField({
 
   return (
     // The footer is the furniture: the companion's perch is its absolutely-positioned child.
-    <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
+    <View style={[styles.footer, { borderTopColor: colors.border }]}>
       {perch}
       {chrome.above}
       <View style={styles.row}>

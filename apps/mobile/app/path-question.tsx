@@ -235,7 +235,7 @@ export default function PathQuestion() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       {/* The back key is simply there; the titles come in from the side (board "arrDeep"). */}
       <View style={styles.top}>
         <PressKey

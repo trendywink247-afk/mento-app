@@ -411,7 +411,7 @@ export default function ChatsTab() {
 
           {/* Search, the switch and the filters: one block with a pillow underside, and the
               companion's home on its bottom edge. It is simply there — no arrival. */}
-          <View style={[styles.tools, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}>
+          <View style={[styles.tools, { borderBottomColor: colors.border }]}>
             {showTools ? (
               <EdgeSurface
                 edge={colors.edgeSurface}

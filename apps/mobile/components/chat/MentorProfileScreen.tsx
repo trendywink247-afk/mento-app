@@ -161,7 +161,7 @@ export default function MentorProfileScreen() {
   const face = { animal: profile?.companion_animal, colour: profile?.companion_colour };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
         <BackKey onPress={() => router.back()} label={t('inTouch.backA11y')} />
 

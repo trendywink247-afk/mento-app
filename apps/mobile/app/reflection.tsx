@@ -128,7 +128,7 @@ export default function ReflectionScreen() {
   const sageInk = COMPANION_COLORS.sage.accentEdge;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bgLavender }]} edges={['top', 'bottom']} testID="reflection">
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']} testID="reflection">
       <RadialWash
         pools={[
           { left: -150, top: -190, width: 690, height: 560, color: colors.accentTint },

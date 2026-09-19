@@ -226,11 +226,11 @@ export default function BrowseMentors() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <CompanionPerches placement={perch}>
         <DeepHeader title={t('browse.title')} sub={t('browse.sub')} onBack={back} backLabel={t('browse.backA11y')} />
 
-        <View style={[styles.pinned, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}>
+        <View style={[styles.pinned, { borderBottomColor: colors.border }]}>
           <DeepArrival style={styles.pinnedCol}>
             <Entrance index={1}>
               <View>

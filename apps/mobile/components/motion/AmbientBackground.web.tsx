@@ -37,7 +37,8 @@ function loadSkia(): Promise<boolean> {
   return skiaReady;
 }
 
-export function AmbientBackground() {
+/** `paused`: see AuroraCanvas — the root sky holds still under an opaque screen. */
+export function AmbientBackground({ paused = false }: { paused?: boolean }) {
   const [ready, setReady] = useState(skiaLoaded);
   const opacity = useSharedValue(skiaLoaded ? 1 : 0);
 
@@ -71,7 +72,7 @@ export function AmbientBackground() {
       {ready ? (
         <Animated.View style={[StyleSheet.absoluteFill, fade]}>
           <Suspense fallback={null}>
-            <AuroraCanvas />
+            <AuroraCanvas paused={paused} />
           </Suspense>
         </Animated.View>
       ) : null}

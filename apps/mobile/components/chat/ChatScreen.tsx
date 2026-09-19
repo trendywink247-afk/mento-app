@@ -221,7 +221,8 @@ export default function ChatScreen() {
     () => ({
       semantics: {
         accentPrimary: colors.accent,
-        backgroundCoreApp: colors.bg,
+        // The thread lies on the one sky (components/motion/SkyGround.tsx).
+        backgroundCoreApp: 'transparent',
         chatBgIncoming: colors.surface,
         chatTextIncoming: colors.ink,
         chatBgOutgoing: colors.accent,
@@ -420,7 +421,7 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: depth.shown ? colors.dotIdle : colors.bg }]}
+      style={styles.safe}
       edges={['top', 'bottom']}
     >
       <CompanionPerches placement={perch}>
@@ -429,7 +430,7 @@ export default function ChatScreen() {
       <KitThreadContext.Provider value={thread}>
       <OwnBubbleToneContext.Provider value="accent">
       <Animated.View
-        style={[styles.back, { backgroundColor: colors.bg }, depth.shown && styles.backSettled, depth.backStyle]}
+        style={[styles.back, depth.shown && styles.backSettled, depth.backStyle]}
       >
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the web chat. */}
       <ChatHeaderCard

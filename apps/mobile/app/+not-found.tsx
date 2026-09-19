@@ -88,7 +88,7 @@ export default function NotFound() {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']} testID="not-found">
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']} testID="not-found">
       <RadialWash
         pools={[
           { left: -260, top: -220, width: 640, height: 520, color: COMPANION_COLORS.sky.accent, opacity: 0.16 },

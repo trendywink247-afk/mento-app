@@ -42,7 +42,7 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.dock, { backgroundColor: colors.bg, paddingBottom: Math.max(insets.bottom, 20) }]}>
+    <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 20) }]}>
       <View style={[styles.bar, elevation.md, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {TABS.map((tab) => {
           // Name-based lookup: hidden routes (mentors) share this navigator, so the
@@ -109,6 +109,8 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // Every tab lies on the one sky (components/motion/SkyGround.tsx).
+        sceneStyle: { backgroundColor: 'transparent' },
         ...(reduced
           ? { animation: 'none' as const }
           : {
