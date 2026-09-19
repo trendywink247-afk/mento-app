@@ -184,6 +184,12 @@ Point an external monitor (UptimeRobot / Better Stack) at
 signal that the crisis-scan pipeline itself died (Stream configured but no webhook
 in 30 min, or Redis down) — not optional before real users touch this.
 
+A second check on `https://api.agentin.chat/api/v1/health/ready` (503 = Postgres
+unreachable from the API) tells "the API process is up but nothing works" apart from
+"the box is down". Support tip: every API response carries `X-Request-ID`, and every
+log line for that request carries the same value as `rid=` —
+`docker logs mento-api-prod 2>&1 | grep rid=<id>`.
+
 ### 11. Admin dashboard, listener console, public apply page (web)
 
 These are the SAME Expo app as the member mobile app (`apps/mobile`), just

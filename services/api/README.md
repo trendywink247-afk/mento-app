@@ -34,7 +34,9 @@ python -m pytest
 ## Endpoints (v1)
 | Method | Path | Purpose |
 |---|---|---|
-| GET  | `/api/v1/health` | liveness |
+| GET  | `/api/v1/health` | liveness (never touches a dependency) |
+| GET  | `/api/v1/health/ready` | readiness — 503 when Postgres is unreachable; Redis + Stream reported, not fatal |
+| GET  | `/api/v1/me` · PUT `/api/v1/me/companion` | the member's own persona + companion (allowed set in `services/companions.py`) |
 | POST | `/api/v1/onboarding/start` | create anonymous user (age-gated), return session + Stream tokens |
 | POST | `/api/v1/match` | General → next-available listener + Stream channel |
 | POST | `/api/v1/safety/scan` | crisis scan → support-and-refer + helplines, files a safety flag |
@@ -42,6 +44,8 @@ python -m pytest
 | POST | `/api/v1/conversations/{id}/wipe` | Panda Wipe — real server-side delete |
 
 All but health/onboarding require `Authorization: Bearer <session_token>`.
+
+Every response carries `X-Request-ID` (a well-formed inbound one is kept). Every log line carries the same id as `rid=`; the access line names the **route template**, never the raw path, a query string, a body or a token. An unhandled error is JSON: `{"detail": …, "request_id": …}` — ask the member for that id.
 
 ## Trust & Safety invariants (see root `CLAUDE.md`)
 - Age computed server-side; under-`MIN_AGE` is blocked.

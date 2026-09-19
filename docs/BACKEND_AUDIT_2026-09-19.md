@@ -15,6 +15,42 @@ Line numbers are as of commit `a9bff53` (before this session's changes).
 
 ---
 
+## Status at the end of the session
+
+Suite: **255 → 309 passed**, `alembic check` clean, ruff + black clean (the CI lint job was
+red on master before — fixed in `df31bf6`), **no migration added**, no response shape changed
+except additively (the schemas move is proven by a byte-identical OpenAPI document).
+
+| # | Sev | Finding | Status |
+|---|---|---|---|
+| F1 | S1 | DB fault strips the helpline card from a crisis message | **fixed** `2e813f0` |
+| F2 | S1 | Gemini key + message text can reach logs / Sentry | **fixed** `55075b9` (+ `hide_parameters` in `6ed8bcc`) |
+| F3 | S1 | Report / Block / Suspend never reach Stream | **fixed** `b496eda` — freeze verified live against the dev Stream app; token revocation **planned** (P2) |
+| F4 | S1 | Personal request accepted twice / by a suspended or blocked mentor | **fixed** `f40b0e9` |
+| F5 | S2 | Counter drift: Report / Block unlocked (turned out to be a **deadlock** too) | **fixed** `b496eda` |
+| F6 | S2 | Counter drift: reconcile recount races the matcher | **fixed** `68b5cee` |
+| F7 | S2 | Counter drift: crash between match phases leaks a slot for 24 h | **fixed** `68b5cee` |
+| F8 | S2 | Stale sweep ends live chats by age, not silence | **planned** (P1) — needs a migration + a founder window |
+| F9 | S2 | Rate-limit gaps (scan, organize, requests, journal writes) | **fixed** `b408c66` |
+| F10 | S2 | No request id / access line / JSON 500 / readiness | **fixed** `6ed8bcc` |
+| F11 | S2 | Onboarding orphans a user when Stream is down | **fixed** `9372dd0` |
+| F12 | S2 | `TRUSTED_PROXY_HOPS=0` behind a proxy = one shared bucket | **fixed** `6ed8bcc` (startup warning) |
+| F13 | S3 | Check-then-insert races (reflection 500s, 6× duplicate requests) | **fixed** `9372dd0` |
+| F14 | S3 | Unbounded / mis-ordered lists, admin N+1, page-bound "Saved N" | **fixed** `9055897` |
+| F15 | S3 | Signed-but-malformed webhook body → 500 | **fixed** `2e813f0` |
+| F16 | S3 | Companion animal / colour are free strings | **fixed** `72ad53e` |
+| F17 | S4 | Routers importing routers' and services' privates; end logic ×4 | **fixed** `b496eda`, `a8fd2d6` |
+| F18 | S4 | 549-line `schemas.py` | **fixed** `a32e240` |
+| F19 | S4 | Redis client reached into from six modules | **planned** (P4b) |
+| F20 | S4 | No foreign keys | **planned** (P3) |
+| F21 | S4 | pytest TRUNCATEs the developer's database | **planned** (P5) |
+| F22 | S4 | Test-before-merge gaps | **fixed** for every finding above (54 new tests); dependency audit in CI **planned** |
+| F23 | S4 | `python-jose` unmaintained | **planned** |
+| F24 | — | Start fresh erases nothing server-side | **planned** (P3) — founder ruling |
+| F25 | — | Clean Wipe leaves Mentor-Note copies | **founder ruling needed** |
+| F26 | — | Full DOB stored | **founder ruling needed** |
+| F27 | — | Push token can be re-pointed by anyone who knows it | **won't fix** — unguessable, and it is what makes reinstall work |
+
 ## What is already good (do not regress)
 
 - Crisis scan is enforced server-to-server in the Stream before-send hook, signature-verified,
@@ -97,7 +133,10 @@ request is closed as `declined`). Blast radius: `matching.py`; callers unchanged
 `app/routers/conversation.py:329,344` call `_owned(...)` without `lock=True`, unlike End / Wipe.
 A report racing the mentor's End (or a double-tapped report) sees `active` twice and calls
 `release_listener_slot` twice → the counter drifts **low**, and the matcher over-assigns past
-`max_concurrent`. Fix: lock, and route every end through one helper.
+`max_concurrent`. Writing the test showed it is worse: the report path takes listener row →
+conversation row, the mentor End takes conversation → listener, and Postgres answers
+`DeadlockDetected` — one of the two callers gets a 500. Fix: lock the conversation first,
+everywhere, through one helper (`services/conversations.py`).
 
 **F6 — Counter drift, source 2: the reconcile recount races the matcher.**
 `app/services/matching.py:344-360`. `UPDATE listener_profiles SET active = (SELECT count…)` under
@@ -105,8 +144,13 @@ READ COMMITTED: if a matcher holds the listener row, the UPDATE waits, then re-c
 evaluates the sub-select on its **original snapshot** — the conversation the matcher just
 committed is not counted and the counter is written one low. This runs inline from
 `match_general` whenever the pool looks full — exactly when matchers are busiest.
-Fix: lock the listener rows first (`SELECT … FOR UPDATE ORDER BY id`), so the recount statement
-takes its snapshot after every in-flight reservation has committed.
+Proven before the fix: counter 2, real 3.
+Fix (as built): reconcile takes the listener rows it can get **without waiting**
+(`FOR UPDATE SKIP LOCKED`, id order) and sweeps + recounts only those, so the recount's snapshot
+is taken when no reservation on the row can be in flight — and the matcher still never blocks
+(`test_matcher_skips_a_locked_listener_row` forbids it). A row a matcher holds is healed on the
+next pass. `match_general` now retries its pick after a heal regardless of the counts, because
+another member's heal may be the one that freed the slot.
 
 **F7 — Counter drift, source 3: a crash between `open_conversation` phases leaks a slot for 24 h.**
 `matching.py:151-191`. Phase 1 commits the reservation; if the process dies before phase 3 the
@@ -192,8 +236,8 @@ Fix: one allowed set (`services/companions.py`); onboarding *coerces* unknown va
 conversation logic is written out four times (member end, wipe, report/block, mentor end).
 Fix: `services/listener_profiles.py`, public names in `matching`, one `services/conversations.py`.
 
-**F18 — `schemas.py` is 549 lines / 60 models in one file.** Split into a package by surface,
-re-exporting every name from `app.schemas` so no import changes. **Planned** — see Plans §P4.
+**F18 — `schemas.py` was 549 lines / 70 models in one file.** Now a package by surface,
+re-exporting every name from `app.schemas` so no import changed (OpenAPI byte-identical).
 
 **F19 — Redis client lives in `ratelimit._redis` and is reached into from six modules** for
 things that are not rate limiting (webhook stamp, watcher cache, brief cache, redaction counters).
@@ -255,9 +299,7 @@ conversations, moderation events and safety flags — the mentor's history and t
 must survive; delete the Stream user. Then add FKs with `ON DELETE` rules that match. Two
 migrations, one spec, founder sign-off on what "begin again" promises.
 
-**P4 — Organisation.** (a) `app/schemas/` package: `onboarding.py`, `matching.py`, `listeners.py`,
-`listener_console.py`, `admin.py`, `conversations.py`, `journals.py`, `paths.py`, `push.py`,
-`applications.py`; `__init__.py` re-exports everything (import paths unchanged). (b)
+**P4 — Organisation.** (a) ~~`app/schemas/` package~~ — done. (b)
 `app/cache.py` owning the Redis client and the four non-limiter uses; `ratelimit._redis` stays as
 an alias until tests move. (c) routers hold no `select(...)`: move the remaining query code in
 `listener_console.py` and `admin_console.py` into services, one router per commit.
@@ -279,4 +321,8 @@ the API takes more than ~5 KB. Set `client_max_body_size 64k` (outside this sess
    mentor tries to accept it.
 4. Onboarding stores NULL for an unknown companion animal or colour instead of the raw string.
 5. New per-member limits: crisis self-scan 30 / 10 min, note-sorting 5 / h, Personal requests
-   10 / h, journal writes 120 / h.
+   10 / h, journal writes 120 / h, companion change 30 / h.
+6. Onboarding answers **503 and removes the account** when Stream cannot register the member,
+   instead of leaving a member who can never be put in a channel.
+7. The capacity sweep now also ends an `active` conversation that has had **no Stream channel
+   for two minutes** (a crashed match) — before, it held a mentor's seat for 24 h.
