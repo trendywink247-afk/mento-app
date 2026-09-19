@@ -182,3 +182,17 @@ Source: the developer relayed these after the recovered 2026-09-06 walkthrough c
 
 **8. Design picks (2026-09-19, direction A board).** Request sent = "a letter on its way"; Chat = "alive" + the "In this chat" strip (topic · saved count · in-touch state) inside a composed header card; My Chats = richer rows + the In touch view; Path = the stage-centred home with the first-question builder and the "life rather than exams" finder; Journal = "today first, then the shelf" — one unified journal where anything saved from a chat lands beside the member's own notes. Direction A ("Pillow") is the working direction by use; B and C are parked, not rejected. These are board decisions — none is built in the app yet.
 
+### L — pending founder veto (implementation choices made where §L is silent)
+
+Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code already follows; strike or amend any of them. Client wiring: `docs/superpowers/specs/2026-09-19-board-port-api.md`.
+
+**L.2 message allowance**
+- **a. "10 per day" is per member across all their conversations; "3 in a row" is per conversation.** Any mentor message in that conversation resets the run.
+- **b. The day is the IST calendar day** (00:00 Asia/Kolkata, fixed UTC+05:30). A member abroad resets at India's midnight.
+- **c. "(or conversation)" is read kindly: for 24 hours after the scan flags anything in a conversation, that whole conversation is exempt** — follow-ups to something frightening are not rationed. They are tallied as crisis-exempt sends. (A member could lift their own limit by typing a crisis phrase; that also puts them in the human-review queue, which is the right outcome.)
+- **d. Both limits reached → the note names the daily one** (the longer wait is the honest one).
+- **e. A held message is not counted, and the server never echoes the member's text back.**
+- **f. Holding ships switched OFF (`ALLOWANCE_ENFORCED=false`); counting is on.** The shipped app has no A22 note yet — an old build would show Stream's raw error bubble. Flip it when the client lands. Limits are env values (A13: "values live in server config").
+- **g. Fail-open has a time budget (800 ms):** a slow database delivers the message uncounted, so the hook always answers Stream in time to keep the helpline card and the redaction.
+- **h. The ledger keeps one row per member per day (counts only — no text, no message or conversation ids) for 35 days.**
+- **i. Admin numbers are audited reads** (`allowance.viewed`), like the safety conversation view.

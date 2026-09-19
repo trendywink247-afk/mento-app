@@ -23,6 +23,7 @@ from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.reflection import ConversationReflection
 from app.schemas import (
+    AllowanceOut,
     ConversationListItem,
     ConversationMentorOut,
     ConversationState,
@@ -36,7 +37,7 @@ from app.schemas import (
     VerifyPinRequest,
 )
 from app.security import current_user_id, hash_pin, verify_pin
-from app.services import categories, conversations, listener_profiles, stream
+from app.services import allowance, categories, conversations, listener_profiles, stream
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -148,6 +149,20 @@ def conversation_mentor(
         issue_category=convo.issue_category,
         issue_category_label=categories.label(convo.issue_category),
     )
+
+
+@router.get("/{convo_id}/allowance", response_model=AllowanceOut)
+def conversation_allowance(
+    convo_id: str,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> AllowanceOut:
+    """The member's message allowance in THIS conversation (DECISIONS §L.2) — so the
+    composer can say "7 of 10 left today" and show the still note without guessing.
+    Read-only; the counting itself happens in the Stream before-send hook. Opaque 404
+    for a conversation that is not this member's."""
+    convo = _owned(db, convo_id, user_id)
+    return allowance.to_out(allowance.state_for(db, user_id, convo))
 
 
 @router.post("/{convo_id}/verify-pin", response_model=OkResult)

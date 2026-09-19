@@ -8,6 +8,9 @@ Two endpoints:
   POST /stream/before-message-send  — SYNCHRONOUS enforcement. Stream waits for our
       response before delivering. We scan, persist the signal, and augment the message
       with a `crisis` custom field (support copy + helplines) the client renders.
+      AFTER the scan — and only for a message the scan did NOT flag — the member's
+      message allowance is applied (DECISIONS §L.2, services/allowance.py). The order
+      is the safety property: a crisis message is never held and never counted.
   POST /stream/webhook              — ASYNC push events (message.new). Stream RETRIES
       this on failure and resumes when our service is healthy again, so any message
       that slipped past the (fail-open) before-send hook during an outage is re-scanned
@@ -42,7 +45,7 @@ from app.config import get_settings
 from app.db import SessionLocal
 from app.models.conversation import Conversation
 from app.models.enums import SafetySignal
-from app.services import crisis, moderation, push, safety, stream
+from app.services import allowance, crisis, moderation, push, safety, stream
 from app.services.crisis import CrisisResult
 from app.services.moderation import RedactionResult
 
@@ -63,6 +66,20 @@ def _get_crisis_limiter() -> anyio.CapacityLimiter:
     if _crisis_limiter is None:
         _crisis_limiter = anyio.CapacityLimiter(get_settings().crisis_scan_threads)
     return _crisis_limiter
+
+
+# The allowance gets its OWN thread budget. It is the only part of the hook that needs
+# Postgres for an ordinary message; if the database hangs, its stuck threads must not
+# take the crisis scan's threads with them (the scan is what puts the helpline card on
+# a message).
+_allowance_limiter: anyio.CapacityLimiter | None = None
+
+
+def _get_allowance_limiter() -> anyio.CapacityLimiter:
+    global _allowance_limiter
+    if _allowance_limiter is None:
+        _allowance_limiter = anyio.CapacityLimiter(get_settings().crisis_scan_threads)
+    return _allowance_limiter
 
 
 async def _run_scan(**kwargs) -> CrisisResult:
@@ -195,8 +212,125 @@ async def _scan_or_degrade(
         return crisis.scan(text)
 
 
+_ALLOWANCE_SEEN_TTL = 300  # seconds a message id's verdict is remembered
+
+
+def _seen_verdict(message_id: str | None) -> str | None:
+    """Stream retries a slow before-send attempt with the SAME message id. Without
+    this a retry would count the message twice (and could hold the member's 2nd
+    message as their "3rd"). Best-effort: no Redis → no memory → count as usual."""
+    if not message_id:
+        return None
+    try:
+        from app import ratelimit
+
+        return ratelimit._redis().get(f"mento:allowance:msg:{message_id}")
+    except Exception:
+        return None
+
+
+def _remember_verdict(message_id: str | None, held: str | None) -> None:
+    if not message_id:
+        return
+    try:
+        from app import ratelimit
+
+        ratelimit._redis().set(
+            f"mento:allowance:msg:{message_id}", held or "ok", ex=_ALLOWANCE_SEEN_TTL
+        )
+    except Exception:
+        pass
+
+
+def _allowance_event(
+    *, channel_id: str, sender_id: str, message_id: str | None
+) -> allowance.Verdict | None:
+    """Blocking allowance work for one NON-crisis message (own thread budget)."""
+    seen = _seen_verdict(message_id)
+    if seen == "ok":
+        return None
+    with SessionLocal() as db:
+        if seen is not None:
+            # A retry of a message we already held: same answer, nothing counted twice.
+            found = allowance.find_conversation(db, channel_id)
+            if found is None:
+                return None
+            convo = db.get(Conversation, found[0])
+            return allowance.Verdict(held=seen, state=allowance.state_for(db, found[1], convo))
+        verdict = allowance.register(db, channel_id=channel_id, sender_id=sender_id)
+    _remember_verdict(message_id, verdict.held if verdict else None)
+    return verdict
+
+
+def _tally_crisis_exempt(channel_id: str, sender_id: str, message_id: str | None) -> None:
+    """Runs AFTER the response has gone out (background task): the helpline card must
+    never wait on a counter. Numbers only; every failure is swallowed and logged."""
+    if _seen_verdict(message_id) is not None:
+        return
+    try:
+        with SessionLocal() as db:
+            allowance.note_crisis_exempt(db, channel_id=channel_id, sender_id=sender_id)
+        _remember_verdict(message_id, None)
+    except Exception as exc:  # noqa: BLE001 — a tally, not a guarantee
+        logger.warning("crisis-exempt tally not written (%s)", type(exc).__name__)
+
+
+async def _allowance_or_open(
+    *, channel_id: str | None, sender_id: str, message_id: str | None
+) -> allowance.Verdict | None:
+    """Apply the allowance to a NON-crisis message, or deliver. FAIL-OPEN and never
+    silent: a database fault, or a database too slow for the time budget, delivers the
+    message uncounted (a late answer from us would make Stream deliver it WITHOUT the
+    redaction that follows)."""
+    settings = get_settings()
+    if not settings.allowance_enabled or not channel_id:
+        return None
+    verdict: allowance.Verdict | None = None
+    finished = False
+    try:
+        with anyio.move_on_after(settings.allowance_budget_ms / 1000):
+            verdict = await anyio.to_thread.run_sync(
+                lambda: _allowance_event(
+                    channel_id=channel_id, sender_id=sender_id, message_id=message_id
+                ),
+                limiter=_get_allowance_limiter(),
+                abandon_on_cancel=True,
+            )
+            finished = True
+    except Exception as exc:  # noqa: BLE001 — the allowance must never stop a message
+        logger.warning("message allowance unavailable (%s) — delivering", type(exc).__name__)
+        return None
+    if not finished:
+        logger.warning("message allowance over its time budget — delivering")
+        return None
+    return verdict
+
+
+def _held_response(verdict: allowance.Verdict) -> dict:
+    """Stream's rejection contract: HTTP 200 with a regular message whose type is
+    `error`. The message is not saved and nobody else sees it; the sender's client
+    gets it back. `text` is the calm fallback line; `allowance` is the machine-readable
+    half the app renders the still note from (board A22). Never the member's text."""
+    state = verdict.state
+    return {
+        "message": {
+            "type": "error",
+            "text": allowance.note(verdict.held or allowance.REASON_IN_A_ROW),
+            "allowance": {
+                "held": True,
+                "reason": verdict.held,
+                "in_a_row": state.in_a_row,
+                "in_a_row_limit": state.in_a_row_limit,
+                "left_today": state.left_today,
+                "daily_limit": state.daily_limit,
+                "resets_at": state.resets_at.isoformat(),
+            },
+        }
+    }
+
+
 @router.post("/before-message-send")
-async def before_message_send(request: Request) -> dict:
+async def before_message_send(request: Request, background: BackgroundTasks) -> dict:
     """Synchronous enforcement: scan before Stream delivers the message."""
     event = await _verified_event(request)
     message = event.get("message") or {}
@@ -210,6 +344,20 @@ async def before_message_send(request: Request) -> dict:
     result = await _scan_or_degrade(
         text=text, user_id=user_id, channel_id=channel_id, message_id=message_id
     )
+
+    # Allowance AFTER the scan (DECISIONS §L.2). A flagged message never reaches the
+    # counters: it can not be held whatever they say, and it is tallied as
+    # crisis-exempt only once the response (and its helpline card) is on its way.
+    if result.triggered:
+        if channel_id and get_settings().allowance_enabled:
+            background.add_task(_tally_crisis_exempt, channel_id, user_id, message_id)
+    else:
+        verdict = await _allowance_or_open(
+            channel_id=channel_id, sender_id=user_id, message_id=message_id
+        )
+        if verdict is not None and verdict.held:
+            return _held_response(verdict)
+
     redaction = await _run_redact(text)
 
     if result.triggered or redaction.redacted:

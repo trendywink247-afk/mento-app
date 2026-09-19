@@ -1,6 +1,7 @@
 """Model registry — importing this module registers all mappers."""
 
 from app.models.admin import AdminAccount, AdminAuditLog
+from app.models.allowance import MessageAllowanceDay
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation
 from app.models.favourite import FavouriteListener
@@ -25,6 +26,7 @@ __all__ = [
     "JournalEntry",
     "ListenerApplication",
     "ListenerProfile",
+    "MessageAllowanceDay",
     "ModerationEvent",
     "PushToken",
     "SafetyFlag",

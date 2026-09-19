@@ -26,6 +26,12 @@ from app.schemas.admin import (
     AttentionItem,
     ModerationItem,
 )
+from app.schemas.allowance import (
+    AdminAllowanceDay,
+    AdminAllowanceOut,
+    AdminAllowanceRule,
+    AllowanceOut,
+)
 from app.schemas.applications import (
     ConsoleSessionOut,
     ListenerApplicationIn,
@@ -101,6 +107,9 @@ from app.schemas.safety import (
 
 __all__ = [
     "AdminAccountItem",
+    "AdminAllowanceDay",
+    "AdminAllowanceOut",
+    "AdminAllowanceRule",
     "AdminApplicationDeclineIn",
     "AdminApplicationItem",
     "AdminAuditItem",
@@ -118,6 +127,7 @@ __all__ = [
     "AdminMessageItem",
     "AdminOverviewOut",
     "AdminReconcileOut",
+    "AllowanceOut",
     "AttentionItem",
     "CompanionUpdateIn",
     "ConsoleSessionOut",

@@ -73,6 +73,21 @@ class Settings(BaseSettings):
     # SDK's ~6s default.
     stream_timeout_seconds: float = 3.0
 
+    # Member message allowance (DECISIONS §L.2): at most N member messages in a row
+    # before the mentor replies, and N per IST day per member. Counted and held in
+    # the Stream before-send hook, AFTER the crisis scan — a crisis-flagged message
+    # (or any message in a conversation flagged within the exempt window) is never
+    # held and never counted. `allowance_enforced` is the rollout switch: counting is
+    # always on (the composer meter and the admin numbers work), holding starts when
+    # this is true — flip it once the app renders the A22 note. Fail-open: a slow or
+    # unreachable database delivers the message (budget below).
+    allowance_enabled: bool = True
+    allowance_enforced: bool = False
+    allowance_in_a_row: int = 3
+    allowance_per_day: int = 10
+    allowance_crisis_exempt_hours: int = 24
+    allowance_budget_ms: int = 800
+
     # Conversations active longer than this are considered abandoned; the admin
     # reconcile action ends them and frees the listener's slot.
     conversation_max_age_hours: int = 24
