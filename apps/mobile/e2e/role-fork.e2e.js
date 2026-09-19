@@ -4,6 +4,14 @@
  * straight from `/`. Runs once normally and once under reducedMotion: 'reduce'. */
 const { chromium } = require('playwright');
 const WEB = 'http://localhost:8081';
+const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
+
+/** What the SERVER holds for this session (GET /me) — read from Node, not the page. */
+async function serverMe(token) {
+  const res = await fetch(`${API}/me`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new Error(`GET /me answered ${res.status}`);
+  return res.json();
+}
 
 const MOTIVATION =
   'I went through a rough prelims year and a friend sat with me through it. I want to be that for someone else.';
@@ -93,6 +101,10 @@ async function run(browser, reduced) {
   // rest of the member journey on the SAME account — never a silent default Panda, never
   // a second account.
   const tokenBefore = await page.evaluate(() => globalThis.localStorage.getItem('mento.session_token'));
+  const meBefore = await serverMe(tokenBefore);
+  if (meBefore.companion_animal !== null) {
+    throw new Error(`a mentor account already has a companion on the server: ${meBefore.companion_animal}`);
+  }
   await tid('mentor-switch-talk').click();
   await page.waitForSelector('text=Your growth, your theme', { timeout: 30000 });
   if ((await page.evaluate(() => globalThis.localStorage.getItem('mento.role'))) !== 'mentor') {
@@ -122,6 +134,18 @@ async function run(browser, reduced) {
   if (after.role !== 'mentee') throw new Error(`role is ${after.role}, expected mentee`);
   if (after.animal !== 'Capybara') throw new Error(`companion is ${after.animal}, expected the one they picked`);
   console.log(`${label}: OK companion → ready → live chat on the same account, as the chosen Capybara`);
+
+  // The pick is on the ACCOUNT too (PUT /me/companion), not only on this device. The save is
+  // fire-and-forget, so give it a moment to land.
+  let me = await serverMe(after.token);
+  for (let i = 0; i < 20 && me.companion_animal !== 'Capybara'; i += 1) {
+    await page.waitForTimeout(250);
+    me = await serverMe(after.token);
+  }
+  if (me.companion_animal !== 'Capybara' || me.companion_colour !== 'sage') {
+    throw new Error(`server holds ${me.companion_animal} / ${me.companion_colour}, expected Capybara / sage`);
+  }
+  console.log(`${label}: OK the server has the companion (GET /me → ${me.companion_animal} / ${me.companion_colour})`);
 
   await page.goto(`${WEB}/chats`, { waitUntil: 'networkidle', timeout: 60000 });
   await tid('tab-chats').waitFor({ timeout: 30000 });

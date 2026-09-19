@@ -35,6 +35,14 @@ export default function ProfileTab() {
   };
   const { colors, companionColor, setCompanionColor } = useTheme();
   const { t, locale, setLocale } = useI18n();
+  // The recolour lands on the device at once (the whole app re-accents) and on the account
+  // in the background — a failed save shows nothing and never undoes the choice.
+  const recolour = (key: CompanionColor) => {
+    setCompanionColor(key);
+    void api.saveCompanion({ companion_colour: key }).catch(() => {
+      /* reason: best-effort sync; the device copy is what the app reads */
+    });
+  };
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   // The status card starts from its last-loaded value so it does not pop in on every return.
@@ -123,7 +131,7 @@ export default function ProfileTab() {
               return (
                 <Pressable
                   key={key}
-                  onPress={() => setCompanionColor(key)}
+                  onPress={() => recolour(key)}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   accessibilityLabel={t('onboarding.companion.themeA11y', { label: COMPANION_COLOR_LABELS[key] })}

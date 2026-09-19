@@ -12,6 +12,19 @@ const BASE_URL =
 
 export type Persona = { id: string; persona_name: string; persona_avatar: string };
 
+/** `GET /me` and the answer to `PUT /me/companion`: the persona plus the companion the
+ * SERVER holds (canonical spelling; null = none stored). */
+export type Me = Persona & {
+  companion_animal: string | null;
+  companion_colour: string | null;
+};
+
+/** `PUT /me/companion`: an omitted field is left as it is, `null` clears it. */
+export type CompanionUpdate = {
+  companion_animal?: string | null;
+  companion_colour?: string | null;
+};
+
 export type OnboardingResult = {
   session_token: string;
   stream_token: string;
@@ -259,6 +272,11 @@ export const api = {
     companion_animal?: string | null;
     companion_colour?: string | null;
   }) => request<OnboardingResult>('/onboarding/start', { method: 'POST', body: JSON.stringify(body) }),
+
+  // --- The member's own record (companion saved on the account, not just the device) ---
+  me: () => request<Me>('/me', {}, true),
+  saveCompanion: (body: CompanionUpdate) =>
+    request<Me>('/me/companion', { method: 'PUT', body: JSON.stringify(body) }, true),
 
   match: (body: { kind?: 'general' | 'personal'; issue_category?: string | null }) =>
     request<MatchResult>('/match', { method: 'POST', body: JSON.stringify(body) }, true),
