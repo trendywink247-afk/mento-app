@@ -6,17 +6,66 @@ import json
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.models.enums import ListenerReportReason, RequestKind, SafetySignal
+from app.services import companions
 
 
 # --- Onboarding ---
 class OnboardingStart(BaseModel):
     dob: date
     email: EmailStr | None = None  # optional, recovery only
+    # Coerced, never rejected (services/companions): an older build with a retired
+    # colour name must still get a person in. Unknown → None.
     companion_animal: str | None = Field(default=None, max_length=32)
     companion_colour: str | None = Field(default=None, max_length=32)
+
+    @field_validator("companion_animal")
+    @classmethod
+    def _known_animal(cls, v: str | None) -> str | None:
+        return companions.coerce_animal(v)
+
+    @field_validator("companion_colour")
+    @classmethod
+    def _known_colour(cls, v: str | None) -> str | None:
+        return companions.coerce_colour(v)
+
+
+# --- The member's own account ---
+class MeOut(BaseModel):
+    """What the app may read back about its own account: persona + companion.
+    Never DOB, age or email."""
+
+    id: str
+    persona_name: str
+    persona_avatar: str
+    companion_animal: str | None
+    companion_colour: str | None
+
+
+class CompanionUpdateIn(BaseModel):
+    """PUT /me/companion. PATCH semantics: a field left out is unchanged, `null`
+    clears it, an unknown value is a 422 naming the allowed set."""
+
+    companion_animal: str | None = Field(default=None, max_length=32)
+    companion_colour: str | None = Field(default=None, max_length=32)
+
+    @field_validator("companion_animal")
+    @classmethod
+    def _allowed_animal(cls, v: str | None) -> str | None:
+        return None if v is None else companions.require_animal(v)
+
+    @field_validator("companion_colour")
+    @classmethod
+    def _allowed_colour(cls, v: str | None) -> str | None:
+        return None if v is None else companions.require_colour(v)
+
+    @model_validator(mode="after")
+    def _something_to_change(self) -> CompanionUpdateIn:
+        if not self.model_fields_set:
+            raise ValueError("send companion_animal and/or companion_colour")
+        return self
 
 
 class PersonaOut(BaseModel):
@@ -78,6 +127,16 @@ class ListenerProfileOut(BaseModel):
     listening_since: str  # ISO date of ListenerProfile.created_at
     conversations_held: int
     is_favourite: bool
+
+
+class ConversationMentorOut(ListenerProfileOut):
+    """`GET /conversations/{id}/mentor` — the mentor's profile PLUS the member's own
+    topic for THIS conversation (the chat header's topic chip). The topic is the
+    member's own match-time choice; nothing here says anything new about either
+    person to the other side (T&S #7). Historic rows: both null."""
+
+    issue_category: str | None = None
+    issue_category_label: str | None = None
 
 
 class PersonalRequestIn(BaseModel):
@@ -363,6 +422,10 @@ class ConversationListItem(BaseModel):
     is_locked: bool
     created_at: str
     ended_at: str | None
+    # The member's own match-time topic (slug + server label); null when none was
+    # picked or the row predates the column.
+    issue_category: str | None = None
+    issue_category_label: str | None = None
 
 
 class VerifyPinRequest(BaseModel):

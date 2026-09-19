@@ -21,6 +21,7 @@ from app.routers import (
     listener_console,
     listeners,
     match,
+    me,
     notifications,
     onboarding,
     paths,
@@ -125,6 +126,7 @@ app.add_middleware(
 API = "/api/v1"
 app.include_router(health.router, prefix=API)
 app.include_router(onboarding.router, prefix=API)
+app.include_router(me.router, prefix=API)
 app.include_router(match.router, prefix=API)
 app.include_router(paths.router, prefix=API)
 app.include_router(safety.router, prefix=API)

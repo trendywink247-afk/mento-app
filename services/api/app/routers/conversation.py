@@ -24,8 +24,8 @@ from app.models.reflection import ConversationReflection
 from app.routers.listeners import _profile_out
 from app.schemas import (
     ConversationListItem,
+    ConversationMentorOut,
     ConversationState,
-    ListenerProfileOut,
     LockRequest,
     OkResult,
     PauseRequest,
@@ -36,7 +36,7 @@ from app.schemas import (
     VerifyPinRequest,
 )
 from app.security import current_user_id, hash_pin, verify_pin
-from app.services import conversations, stream
+from app.services import categories, conversations, stream
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -123,17 +123,19 @@ def list_conversations(
             is_locked=c.is_locked,
             created_at=c.created_at.isoformat(),
             ended_at=c.ended_at.isoformat() if c.ended_at else None,
+            issue_category=c.issue_category,
+            issue_category_label=categories.label(c.issue_category),
         )
         for c in convos
     ]
 
 
-@router.get("/{convo_id}/mentor", response_model=ListenerProfileOut)
+@router.get("/{convo_id}/mentor", response_model=ConversationMentorOut)
 def conversation_mentor(
     convo_id: str,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
-) -> ListenerProfileOut:
+) -> ConversationMentorOut:
     """ "Two in the room" (spec §3.3), keyed by the conversation the member is in —
     the chat route only knows the conversation id, so the listener id never has to
     travel through route params. Opaque 404 for any conversation not this member's."""
@@ -141,7 +143,11 @@ def conversation_mentor(
     listener = db.get(ListenerProfile, convo.listener_id)
     if listener is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
-    return _profile_out(db, listener, user_id)
+    return ConversationMentorOut(
+        **_profile_out(db, listener, user_id).model_dump(),
+        issue_category=convo.issue_category,
+        issue_category_label=categories.label(convo.issue_category),
+    )
 
 
 @router.post("/{convo_id}/verify-pin", response_model=OkResult)
