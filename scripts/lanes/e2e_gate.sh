@@ -4,7 +4,7 @@ ROOT=/c/Users/khana/Desktop/Mento
 OUT="${MENTO_GATE_OUT:-/tmp/mento-e2e-gate}"
 mkdir -p "$OUT"; : > "$OUT/summary.txt"
 export NODE_PATH="$HOME/.claude/skills/playwright-skill/node_modules"
-export MENTO_WEB=http://localhost:8081
+export MENTO_WEB=http://localhost:8081 MENTO_DB="${MENTO_DB:-mento}" MENTO_REDIS_DB="${MENTO_REDIS_DB:-0}"
 psqlc() { docker exec mento-postgres psql -U mento -d mento -t -A -c "$1"; }
 reset() {
   docker exec mento-redis redis-cli FLUSHDB >/dev/null
