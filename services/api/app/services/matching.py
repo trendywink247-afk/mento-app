@@ -39,7 +39,7 @@ class ListenerAtCapacity(Exception):
     """The target listener has no spare capacity right now."""
 
 
-def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
+def blocked_listener_ids(db: Session, user_id: str) -> set[str]:
     """Listeners this user has blocked — never re-match them (Trust & Safety #9)."""
     rows = (
         db.execute(
@@ -54,7 +54,7 @@ def _blocked_listener_ids(db: Session, user_id: str) -> set[str]:
     return set(rows)
 
 
-def _own_listener_ids(db: Session, user_id: str) -> set[str]:
+def own_listener_ids(db: Session, user_id: str) -> set[str]:
     """Listener profiles minted from this user's own applications (session 22
     funnel) — a member who became a listener must never be paired with themself."""
     rows = (
@@ -234,7 +234,7 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
     """Match the user to the next available listener and open a Stream channel."""
     sweep_stale_presence(db)
     db.commit()
-    blocked_ids = _blocked_listener_ids(db, user.id) | _own_listener_ids(db, user.id)
+    blocked_ids = blocked_listener_ids(db, user.id) | own_listener_ids(db, user.id)
     listener = _pick_available_listener(db, category, blocked_ids, community=user.community_slug)
     if listener is None:
         # Self-heal before giving up. Prod finding (2026-09-06): every slot was held
@@ -289,7 +289,7 @@ def accept_personal_request(
 
     # The member blocked this mentor after asking (T&S #9): the mentor must not come
     # back into their chats through the old request. Close it; opaque to the caller.
-    if req.target_listener_id in _blocked_listener_ids(db, req.requester_id):
+    if req.target_listener_id in blocked_listener_ids(db, req.requester_id):
         req.status = RequestStatus.declined
         db.commit()
         raise RequestNotPending()

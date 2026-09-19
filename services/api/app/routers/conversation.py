@@ -22,7 +22,6 @@ from app.models.enums import ConversationEndedBy, ConversationStatus, Moderation
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.reflection import ConversationReflection
-from app.routers.listeners import _profile_out
 from app.schemas import (
     ConversationListItem,
     ConversationMentorOut,
@@ -37,7 +36,7 @@ from app.schemas import (
     VerifyPinRequest,
 )
 from app.security import current_user_id, hash_pin, verify_pin
-from app.services import categories, conversations, stream
+from app.services import categories, conversations, listener_profiles, stream
 
 router = APIRouter(prefix="/conversations", tags=["conversations"])
 
@@ -145,7 +144,7 @@ def conversation_mentor(
     if listener is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
     return ConversationMentorOut(
-        **_profile_out(db, listener, user_id).model_dump(),
+        **listener_profiles.profile(db, listener, user_id).model_dump(),
         issue_category=convo.issue_category,
         issue_category_label=categories.label(convo.issue_category),
     )

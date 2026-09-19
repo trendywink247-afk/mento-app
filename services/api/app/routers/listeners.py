@@ -10,17 +10,14 @@ real and testable today without a mentor app.
 from __future__ import annotations
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.db import get_db
 from app.models.admin import AdminAccount
-from app.models.conversation import Conversation
 from app.models.enums import (
-    ConversationStatus,
-    ListenerStatus,
     RequestKind,
     RequestStatus,
     VettingStatus,
@@ -31,66 +28,17 @@ from app.models.request import ConversationRequest
 from app.routers.admin_console import current_admin
 from app.schemas import ListenerOut, ListenerProfileOut, OkResult, PersonalRequestIn, RequestOut
 from app.security import current_user_id
-from app.services import audit, locks, push_tasks
+from app.services import audit, listener_profiles, locks, push_tasks
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
-    _blocked_listener_ids,
-    _own_listener_ids,
     accept_personal_request,
+    blocked_listener_ids,
     decline_personal_request,
+    own_listener_ids,
 )
 
 router = APIRouter(prefix="/listeners", tags=["listeners"])
-
-# Conversation statuses that count toward "conversations held" on a mentor
-# profile — spec 2026-09-06 §3.3: the count is about the mentor's experience,
-# so a wiped conversation (member-side hard delete) still counts.
-_HELD_STATUSES = (ConversationStatus.active, ConversationStatus.ended, ConversationStatus.wiped)
-
-
-def _is_favourite(db: Session, user_id: str, listener_id: str) -> bool:
-    return db.get(FavouriteListener, {"user_id": user_id, "listener_id": listener_id}) is not None
-
-
-def _listener_out(li: ListenerProfile, *, is_favourite: bool = False) -> ListenerOut:
-    return ListenerOut(
-        id=li.id,
-        persona_name=li.persona_name,
-        persona_avatar=li.persona_avatar,
-        gender=li.gender.value,
-        categories=li.categories or [],
-        status=li.status.value,
-        available=li.status == ListenerStatus.online
-        and li.active_conversations < li.max_concurrent,
-        is_favourite=is_favourite,
-    )
-
-
-def _profile_out(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOut:
-    """The full "Two in the room" profile (spec §3.3). Shared by the by-id (Browse)
-    and by-conversation (chat header) routes."""
-    conversations_held = db.scalar(
-        select(func.count())
-        .select_from(Conversation)
-        .where(Conversation.listener_id == li.id, Conversation.status.in_(_HELD_STATUSES))
-    )
-    return ListenerProfileOut(
-        id=li.id,
-        persona_name=li.persona_name,
-        persona_avatar=li.persona_avatar,
-        gender=li.gender.value,
-        categories=li.categories or [],
-        community_slug=li.community_slug,
-        status=li.status.value,
-        available=li.status == ListenerStatus.online
-        and li.active_conversations < li.max_concurrent,
-        public_line=li.public_line,
-        availability_note=li.availability_note,
-        listening_since=li.created_at.date().isoformat(),
-        conversations_held=conversations_held or 0,
-        is_favourite=_is_favourite(db, user_id, li.id),
-    )
 
 
 def _request_out(r: ConversationRequest) -> RequestOut:
@@ -113,7 +61,7 @@ def list_listeners(
     own listener profile, if their application was approved). Ordered favourites
     first, then available first, then rank (spec 2026-09-06 §3.4) — each a stable
     sort over the previous so rank order survives within every group."""
-    excluded = _blocked_listener_ids(db, user_id) | _own_listener_ids(db, user_id)
+    excluded = blocked_listener_ids(db, user_id) | own_listener_ids(db, user_id)
     listeners = db.scalars(
         select(ListenerProfile)
         .where(ListenerProfile.vetting_status == VettingStatus.approved)
@@ -125,7 +73,7 @@ def list_listeners(
         ).all()
     )
     out = [
-        _listener_out(li, is_favourite=li.id in favourite_ids)
+        listener_profiles.card(li, is_favourite=li.id in favourite_ids)
         for li in listeners
         if li.id not in excluded
     ]
@@ -139,7 +87,7 @@ def _visible_approved_listener(db: Session, listener_id: str, user_id: str) -> L
     li = db.get(ListenerProfile, listener_id)
     if li is None or li.vetting_status != VettingStatus.approved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
-    if listener_id in _blocked_listener_ids(db, user_id) | _own_listener_ids(db, user_id):
+    if listener_id in blocked_listener_ids(db, user_id) | own_listener_ids(db, user_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
     return li
 
@@ -152,7 +100,7 @@ def get_listener_profile(
 ) -> ListenerProfileOut:
     """Browse profile — "Two in the room" (spec §3.3), by listener id."""
     li = _visible_approved_listener(db, listener_id, user_id)
-    return _profile_out(db, li, user_id)
+    return listener_profiles.profile(db, li, user_id)
 
 
 @router.post("/{listener_id}/favourite", response_model=OkResult)
@@ -222,7 +170,7 @@ def create_personal_request(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
     # Blocked listeners and the user's own listener profile are equally
     # unreachable — same opaque refusal for both.
-    if listener_id in _blocked_listener_ids(db, user_id) | _own_listener_ids(db, user_id):
+    if listener_id in blocked_listener_ids(db, user_id) | own_listener_ids(db, user_id):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "listener unavailable")
 
     # One pending request per pair: a double tap must wait for the first insert,
