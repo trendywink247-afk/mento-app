@@ -41,7 +41,8 @@ from sqlalchemy import select
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models.conversation import Conversation
-from app.services import moderation, push, safety, stream
+from app.models.enums import SafetySignal
+from app.services import crisis, moderation, push, safety, stream
 from app.services.crisis import CrisisResult
 from app.services.moderation import RedactionResult
 
@@ -110,31 +111,52 @@ async def _verified_event(request: Request) -> dict:
         except OSError:
             payload = raw
 
-    if stream.verify_webhook(payload, signature):
-        return json.loads(payload)
-    # Fallback: a setup that signs the raw (compressed) bytes.
-    if payload is not raw and stream.verify_webhook(raw, signature):
-        return json.loads(payload)
+    verified = stream.verify_webhook(payload, signature) or (
+        # Fallback: a setup that signs the raw (compressed) bytes.
+        payload is not raw
+        and stream.verify_webhook(raw, signature)
+    )
+    if not verified:
+        logger.warning("Stream webhook signature verification FAILED — rejecting")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid webhook signature")
+    try:
+        event = json.loads(payload)
+    except ValueError:
+        # Signed but unparseable: a 500 here would make Stream retry it forever.
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "malformed webhook body") from None
+    if not isinstance(event, dict):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "malformed webhook body")
+    return event
 
-    logger.warning("Stream webhook signature verification FAILED — rejecting")
-    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid webhook signature")
 
-
-def _scan_event(
-    *, text: str, user_id: str, channel_id: str | None, message_id: str | None
-) -> CrisisResult:
-    """The blocking DB work for one webhook event — ONE session for both the channel
-    lookup and the flag write. Runs in the threadpool: these handlers are async (the
-    body read must be awaited), and sync DB calls on the event loop would stall every
-    other request while Stream waits on the hot per-message path."""
-    # Stamp last-webhook time so the admin Health tab can detect a silently-dead
-    # crisis webhook. Best-effort — a Redis outage must never break the scan path.
+def _stamp_webhook_seen() -> None:
+    """Stamp last-webhook time so the admin Health tab and /health/crisis can detect a
+    silently-dead crisis webhook. Best-effort — a Redis outage must never break the
+    scan path."""
     try:
         from app import ratelimit
 
         ratelimit._redis().set("mento:last_webhook_at", datetime.now(UTC).isoformat())
     except Exception:
         pass
+
+
+def _scan_event(
+    *, text: str, user_id: str, channel_id: str | None, message_id: str | None
+) -> CrisisResult:
+    """The blocking work for one webhook event. Runs in the threadpool: these handlers
+    are async (the body read must be awaited), and sync DB calls on the event loop
+    would stall every other request while Stream waits on the hot per-message path.
+
+    Scan FIRST, database second. The lexical scan is pure, so an ordinary message
+    costs no DB round trip at all, and a crisis message is recognised even when
+    Postgres is unreachable. Only a triggered signal opens a session — ONE session
+    for both the channel lookup and the flag write. A DB failure propagates: the
+    sync hook degrades to the card without the flag (see before_message_send), the
+    async hook answers 5xx so Stream retries it."""
+    _stamp_webhook_seen()
+    if not crisis.scan(text).triggered:
+        return CrisisResult(triggered=False, signal=SafetySignal.none)
     with SessionLocal() as db:
         conversation_id = None
         if channel_id:
@@ -150,6 +172,29 @@ def _scan_event(
         )
 
 
+async def _scan_or_degrade(
+    *, text: str, user_id: str, channel_id: str | None, message_id: str | None
+) -> CrisisResult:
+    """Sync-hook scan that can never lose the helpline card to an infra fault.
+
+    Stream fails OPEN on a non-2xx from us — the message would be delivered exactly
+    as sent, with no `crisis` payload. So if persisting the flag fails (DB down, pool
+    exhausted) we fall back to the pure scan and still augment the message. Never
+    silent: logged at ERROR; the retried async `message.new` hook writes the flag
+    for the human-review queue once the database is back."""
+    try:
+        return await _run_scan(
+            text=text, user_id=user_id, channel_id=channel_id, message_id=message_id
+        )
+    except Exception as exc:  # noqa: BLE001 — the card must survive any fault
+        logger.error(
+            "crisis flag NOT persisted in before-send hook (%s) — returning the "
+            "helpline card anyway; the async message.new hook will retry the flag",
+            type(exc).__name__,
+        )
+        return crisis.scan(text)
+
+
 @router.post("/before-message-send")
 async def before_message_send(request: Request) -> dict:
     """Synchronous enforcement: scan before Stream delivers the message."""
@@ -162,7 +207,7 @@ async def before_message_send(request: Request) -> dict:
 
     # Crisis scan reads the ORIGINAL text (signals aren't PII; redaction must not blind
     # it). Redaction rewrites what the recipient actually receives.
-    result = await _run_scan(
+    result = await _scan_or_degrade(
         text=text, user_id=user_id, channel_id=channel_id, message_id=message_id
     )
     redaction = await _run_redact(text)
