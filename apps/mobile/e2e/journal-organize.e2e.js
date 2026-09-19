@@ -1,7 +1,8 @@
 /**
- * Journal note-sorting (opt-in AI) flow: journals hub → AI card → Organize screen →
- * pick a channel. With no Gemini key set the endpoint 503s and the screen shows the
- * friendly "not switched on yet" notice — asserted here. Normal + reduced-motion.
+ * Journal note-sorting (opt-in AI) flow, board A30: journals hub → Find the threads →
+ * OFF by default (no key to press) → the consent switch → Find the threads. With no
+ * Gemini key set the endpoint 503s and the screen shows the honest "not switched on yet"
+ * notice — asserted here. Normal + reduced-motion.
  */
 const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
@@ -37,8 +38,10 @@ async function run(browser, reduced) {
   await onboard(page, tid);
   await page.goto(`${WEB}/journals`, { waitUntil: 'networkidle', timeout: 60000 });
   await tid('journal-ai-organize').click();
-  await page.waitForSelector('text=Organize with AI', { timeout: 30000 });
-  await tid('organize-channel-mood').click();
+  await page.waitForSelector('[data-testid="threads-off"]', { timeout: 30000 });
+  if (await tid('threads-find').count()) throw new Error('Find the threads was pressable before consent');
+  await tid('threads-consent').click();
+  await tid('threads-find').click();
   // Dark by default (no key) → the disabled notice must render.
   await page.waitForSelector('[data-testid="organize-error"]', { timeout: 30000 });
 
@@ -51,5 +54,5 @@ async function run(browser, reduced) {
   const errors = [...(await run(browser, false)), ...(await run(browser, true))];
   await browser.close();
   if (errors.length) { console.error('PAGE ERRORS:', errors); process.exit(1); }
-  console.log('JOURNAL-ORGANIZE E2E PASSED — card→screen→disabled notice, 0 page errors (normal + reduced)');
+  console.log('JOURNAL-ORGANIZE E2E PASSED — card→screen→consent→disabled notice, 0 page errors (normal + reduced)');
 })().catch((e) => { console.error('E2E FAILED:', e.message); process.exit(1); });
