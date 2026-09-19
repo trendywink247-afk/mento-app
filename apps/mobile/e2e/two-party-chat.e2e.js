@@ -17,6 +17,12 @@
  *
  *   Run:  $env:LISTENER_ID="<id>"; node e2e/two-party-chat.e2e.js
  *
+ *   AFTER the run, put the pool back — this spec opens the listener console, which stamps
+ *   `last_seen_at`; 15 minutes later every General match sweeps that mentor to `away`
+ *   (matching.sweep_stale_presence) and the NEXT run of this spec hangs at onboarding:
+ *
+ *      docker exec mento-postgres psql -U mento -d mento -c "UPDATE listener_profiles SET status='online', last_seen_at=NULL;"
+ *
  * NOTE: live PII-redaction / crisis enforcement additionally needs Stream's before-send
  * webhook pointed at the API (a public tunnel, see the mento-crisis-webhook skill). The
  * enforcement LOGIC is proven server-side by pytest; this spec proves the chat loop.

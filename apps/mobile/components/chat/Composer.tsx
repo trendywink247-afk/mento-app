@@ -42,6 +42,7 @@
  * components/chat/ComposerField.tsx, shared with the two hand-rolled web
  * composers — this file supplies only the kit-specific text/send wiring above.
  */
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import type { TextComposerState } from 'stream-chat';
 import { useMessageComposer, useMessageInputContext, useStateStore } from 'stream-chat-expo';
@@ -53,6 +54,11 @@ const textComposerStateSelector = (state: TextComposerState) => ({ text: state.t
 
 export function Composer() {
   const { t } = useI18n();
+  // The kit renders this override itself (no props of ours reach it), so the one route
+  // flag it honours is read here: `edit=1` — the first-question builder's "Edit in
+  // chat" — opens the chat with the field focused. Only the member chat route ever
+  // carries it; on the mentor chat it is simply absent.
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
   const messageComposer = useMessageComposer();
   const { textComposer } = messageComposer;
   const { text } = useStateStore(textComposer.state, textComposerStateSelector);
@@ -98,6 +104,7 @@ export function Composer() {
       sending={sending}
       placeholder={t('chat.placeholder')}
       testIDPrefix="composer"
+      autoFocus={edit === '1'}
     />
   );
 }

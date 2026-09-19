@@ -1,6 +1,7 @@
 /**
  * Path (Communities) E2E: onboard → Path tab → Pathfinder walk → UPSC placement →
- * Path home (stage + prompts + listeners-online) → prompt tap → chat composer
+ * Path home (stage + prompts + listeners-online) → prompt tap → first-question builder
+ * (DECISIONS §L.8; chips proven in path-question.e2e.js) → continue → chat composer
  * pre-filled (never auto-sent) → change path → life/heavy_days. Plus a
  * reduced-motion pathfinder walk. 0 page errors required.
  */
@@ -58,8 +59,11 @@ async function onboard(page) {
   await page.waitForSelector('text=mentor', { timeout: 30000 }); // online counter line
   console.log('OK path home: stage title + prompts + listeners line');
 
-  // ---------- Prompt tap → chat with pre-filled composer, NOT auto-sent ----------
+  // ---------- Prompt tap → builder → chat with pre-filled composer, NOT auto-sent ----------
   await page.locator('[data-testid="path-prompt-0"]').click();
+  await page.waitForURL('**/path-question**', { timeout: 30000 });
+  await page.waitForSelector('text=Nothing is sent until you tap Send.', { timeout: 30000 });
+  await page.locator('[data-testid="pq-continue"]').click();
   await page.waitForURL('**/chat/**', { timeout: 60000 });
   await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
   const draft = await page.locator('[data-testid="composer-input"]').inputValue();
@@ -67,9 +71,15 @@ async function onboard(page) {
     console.error(`FAIL composer draft = "${draft}"`);
     process.exit(1);
   }
-  const sent = await page.locator('text=I keep recalculating my marks.').count();
-  // The text exists only in the composer (input value), not as a sent message bubble.
-  console.log(`OK prompt pre-filled composer (bubbles containing it: ${sent === 0 ? 'none' : sent})`);
+  // The text exists only in the composer (input value), never as a sent message bubble:
+  // the transcript is still in its empty state. (Counting the sentence on the page
+  // proves nothing — the Path tab's prompt card stays mounted under the chat.)
+  await page.waitForTimeout(1500);
+  if (!(await page.locator("text=You're connected.").count())) {
+    console.error('FAIL the transcript is not empty — the starter was sent');
+    process.exit(1);
+  }
+  console.log('OK prompt → builder → pre-filled composer, nothing sent');
 
   // ---------- Change path → life ----------
   await page.goto(`${WEB}/path`, { waitUntil: 'networkidle', timeout: 60000 });

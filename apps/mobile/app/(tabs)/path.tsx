@@ -89,7 +89,7 @@ export default function PathTab() {
     }
   };
 
-  const talk = async (prompt?: string) => {
+  const talk = async () => {
     if (matching) return;
     setMatching(true);
     setNote(null);
@@ -101,7 +101,6 @@ export default function PathTab() {
           id: match.conversation_id,
           listener: match.listener_persona_name,
           channel: match.stream_channel_id ?? '',
-          ...(prompt ? { starter: prompt } : {}),
         },
       });
     } catch (e) {
@@ -241,7 +240,14 @@ export default function PathTab() {
             key={p}
             style={[styles.promptCard, { backgroundColor: colors.surface }]}
             edge={colors.edgeSurface}
-            onPress={() => void talk(p)}
+            onPress={() =>
+              // The first-question builder (DECISIONS §L.8): the starter is shaped there and
+              // handed to the chat composer — nothing is matched or sent on this tap.
+              router.push({
+                pathname: '/path-question',
+                params: { starter: p, community: community.slug, lens: `${community.name} · ${stage.title}` },
+              })
+            }
             disabled={matching}
             testID={`path-prompt-${i}`}
           >

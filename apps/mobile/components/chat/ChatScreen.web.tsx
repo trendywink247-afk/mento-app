@@ -258,6 +258,8 @@ type ComposerProps = {
   /** Resolves when the message is accepted by the server; rejects on failure. */
   onSend: (body: string) => Promise<void>;
   onTyping: () => void;
+  /** "Edit in chat" from the first-question builder: open with the field focused. */
+  autoFocus?: boolean;
 };
 
 /** Pillow-key composer (spec §5.2 — same anatomy/tokens as the native
@@ -270,7 +272,7 @@ type ComposerProps = {
  * so Enter-to-send is wired through `onKeyPress` instead, reading the DOM
  * KeyboardEvent's `shiftKey` off `nativeEvent` (present at runtime; not in RN's
  * official TextInputKeyPressEventData type, hence the narrow cast below). */
-const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: ComposerProps) {
+const Composer = memo(function Composer({ onSend, onTyping, initialDraft, autoFocus }: ComposerProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const [draft, setDraft] = useState(initialDraft ?? '');
@@ -327,6 +329,7 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft }: Comp
         sending={sending}
         placeholder={t('chat.placeholder')}
         testIDPrefix="composer"
+        autoFocus={autoFocus}
       />
     </View>
   );
@@ -339,11 +342,13 @@ export default function ChatScreenWeb() {
   useSessionGuard();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const { id: conversationId, listener, channel: channelId, starter } = useLocalSearchParams<{
+  const { id: conversationId, listener, channel: channelId, starter, edit } = useLocalSearchParams<{
     id: string;
     listener?: string;
     channel?: string;
     starter?: string;
+    /** '1' = arrive with the composer focused (first-question builder, "Edit in chat"). */
+    edit?: string;
   }>();
   const listenerName = listener ?? t('chat.yourListener');
   // Presence, community and the saved count for the header card. The header may know
@@ -638,7 +643,7 @@ export default function ChatScreenWeb() {
           {/* Presence-only typing bubble — Focus physics: three dots breathing. */}
           {typing ? <TypingDots testID="typing-indicator" /> : null}
 
-          <Composer onSend={send} onTyping={onTyping} initialDraft={starter} />
+          <Composer onSend={send} onTyping={onTyping} initialDraft={starter} autoFocus={edit === '1'} />
         </View>
       )}
 

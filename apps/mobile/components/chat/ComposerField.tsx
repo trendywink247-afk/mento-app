@@ -8,7 +8,15 @@
  * their own text state and guard/async logic and just hand it primitives.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { useRef } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  TextInput,
+  View,
+  type TextInputProps,
+} from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { PressKey } from '@/components/motion/PressKey';
@@ -39,6 +47,10 @@ type Props = {
    * the OS keyboard's Enter already inserts a newline and the button is the only
    * way to send. */
   onKeyPress?: TextInputProps['onKeyPress'];
+  /** Open with the field focused and the caret at the END of whatever it holds — the
+   * first-question builder's "Edit in chat" (app/path-question.tsx). Focus only: it
+   * never sends anything. */
+  autoFocus?: boolean;
 };
 
 export function ComposerField({
@@ -50,9 +62,23 @@ export function ComposerField({
   placeholder,
   testIDPrefix,
   onKeyPress,
+  autoFocus = false,
 }: Props) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const caretPlaced = useRef(false);
+
+  // A browser focuses a pre-filled textarea with the caret at the START; typing would
+  // then land in front of the draft. Native already puts it at the end. Once only, so
+  // it never fights the member's own caret afterwards.
+  const placeCaretAtEnd: TextInputProps['onFocus'] = (e) => {
+    if (Platform.OS !== 'web' || caretPlaced.current) return;
+    caretPlaced.current = true;
+    // reason: on react-native-web the focus event's target is the DOM <textarea>; RN's
+    // event type only knows a native node handle.
+    const el = e.target as unknown as { setSelectionRange?: (start: number, end: number) => void };
+    el.setSelectionRange?.(value.length, value.length);
+  };
 
   return (
     <View style={styles.row}>
@@ -66,6 +92,8 @@ export function ComposerField({
           value={value}
           onChangeText={onChangeText}
           onKeyPress={onKeyPress}
+          autoFocus={autoFocus}
+          onFocus={autoFocus ? placeCaretAtEnd : undefined}
           placeholder={placeholder}
           placeholderTextColor={colors.inkMuted}
           multiline
