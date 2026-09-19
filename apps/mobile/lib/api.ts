@@ -309,6 +309,8 @@ export type ListenerApplication = {
   mentor_interest: boolean;
   created_at: string;
   console_url: string | null;
+  /** Declined only: when the server's 30-day cooldown lets them apply again (ISO time). */
+  reapply_after?: string | null;
 };
 export type ListenerApplicationIn = {
   motivation: string;
@@ -510,4 +512,10 @@ export const api = {
   // --- Product feedback (board A11) ---
   sendFeedback: (body: { category: FeedbackCategory; text: string; screen?: string; app_version?: string }) =>
     request<FeedbackReceived>('/feedback', { method: 'POST', body: JSON.stringify(body) }, true),
+
+  // --- Start fresh (board A32; DECISIONS §L.11) ---
+  /** Erase this member on our servers and on Stream. 200 = gone (also when already gone).
+   * Refusals carry a `code`: 409 `mentor_active` (also a live mentor — nothing touched),
+   * 503 `erase_incomplete` (chats ended, the rest not yet — keep the session and retry). */
+  eraseMe: () => request<{ status: 'erased' }>('/me', { method: 'DELETE' }, true),
 };

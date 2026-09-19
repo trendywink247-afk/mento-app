@@ -8,6 +8,8 @@
  *                        and must not claim a server deletion anywhere;
  *   - `DELETE /me` exists → the sheet must promise the deletion (and this spec fails until
  *                        the copy — and the confirm handler — are moved back to the board's words).
+ * With `DELETE /me` it also proves the erasure really happened: after confirm, the old
+ * session is unknown to the server (GET /me → 401) and a second DELETE is a 200 no-op.
  * Also: the sheet is STILL (nothing in it animates once it is up), the two keys are the same
  * size, and "Keep my space" returns to Profile with the session intact.
  * Runs at 390×844, normal + reduced motion, 0 page errors.
@@ -108,8 +110,21 @@ async function run(browser, reduced, canErase) {
   // stands in for the funnel's (dark in e2e): it must not survive into the next identity.
   await page.evaluate(() => globalThis.localStorage.setItem('mento.analytics_id', 'e2e-old-identity'));
   await tid('profile-start-fresh').click();
+  if (canErase) {
+    const kept = await tid('start-fresh-kept').innerText();
+    if (!/safety signals and reports/i.test(kept)) throw new Error(`[${label}] the sheet does not name what is kept: "${kept}"`);
+  }
   await tid('start-fresh-confirm').click();
   await tid('start').waitFor({ timeout: 30000 });
+  if (canErase) {
+    // The server really erased the member: the old session is an unknown one now, and a
+    // second DELETE /me with it is the idempotent no-op.
+    const me = await fetch(`${API}/me`, { headers: { Authorization: `Bearer ${token}` } });
+    if (me.status !== 401) throw new Error(`[${label}] GET /me after Start fresh answered ${me.status}, expected 401 (member erased)`);
+    const again = await fetch(`${API}/me`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    if (again.status !== 200) throw new Error(`[${label}] a second DELETE /me answered ${again.status}, expected the 200 no-op`);
+    console.log(`[${label}] OK the server erased the member (GET /me 401; DELETE /me again is a 200 no-op)`);
+  }
   const after = await page.evaluate(() => globalThis.localStorage.getItem('mento.session_token'));
   if (after) throw new Error(`[${label}] Start fresh left the session token on the device`);
   const analyticsId = await page.evaluate(() => globalThis.localStorage.getItem('mento.analytics_id'));

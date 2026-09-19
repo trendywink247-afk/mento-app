@@ -991,8 +991,8 @@
     "titleLead": "Start ",
     "titleAccent": "fresh",
     "titleTail": "",
-    "sub": "This ends your Mento space on this device and begins a new one, with a new name.",
-    "listTitle": "What you leave behind",
+    "sub": "This deletes your Mento space and begins a new one, with a new name.",
+    "listTitle": "What will be deleted",
     "chats": "Your chats",
     "chatsRest": "and the mentors you stay in touch with",
     "journal": "Your journal",
@@ -1002,9 +1002,9 @@
     "path": "Your path",
     "pathRest": "and the name %{name}",
     "pathRestNoName": "and your name here",
-    "truth": "All of it leaves this device now. It is not deleted from our servers yet, and you will not be able to open any of it again.",
-    "warn": "This cannot be undone. Once you start fresh, there is no way back to any of it.",
-    "confirm": "Leave it all and start fresh",
+    "truth": "All of it is deleted from this device and from our servers.",
+    "warn": "This cannot be undone. Once it is deleted, we cannot bring any of it back.",
+    "confirm": "Delete everything and start fresh",
     "keep": "Keep my space",
     "closeA11y": "Close this sheet and keep my space"
   },
@@ -1224,5 +1224,12 @@
     "time_evenings": "Evenings",
     "time_weekends": "Weekends",
     "commitmentA11y": "How much time you can give: %{value}. Tap to change."
+  },
+  "erase": {
+    "kept": "Kept, with nothing that points to you: safety signals and reports, so the team's safety record stays complete.",
+    "failed": "Your chats have ended, but the rest is not deleted yet. Nothing has left this device. Please try again in a moment.",
+    "unreachable": "We could not reach Mento, so nothing is confirmed as deleted. Nothing has left this device. Please try again.",
+    "retry": "Try deleting again",
+    "mentorActive": "You are also a mentor here. Deleting everything would leave the people you talk with mid-conversation, so it cannot be done from here yet. Ask the Mento team to close your mentor side first. After that, Start fresh deletes everything."
   }
 }

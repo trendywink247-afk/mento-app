@@ -7,6 +7,7 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { BoardSheet, type BoardSheetHandle } from '@/components/motion/BoardSheet';
 import { PressKey } from '@/components/motion/PressKey';
 import { forgetAnalyticsId } from '@/lib/analytics';
+import { ApiError, api } from '@/lib/api';
 import { forgetPlacements } from '@/lib/companionPlacement';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { clearListenerSession } from '@/lib/listenerSession';
@@ -22,13 +23,18 @@ import { dangerKeyEdge, font, radius, type, wash, washInk } from '@/theme/tokens
  * (components/motion/BoardSheet.tsx). A limit state: its CONTENT is still — no arrivals on
  * the rows, no companion, no haptic on the destructive key.
  *
- * THE COPY IS WHAT THE CODE DOES, NOT WHAT THE BOARD HOPES (T&S #6 / #8). Today Start fresh
- * clears this device (session, Stream token, persona, companion, role, placements, mentor
- * session) and drops this device's push token — and nothing else: there is no `DELETE /me`
- * (docs/BACKEND_AUDIT_2026-09-19.md F24, planned as P3). So the sheet says the space leaves
- * this device, that it is NOT yet deleted from our servers, and that the member cannot open
- * it again. When the erasure endpoint ships, `startFresh.truth`, `.sub`, `.listTitle` and
- * `.confirm` go back to the board's words — `e2e/start-fresh-copy.e2e.js` fails until they do.
+ * THE COPY IS WHAT THE CODE DOES (T&S #6 / #8). Confirm calls `DELETE /me` FIRST — the
+ * server erases the member and everything keyed to them, on our servers and on Stream
+ * (DECISIONS §L.11, services/api/app/services/erasure.py) — and only once it answers
+ * "erased" does the device forget the session, persona, companion, role, placements, mentor
+ * session and push registration. So the board's words are true: deleted from this device
+ * AND from our servers. `e2e/start-fresh-copy.e2e.js` holds the sheet to the API.
+ *
+ * When the server cannot confirm (503 `erase_incomplete`, or no answer at all) nothing
+ * leaves the device and one still line says so, with the key turned into "Try deleting
+ * again" — the same session retries. A member who is ALSO a live mentor (409
+ * `mentor_active`, or known up front from their approved application) is told calmly why
+ * it cannot be done from here yet, and only "Keep my space" remains.
  *
  * A screens-backed `transparentModal` route, not an RN <Modal> (blank on Android new arch).
  */
@@ -46,20 +52,43 @@ export default function StartFreshSheet() {
   const sheet = useRef<BoardSheetHandle | null>(null);
   const [persona, setPersona] = useState<Persona | null>(null);
   const [leaving, setLeaving] = useState(false);
+  // Why the last try did not erase: the server ended the chats but could not finish, or we
+  // never heard back. Either way nothing has left the device.
+  const [failure, setFailure] = useState<'incomplete' | 'unreachable' | null>(null);
+  // Also a live mentor: erasing would strand the people they talk with (DECISIONS §L.11 ii).
+  const [mentorActive, setMentorActive] = useState(false);
 
   useEffect(() => {
     let active = true;
     void getPersona().then((p) => {
       if (active) setPersona(p);
     });
+    // Known up front, so a mentor is never offered a key that can only be refused. The
+    // server is still the judge (409 below) — this read only saves them the tap.
+    void api
+      .getListenerApplication()
+      .then((a) => {
+        if (active && a?.status === 'approved' && a.console_url) setMentorActive(true);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
   }, []);
 
   const confirm = async () => {
-    if (leaving) return;
+    if (leaving || mentorActive) return;
     setLeaving(true);
+    setFailure(null);
+    try {
+      await api.eraseMe();
+    } catch (e) {
+      // Nothing leaves the device unless the server said "erased": the same session retries.
+      if (e instanceof ApiError && e.code === 'mentor_active') setMentorActive(true);
+      else setFailure(e instanceof ApiError && e.code === 'erase_incomplete' ? 'incomplete' : 'unreachable');
+      setLeaving(false);
+      return;
+    }
     setCompanionColor(DEFAULT_COMPANION_COLOR); // un-tint before the new onboarding picks its own
     await unregisterPush();
     await clearSession();
@@ -121,15 +150,30 @@ export default function StartFreshSheet() {
         <Text style={[type.note, { color: colors.ink }]} testID="start-fresh-truth">
           {t('startFresh.truth')}
         </Text>
+        <Text style={[type.caption, { color: colors.inkMuted }]} testID="start-fresh-kept">
+          {t('erase.kept')}
+        </Text>
       </EdgeSurface>
 
-      <View style={[styles.warn, { backgroundColor: wash.danger }]}>
-        <Ionicons name="alert-circle-outline" size={20} color={washInk.danger} />
-        <Text style={[styles.warnText, { color: washInk.danger }]}>{t('startFresh.warn')}</Text>
-      </View>
+      {/* Still, like every limit state: a line, never a shake. */}
+      {mentorActive ? (
+        <View style={[styles.warn, { backgroundColor: colors.surfaceAlt }]} testID="start-fresh-mentor">
+          <Ionicons name="people-outline" size={20} color={colors.ink} />
+          <Text style={[styles.warnText, { color: colors.ink }]}>{t('erase.mentorActive')}</Text>
+        </View>
+      ) : (
+        <View style={[styles.warn, { backgroundColor: wash.danger }]}>
+          <Ionicons name="alert-circle-outline" size={20} color={washInk.danger} />
+          <Text style={[styles.warnText, { color: washInk.danger }]} testID="start-fresh-warn">
+            {failure === 'incomplete' ? t('erase.failed') : failure === 'unreachable' ? t('erase.unreachable') : t('startFresh.warn')}
+          </Text>
+        </View>
+      )}
 
-      {/* Two keys of exactly the same size: leaving is never the easier tap. */}
+      {/* Two keys of exactly the same size: leaving is never the easier tap. A live mentor
+          keeps only "Keep my space" — the other key could only be refused. */}
       <View style={styles.keys}>
+        {mentorActive ? null : (
         <PressKey
           onPress={() => void confirm()}
           disabled={leaving}
@@ -143,10 +187,11 @@ export default function StartFreshSheet() {
             <ActivityIndicator color={colors.onBrand} />
           ) : (
             <Text style={[styles.keyText, { color: colors.onBrand }]} numberOfLines={1} adjustsFontSizeToFit>
-              {t('startFresh.confirm')}
+              {failure ? t('erase.retry') : t('startFresh.confirm')}
             </Text>
           )}
         </PressKey>
+        )}
         <PressKey
           onPress={keep}
           disabled={leaving}
