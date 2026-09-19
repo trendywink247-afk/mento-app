@@ -150,9 +150,11 @@ async function memberOnboard(page, tid) {
   // --- A: member brief ("Context for care") -------------------------------------
   await atid('member-header').click();
   await a.waitForSelector('[data-testid="brief-ready"]', { timeout: 30000 });
-  await a.locator('text=Why they came').first().waitFor({ timeout: 15000 });
-  await a.locator('text=A gentle next step').first().waitFor({ timeout: 15000 });
-  console.log('OK member brief shows "Why they came" + "A gentle next step"');
+  // Board A36: the 2x2 facts and the care prompt.
+  await a.locator('text=Path and stage').first().waitFor({ timeout: 15000 });
+  await a.locator('text=A care prompt').first().waitFor({ timeout: 15000 });
+  await a.locator("text=You will never see a member's age, email or anything that identifies them.").first().waitFor({ timeout: 15000 });
+  console.log('OK member brief (A36) shows the facts, the care prompt and the identity promise');
   await atid('back').click();
   await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
 

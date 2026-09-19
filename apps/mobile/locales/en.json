@@ -835,6 +835,28 @@
     "companionA11y": "Your companion, peeking over the message field",
     "read": "Read"
   },
+  "memberBrief": {
+    "eyebrow": "Only what a mentor may know",
+    "title": "Member brief",
+    "back": "Back to the conversation",
+    "knowYou": "They know you as %{name} today.",
+    "pathStage": "Path and stage",
+    "cameWith": "Came with",
+    "started": "Chat started",
+    "lastMessage": "Last message",
+    "notShared": "Not shared",
+    "todayAt": "Today, %{time}",
+    "flagsOne": "1 open safety flag",
+    "flagsMany": "%{count} open safety flags",
+    "flagsBody": "Our safety team is looking at it. Keep mentoring as you are. You are not alone with it.",
+    "carePrompt": "A care prompt",
+    "never": "You will never see a member's age, email or anything that identifies them.",
+    "inTouch": "You stay in touch with %{name}.",
+    "endInTouch": "End it",
+    "endedInTouch": "You no longer stay in touch.",
+    "companionA11y": "%{name}'s companion, in their colour",
+    "loadError": "We could not load the brief."
+  },
   "mentorInTouch": {
     "sheetA11y": "A member asked to stay in touch",
     "title": "%{name} would like to ",
