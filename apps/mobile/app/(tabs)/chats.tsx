@@ -9,10 +9,10 @@ import { FeedbackPill } from '@/components/FeedbackPill';
 import { GroundFade } from '@/components/GroundFade';
 import { LinkedRings } from '@/components/InTouchBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { LottieTile } from '@/components/art/LottieTile';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PinPad } from '@/components/chat/options/bits';
 import { ChatRow, type ChatRowState } from '@/components/chats/ChatRow';
+import { ChatsEmpty } from '@/components/chats/ChatsEmpty';
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
@@ -299,10 +299,13 @@ export default function ChatsTab() {
     () => [...HOME_PERCHES, ...(!loading && hasAnything && listLength <= SHORT_LIST ? CARD_PERCHES : [])],
     [loading, hasAnything, listLength],
   );
+  // Before the first conversation the empty state itself shows the companion, on its own
+  // stage — so the perch stays empty (never two companions on one screen).
+  const showEmpty = !loading && !hasAnything && view === 'all' && loadError === null;
   // An honest error is a still state; a sheet over the list hides the companion.
   const perch = useCompanionPlacement('chats', perches, {
     still: loadError !== null,
-    hidden: sheetOpen || gate !== null,
+    hidden: sheetOpen || gate !== null || showEmpty,
   });
 
   const stateOf = (c: ConversationListItem): ChatRowState =>
@@ -484,8 +487,9 @@ export default function ChatsTab() {
               <View style={styles.touchLine}>
                 <Text style={[type.caption, styles.touchLineText, { color: colors.inkMuted }]}>{t('inTouch.viewLine')}</Text>
               </View>
-            ) : (
-              // Nothing to filter yet: the same room is kept for the companion.
+            ) : showEmpty ? null : (
+              // Nothing to filter yet: the same room is kept for the companion. (Not before
+              // the first conversation — the companion stands in the empty state then.)
               <View style={styles.touchLine} />
             )}
             <View style={[styles.toolsEdge, { backgroundColor: colors.edgeSurface }]} pointerEvents="none" />
@@ -600,19 +604,8 @@ export default function ChatsTab() {
               }}
             />
           ) : !hasAnything ? (
-            <View style={styles.center}>
-              <LottieTile name="chatDots" fallback="chatsEmpty" size={140} />
-              <Text style={[type.title, { color: colors.ink }]}>{t('chats.emptyTitle')}</Text>
-              <Text style={[type.body, styles.centerText, { color: colors.inkMuted }]}>{t('chats.emptyBody')}</Text>
-              <View style={styles.emptyCta}>
-                <PrimaryButton
-                  label={t('chats.startCta')}
-                  icon="chatbubble-ellipses"
-                  onPress={openNewChat}
-                  testID="start-from-chats"
-                />
-              </View>
-            </View>
+            // A failed first load shows only its honest note above — never "no conversations".
+            showEmpty ? <ChatsEmpty onStart={openNewChat} /> : null
           ) : (
             <FlatList
               key="all"
@@ -744,7 +737,6 @@ const styles = StyleSheet.create({
   pip: { width: 28, height: 10, borderRadius: radius.pill },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: space.lg },
   centerText: { textAlign: 'center' },
-  emptyCta: { alignSelf: 'stretch', marginTop: space.sm },
   newChatWrap: { position: 'absolute', left: space.md, right: space.md, bottom: 36 },
   newChatCard: {
     flexDirection: 'row',

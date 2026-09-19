@@ -579,7 +579,7 @@
     "retryA11y": "Retry loading conversations",
     "emptyTitle": "No conversations yet",
     "emptyBody": "When you start talking with a mentor, your conversations will live here. Always private.",
-    "startCta": "Start a Conversation",
+    "startCta": "Start a conversation",
     "privacyFooter": "Your conversations are private.",
     "wiped": "Messages wiped — gone from both sides.",
     "sayHello": "Say hello when you're ready.",
@@ -1301,5 +1301,8 @@
     "postmarkA11y": "Sent through Mento",
     "notFound": "We could not find this question. It may have been closed.",
     "loadError": "We could not load your question just now. It is still on its way."
+  },
+  "chatsEmpty": {
+    "companionA11y": "Your companion, here with you"
   }
 }
