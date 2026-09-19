@@ -52,3 +52,12 @@ Publish rules: read the live index first, change only our keys, batch the publis
 | u11 | 8092 / 8011 / `mento_u11` / 12 | One face per mentor everywhere (`listener_profiles.companion_animal`, the ONLY migration, off `3a56447b2ab6`), member companions on Mentor Home rows, topic label, "Your line" sheet, the mentor chat Owl, application copy. |
 | u12 | 8093 / 8012 / `mento_u12` / 13 | Companion pick copy + clipping, Profile "Support the team" row, My Chats empty state, admin A13 allowance panel + admin feedback list. No migration. |
 Parked by the founder: companion glide (T02), row→chat / sheet shared elements (T05/T06), living art (credits). Gotcha learned: stopping a background gate with TaskStop does NOT kill `e2e_gate.sh` on Windows — two gates then reset the same DB under each other. Kill with `Get-CimInstance Win32_Process | ? CommandLine -match 'e2e_gate\.sh|\.e2e\.js' | % { Stop-Process $_.ProcessId -Force }` before starting another.
+
+## Round 4 (2026-09-20) — the founder's board review + the canvas's "Left to build or wire" row
+Notes: `docs/superpowers/plans/2026-09-20-founder-board-review.md`. Lanes off master `dfb230c`:
+| Lane | Web / API / DB / Redis | Owns |
+|---|---|---|
+| u13 | 8094 / 8013 / `mento_u13` / 14 | One sky everywhere; A03 copy + clip; the ask loop (busy → A24 → A25 → mentor page → question → A04 letter → My Chats); Android crisis media pop-up + send; A21/A22 solid; A04 real Seen/Replying (migration `c13a0seen001` off `4b971bd4faaa`); safety tip placement; then T05/T06 motion if time. |
+| u14 | 8095 / 8014 / `mento_u14` / 15 | Owl default for mentors; A32 self-serve step back ("Notify the Mento team" / "Back to mentoring"); A10 Mentor Home pass; Your line pass; A12 Reading 1 ported from the drafted pages + a final "being written" page; mentor chat menu = Report + End only; A37 pass; web console + admin faces. Any migration chains after `c13a0seen001`. |
+Then: merge u13 → u14 (chain migrations), full gate, backup + deploy, OTA; then re-capture the shipped app and re-lay the board: clear it and finalise (one page of final screens by flow; design-source A-artboards and the parked motion prototypes moved to their own pages rather than deleted).
+Still parked / founder decisions: A11 screenshot (no file storage), T02 glide, living art for eight animals (credits), native animated-webp flag (needs an APK), mentor crisis wording, Module B naming, paid-version vs the 2-mentor cap, rule-of-three motion.
