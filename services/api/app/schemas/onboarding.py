@@ -16,6 +16,9 @@ class OnboardingStart(BaseModel):
     # colour name must still get a person in. Unknown → None.
     companion_animal: str | None = Field(default=None, max_length=32)
     companion_colour: str | None = Field(default=None, max_length=32)
+    # The member's own name for the companion — same never-reject rule: a name that
+    # fails services/companions.clean_name is dropped, never a reason to refuse.
+    companion_name: str | None = None
 
     @field_validator("companion_animal")
     @classmethod
@@ -26,6 +29,11 @@ class OnboardingStart(BaseModel):
     @classmethod
     def _known_colour(cls, v: str | None) -> str | None:
         return companions.coerce_colour(v)
+
+    @field_validator("companion_name")
+    @classmethod
+    def _kept_name(cls, v: str | None) -> str | None:
+        return companions.coerce_name(v)
 
 
 class PersonaOut(BaseModel):
@@ -49,14 +57,19 @@ class MeOut(BaseModel):
     persona_avatar: str
     companion_animal: str | None
     companion_colour: str | None
+    # Only ever returned to the member themself (never in a mentor or admin payload).
+    companion_name: str | None = None
 
 
 class CompanionUpdateIn(BaseModel):
     """PUT /me/companion. PATCH semantics: a field left out is unchanged, `null`
-    clears it, an unknown value is a 422 naming the allowed set."""
+    clears it, an unknown value is a 422 naming the allowed set. `companion_name` is
+    checked in the router (services/companions.clean_name) so its refusal carries
+    `code: companion_name_invalid`; the bound here only caps the body."""
 
     companion_animal: str | None = Field(default=None, max_length=32)
     companion_colour: str | None = Field(default=None, max_length=32)
+    companion_name: str | None = Field(default=None, max_length=companions.NAME_MAX * 8)
 
     @field_validator("companion_animal")
     @classmethod
@@ -71,5 +84,5 @@ class CompanionUpdateIn(BaseModel):
     @model_validator(mode="after")
     def _something_to_change(self) -> CompanionUpdateIn:
         if not self.model_fields_set:
-            raise ValueError("send companion_animal and/or companion_colour")
+            raise ValueError("send companion_animal, companion_colour and/or companion_name")
         return self

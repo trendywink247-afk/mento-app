@@ -121,6 +121,7 @@ def test_me_returns_persona_and_companion_and_nothing_private(client, db_session
         "persona_avatar": "harbor",
         "companion_animal": "Cat",
         "companion_colour": "plum",
+        "companion_name": None,
     }
 
 

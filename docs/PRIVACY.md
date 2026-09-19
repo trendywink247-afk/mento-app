@@ -35,6 +35,12 @@ person seeking support and the listener — appears only as an auto-assigned per
   at any time from your profile. It is used only as a soft signal to the matcher — it
   never blocks or delays being matched with a listener — picking a rare or no
   community never leaves you unmatched.
+- **Your companion's name — optional.** If you name your growth companion (when you
+  pick it, or later in Profile), we store that short name so the app can show it back
+  to you. Only you ever see it: it is never shown to mentors or other members, never
+  sent to our messaging provider or to analytics, and not shown to safety staff. It
+  cannot hold links, email addresses or phone numbers. You can change or remove it
+  in Profile, and Start fresh erases it with the rest of your account.
 - **Journals** — mood, finance, gratitude entries, and mentor notes you save are
   stored so you can read them back. They are private to you; no one else, including
   listeners or admins, can read your journal.
