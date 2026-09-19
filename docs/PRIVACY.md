@@ -6,7 +6,7 @@
 > policy shown in-app or on any public page) before publication. Update this file in the
 > same commit as any change to what data Mento collects or who can see it.
 
-**Last reconciled against the codebase:** 2026-09-04 (session 29).
+**Last reconciled against the codebase:** 2026-09-19 (session 36 — account erasure, `DELETE /me`).
 
 ---
 
@@ -37,7 +37,7 @@ person seeking support and the listener — appears only as an auto-assigned per
   community never leaves you unmatched.
 - **Journals** — mood, finance, gratitude entries, and mentor notes you save are
   stored so you can read them back. They are private to you; no one else, including
-  listeners or admins, can read your journal.
+  listeners or admins, can read your journal. Start fresh deletes them (§5).
 - **Listener applications** (if you apply to become a listener) — motivation,
   community interests, availability, and optional email. Stored, not sent anywhere,
   until an admin reviews the application.
@@ -98,6 +98,41 @@ our messaging provider during an active conversation.
 
 You can also clear your Path community/stage preference at any time; doing so
 removes that soft-matching signal going forward.
+
+### Erasing everything — "Start fresh"
+
+Profile → Start fresh erases your Mento account, on this device **and on our
+servers**, and you begin again with a new name. It is permanent: nobody, including
+the Mento team, can bring any of it back.
+
+**Deleted:** your account record (your persona name, date of birth, optional email,
+companion and its colour, and your Path choice); every journal entry, including
+Mentor Notes you saved from a chat; your saved mentors and any "stay in touch"
+links (the mentor sees the link end); requests you sent to a mentor; your
+notification registration; the daily message counts; your end-of-chat reflections;
+any mentor application that did not become an active mentor role; and every
+conversation — each open one is ended, and its messages and channel are
+hard-deleted from our messaging provider (Stream Chat) exactly as Clean Wipe does,
+together with your account there.
+
+**Kept, with nothing that points back to you:**
+- **Crisis-safety flags** raised by the automatic scan — which signal fired, the few
+  matched words that triggered it, and when; never the message itself. They stay so the safety team's review record is complete;
+  the link to your account is removed.
+- **Reports.** A report you made about a mentor stays (it protects other members)
+  without your account on it; a report a mentor made about a conversation with you
+  stays for review without your account on it.
+- **One line in the team's audit log** saying that an account was erased, with
+  counts of what was removed — not who.
+
+If our messaging provider cannot confirm a deletion at that moment, the
+app says so and asks you to try again; it never tells you something was deleted when
+it was not. Your open chats are ended either way.
+
+**If you are also a mentor on Mento**, Start fresh cannot erase your account from the
+app while your mentor role is active — doing so would leave the people you support
+mid-conversation. Ask the Mento team to close your mentor side first; after that,
+Start fresh erases everything as above.
 
 ## 6. Crisis support
 

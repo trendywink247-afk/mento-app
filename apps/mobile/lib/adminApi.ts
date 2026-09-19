@@ -38,7 +38,8 @@ export type AdminListener = {
 export type AdminModerationItem = {
   id: string;
   reporter_id: string | null;
-  subject_id: string;
+  /** null = the reported member has since erased their account (DELETE /me). */
+  subject_id: string | null;
   conversation_id: string | null;
   level: number;
   reason: string | null;

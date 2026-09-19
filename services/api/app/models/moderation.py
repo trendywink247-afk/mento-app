@@ -19,7 +19,9 @@ class ModerationEvent(UUIDMixin, TimestampMixin, Base):
     # Who filed it. `reporter_id` is a User id for members and a ListenerProfile id
     # for listeners; the block-list query only ever reads member rows (blocked=True).
     reporter_kind: Mapped[ReporterKind] = mapped_column(default=ReporterKind.member)
-    subject_id: Mapped[str] = mapped_column(String(36), index=True)  # reported user/listener
+    # The reported user or listener. NULL once a reported MEMBER has erased their account
+    # (DELETE /me): a mentor's report stays for review, the member's id does not.
+    subject_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
     conversation_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     level: Mapped[ModerationLevel] = mapped_column(default=ModerationLevel.warning)

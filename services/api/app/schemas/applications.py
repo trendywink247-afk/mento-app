@@ -30,6 +30,9 @@ class ListenerApplicationOut(BaseModel):
     created_at: str
     # Present only when approved: the applicant's private console link.
     console_url: str | None = None
+    # Declined only: when the server's 30-day cooldown lets them apply again (ISO time).
+    # Additive; older builds ignore it.
+    reapply_after: str | None = None
 
 
 class ConsoleSessionOut(BaseModel):

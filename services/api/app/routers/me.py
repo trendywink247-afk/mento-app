@@ -11,10 +11,11 @@ from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.db import get_db
+from app.errors import ApiProblem
 from app.models.user import User
-from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut
+from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut, OkResult
 from app.security import current_user_id
-from app.services import allowance
+from app.services import allowance, erasure
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -76,3 +77,46 @@ def update_companion(
     db.commit()
     db.refresh(user)
     return _out(user)
+
+
+@router.delete(
+    "",
+    response_model=OkResult,
+    responses={
+        409: {"description": "`mentor_active` — also a live mentor; nothing was touched"},
+        503: {"description": "`erase_incomplete` — chats ended, the rest not yet; retry"},
+    },
+)
+def erase_me(
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """Start fresh, for real (audit F24, DECISIONS §L.11): erase this member and
+    everything keyed to them — see `services/erasure.py` for exactly what is deleted,
+    what is kept detached (safety flags, reports) and why.
+
+    Idempotent: once erased, the same session gets 200 again and nothing happens.
+    Fail-safe: when Stream cannot confirm a deletion the answer is 503 `erase_incomplete`
+    — chats are ended, nothing else is claimed, the member row stays so the app retries
+    with the same session. Refused with 409 `mentor_active` while the member is also a
+    live mentor (nothing touched)."""
+    ratelimit.enforce(
+        f"erase:{user_id}", 10, 3600, detail="Too many tries — please wait a little and try again."
+    )
+    try:
+        erasure.erase_member(db, user_id)
+    except erasure.MentorActive as exc:
+        raise ApiProblem(
+            status.HTTP_409_CONFLICT,
+            "mentor_active",
+            "You are also a mentor here. Erasing everything would leave the people you "
+            "talk with mid-conversation, so it cannot be done from here yet.",
+        ) from exc
+    except erasure.EraseIncomplete as exc:
+        raise ApiProblem(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "erase_incomplete",
+            "Your chats have ended, but the rest is not deleted yet. Please try again "
+            "in a moment.",
+        ) from exc
+    return OkResult(status="erased")

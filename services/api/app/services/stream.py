@@ -109,6 +109,38 @@ def wipe_channel(channel_id: str) -> None:
     client.delete_channels([f"messaging:{channel_id}"], hard_delete=True)
 
 
+def _is_not_found(exc: Exception) -> bool:
+    """Stream answers 404 for a channel or user that is already gone."""
+    return getattr(exc, "status_code", None) == 404
+
+
+def erase_channel(channel_id: str) -> None:
+    """Member erasure (DELETE /me): the same hard delete as Clean Wipe, but a channel that
+    is already gone on Stream counts as done — erasure must converge on a retry, not fail
+    forever. Any other failure RAISES: the caller must not claim a deletion that did not
+    happen."""
+    try:
+        wipe_channel(channel_id)
+    except Exception as exc:  # noqa: BLE001 — classified here, re-raised unless "gone"
+        if not _is_not_found(exc):
+            raise
+
+
+def delete_user(user_id: str) -> None:
+    """Member erasure: hard-delete the member's Stream user and anything it still owns
+    there. Already gone = done. Stub mode has no Stream user to delete. Any other failure
+    RAISES — see erase_channel."""
+    client = _client()
+    if client is None:
+        logger.warning("Stream not configured — skipping delete_user")
+        return
+    try:
+        client.delete_user(user_id, hard_delete=True, mark_messages_deleted=True)
+    except Exception as exc:  # noqa: BLE001 — classified here, re-raised unless "gone"
+        if not _is_not_found(exc):
+            raise
+
+
 def freeze_channel(channel_id: str) -> bool:
     """Freeze a channel so no member can write into it again — the Stream half of
     Report / Block / Suspend (a blocked or suspended mentor's open client, or a saved
