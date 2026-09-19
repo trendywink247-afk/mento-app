@@ -17,6 +17,10 @@
  * ART (animal + pose), not just the pose key, so an animal change crossfades too
  * instead of hard-cutting.
  *
+ * Optional CLING poses (`hang` / `peek` / `dangle`, 2026-09-19) exist for some animals only
+ * and are pinned by components/art/PerchedCompanion.tsx, which never asks for one an animal
+ * lacks; asked for anyway, it falls back to `idle` like any other missing pose.
+ *
  * State vocabulary (all animals): idle micro-sway (+ host breathing), greet,
  * celebrate, comfort, tap-react (`interactive`).
  */

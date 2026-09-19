@@ -14,6 +14,7 @@ import { relativeTime } from '@/lib/format';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { listenerApi, onListenerSessionLost, type MemberBrief } from '@/lib/listenerApi';
 import { useReducedMotion } from '@/lib/useReducedMotion';
+import { leaveToMentorHome } from '@/lib/leaveToChats';
 import { accentFor, COMPANION_COLOR_LABELS, type CompanionColor } from '@/theme/companion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -71,14 +72,14 @@ export default function MemberBriefScreen() {
 
   // Suspension / expired token mid-read — fall back to Mentor Home, the same
   // guard the console itself uses (lib/useMentorConsole.ts).
-  useEffect(() => onListenerSessionLost(() => router.replace('/mentor-home')), [router]);
+  useEffect(() => onListenerSessionLost(() => leaveToMentorHome(router)), [router]);
 
   const endNow = async () => {
     if (ending || !id) return;
     setEnding(true);
     try {
       await listenerApi.end(id);
-      router.replace('/mentor-home');
+      leaveToMentorHome(router);
     } catch {
       // Stay still and silent (T&S #11) — release the spinner, fold the confirm back.
       setEnding(false);

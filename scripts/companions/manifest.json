@@ -16,6 +16,10 @@
       "poses": 20,
       "rerolls": 0,
       "total": 24
+    },
+    "batch_2026_09_19_cling": {
+      "note": "Cat cling poses (hang / peek / dangle shipped; walk / climb / stretch generated, not shipped; nap failed 3x). Credits were not itemised in the provenance note - the account balance was ~0.5 afterwards.",
+      "poses_shipped": 3
     }
   },
   "renders": [
@@ -866,6 +870,57 @@
       "cutout_size": 1024,
       "cutout_thresh": 16,
       "batch": "2026-09-19-hd"
+    },
+    {
+      "animal": "Cat",
+      "pose": "hang",
+      "model": "nano_banana_pro",
+      "job_id": "0379a78b-c9da-4770-8256-23226c7489ab",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md 00a7Cling poses",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/hang.webp",
+      "cutout_size": 1024,
+      "cutout_px": "429x1024",
+      "cutout_tool": "clingcut.py",
+      "cutout_flags": "--thresh 16 --flush top --hole 983,200",
+      "contact": "paws touch the TOP edge (contact 0); grip centre x=0.47; body to y=0.94",
+      "optional": true,
+      "batch": "2026-09-19-cling"
+    },
+    {
+      "animal": "Cat",
+      "pose": "peek",
+      "model": "nano_banana_pro",
+      "job_id": "645df71f-aac5-42bb-b599-c31e42de70f5",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md 00a7Cling poses",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/peek.webp",
+      "cutout_size": 1024,
+      "cutout_px": "1024x981",
+      "cutout_tool": "clingcut.py",
+      "cutout_flags": "--thresh 16 --clip 0,0,2048,1262 --fill 380,1222,522,1270 --flush bottom",
+      "contact": "BOTTOM edge is the paw line (head + paws only); contact 0.979 of the square art box",
+      "optional": true,
+      "batch": "2026-09-19-cling"
+    },
+    {
+      "animal": "Cat",
+      "pose": "dangle",
+      "model": "nano_banana_pro",
+      "job_id": "a993079e-b377-4027-8dd7-bdea7d568009",
+      "reference_job_id": "b5a482c5-47c8-49fd-a74c-7131794e6044",
+      "prompt": "recipe.md 00a7Cling poses",
+      "accepted": true,
+      "output": "apps/mobile/assets/companions/generated/Cat/dangle.webp",
+      "cutout_size": 1024,
+      "cutout_px": "802x1024",
+      "cutout_tool": "clingcut.py",
+      "cutout_flags": "--thresh 16 --fill 100,1645,515,1720 --fill 1575,1645,1950,1720",
+      "contact": "seat line at y=0.84; hind feet hang to 0.945",
+      "optional": true,
+      "batch": "2026-09-19-cling"
     }
   ]
 }

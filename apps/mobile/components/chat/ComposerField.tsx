@@ -8,7 +8,7 @@
  * their own text state and guard/async logic and just hand it primitives.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useRef } from 'react';
+import { createContext, useContext, useRef, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -29,6 +29,12 @@ const SEND_SIZE = 44;
 const INPUT_VERTICAL_PADDING = space.sm; // 8 top + 8 bottom inside the field
 const MAX_LINES = 4;
 const MAX_INPUT_HEIGHT = MAX_LINES * typeTokens.body.lineHeight + INPUT_VERTICAL_PADDING * 2;
+
+/** Something small that sits ON the field's top edge, at its right end — the member chat's
+ * companion (components/art/PerchedCompanion.tsx). Provided by the member chat screens only;
+ * the mentor console never provides one (no animals there), so it renders nothing. A context
+ * rather than a prop because on native the kit mounts the composer itself. */
+export const ComposerPerchContext = createContext<ReactNode>(null);
 
 type Props = {
   value: string;
@@ -67,6 +73,7 @@ export function ComposerField({
   const { colors } = useTheme();
   const { t } = useI18n();
   const caretPlaced = useRef(false);
+  const perch = useContext(ComposerPerchContext);
 
   // A browser focuses a pre-filled textarea with the caret at the START; typing would
   // then land in front of the draft. Native already puts it at the end. Once only, so
@@ -82,11 +89,13 @@ export function ComposerField({
 
   return (
     <View style={styles.row}>
+      {/* The field is the furniture: a perch is its absolutely-positioned child. */}
+      <View style={styles.fieldContainer}>
+      {perch}
       <EdgeSurface
         edge={colors.edgeSurface}
         radius={FIELD_RADIUS}
         style={[styles.field, { backgroundColor: colors.surface }]}
-        containerStyle={styles.fieldContainer}
       >
         <TextInput
           value={value}
@@ -103,6 +112,7 @@ export function ComposerField({
           accessibilityLabel={placeholder}
         />
       </EdgeSurface>
+      </View>
       <PressKey
         onPress={onSubmit}
         edge={colors.accentEdge}

@@ -6,11 +6,12 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-n
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
-import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
+import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { PressKey } from '@/components/motion/PressKey';
 import { api, type ListenerApplication } from '@/lib/api';
+import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
 import { screenCache } from '@/lib/screenCache';
 import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
@@ -25,6 +26,19 @@ import { font, radius, space, type } from '@/theme/tokens';
 
 const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
 
+/** Where the companion can be on this screen (lib/companionPlacement.ts). Its bubble on the
+ * companion card is home — when it is out, the bubble is simply empty and it is somewhere
+ * else on the page. The other places have clear ground: beside the avatar, and the right of
+ * the "Support & About" heading row (above the Language row / under the companion card). */
+const PERCHES: PlacementSlot[] = [
+  { id: 'bubble', type: 'top', level: 'mid', home: true },
+  { id: 'besideAvatar', type: 'lean', level: 'high' },
+  { id: 'languageTop', type: 'top', level: 'low' },
+  { id: 'languageNap', type: 'nap', level: 'low' },
+  { id: 'languagePeek', type: 'peek', level: 'low' },
+  { id: 'cardHang', type: 'hang', level: 'mid' },
+];
+
 /** Lightweight v1 Profile: persona identity, live companion-colour switcher,
  * support & about. (Mirror/UPSC panels are deferred modules.) */
 export default function ProfileTab() {
@@ -35,6 +49,14 @@ export default function ProfileTab() {
   };
   const { colors, companionColor, setCompanionColor } = useTheme();
   const { t, locale, setLocale } = useI18n();
+  // The recolour lands on the device at once (the whole app re-accents) and on the account
+  // in the background — a failed save shows nothing and never undoes the choice.
+  const recolour = (key: CompanionColor) => {
+    setCompanionColor(key);
+    void api.saveCompanion({ companion_colour: key }).catch(() => {
+      /* reason: best-effort sync; the device copy is what the app reads */
+    });
+  };
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   // The status card starts from its last-loaded value so it does not pop in on every return.
@@ -43,6 +65,8 @@ export default function ProfileTab() {
   );
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | 'idle'>('idle');
   const running = runningUpdate();
+  // The bubble only exists once the animal is known — until then there is no home slot.
+  const perch = useCompanionPlacement('profile', animal ? PERCHES : PERCHES.slice(1));
 
   useFocusEffect(
     useCallback(() => {
@@ -83,13 +107,18 @@ export default function ProfileTab() {
 
   return (
     <Screen>
+      <CompanionPerches placement={perch}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.lg }}>
         <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
           {t('profile.title')}
         </Text>
 
         <View style={styles.identity}>
-          <PersonaAvatar name={persona?.persona_name ?? 'Mento'} size={88} />
+          <View>
+            <PersonaAvatar name={persona?.persona_name ?? 'Mento'} size={88} />
+            {/* Beside the avatar, feet on its baseline — the furniture is the avatar itself. */}
+            <CompanionSlot id="besideAvatar" size={56} attach="floor" inset={-72} />
+          </View>
           <Text style={[styles.name, { color: colors.ink }]}>
             {persona?.persona_name ?? t('profile.anonymous')}
           </Text>
@@ -98,6 +127,8 @@ export default function ProfileTab() {
           </Text>
         </View>
 
+        <View style={styles.furniture}>
+        <CompanionSlot id="cardHang" size={56} inset={space.lg} />
         <EdgeSurface
           edge={colors.edgeSurface}
           style={[styles.card, { backgroundColor: colors.surface }]}
@@ -106,7 +137,7 @@ export default function ProfileTab() {
           {animal ? (
             <View style={styles.companionRow}>
               <View style={[styles.companionBubble, { backgroundColor: colors.accentTint }]}>
-                <Companion animal={animal} size={44} interactive />
+                <CompanionSlot id="bubble" flow reserve size={44} interactive />
               </View>
               <Text style={[type.bodySemi, { color: colors.ink }]}>
                 {COMPANION_COLOR_LABELS[companionColor]} {animal}
@@ -123,7 +154,7 @@ export default function ProfileTab() {
               return (
                 <Pressable
                   key={key}
-                  onPress={() => setCompanionColor(key)}
+                  onPress={() => recolour(key)}
                   accessibilityRole="button"
                   accessibilityState={{ selected }}
                   accessibilityLabel={t('onboarding.companion.themeA11y', { label: COMPANION_COLOR_LABELS[key] })}
@@ -138,13 +169,17 @@ export default function ProfileTab() {
             })}
           </View>
         </EdgeSurface>
+        </View>
 
         <Text style={[styles.section, { color: colors.ink }]}>{t('profile.section')}</Text>
 
+        <View style={styles.rowSpacing}>
+        <CompanionSlot id="languageTop" size={52} inset={space.md} />
+        <CompanionSlot id="languageNap" size={52} inset={space.md} />
+        <CompanionSlot id="languagePeek" size={46} inset={96} />
         <EdgeSurface
           edge={colors.edgeSurface}
           style={[styles.row, { backgroundColor: colors.surface }]}
-          containerStyle={styles.rowSpacing}
         >
           <IconBadge icon="language-outline" size={44} />
           <View style={{ flex: 1 }}>
@@ -180,6 +215,7 @@ export default function ProfileTab() {
             })}
           </View>
         </EdgeSurface>
+        </View>
 
         <PressKey
           onPress={() => router.push('/coffee')}
@@ -360,6 +396,7 @@ export default function ProfileTab() {
           {t('profile.version')}
         </Text>
       </ScrollView>
+      </CompanionPerches>
     </Screen>
   );
 }
@@ -367,6 +404,7 @@ export default function ProfileTab() {
 const styles = StyleSheet.create({
   identity: { alignItems: 'center', gap: space.xs, marginVertical: space.md },
   name: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 33 },
+  furniture: { zIndex: 1 },
   card: { borderRadius: radius.lg, padding: space.md, gap: space.xs },
   cardTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 23 },
   companionRow: {

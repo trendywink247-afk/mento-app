@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Panda } from '@/components/art/Panda';
+import { forgetPlacements } from '@/lib/companionPlacement';
 import { clearListenerSession } from '@/lib/listenerSession';
 import { disconnectListenerClient } from '@/lib/listenerStreamClient';
 import { unregisterPush } from '@/lib/pushNotifications';
@@ -38,6 +39,7 @@ export default function StartFreshDialog() {
     setCompanionColor(DEFAULT_COMPANION_COLOR); // un-tint before the new onboarding picks its own
     await unregisterPush();
     await clearSession();
+    forgetPlacements(); // a new identity has no history of places
     await clearListenerSession();
     await disconnectListenerClient().catch(() => {});
     router.dismissAll();

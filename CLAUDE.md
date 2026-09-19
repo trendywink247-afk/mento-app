@@ -26,7 +26,7 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 |---|---|---|
 | Mobile | **Expo SDK 52** (RN 0.76, TS 5.3) + expo-router 4 | iOS + Android primary; **web = dev/test surface** (Playwright), best-effort UX — also served whole on prod at the app host (`app.<root>`, founder ruling 2026-09-19); the staff dashboard has its own host (`admin.<root>`); hostnames live only in `deploy/domains.env`. |
 | Motion | **Reanimated 3.16** + **@shopify/react-native-skia 1.5** + expo-haptics | Skia 1.5 is the SDK 52 pin (v2 needs SDK 53+). Ambient SkSL aurora + motion tokens (`theme/motion.ts`). Web lazy-loads CanvasKit, falls back to a static gradient. |
-| Character art | In-house rig + painterly generated pose set (6 animals × 6 poses, `scripts/companions/`) + 2.5D `Tilt3D` parallax | **PERMANENT v1 route** (DECISIONS §I.4, amended 2026-07-13 — Rive retired, no commission budget; §K.8 painterly set 2026-09-05). Assets in `apps/mobile/assets/companions/generated/<Animal>/<pose>.webp`; regenerate via `scripts/companions/recipe.md` + `manifest.json`, cut with `cutout.py`. |
+| Character art | In-house rig + painterly generated pose set (6 animals × 6 poses, `scripts/companions/`) + 2.5D `Tilt3D` parallax | **PERMANENT v1 route** (DECISIONS §I.4, amended 2026-07-13 — Rive retired, no commission budget; §K.8 painterly set 2026-09-05). Assets in `apps/mobile/assets/companions/generated/<Animal>/<pose>.webp`; regenerate via `scripts/companions/recipe.md` + `manifest.json`, cut with `cutout.py`. OPTIONAL cling poses (`hang`/`peek`/`dangle` — Cat only so far, cut with `clingcut.py`) let the companion hold on to the UI: `lib/companionPlacement.ts` picks a new slot on every arrival, `components/art/PerchedCompanion.tsx` draws it. |
 | Scene art | **Lottie** — `lottie-react-native` 7.1 (native) + `@lottiefiles/dotlottie-react` (web) | Free LottieFiles assets, palette **baked** by `scripts/theme_lottie.py` (repo root). Licenses tracked in `apps/mobile/assets/lottie/README.md`. See Lottie rules below. |
 | Backend | **FastAPI** (Python 3.12) | async; Pydantic v2. |
 | DB | **Postgres 16** (compose locally → DigitalOcean managed) | SQLAlchemy 2.0 + Alembic migrations; matcher relies on row locks (`FOR UPDATE SKIP LOCKED`). |
@@ -87,6 +87,8 @@ E2E specs are plain Node scripts in `apps/mobile/e2e/` (not `@playwright/test` �
 - **Push tokens are unique per (token, role)**, never per token: a dual-role phone keeps a member row and a listener row.
 - **Kit composer override (session 33):** stream-chat-expo 9.3.0 replaces its whole input row when `WithComponents overrides={{ Input }}` is set; `components/chat/Composer.tsx` keeps the kit's `textComposer.handleChange` (typing events) and `sendMessage`, and the screens' `streamTheme.messageComposer.wrapper` zeroes the kit's own chrome without touching its safe-area `paddingBottom`. Web composers are hand-rolled and share `ComposerField`; **react-native-web never fires `onSubmitEditing` on a multiline field** — Enter-to-send is an `onKeyPress` handler (proven in `two-party-chat.e2e.js`).
 - **`SafeAreaView` pads flow children only** — see PandaStage (session 32). **Module-store hand-offs across a `router.back()`** (`lib/pendingOption.ts`) must be keyed by the conversation id — an unscoped flag fires on whichever chat focuses next.
+- **`app/+html.tsx` is ignored here** — the app is `web.output: "single"`, and expo-router only reads `+html.tsx` under static rendering. The web first-paint template is `apps/mobile/public/index.html` (that is where the oat ground behind the JS bundle lives).
+- **`router.replace` onto a tab route (or `/mentor-home`) stacks a SECOND navigator / a second copy of the screen** on top of the one already mounted — every tab remounts, data and scroll are lost, two consoles poll. Leave with `dismissTo` via `lib/leaveToChats.ts` (`leaveToChats` / `leaveToMentorHome` / `leaveToPath`); e2e proof = exactly one `tab-journals` / one `mentor-console` after leaving.
 - Phone testing: Expo Go **2.32.20** (SDK 52) sideloaded from Expo's GitHub releases (Play Store Expo Go is newer-SDK-only); API must run `--host 0.0.0.0` with `EXPO_PUBLIC_API_URL` on the LAN IP.
 
 ---
@@ -107,7 +109,9 @@ mento/
                             · listener/ (web token-link console; chat/[id] re-exports the shared mentor chat) · admin/ (web-only dashboard)
     components/
       art/                  Logo, Panda, AnimatedPanda rig, Companion(s), ReactiveCompanion (idle states:
-                            curious/joy/sleepy), Scenes, SceneTile, LottieTile, PersonaAvatar
+                            curious/joy/sleepy), PerchedCompanion (the member's companion in a new slot on every
+                            arrival: useCompanionPlacement + CompanionPerches + CompanionSlot), Scenes, SceneTile,
+                            LottieTile, PersonaAvatar
       motion/               AmbientBackground(.web), AuroraCanvas (SkSL), PandaStage, Entrance, StepTransition,
                             useBreathing, ambientLift, StaticAmbient, Tilt3D/TiltCard (2.5D), ConnectionConstellation, SkyMotes · PressKey (pillow key)
       onboarding/           OnboardingJourney (step machine) + steps/ + StepScaffold
@@ -121,20 +125,29 @@ mento/
     theme/                  tokens.ts · motion.ts · companion.ts · layout.ts (wide-screen widths) · ThemeProvider (see Design tokens)
     lib/                    api.ts, adminApi.ts, listenerApi.ts (typed clients) · session/adminSession/listenerSession
                             · streamClient/listenerStreamClient · haptics · useReducedMotion(.web) · onboardingDraft
-                            · useSessionGuard · format · useFrameSize (the column a screen may draw into)
+                            · useSessionGuard · format · screenCache (last-loaded tab data) · leaveToChats (dismissTo
+                            exits) · companionPlacement (pure slot picker, `npm run test:placement`) · questionBuilder
+                            · useChatHeader · useCompanionAnimal · communityLabel · useFrameSize (the column a screen may draw into)
     assets/                 lottie/ (5 themed animations + license README) · companions/ (generated/<Animal>/<pose>.webp
-                            painterly set + registry.ts; fluent/ SVG fallback + convert.js) · scenes/ (webp empty-states)
+                            painterly set, 9 animals × 6 poses + OPTIONAL cling poses hang/peek/dangle (Cat only so far)
+                            + registry.ts; fluent/ SVG fallback + convert.js) · scenes/ (webp empty-states)
     locales/                en.json · hi.json (typed keys via lib/i18n.tsx; EN is canonical)
     e2e/                    connecting-experience.e2e.js · path-communities.e2e.js · listener-apply.e2e.js
                             · analytics-dark.e2e.js · hindi-core-loop.e2e.js · role-fork · member-screens
-                            · two-party-chat · mentor-console (needs MENTO_ADMIN_TOKEN) · desktop-frame (MENTO_WEB) · README.md
+                            · two-party-chat · mentor-console (needs MENTO_ADMIN_TOKEN) · desktop-frame (MENTO_WEB) · companion-placement
+                            (+ Node unit tests *.test.mjs: notifications-route, question-builder, companion-placement)
+                            · README.md
     patches/ + .npmrc       Expo Go device-compat (patch-package via postinstall + legacy-peer-deps) — do not remove
   services/api/
-    app/                    routers/ (onboarding, match, conversation, stream_hooks, moderation, journals, listeners,
-                            listener_console, admin_console, safety, paths, health)
-                            · services/ (matching, stream, safety, crisis, audit, persona(+data), paths(+data))
+    app/                    routers/ (onboarding, match, conversation, stream_hooks, journals, listeners,
+                            listener_applications, listener_console, admin_console, safety, paths, notifications,
+                            me (GET /me · PUT /me/companion), health)
+                            · services/ (matching, conversations (every end path: lock → end → seal), stream, safety,
+                            crisis, moderation, audit, persona(+data), paths(+data), companions (allowed animals/colours),
+                            listener_profiles, locks, links, care_prompts, categories, push(+tasks), notes_ai)
                             · models/ (user, listener, conversation, journal, reflection, moderation, safety,
-                            contribution, request, admin, enums, mixins) · schemas.py · security.py · ratelimit.py
+                            contribution, request, admin, enums, mixins) · schemas/ (package, 12 modules, every name
+                            re-exported) · security.py · ratelimit.py · observability.py (request ids, access log)
                             · config.py · db.py
     migrations/             7 forward-only Alembic revisions (alembic check keeps models in sync)
     scripts/                seed_listeners · configure_stream · issue_listener_token · issue_admin_token

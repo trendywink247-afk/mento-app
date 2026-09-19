@@ -10,7 +10,8 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test:route": "tsc lib/notificationRoute.ts --outDir .tmp-route --module es2020 --target es2020 --skipLibCheck && node e2e/notifications-route.test.mjs",
-    "test:question": "tsc lib/questionBuilder.ts --outDir .tmp-question --module es2020 --target es2020 --skipLibCheck && node e2e/question-builder.test.mjs"
+    "test:question": "tsc lib/questionBuilder.ts --outDir .tmp-question --module es2020 --target es2020 --skipLibCheck && node e2e/question-builder.test.mjs",
+    "test:placement": "tsc lib/companionPlacement.ts --outDir .tmp-placement --module es2020 --target es2020 --skipLibCheck && node e2e/companion-placement.test.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/baloo-2": "^0.4.2",

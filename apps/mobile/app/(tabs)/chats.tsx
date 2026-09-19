@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -15,11 +15,13 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
 import { PressKey } from '@/components/motion/PressKey';
+import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { LottieTile } from '@/components/art/LottieTile';
 import { SceneTile } from '@/components/art/SceneTile';
 import { PinPad } from '@/components/chat/options/bits';
 import { ApiError, api, type ConversationListItem } from '@/lib/api';
+import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n, type TFunc } from '@/lib/i18n';
 import { screenCache, type ChatPreview } from '@/lib/screenCache';
 import { getPersona, getStreamToken } from '@/lib/session';
@@ -31,6 +33,26 @@ import { font, radius, space, type } from '@/theme/tokens';
  * + unread badges, locked-chat PIN gate, and the New Chat FAB (re-match without
  * re-onboarding). Archived is not a real state yet, so the chip set is honest:
  * All / Active / Completed. */
+
+/** Where the companion can be on My Chats (lib/companionPlacement.ts) — a screen that had no
+ * companion before. The header corner is home (the heading keeps that corner free). The low
+ * places — on the New Chat key, on the tab bar's edge, under the privacy card — only count
+ * while the list is short enough that no row can be resting behind them; the filter row's
+ * free end only while the filters are showing. */
+const HEADER_PERCHES: PlacementSlot[] = [{ id: 'titleCorner', type: 'top', level: 'high', home: true }];
+const FLOOR_PERCHES: PlacementSlot[] = [
+  { id: 'tabBarLeft', type: 'top', level: 'low' },
+  { id: 'tabBarNap', type: 'nap', level: 'low' },
+  { id: 'tabBarPeek', type: 'peek', level: 'low' },
+];
+const FAB_PERCHES: PlacementSlot[] = [
+  { id: 'fabTop', type: 'top', level: 'low' },
+  { id: 'fabDangle', type: 'dangle', level: 'low' },
+  { id: 'footerHang', type: 'hang', level: 'mid' },
+];
+const TOOLS_PERCHES: PlacementSlot[] = [{ id: 'chipsEnd', type: 'lean', level: 'high' }];
+/** Rows that fit above the low perches on the smallest supported phone (360×740). */
+const SHORT_LIST = 3;
 
 type Preview = ChatPreview;
 type Filter = 'all' | 'active' | 'completed';
@@ -229,14 +251,32 @@ export default function ChatsTab() {
   // (UX review 2026-07-13 #5): below ~5 conversations they're noise before utility.
   const showTools = rows.length >= 5;
 
+  const perches = useMemo(
+    () => [
+      ...HEADER_PERCHES,
+      ...(!loading && rows.length <= SHORT_LIST ? FLOOR_PERCHES : []),
+      ...(!loading && rows.length > 0 && rows.length <= SHORT_LIST ? FAB_PERCHES : []),
+      ...(showTools ? TOOLS_PERCHES : []),
+    ],
+    [loading, rows.length, showTools],
+  );
+  // An honest error or "everyone is busy" note is a still state; a sheet over the list hides it.
+  const perch = useCompanionPlacement('chats', perches, {
+    still: note !== null || loadError !== null,
+    hidden: picker || gate !== null,
+  });
+
   return (
     <Screen>
-      <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
-        {t('chats.title')}
-      </Text>
-      <Text style={[type.body, { color: colors.inkMuted, marginBottom: space.sm }]}>
-        {t('chats.sub')}
-      </Text>
+      <CompanionPerches placement={perch}>
+      {/* The heading keeps its right corner free: that corner is the companion's home here. */}
+      <View style={styles.head}>
+        <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
+          {t('chats.title')}
+        </Text>
+        <Text style={[type.body, { color: colors.inkMuted }]}>{t('chats.sub')}</Text>
+        <CompanionSlot id="titleCorner" size={60} attach="floor" />
+      </View>
 
       {showTools ? (
         <>
@@ -254,6 +294,7 @@ export default function ChatsTab() {
           </View>
 
           <View style={styles.chips}>
+            <CompanionSlot id="chipsEnd" size={44} attach="floor" />
             {chips.map((c) => {
               const selected = filter === c.key;
               return (
@@ -348,11 +389,14 @@ export default function ChatsTab() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ gap: space.sm, paddingBottom: 96 }}
           ListFooterComponent={
-            <View style={[styles.privacyCard, { backgroundColor: colors.surfaceAlt }]}>
-              <Ionicons name="lock-closed-outline" size={18} color={colors.accentSoft} />
-              <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
-                {t('chats.privacyFooter')}
-              </Text>
+            <View style={styles.privacyWrap}>
+              <CompanionSlot id="footerHang" size={56} align="left" inset={space.lg} />
+              <View style={[styles.privacyCard, { backgroundColor: colors.surfaceAlt }]}>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.accentSoft} />
+                <Text style={[type.caption, { color: colors.inkMuted, flex: 1 }]}>
+                  {t('chats.privacyFooter')}
+                </Text>
+              </View>
             </View>
           }
           renderItem={({ item }) => {
@@ -407,23 +451,34 @@ export default function ChatsTab() {
         />
       )}
 
+      {/* The tab bar's top edge is this screen's floor. */}
+      <View style={styles.floor} pointerEvents="none">
+        <CompanionSlot id="tabBarLeft" size={56} align="left" inset={space.lg} attach="floor" />
+        <CompanionSlot id="tabBarNap" size={56} align="left" inset={space.lg} attach="floor" />
+        <CompanionSlot id="tabBarPeek" size={46} align="left" inset={space.xl} attach="floor" />
+      </View>
+
       {rows.length > 0 ? (
-        <Pressable
-          onPress={() => setPicker(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t('chats.newChatA11y')}
-          testID="new-chat-fab"
-          style={[styles.fab, { backgroundColor: colors.accent }, elevation.md]}
-        >
-          {matching ? (
-            <ActivityIndicator color={colors.onAccent} />
-          ) : (
-            <>
-              <Ionicons name="chatbubble-ellipses" size={22} color={colors.onAccent} />
-              <Text style={[styles.fabText, { color: colors.onAccent }]}>{t('chats.newChat')}</Text>
-            </>
-          )}
-        </Pressable>
+        <View style={styles.fabWrap} pointerEvents="box-none">
+          <CompanionSlot id="fabTop" size={52} align="center" nudge={4} />
+          <CompanionSlot id="fabDangle" size={56} align="center" nudge={4} />
+          <Pressable
+            onPress={() => setPicker(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('chats.newChatA11y')}
+            testID="new-chat-fab"
+            style={[styles.fab, { backgroundColor: colors.accent }, elevation.md]}
+          >
+            {matching ? (
+              <ActivityIndicator color={colors.onAccent} />
+            ) : (
+              <>
+                <Ionicons name="chatbubble-ellipses" size={22} color={colors.onAccent} />
+                <Text style={[styles.fabText, { color: colors.onAccent }]}>{t('chats.newChat')}</Text>
+              </>
+            )}
+          </Pressable>
+        </View>
       ) : null}
 
       {picker ? (
@@ -494,6 +549,7 @@ export default function ChatsTab() {
           </View>
         </View>
       ) : null}
+      </CompanionPerches>
     </Screen>
   );
 }
@@ -517,13 +573,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
   },
   note: { borderRadius: radius.md, padding: space.sm },
+  head: { paddingRight: 68, marginBottom: space.sm },
+  floor: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 0 },
+  privacyWrap: { marginTop: space.sm },
   privacyCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
     borderRadius: radius.md,
     padding: space.sm,
-    marginTop: space.sm,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm },
   centerText: { textAlign: 'center' },
@@ -547,10 +605,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   unreadText: { fontFamily: font.sansBold, fontSize: 12 },
+  fabWrap: { position: 'absolute', right: space.lg, bottom: space.lg },
   fab: {
-    position: 'absolute',
-    right: space.lg,
-    bottom: space.lg,
     width: 84,
     height: 84,
     borderRadius: 42,

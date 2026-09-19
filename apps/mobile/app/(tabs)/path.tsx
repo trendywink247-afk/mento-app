@@ -6,11 +6,13 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { Screen } from '@/components/Screen';
 import { Companion } from '@/components/art/Companion';
+import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
 import { TiltCard } from '@/components/motion/TiltCard';
 import { capture } from '@/lib/analytics';
 import { ApiError, api, type PathNode, type PathState, type PathTree } from '@/lib/api';
+import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
 import { screenCache } from '@/lib/screenCache';
 import { getCompanionAnimal } from '@/lib/session';
@@ -25,6 +27,30 @@ import { font, radius, space, type } from '@/theme/tokens';
  * is a LENS on the core loop (tuned prompts, seasonal support, same-road listeners) —
  * never a feed. Anonymity rails untouched.
  */
+/** Where the companion can be (lib/companionPlacement.ts). Two states, two lists — a slot only
+ * counts while its furniture is on screen. The places it ALREADY had are the home slots: the
+ * hero above the invitation, and the right of the Path home heading (that column stays
+ * reserved, so the ground above the seasonal card is always clear). The Pathfinder question
+ * walk keeps its own staged hero, like onboarding. */
+const INVITE_PERCHES: PlacementSlot[] = [
+  { id: 'inviteHero', type: 'top', level: 'high', home: true },
+  { id: 'inviteCta', type: 'lean', level: 'mid' },
+  { id: 'tabBarLeft', type: 'top', level: 'low' },
+  { id: 'tabBarNap', type: 'nap', level: 'low' },
+  { id: 'inviteCtaDangle', type: 'dangle', level: 'mid' },
+  { id: 'tabBarPeek', type: 'peek', level: 'low' },
+];
+const HOME_PERCHES: PlacementSlot[] = [
+  { id: 'headRight', type: 'top', level: 'high', home: true },
+  { id: 'talkCorner', type: 'lean', level: 'mid' },
+];
+const SEASONAL_PERCHES: PlacementSlot[] = [
+  { id: 'seasonalTop', type: 'top', level: 'high' },
+  { id: 'seasonalNap', type: 'nap', level: 'high' },
+  { id: 'seasonalDangle', type: 'dangle', level: 'high' },
+];
+const NO_PERCHES: PlacementSlot[] = [];
+
 export default function PathTab() {
   const router = useRouter();
   const { colors } = useTheme();
@@ -122,6 +148,18 @@ export default function PathTab() {
     }
   };
 
+  const onHome = Boolean(state?.community && state.stage);
+  const perches =
+    loading || (nodeId && tree)
+      ? NO_PERCHES
+      : !onHome
+        ? INVITE_PERCHES
+        : state?.seasonal
+          ? [...HOME_PERCHES, ...SEASONAL_PERCHES]
+          : HOME_PERCHES;
+  // A failed load / save / match is a still state: the home slot, sitting (T&S #11).
+  const perch = useCompanionPlacement('path', perches, { still: note !== null });
+
   if (loading) {
     return (
       <Screen>
@@ -179,12 +217,11 @@ export default function PathTab() {
   if (!state?.community || !state.stage) {
     return (
       <Screen>
+        <CompanionPerches placement={perch}>
         <View style={styles.center}>
           <Entrance index={0}>
             <View style={styles.hero}>
-              <Tilt3D maxTilt={6}>
-                <Companion animal={animal} size={96} />
-              </Tilt3D>
+              <CompanionSlot id="inviteHero" flow size={96} />
               <Text style={[styles.heroTitle, { color: colors.ink }]} accessibilityRole="header">
                 {t('path.inviteTitle')}
               </Text>
@@ -194,17 +231,28 @@ export default function PathTab() {
             </View>
           </Entrance>
           <Entrance index={1}>
-            <Pressable
-              style={[styles.cta, { backgroundColor: colors.accent }]}
-              onPress={() => void startPathfinder()}
-              accessibilityRole="button"
-              testID="path-start"
-            >
-              <Text style={styles.ctaLabel}>{t('path.findCta')}</Text>
-            </Pressable>
+            <View>
+              <CompanionSlot id="inviteCta" size={48} inset={space.sm} />
+              <CompanionSlot id="inviteCtaDangle" size={56} inset={space.sm} />
+              <Pressable
+                style={[styles.cta, { backgroundColor: colors.accent }]}
+                onPress={() => void startPathfinder()}
+                accessibilityRole="button"
+                testID="path-start"
+              >
+                <Text style={styles.ctaLabel}>{t('path.findCta')}</Text>
+              </Pressable>
+            </View>
           </Entrance>
           {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}
         </View>
+        {/* The tab bar's top edge is this screen's floor. */}
+        <View style={styles.floor} pointerEvents="none">
+          <CompanionSlot id="tabBarLeft" size={56} align="left" inset={space.lg} attach="floor" />
+          <CompanionSlot id="tabBarNap" size={56} align="left" inset={space.lg} attach="floor" />
+          <CompanionSlot id="tabBarPeek" size={46} align="left" inset={space.xl} attach="floor" />
+        </View>
+        </CompanionPerches>
       </Screen>
     );
   }
@@ -213,6 +261,7 @@ export default function PathTab() {
   const { community, stage } = state;
   return (
     <Screen scroll>
+      <CompanionPerches placement={perch}>
       <Entrance index={0}>
         <View style={styles.homeHead}>
           <View style={{ flex: 1 }}>
@@ -222,18 +271,23 @@ export default function PathTab() {
             </Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>{stage.blurb}</Text>
           </View>
-          <Companion animal={animal} size={56} trigger={joy} />
+          <CompanionSlot id="headRight" flow reserve size={56} trigger={joy} />
         </View>
       </Entrance>
 
       {state.seasonal ? (
         <Entrance index={1}>
+          <View style={styles.seasonalWrap}>
+          <CompanionSlot id="seasonalTop" size={56} />
+          <CompanionSlot id="seasonalNap" size={56} />
+          <CompanionSlot id="seasonalDangle" size={60} />
           <View style={[styles.seasonal, { backgroundColor: colors.accentTint }]}>
             <Ionicons name="sparkles-outline" size={18} color={colors.accent} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardTitle, { color: colors.ink }]}>{state.seasonal.title}</Text>
               <Text style={[type.caption, { color: colors.inkMuted }]}>{state.seasonal.body}</Text>
             </View>
+          </View>
           </View>
         </Entrance>
       ) : null}
@@ -266,21 +320,25 @@ export default function PathTab() {
       </Entrance>
 
       <Entrance index={3}>
+        <View style={styles.talkWrap}>
         <EdgeSurface
           edge={colors.edgeSurface}
           style={[styles.talkCard, { backgroundColor: colors.surface }]}
-          containerStyle={{ marginTop: space.md }}
         >
-          <Text style={[styles.cardTitle, { color: colors.ink }]}>
-            {t('path.talkTitle')}
-          </Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>
-            {state.listeners_online > 0
-              ? t(state.listeners_online === 1 ? 'path.listenersOne' : 'path.listenersOther', {
-                  count: state.listeners_online,
-                })
-              : t('path.listenersNone')}
-          </Text>
+          {/* The heading block keeps its right corner free — the companion can stand there. */}
+          <View style={styles.talkHead}>
+            <Text style={[styles.cardTitle, { color: colors.ink }]}>
+              {t('path.talkTitle')}
+            </Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>
+              {state.listeners_online > 0
+                ? t(state.listeners_online === 1 ? 'path.listenersOne' : 'path.listenersOther', {
+                    count: state.listeners_online,
+                  })
+                : t('path.listenersNone')}
+            </Text>
+            <CompanionSlot id="talkCorner" size={48} attach="floor" />
+          </View>
           <View style={styles.talkRow}>
             <Pressable
               style={[styles.cta, { backgroundColor: colors.accent, flex: 1 }]}
@@ -305,6 +363,7 @@ export default function PathTab() {
             </Pressable>
           </View>
         </EdgeSurface>
+        </View>
       </Entrance>
 
       {note ? <Text style={[type.caption, styles.note, { color: colors.inkMuted }]}>{note}</Text> : null}
@@ -320,6 +379,7 @@ export default function PathTab() {
           <Text style={[type.caption, { color: colors.inkMuted }]}>{t('path.change')}</Text>
         </Pressable>
       </Entrance>
+      </CompanionPerches>
     </Screen>
   );
 }
@@ -367,13 +427,13 @@ const styles = StyleSheet.create({
     marginBottom: space.md,
   },
   homeTitle: { fontFamily: font.sansHeavy, fontSize: 21, lineHeight: 28 },
+  seasonalWrap: { marginBottom: space.md, zIndex: 1 },
   seasonal: {
     flexDirection: 'row',
     gap: space.sm,
     alignItems: 'flex-start',
     borderRadius: radius.lg,
     padding: space.md,
-    marginBottom: space.md,
   },
   cardTitle: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 21 },
   section: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24, marginTop: space.sm },
@@ -385,7 +445,10 @@ const styles = StyleSheet.create({
     padding: space.md,
   },
   promptText: { flex: 1, fontFamily: font.sansSemi, fontSize: 14, lineHeight: 20 },
+  talkWrap: { marginTop: space.md, zIndex: 1 },
   talkCard: { borderRadius: radius.lg, padding: space.md, gap: space.xs },
+  talkHead: { gap: space.xs, paddingRight: 56, minHeight: 44 },
+  floor: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 0 },
   talkRow: { flexDirection: 'row', gap: space.sm, marginTop: space.sm },
   note: { textAlign: 'center', marginTop: space.sm },
   change: {

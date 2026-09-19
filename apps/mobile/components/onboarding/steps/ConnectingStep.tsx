@@ -172,6 +172,17 @@ export function ConnectingStep({
       } else if (draft.sessionBacked && draft.companionAnimal) {
         // Existing account (mentor → talk): nothing to mint, but the pick still has to stick.
         await saveCompanionAnimal(draft.companionAnimal);
+        // …on the ACCOUNT too, not just this device (a new account carries it in
+        // /onboarding/start; an existing one needs the PUT). Best-effort: a failure
+        // never blocks the way to a mentor and shows nothing — the device copy stands.
+        void api
+          .saveCompanion({
+            companion_animal: draft.companionAnimal,
+            ...(draft.companionColour ? { companion_colour: draft.companionColour } : {}),
+          })
+          .catch(() => {
+            /* reason: best-effort sync; the next companion/colour change retries */
+          });
       }
       onboardedRef.current = true;
       setHasSession(true);

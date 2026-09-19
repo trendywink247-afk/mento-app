@@ -12,12 +12,15 @@ import { Channel, Chat, MessageComposer, MessageList, useMessageComposer, WithCo
 type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
 import { IconBadge } from '@/components/IconBadge';
+import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { Composer } from '@/components/chat/Composer';
+import { ComposerPerchContext } from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { MessageText } from '@/components/chat/MessageText';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
@@ -49,6 +52,13 @@ type CrisisPayload = {
 
 /** Any Stream message shape can carry the server-injected `crisis` field. */
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
+
+/** Inside a live conversation the companion does not roam: ONE fixed place, on the composer
+ * field's top edge (same as ChatScreen.web.tsx). Not drawn at all while the crisis card or an
+ * error is showing, or while the options sheet is up — this screen never had a companion, so
+ * its still state is absence (T&S #11). */
+const CHAT_PERCH: PlacementSlot[] = [{ id: 'composerTop', type: 'top', level: 'low', home: true }];
+const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={44} inset={space.md} />;
 
 /** Seeds a Path warm-up prompt into the composer — ready to edit/send, never
  * auto-sent (the user must own the first message). Runs once per mount. */
@@ -247,8 +257,14 @@ export default function ChatScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channelId, surfaceCrisis]);
 
+  const perch = useCompanionPlacement('chat', CHAT_PERCH, {
+    hidden: crisis !== null || error !== null || optionsOpen,
+  });
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      <CompanionPerches placement={perch}>
+      <ComposerPerchContext.Provider value={COMPOSER_PERCH}>
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the web chat. */}
       <ChatHeaderCard
         name={headerName}
@@ -326,6 +342,8 @@ export default function ChatScreen() {
         listenerName={listenerName}
         initial={pendingInitial}
       />
+      </ComposerPerchContext.Provider>
+      </CompanionPerches>
     </SafeAreaView>
   );
 }

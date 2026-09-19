@@ -21,6 +21,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
 import { listenerApi } from '@/lib/listenerApi';
 import { ensureListenerConnected, getListenerStreamClient } from '@/lib/listenerStreamClient';
+import { leaveToMentorHome } from '@/lib/leaveToChats';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -129,7 +130,7 @@ export default function MentorChatScreen() {
     setEnding(true);
     try {
       await listenerApi.end(id);
-      router.replace('/mentor-home');
+      leaveToMentorHome(router);
     } catch {
       // Stay still and silent (T&S: no shaking/buzzing at a struggling user) —
       // release the spinner and fold the menu back rather than surface an error.
@@ -143,7 +144,7 @@ export default function MentorChatScreen() {
       <View style={{ flex: 1, backgroundColor: colors.bg }}>
         <View style={[styles.header, { backgroundColor: colors.surface }]}>
           <Pressable
-            onPress={() => router.replace('/mentor-home')}
+            onPress={() => leaveToMentorHome(router)}
             hitSlop={12}
             accessibilityRole="button"
             accessibilityLabel={t('mentor.chat.back')}
