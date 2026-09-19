@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Interaction spec, how Mento feels under the thumb</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+code{font-family:inherit;font-weight:700;background:#EFE9DF;border-radius:4px;padding:0 3px}
+.dark code{background:#3D3B38;color:#FFFFFF}
+.still code{background:#FFFFFF}
+@keyframes pressDemo{0%,18%{transform:translateY(0)}26%,62%{transform:translateY(4px)}88%,100%{transform:translateY(0)}}
+@media (prefers-reduced-motion: no-preference){
+.pressDemo{animation:pressDemo 5.2s cubic-bezier(.22,1,.36,1) infinite}
+}
+</style>
+</helmet>
+<div style="width: 1280px; height: 900px; box-sizing: border-box; overflow: hidden; position: relative; padding: 20px 28px; display: flex; flex-direction: column; gap: 12px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; height: 52px; flex-shrink: 0;">
+<div style="display: flex; flex-direction: column;">
+<h1 style="margin: 0; font-size: 28px; line-height: 34px; font-weight: 800; letter-spacing: -0.2px;">How Mento feels under the <span style="color: {{accent}};">thumb</span></h1>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">Interaction spec for the pillow key: travel, tempo and haptics, mapped to what a press means. Proposal for founder review, 19 Sep 2026.</p>
+</div>
+<div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; font-size: 13px; line-height: 18px; font-weight: 700;">
+<span style="color: #5E5A53; font-weight: 600;">theme/motion.ts</span>
+<span style="height: 24px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 999px; background: #FFFFFF; border: 1px solid #E6DFD3;">fast 200</span>
+<span style="height: 24px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 999px; background: #FFFFFF; border: 1px solid #E6DFD3;">base 350</span>
+<span style="height: 24px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 999px; background: #FFFFFF; border: 1px solid #E6DFD3;">gentle 500</span>
+<span style="height: 24px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 999px; background: #FFFFFF; border: 1px solid #E6DFD3;">slow 700</span>
+<span style="height: 24px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 999px; background: #FFFFFF; border: 1px solid #E6DFD3;">stagger 80</span>
+<span style="height: 24px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 999px; background: #FFFFFF; border: 1px solid #E6DFD3;">spring.calm</span>
+<span style="height: 24px; padding: 0 10px; display: inline-flex; align-items: center; border-radius: 999px; background: #FFFFFF; border: 1px solid #E6DFD3;">easing.settle</span>
+</div>
+</header>
+
+<section aria-label="Intent table" style="flex-shrink: 0; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF; overflow: hidden; font-size: 13px; line-height: 17px;">
+<div style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; padding: 6px 16px; background: #FBF8F2; font-weight: 700; color: #5E5A53;">
+<span>Intent</span><span>Example</span><span>Travel</span><span>Press / release</span><span>Haptic, iOS and Android</span><span>What it tells the user</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 34px; padding: 4px 16px; border-top: 1px solid #EFE9DF;">
+<span style="font-size: 14px; font-weight: 800;">Commit</span>
+<span>Start a Conversation, Accept, Continue</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="position: relative; width: 30px; height: 14px; flex-shrink: 0;"><span style="position: absolute; left: 0; right: 0; top: 4px; height: 10px; border-radius: 4px; background: {{accentEdge}};"></span><span style="position: absolute; left: 0; right: 0; top: 0; height: 10px; border-radius: 4px; background: {{accent}}; transform: translateY(4px);"></span></span><span style="font-weight: 700;">4 of 4 px</span></span>
+<span>in 120 ms (<code>fast</code> × 0.6) · out <code>spring.calm</code>, about 350 ms</span>
+<span><b>impact Medium</b> on press-in · <code>haptic.commit()</code></span>
+<span style="font-weight: 600;">You are committing to this.</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 34px; padding: 4px 16px; border-top: 1px solid #EFE9DF;">
+<span style="font-size: 14px; font-weight: 800;">Navigate</span>
+<span>Not now, Back, Browse, cards, rows, tab pill</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="position: relative; width: 30px; height: 14px; flex-shrink: 0;"><span style="position: absolute; left: 0; right: 0; top: 4px; height: 10px; border-radius: 4px; background: #D9D1C2;"></span><span style="position: absolute; left: 0; right: 0; top: 0; height: 10px; box-sizing: border-box; border-radius: 4px; background: #FFFFFF; border: 1px solid #D9D1C2; transform: translateY(2px);"></span></span><span style="font-weight: 700;">2 of 4 px</span></span>
+<span>in 70 ms · out 200 ms (<code>fast</code>), <code>easing.settle</code></span>
+<span><b>impact Light</b> on press-in · <code>haptic.advance()</code></span>
+<span style="font-weight: 600;">You are moving. Nothing is decided.</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 34px; padding: 4px 16px; border-top: 1px solid #EFE9DF;">
+<span style="font-size: 14px; font-weight: 800;">Select</span>
+<span>Topic chips, colour swatches, companion cells</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="position: relative; width: 30px; height: 14px; flex-shrink: 0;"><span style="position: absolute; left: 0; right: 0; top: 3px; height: 10px; border-radius: 999px; background: #D9D1C2;"></span><span style="position: absolute; left: 0; right: 0; top: 0; height: 10px; box-sizing: border-box; border-radius: 999px; background: {{accentTint}}; border: 1.5px solid {{accent}}; transform: translateY(2px);"></span></span><span style="font-weight: 700;">2 of 3 px</span></span>
+<span>in 80 ms · ring settles 350 ms (<code>base</code>), <code>easing.settle</code></span>
+<span><b>selection</b> on press-in · <code>haptic.tick()</code></span>
+<span style="font-weight: 600;">Held. Your choice stays put.</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 34px; padding: 4px 16px; border-top: 1px solid #EFE9DF;">
+<span style="font-size: 14px; font-weight: 800;">Toggle</span>
+<span>Online / On a break, Quiet Pause</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="position: relative; width: 30px; height: 14px; flex-shrink: 0;"><span style="position: absolute; left: 0; right: 0; top: 4px; height: 10px; border-radius: 4px; background: #D9D1C2;"></span><span style="position: absolute; left: 0; right: 0; top: 0; height: 10px; box-sizing: border-box; border-radius: 4px; background: #FFFFFF; border: 1px solid #D9D1C2; transform: translateY(2px);"></span><span style="position: absolute; right: 3px; top: 5px; width: 4px; height: 4px; border-radius: 50%; background: #38734B;"></span></span><span style="font-weight: 700;">2 of 4 px</span></span>
+<span>in 80 ms · knob slides 350 ms (<code>base</code>), <code>easing.settle</code></span>
+<span><b>impact Soft</b>, Light as fallback · <code>haptic.toggle()</code></span>
+<span style="font-weight: 600;">Your state changed, and it stays.</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 34px; padding: 4px 16px; border-top: 1px solid #EFE9DF;">
+<span style="font-size: 14px; font-weight: 800;">Arrived</span>
+<span>A message the server confirmed; a mentor found</span>
+<span style="color: #5E5A53;">key already landed</span>
+<span>check draws once, 350 ms (<code>base</code>); match: celebrate 800 ms</span>
+<span><b>notification Success</b>, once, when it is true, never on the tap · <code>haptic.success()</code></span>
+<span style="font-weight: 600;">It arrived.</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 34px; padding: 4px 16px; border-top: 1px solid #EFE9DF;">
+<span style="font-size: 14px; font-weight: 800;">Kept</span>
+<span>Save to Mentor Notes, a journal entry saved</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="position: relative; width: 30px; height: 14px; flex-shrink: 0;"><span style="position: absolute; left: 0; right: 0; top: 4px; height: 10px; border-radius: 4px; background: #D9D1C2;"></span><span style="position: absolute; left: 0; right: 0; top: 0; height: 10px; box-sizing: border-box; border-radius: 4px; background: #FFFFFF; border: 1px solid #D9D1C2; transform: translateY(2px);"></span></span><span style="font-weight: 700;">2 of 4 px</span></span>
+<span>check draws 350 ms (<code>base</code>) · companion joy 700 ms</span>
+<span><b>impact Light</b> on confirmed save · new <code>haptic.kept()</code></span>
+<span style="font-weight: 600;">Kept. It stays with you.</span>
+</div>
+
+<div style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 34px; padding: 4px 16px; border-top: 1px solid #EFE9DF;">
+<span style="font-size: 14px; font-weight: 800; color: #8E2F2A;">Hold</span>
+<span>End conversation, Clean Wipe, Start fresh</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="position: relative; width: 30px; height: 15px; flex-shrink: 0;"><span style="position: absolute; left: 0; right: 0; top: 5px; height: 10px; border-radius: 4px; background: #E2B9B6;"></span><span style="position: absolute; left: 0; right: 0; top: 0; height: 10px; border-radius: 4px; background: #F8DEDC; transform: translateY(5px);"></span></span><span style="font-weight: 700;">5 of 5 px</span></span>
+<span>sinks through a 900 ms hold, ring fills · out 350 ms (<code>base</code>)</span>
+<span>Silent on touch; <b>impact Rigid</b> once at the end · new <code>haptic.done()</code></span>
+<span style="font-weight: 600;">This is deliberate. You can still let go.</span>
+</div>
+
+<div class="still" style="display: grid; grid-template-columns: 88px 236px 96px 240px 300px minmax(0, 1fr); gap: 12px; align-items: center; min-height: 34px; padding: 6px 16px; border-top: 1px solid #E6DFD3; background: #EFE9DF;">
+<span style="font-size: 14px; font-weight: 800;">Stillness</span>
+<span>Error, limit reached, crisis card, under-age block, disabled key</span>
+<span style="display: flex; align-items: center; gap: 6px;"><span aria-hidden="true" style="position: relative; width: 30px; height: 14px; flex-shrink: 0;"><span style="position: absolute; left: 0; right: 0; top: 0; height: 10px; border-radius: 4px; background: {{accent}}; opacity: 0.45;"></span></span><span style="font-weight: 700;">0 px</span></span>
+<span>no motion · at most a 150 ms opacity change</span>
+<span><b>No haptic, no motion.</b> Stillness is the signal (T&amp;S #11); no verb exists for it.</span>
+<span style="font-weight: 600;">Stop and read. Nothing is pushing you.</span>
+</div>
+
+<div style="display: flex; align-items: flex-start; gap: 10px; padding: 8px 16px; border-top: 1px solid #E6DFD3; background: #FBF8F2; color: #2B2B2B;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><rect x="8" y="4" width="8" height="16" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path></svg>
+<p style="margin: 0;"><b>Android reality.</b> Many mid-range Android phones render every impact style as the same short buzz, so a haptic is never the only signal: travel and tempo carry the meaning. Honour the system touch-feedback setting. Under reduced motion, travel becomes a 150 ms opacity dip and haptics stay single, never added to compensate.</p>
+</div>
+</section>
+
+<div style="flex: 1 1 0; min-height: 0; display: grid; grid-template-columns: 226px 210px minmax(0, 1fr) 342px; gap: 12px; font-size: 13px; line-height: 17px;">
+
+<section aria-label="Key anatomy" style="box-sizing: border-box; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Key anatomy</h2>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; text-align: center;">
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<span style="font-weight: 700;">Rest</span>
+<span aria-hidden="true" style="position: relative; height: 32px;"><span style="position: absolute; left: 0; right: 0; top: 4px; height: 28px; border-radius: 8px; background: {{accentEdge}};"></span><span style="position: absolute; left: 0; right: 0; top: 0; height: 28px; border-radius: 8px; background: {{accent}};"></span></span>
+<span style="color: #5E5A53;">edge 4 px</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<span style="font-weight: 700;">Pressed</span>
+<span aria-hidden="true" style="position: relative; height: 32px;"><span style="position: absolute; left: 0; right: 0; top: 4px; height: 28px; border-radius: 8px; background: {{accentEdge}};"></span><span style="position: absolute; left: 0; right: 0; top: 0; height: 28px; border-radius: 8px; background: {{accent}}; transform: translateY(4px); display: flex; align-items: center; justify-content: center; color: #FFFFFF;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M6 13l6 6 6-6"></path></svg></span></span>
+<span style="color: #5E5A53;">face +4 px</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<span style="font-weight: 700;">Released</span>
+<span aria-hidden="true" style="position: relative; height: 32px;"><span style="position: absolute; left: 0; right: 0; top: 4px; height: 28px; border-radius: 8px; background: {{accentEdge}};"></span><span class="pressDemo" style="position: absolute; left: 0; right: 0; top: 0; height: 28px; border-radius: 8px; background: {{accent}}; display: flex; align-items: center; justify-content: center; color: #FFFFFF;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M6 11l6-6 6 6"></path></svg></span></span>
+<span style="color: #5E5A53;">back to 0</span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<p style="margin: 0;"><b>Face.</b> The only part that moves.</p>
+<p style="margin: 0;"><b>Edge.</b> Solid, no blur. Depth 4 px; chips 3, hold 5.</p>
+<p style="margin: 0;"><b>Travel.</b> Set by intent, never more than depth.</p>
+<p style="margin: 0;"><b>Reduced motion.</b> No travel, a 15% opacity dip.</p>
+</div>
+</section>
+
+<section class="dark" aria-label="Never" style="box-sizing: border-box; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; background: #2B2B2B; color: #FFFFFF; border-radius: 22px; box-shadow: 0 3px 0 #141414;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Never</h2>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px;">
+<li>No audio, shake or flash.</li>
+<li>No bounce or overshoot.</li>
+<li>No haptic on scroll or typing.</li>
+<li>No haptic loops or patterns.</li>
+<li>No Warning or Error haptic.</li>
+<li>No second haptic on one press.</li>
+<li style="padding-top: 6px; border-top: 1px solid #4A4743; color: #F6D9CB; font-weight: 600;">Nothing at a struggling person. Errors, limits, the crisis card and the age block stay still. T&amp;S #11.</li>
+</ul>
+</section>
+
+<section aria-label="What the app does today" style="box-sizing: border-box; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Today, read from the source</h2>
+<p style="margin: 0;"><b>Committed.</b> <code>PressKey</code> travel <code>4 | 3 | 2</code>, edge equals travel; in <code>withTiming(1, duration.fast / 2, easing.exit)</code>, out <code>withSpring(0, spring.calm)</code>; reduced motion swaps travel for a 15% opacity dip; disabled is silent and still. Every key fires the same <code>haptic.advance()</code> (Light). <code>lib/haptics.ts</code> has <code>tick()</code>, <code>advance()</code>, <code>success()</code>, <code>nudge()</code> and no error verb.</p>
+<p style="margin: 0;"><b>Uncommitted, in the working tree.</b> <code>PressKeyIntent</code> commit | navigate | select | toggle; <code>haptic.commit()</code> Medium; <code>haptic.toggle()</code> Soft; commit press-in 120 ms; a note save fires <code>success()</code> once it resolves.</p>
+<p style="margin: 0;"><b>Gaps.</b> <code>goNext()</code> and <code>onRolePicked()</code> call <code>haptic.advance()</code> on top of the key's own: two buzzes per tap. Press-in eases in, so the first frames lag. No press-and-hold exists. A confirmed send fires nothing. No error path calls a haptic; keep it so.</p>
+</section>
+
+<section aria-label="Five smallest changes" style="box-sizing: border-box; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Five smallest changes</h2>
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 5px;">
+<li style="display: flex; gap: 8px;"><span aria-hidden="true" style="width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: {{accent}}; color: #FFFFFF; font-size: 13px; line-height: 18px; font-weight: 800;">1</span><span><code>PressKey</code> (started): one table maps <code>intent</code> to travel, press-in and haptic. Add <code>hold</code>; split <code>depth</code> from <code>travel</code>.</span></li>
+<li style="display: flex; gap: 8px;"><span aria-hidden="true" style="width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: {{accent}}; color: #FFFFFF; font-size: 13px; line-height: 18px; font-weight: 800;">2</span><span>Press-in on <code>easing.enter</code>, not <code>easing.exit</code>. Name the timings in <code>theme/motion.ts</code>; drop <code>duration.fast / 2</code>.</span></li>
+<li style="display: flex; gap: 8px;"><span aria-hidden="true" style="width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: {{accent}}; color: #FFFFFF; font-size: 13px; line-height: 18px; font-weight: 800;">3</span><span>One press, one haptic: remove <code>haptic.advance()</code> from <code>goNext()</code> and <code>onRolePicked()</code>.</span></li>
+<li style="display: flex; gap: 8px;"><span aria-hidden="true" style="width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: {{accent}}; color: #FFFFFF; font-size: 13px; line-height: 18px; font-weight: 800;">4</span><span><code>Composer.handleSend</code>: send key <code>haptic="none"</code>, then <code>haptic.success()</code> once <code>sendMessage()</code> resolves. <code>catch</code> stays silent.</span></li>
+<li style="display: flex; gap: 8px;"><span aria-hidden="true" style="width: 18px; height: 18px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: {{accent}}; color: #FFFFFF; font-size: 13px; line-height: 18px; font-weight: 800;">5</span><span>Add <code>haptic.kept()</code> Light and <code>haptic.done()</code> Rigid. Test that error, limit, crisis and age paths fire none.</span></li>
+</ol>
+</section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":1280,"height":900}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return { accent: accent, accentEdge: this.mix(accent, 0, 0.22), accentTint: this.mix(accent, 255, 0.8) };
+  }
+}
+</script>
+</body>
+</html>

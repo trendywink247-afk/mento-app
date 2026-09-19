@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — your companion, somewhere new on every screen</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.scr{transition:opacity 200ms cubic-bezier(0.22,1,0.36,1)}
+.ghost{transition:opacity 200ms linear}
+.pose{transition:opacity 200ms linear}
+.pill{transition:transform 350ms cubic-bezier(0.22,1,0.36,1);will-change:transform}
+.tint{transition:color 350ms cubic-bezier(0.22,1,0.36,1)}
+.key{transition:transform 120ms cubic-bezier(0.22,1,0.36,1)}
+.key:active{transform:translateY(3px)}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+@media (prefers-reduced-motion: no-preference){
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+@media (prefers-reduced-motion: reduce){
+.scr,.ghost,.pose{transition:opacity 150ms linear !important}
+.pill{transition:none !important}
+.tint{transition:color 150ms linear !important}
+.key{transition:none !important}
+.key:active{transform:none !important;opacity:0.85}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;">
+<div style="position: absolute; left: -240px; top: -130px; width: 640px; height: 500px; border-radius: 50%; background: radial-gradient(closest-side, {{sky1}}, {{sky1Soft}} 55%, rgba(244,239,230,0));"></div>
+<div style="position: absolute; right: -300px; top: 320px; width: 600px; height: 540px; border-radius: 50%; background: radial-gradient(closest-side, rgba(107,76,140,0.14), rgba(107,76,140,0.05) 55%, rgba(244,239,230,0));"></div>
+</div>
+
+<div role="group" aria-label="Board only controls" style="position: absolute; left: 0; right: 0; top: 0; height: 88px; z-index: 9; box-sizing: border-box; background: #EFE9DF; border-bottom: 1px solid #E0D8CA; font-size: 12px; line-height: 16px; color: #5E5A53;">
+<div style="position: absolute; left: 12px; right: 12px; top: 0; height: 44px; display: flex; align-items: center; gap: 2px;">
+<span style="padding-right: 6px; font-weight: 700;">Board only</span>
+<button onClick="{{ setAlive }}" aria-pressed="{{ alivePressed }}" style="height: 44px; padding: 0 6px; display: flex; align-items: center; background: transparent; border: 0; font-weight: {{ aliveW }}; color: {{ aliveFg }};"><span style="padding: 2px 0; box-shadow: {{ aliveLine }};">Alive</span></button>
+<span aria-hidden="true">·</span>
+<button onClick="{{ setStill }}" aria-pressed="{{ stillPressed }}" style="height: 44px; padding: 0 6px; display: flex; align-items: center; background: transparent; border: 0; font-weight: {{ stillW }}; color: {{ stillFg }};"><span style="padding: 2px 0; box-shadow: {{ stillLine }};">Still (crisis, errors)</span></button>
+</div>
+<div role="group" aria-label="Whose companion" style="position: absolute; left: 8px; right: 4px; top: 44px; height: 44px; display: flex; align-items: center;">
+<span style="width: 54px; flex-shrink: 0; font-size: 11px; line-height: 13px; font-weight: 700;">Whose companion</span>
+<button onClick="{{ pick_Cat }}" aria-label="Cat" aria-pressed="{{ on_Cat }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Cat }};"><img src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button><button onClick="{{ pick_Panda }}" aria-label="Panda" aria-pressed="{{ on_Panda }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Panda }};"><img src="/_blob/43230048b776f2ff94d33e0fa140d725" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button><button onClick="{{ pick_Dog }}" aria-label="Dog" aria-pressed="{{ on_Dog }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Dog }};"><img src="/_blob/0c005c3ccd4f52c8cdec64fcdb969a5c" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button><button onClick="{{ pick_Fox }}" aria-label="Fox" aria-pressed="{{ on_Fox }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Fox }};"><img src="/_blob/265423dc8215648a9bf970aaa634e596" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button><button onClick="{{ pick_Capybara }}" aria-label="Capybara" aria-pressed="{{ on_Capybara }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Capybara }};"><img src="/_blob/e24b931d92e34394ed5c239860bd3954" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button><button onClick="{{ pick_Elephant }}" aria-label="Elephant" aria-pressed="{{ on_Elephant }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Elephant }};"><img src="/_blob/b269db7c95235bfef40a235c56db9070" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button><button onClick="{{ pick_Turtle }}" aria-label="Turtle" aria-pressed="{{ on_Turtle }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Turtle }};"><img src="/_blob/c1d23c5473dbb02c8c74f310e63be723" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button><button onClick="{{ pick_Deer }}" aria-label="Deer" aria-pressed="{{ on_Deer }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Deer }};"><img src="/_blob/c1b1a6dc110d1df028f772f5aa0f6c94" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button><button onClick="{{ pick_Owl }}" aria-label="Owl" aria-pressed="{{ on_Owl }}" style="width: 36px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0;"><span style="width: 30px; height: 30px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #FFFFFF; box-shadow: {{ ring_Owl }};"><img src="/_blob/fef8c8099890805ca9a9c6e6e302488e" alt="" style="width: 27px; height: 27px; object-fit: contain; object-position: 50% 100%;"></span></button>
+</div>
+</div>
+
+<section aria-label="Chats" aria-hidden="{{ hid0 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; opacity: {{ scrOp0 }}; pointer-events: {{ pe0 }};">
+<div style="position: absolute; left: 24px; top: 96px; width: 240px; display: flex; flex-direction: column;"><h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">My <span style="color: {{accent}};">Chats</span></h1><p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">Your conversations with mentors</p></div>
+<div style="position: absolute; left: 16px; top: 168px; width: 358px; height: 52px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; color: #5E5A53; font-size: 16px; line-height: 24px;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+<span>Search conversations</span>
+</div>
+<div role="group" aria-label="Filter conversations" style="position: absolute; left: 16px; top: 234px; display: flex; gap: 8px;">
+<button class="key" aria-pressed="true" style="height: 44px; padding: 0 20px; background: #2B2B2B; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 #141414; font-size: 14px; line-height: 20px; font-weight: 700;">All chats</button>
+<button class="key" aria-pressed="false" style="height: 44px; padding: 0 18px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF; font-size: 14px; line-height: 20px; font-weight: 700;">In touch</button>
+</div>
+<button class="key" aria-label="Conversation with Quiet Banyan, your mentor. Active." style="position: absolute; left: 16px; top: 294px; width: 358px; height: 102px; overflow: hidden; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; text-align: left; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;"><span style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD;"><img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 48px; height: 48px; object-fit: contain;"></span><span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="display: flex; align-items: center; gap: 6px;"><span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Quiet Banyan</span><span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 11px; line-height: 14px; font-weight: 700;">Active</span><span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">just now</span></span><span style="font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Your mentor · first talked as Steady Cedar</span><span style="font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Rest is part of preparation, not a break from it.</span></span></button><button class="key" aria-label="Your open question with Calm Peepal, waiting for a reply" style="position: absolute; left: 16px; top: 412px; width: 358px; height: 90px; overflow: hidden; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; text-align: left; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;"><span style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE8F2;"><img src="/_blob/3b21fb5f931931698542b5b81540e76d" alt="" style="width: 48px; height: 48px; object-fit: contain;"></span><span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="display: flex; align-items: center; gap: 6px;"><span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Calm Peepal</span><span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 11px; line-height: 14px; font-weight: 700;">Waiting</span><span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">today</span></span><span style="font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Waiting for Calm Peepal · they reply when free</span></span></button><button class="key" aria-label="Conversation with Soft Tamarind, your mentor. Completed." style="position: absolute; left: 16px; top: 518px; width: 358px; height: 84px; overflow: hidden; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; text-align: left; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;"><span style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #F5E8C4;"><img src="/_blob/b05ef1ab4529da5a9ea03cab0dc894ac" alt="" style="width: 48px; height: 48px; object-fit: contain;"></span><span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;"><span style="display: flex; align-items: center; gap: 6px;"><span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Soft Tamarind</span><span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Completed</span><span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">yesterday</span></span><span style="font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Take the evening off. The syllabus will wait.</span></span></button>
+<button class="key" style="position: absolute; left: 214px; top: 668px; width: 160px; height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentEdge}}, 0 10px 18px rgba(43,43,43,0.10); font-size: 17px; line-height: 24px; font-weight: 700;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+<span>New chat</span>
+</button>
+</section>
+
+<section aria-label="Path" aria-hidden="{{ hid1 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; opacity: {{ scrOp1 }}; pointer-events: {{ pe1 }};">
+<div style="position: absolute; left: 24px; top: 96px; width: 240px; display: flex; flex-direction: column;"><h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">Your <span style="color: {{accent}};">path</span></h1><p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">Built around the stage you are in</p></div>
+<div style="position: absolute; left: 16px; top: 172px; width: 358px; height: 160px; overflow: hidden; padding: 12px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<div style="height: 44px; padding-left: 4px; display: flex; align-items: center; gap: 10px;">
+<span style="flex-grow: 1; display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">Your community</span>
+<span style="font-size: 22px; line-height: 26px; font-weight: 800;">UPSC</span>
+</span>
+<button class="key" aria-label="Change your community or stage" style="height: 44px; flex-shrink: 0; padding: 0 14px; display: flex; align-items: center; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #D9D1C2; font-size: 14px; line-height: 20px; font-weight: 700;">Change</button>
+</div>
+<div style="box-sizing: border-box; padding: 10px 14px; display: flex; flex-direction: column; background: {{accentTint}}; border-radius: 14px;">
+<span style="font-size: 18px; line-height: 24px; font-weight: 800;">The quiet after mains</span>
+<span style="font-size: 14px; line-height: 20px; color: #2B2B2B;">The papers are done. The space after is bigger than expected.</span>
+</div>
+</div>
+<h2 style="position: absolute; left: 24px; top: 384px; width: 250px; margin: 0; font-size: 16px; line-height: 20px; font-weight: 700;">People at this stage often ask</h2>
+<button class="key" style="position: absolute; left: 16px; top: 420px; width: 358px; height: 48px; box-sizing: border-box; padding: 0 10px 0 14px; display: flex; align-items: center; gap: 8px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 15px; line-height: 20px; font-weight: 600;"><span style="flex-grow: 1;">What did you do in the weeks after mains?</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg></button>
+<button class="key" style="position: absolute; left: 16px; top: 480px; width: 358px; height: 48px; box-sizing: border-box; padding: 0 10px 0 14px; display: flex; align-items: center; gap: 8px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 15px; line-height: 20px; font-weight: 600;"><span style="flex-grow: 1;">How do I prepare for the interview?</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg></button>
+<div style="position: absolute; left: 16px; top: 600px; width: 358px; height: 120px; overflow: hidden; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<div style="display: flex; flex-direction: column;">
+<h2 style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 700;">Talk to someone who's walked it</h2>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Mentors reply when they're free</span>
+</div>
+<div style="display: flex; gap: 12px;">
+<button class="key" style="flex: 1.3 1 0; height: 44px; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 16px; line-height: 24px; font-weight: 700;">Ask a mentor</button>
+<button class="key" style="flex: 1 1 0; height: 44px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #D9D1C2; font-size: 16px; line-height: 24px; font-weight: 700;">Browse</button>
+</div>
+</div>
+</section>
+
+<section aria-label="Journal" aria-hidden="{{ hid2 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; opacity: {{ scrOp2 }}; pointer-events: {{ pe2 }};">
+<div style="position: absolute; left: 24px; top: 96px; width: 240px; display: flex; flex-direction: column;"><h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">Journal</h1><p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">Yours alone. Never shared.</p></div>
+<h2 style="position: absolute; left: 24px; top: 162px; margin: 0; display: flex; align-items: baseline; gap: 8px; font-size: 22px; line-height: 28px; font-weight: 700;"><span style="color: {{accent}};">Today</span><span style="font-size: 14px; line-height: 20px; font-weight: 400; color: #5E5A53;">Wednesday 17</span></h2>
+<article aria-label="Today" style="position: absolute; left: 16px; top: 196px; width: 358px; height: 242px; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<button class="key" onClick="{{ openDay }}" aria-label="Guidance you kept from Steady Cedar. Open this day." style="box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; background: {{accentTint}}; border: 0; border-radius: 14px; box-shadow: 0 3px 0 {{accentTintEdge}};">
+<span style="align-self: stretch; display: flex; align-items: center; gap: 10px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD;"><img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 33px; height: 33px; object-fit: contain;"></span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{accent}};">Guidance you kept</span>
+<span style="font-size: 13px; line-height: 18px; color: #2B2B2B;">From your chat with <span style="font-weight: 700;">Steady Cedar</span></span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{accent}}" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+<span style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 14px; line-height: 20px; font-weight: 600; color: #2B2B2B;">Freezing doesn't erase three years of work. Can we look at the minute just before it happens?</span>
+</button>
+<div aria-hidden="true" style="flex-grow: 1;"></div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px dashed #D9D1C2;">
+<span id="t07-mood" style="padding: 0 4px; font-size: 14px; line-height: 20px; font-weight: 700;">How is today sitting? <span style="font-weight: 400; color: #5E5A53;">One tap is enough.</span></span>
+<div role="group" aria-labelledby="t07-mood" style="display: flex; gap: 6px; padding-bottom: 3px;"><button class="key" onClick="{{ mood0 }}" aria-pressed="{{ m0Pressed }}" style="flex: 1 1 0; height: 46px; background: {{ m0Bg }}; border: 1px solid {{ m0Bd }}; border-radius: 14px; box-shadow: 0 3px 0 {{ m0Sh }}; color: {{ m0Fg }}; font-size: 13px; line-height: 18px; font-weight: 700;">Heavy</button><button class="key" onClick="{{ mood1 }}" aria-pressed="{{ m1Pressed }}" style="flex: 1 1 0; height: 46px; background: {{ m1Bg }}; border: 1px solid {{ m1Bd }}; border-radius: 14px; box-shadow: 0 3px 0 {{ m1Sh }}; color: {{ m1Fg }}; font-size: 13px; line-height: 18px; font-weight: 700;">Low</button><button class="key" onClick="{{ mood2 }}" aria-pressed="{{ m2Pressed }}" style="flex: 1 1 0; height: 46px; background: {{ m2Bg }}; border: 1px solid {{ m2Bd }}; border-radius: 14px; box-shadow: 0 3px 0 {{ m2Sh }}; color: {{ m2Fg }}; font-size: 13px; line-height: 18px; font-weight: 700;">Okay</button><button class="key" onClick="{{ mood3 }}" aria-pressed="{{ m3Pressed }}" style="flex: 1 1 0; height: 46px; background: {{ m3Bg }}; border: 1px solid {{ m3Bd }}; border-radius: 14px; box-shadow: 0 3px 0 {{ m3Sh }}; color: {{ m3Fg }}; font-size: 13px; line-height: 18px; font-weight: 700;">Good</button><button class="key" onClick="{{ mood4 }}" aria-pressed="{{ m4Pressed }}" style="flex: 1 1 0; height: 46px; background: {{ m4Bg }}; border: 1px solid {{ m4Bd }}; border-radius: 14px; box-shadow: 0 3px 0 {{ m4Sh }}; color: {{ m4Fg }}; font-size: 13px; line-height: 18px; font-weight: 700;">Light</button></div>
+</div>
+</article>
+<h2 style="position: absolute; left: 24px; top: 466px; margin: 0; font-size: 17px; line-height: 24px; font-weight: 700;">Past days</h2>
+<div role="group" aria-label="Past days" style="position: absolute; left: 16px; top: 500px; width: 470px; height: 112px; display: flex; gap: 10px;">
+<button class="key" onClick="{{ openDay }}" aria-label="Yesterday. Open this day." style="width: 156px; height: 112px; flex-shrink: 0; overflow: hidden; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;"><span style="font-size: 14px; line-height: 20px; font-weight: 700;">Yesterday</span><span style="font-size: 13px; line-height: 18px; font-weight: 700; color: #4D3765;">Low</span><span style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; line-height: 18px; color: #2B2B2B;"><span style="font-weight: 700; color: #674711;">Grateful.</span> Amma packed lunch without being asked.</span></button><button class="key" onClick="{{ openDay }}" aria-label="Monday 15. Open this day." style="width: 132px; height: 112px; flex-shrink: 0; overflow: hidden; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #D9D1C2;"><span style="font-size: 14px; line-height: 20px; font-weight: 700;">Mon 15</span><span style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; line-height: 18px; color: #5E5A53;">A quiet day. Nothing written, and that is fine.</span></button><button class="key" onClick="{{ openDay }}" aria-label="Sunday 14. Open this day." style="width: 156px; height: 112px; flex-shrink: 0; overflow: hidden; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;"><span style="font-size: 14px; line-height: 20px; font-weight: 700;">Sun 14</span><span style="font-size: 12px; line-height: 16px; font-weight: 700; color: {{accent}};">Kept from a chat</span><span style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; line-height: 18px; color: #2B2B2B;">Rest is part of preparation, not a break from it.</span></button>
+</div>
+<button class="key" style="position: absolute; left: 172px; top: 668px; width: 202px; height: 56px; box-sizing: border-box; padding: 0 18px 0 16px; display: flex; align-items: center; gap: 10px; text-align: left; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentEdge}}, 0 10px 18px rgba(43,43,43,0.10);">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M4 20l4-1 11-11-3-3L5 16z"></path></svg>
+<span style="display: flex; flex-direction: column;"><span style="font-size: 17px; line-height: 22px; font-weight: 700;">Write</span><span style="font-size: 12px; line-height: 16px; font-weight: 600;">Note, mood or gratitude</span></span>
+</button>
+</section>
+
+<section aria-label="Profile" aria-hidden="{{ hid3 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; opacity: {{ scrOp3 }}; pointer-events: {{ pe3 }};">
+<div style="position: absolute; left: 24px; top: 96px; width: 240px; display: flex; flex-direction: column;"><h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">Profile</h1><p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">This is all anyone ever sees</p></div>
+<div style="position: absolute; left: 16px; top: 172px; width: 358px; height: 134px; overflow: hidden; padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 24px; line-height: 30px; font-weight: 800;">Gentle Harbor</span>
+<span style="height: 24px; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 12px; line-height: 16px; font-weight: 700;">Private</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Your identity is never shared. Mentors see this name and your companion, nothing else.</span>
+</div>
+<div style="position: absolute; left: 16px; top: 326px; width: 358px; height: 136px; overflow: hidden; box-sizing: border-box; padding: 14px; display: flex; flex-direction: column; gap: 8px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<h2 style="margin: 0; padding: 0 2px; font-size: 16px; line-height: 22px; font-weight: 700;">Your growth companion</h2>
+<div style="display: flex; justify-content: space-between; padding: 5px 5px 9px;"><span role="img" aria-label="Terracotta, selected" style="width: 40px; height: 40px; border-radius: 999px; background: #A2533A; box-shadow: 0 0 0 3px #FBF8F2, 0 0 0 5px #2B2B2B;"></span><span role="img" aria-label="Sage" style="width: 40px; height: 40px; border-radius: 999px; background: #467054; box-shadow: 0 4px 0 #33513C;"></span><span role="img" aria-label="Sky" style="width: 40px; height: 40px; border-radius: 999px; background: #3B6D8F; box-shadow: 0 4px 0 #2A4F69;"></span><span role="img" aria-label="Rose" style="width: 40px; height: 40px; border-radius: 999px; background: #A24C61; box-shadow: 0 4px 0 #7D3A4A;"></span><span role="img" aria-label="Mustard" style="width: 40px; height: 40px; border-radius: 999px; background: #895F17; box-shadow: 0 4px 0 #674711;"></span><span role="img" aria-label="Plum" style="width: 40px; height: 40px; border-radius: 999px; background: #6B4C8C; box-shadow: 0 4px 0 #4D3765;"></span><span role="img" aria-label="Teal" style="width: 40px; height: 40px; border-radius: 999px; background: #286F6B; box-shadow: 0 4px 0 #1C4F4C;"></span></div>
+<p style="margin: 0; padding: 0 2px; font-size: 13px; line-height: 18px; color: #5E5A53;">Switching colours re-tints the whole app, instantly.</p>
+</div>
+<button class="key" style="position: absolute; left: 16px; top: 482px; width: 358px; height: 60px; overflow: hidden; box-sizing: border-box; padding: 0 12px 0 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;"><span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10a5 5 0 0 1 10 0c0 3-3 4-3 7a3 3 0 0 1-5.5 1.5"></path><path d="M10 10a2 2 0 0 1 4 0"></path></svg></span><span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;"><span style="font-size: 16px; line-height: 22px; font-weight: 700;">Become a mentor</span><span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Been through a hard season? Help someone through theirs.</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg></button><button class="key" style="position: absolute; left: 16px; top: 558px; width: 358px; height: 60px; overflow: hidden; box-sizing: border-box; padding: 0 12px 0 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;"><span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"></path><path d="M16 10h2a2 2 0 0 1 0 5h-2"></path><path d="M8 5v1"></path><path d="M12 5v1"></path></svg></span><span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;"><span style="font-size: 16px; line-height: 22px; font-weight: 700;">Buy the Mento Team a Coffee</span><span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Optional, always. It keeps this space free and safe.</span></span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg></button>
+</section>
+
+<section aria-label="One day" aria-hidden="{{ hid4 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; opacity: {{ scrOp4 }}; pointer-events: {{ pe4 }};">
+
+<button class="key" onClick="{{ backToJournal }}" aria-label="Back to Journal" style="position: absolute; left: 16px; top: 100px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</button>
+<div style="position: absolute; left: 72px; top: 100px; width: 190px; height: 44px; display: flex; flex-direction: column; justify-content: center;">
+<h1 style="margin: 0; font-size: 20px; line-height: 26px; font-weight: 800;">Wednesday 17</h1>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">One day, opened from the Journal</p>
+</div>
+<div style="position: absolute; left: 16px; top: 172px; width: 358px; height: 146px; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="display: flex; align-items: center; gap: 10px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD;"><img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 33px; height: 33px; object-fit: contain;"></span>
+<span style="display: flex; flex-direction: column;"><span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{accent}};">Guidance you kept</span><span style="font-size: 13px; line-height: 18px;">From your chat with <span style="font-weight: 700;">Steady Cedar</span></span></span>
+</span>
+<span style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 16px; line-height: 22px; font-weight: 600;">Freezing doesn't erase three years of work. Can we look at the minute just before it happens?</span>
+</div>
+<div style="position: absolute; left: 16px; top: 338px; width: 358px; height: 104px; overflow: hidden; padding: 16px; display: flex; flex-direction: column; gap: 4px; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">Then you wrote</span>
+<p style="margin: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 16px; line-height: 24px;">Tried the two-minute reset before the mock. Got through section one without blanking.</p>
+</div>
+</section>
+
+<nav aria-label="Main" style="position: absolute; left: 16px; top: 736px; width: 358px; height: 68px; z-index: 2; box-sizing: border-box; padding: 8px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 6px 18px rgba(43,43,43,0.10);">
+<span aria-hidden="true" class="pill" style="position: absolute; left: 8px; top: 9px; width: 85px; height: 48px; border-radius: 999px; background: {{accentTint}}; box-shadow: 0 3px 0 {{accentTintEdge}}; transform: {{ pillTf }};"></span>
+<button class="tint" aria-label="Chats tab" aria-pressed="{{ cur0 }}" onClick="{{ go0 }}" style="position: relative; flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 0; border-radius: 999px; color: {{ fg0 }}; font-size: 12px; line-height: 14px; font-weight: 700;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg><span>Chats</span></button><button class="tint" aria-label="Path tab" aria-pressed="{{ cur1 }}" onClick="{{ go1 }}" style="position: relative; flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 0; border-radius: 999px; color: {{ fg1 }}; font-size: 12px; line-height: 14px; font-weight: 700;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg><span>Path</span></button><button class="tint" aria-label="Journal tab" aria-pressed="{{ cur2 }}" onClick="{{ go2 }}" style="position: relative; flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 0; border-radius: 999px; color: {{ fg2 }}; font-size: 12px; line-height: 14px; font-weight: 700;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg><span>Journal</span></button><button class="tint" aria-label="Profile tab" aria-pressed="{{ cur3 }}" onClick="{{ go3 }}" style="position: relative; flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 0; border-radius: 999px; color: {{ fg3 }}; font-size: 12px; line-height: 14px; font-weight: 700;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg><span>Profile</span></button>
+</nav>
+
+<p style="position: absolute; left: 16px; right: 16px; top: 808px; height: 32px; z-index: 1; margin: 0; text-align: center; font-size: 11px; line-height: 16px; color: #5E5A53;">It picks a new spot each time you arrive. It does not wander.<br>Tap any tab, even the one you are on, to arrive again.</p>
+
+<div style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; z-index: 6; pointer-events: none; transform-origin: 0 0; transform: {{ catTf }};">
+<div class="ghost" style="position: absolute; inset: 0; opacity: {{ ghostOp }}; transition-duration: {{ ghostDur }};">
+<!--pose-layers: one literal img per animal and pose, only one is ever visible-->
+<img class="pose breathe" src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Cat_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/ca61e83f28c39e94950642c2a809833d" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Cat_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/0679b2d38a2ca46e70a0baf08fd6219b" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Cat_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/c5932cbe7933051e63ca71be87e0d6f1" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Cat_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/4f2efcf71291b5c16ffd4f80ab2a3e70" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Cat_joy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/5ef7c66e2ec3a36385bafc98e11b92ed" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Cat_comfort }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/71fc89b7009da3701d2bceb080e0f24e" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 49% 0%; object-fit: contain; opacity: {{ op_Cat_hang }}; transition-duration: {{ poseDur }}; transform-origin: 50% 0%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/67d36538c4a7c1dbe0fbf0629cc04e87" alt="" style="position: absolute; left: 26px; top: 38px; width: 48px; height: 46px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Cat_peek }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/f5d6206e0be74fe6dc95f9b0722f5877" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Cat_dangle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 84%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/43230048b776f2ff94d33e0fa140d725" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Panda_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/440c6a8d0915ce44b50b4320b43d1870" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Panda_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/25b657f793c4ff0c7b6ee92b168a958d" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Panda_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/be6b271629bf919edef2304b6b8942d2" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Panda_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/0c005c3ccd4f52c8cdec64fcdb969a5c" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Dog_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/23230004e1558de35b1d9385a5451727" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Dog_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/9ff9a8509490d76d65f3129e3dd5dbc0" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Dog_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/3bc70fffdaa6f2f10776977f9b130f77" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Dog_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/265423dc8215648a9bf970aaa634e596" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Fox_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/d87755b53509e7a1489ee69e3d25ee96" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Fox_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/3c5b374271ee54c928980ec829f10458" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Fox_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/3703bec182b52f2b5a88352c05afb95f" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Fox_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/e24b931d92e34394ed5c239860bd3954" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Capybara_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/327d2e7a0276e447bebd8f35e85581f9" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Capybara_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/3078708d08a58ec5ab0262db717e9545" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Capybara_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/b47c4f3b8b5fa207fa454ab0a64791ba" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Capybara_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/b269db7c95235bfef40a235c56db9070" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Elephant_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/2b7bb90ac5b9c62e27121bc072cef2fe" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Elephant_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/7906a938e2887e3f711508b837f30e1a" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Elephant_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/ba9d583b28eb48f90f3a02e1baec1652" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Elephant_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/c1d23c5473dbb02c8c74f310e63be723" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Turtle_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/d2a863e9fea19b565f07c354438ad1dc" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Turtle_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/9467ae9a4bca8e8849cfe0a29f2e6f8e" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Turtle_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/d0ec8cc81784cdafeee6c4b18fb1b180" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Turtle_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/c1b1a6dc110d1df028f772f5aa0f6c94" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Deer_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/fa60f5b0ae449145b3c9cce92a101eb2" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Deer_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/07e8e2cbed2216dbf0893e401df6ae07" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Deer_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/8ef6c1be0535818d6c849f939127f324" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Deer_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/fef8c8099890805ca9a9c6e6e302488e" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Owl_idle }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/eddca3a5f62ea78a93ab0da4211ae089" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Owl_curious }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/0fb56d4ddf19c188971760fbea530641" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Owl_sleepy }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<img class="pose breathe" src="/_blob/f7048216a2d9071456ef8cc908ab18ae" alt="" style="position: absolute; left: 0; top: 0; width: 100px; height: 84px; object-position: 50% 100%; object-fit: contain; opacity: {{ op_Owl_greet }}; transition-duration: {{ poseDur }}; transform-origin: 50% 100%; animation-name: {{ breathName }};">
+<!--/pose-layers-->
+<button onClick="{{ tapCompanion }}" aria-label="{{ companionLabel }}" style="position: absolute; left: {{ hitL }}; top: {{ hitT }}; width: {{ hitW }}; height: {{ hitH }}; background: transparent; border: 0; border-radius: 18px; pointer-events: {{ companionPe }};"></button>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  // ------------------------------------------------------------------
+  // POSE GEOMETRY. One entry per pose layer, shared by every animal.
+  //   pin : the contact point, as fractions of the 100 x 84 image box.
+  //         The code puts that exact point on the furniture edge.
+  //   hit : the tap area inside the box (only the visible animal).
+  // The art itself is literal <img> markup between the pose-layers
+  // comments (this board cannot put a hole in src). To give an animal
+  // a new pose: add its <img> there (with an op_<Animal>_<pose> hole)
+  // and add the pose key to that animal's list in ANIMALS below.
+  // ------------------------------------------------------------------
+  get POSES() {
+    if (this._poses) { return this._poses; }
+    var SIT = { pin: { x: 0.5, y: 0.91 }, hit: { l: 22, t: 0, w: 56, h: 84 } };
+    this._poses = {
+      idle: SIT, greet: SIT, joy: SIT, comfort: SIT, sleepy: SIT,
+      curious: { pin: { x: 0.5, y: 0.91 }, hit: { l: 16, t: 0, w: 52, h: 84 } },
+      dangle:  { pin: { x: 0.5, y: 0.84 }, hit: { l: 22, t: 0, w: 56, h: 84 } },  // seat line at 84% of the height
+      peek:    { pin: { x: 0.5, y: 1 },    hit: { l: 26, t: 38, w: 48, h: 46 } }, // head and paws, drawn in a 48 x 46 sub-box; bottom edge = paw line
+      hang:    { pin: { x: 0.49, y: 0 },   hit: { l: 28, t: 0, w: 44, h: 84 } }   // paws at the very top of the image
+    };
+    return this._poses;
+  }
+
+  // Which pose a perch type asks for. An animal without that art never gets that perch.
+  get TYPE_POSE() { return { top: 'idle', dangle: 'dangle', hang: 'hang', peek: 'peek', lean: 'curious', nap: 'sleepy' }; }
+
+  // ------------------------------------------------------------------
+  // THE ANIMALS. has = the pose layers that exist for it today.
+  // taste = personality: a weight per perch type, plus low / high
+  // (how much it prefers perches near the bottom / top of the screen).
+  // Panda, Fox and Elephant already carry their hang / peek taste: it
+  // switches on by itself the day that art is added to has.
+  // ------------------------------------------------------------------
+  get ANIMALS() {
+    if (this._animals) { return this._animals; }
+    var BASIC = ['idle', 'curious', 'sleepy', 'greet'];
+    this._animals = {
+      Cat:      { has: ['idle', 'curious', 'sleepy', 'greet', 'joy', 'comfort', 'hang', 'peek', 'dangle'], taste: { top: 1.0, dangle: 1.6, hang: 0.8, peek: 1.0, lean: 0.9, nap: 0.7, low: 0, high: 0 } },
+      Panda:    { has: BASIC, taste: { top: 1.0, dangle: 1.0, hang: 1.8, peek: 0.8, lean: 1.0, nap: 0.8, low: 0, high: 0 } },
+      Dog:      { has: BASIC, taste: { top: 1.0, dangle: 0.8, hang: 0.5, peek: 0.9, lean: 1.2, nap: 0.7, low: 1.2, high: 0 } },
+      Fox:      { has: BASIC, taste: { top: 1.0, dangle: 0.8, hang: 0.6, peek: 1.8, lean: 1.3, nap: 0.6, low: 0, high: 0 } },
+      Capybara: { has: BASIC, taste: { top: 0.8, dangle: 0.6, hang: 0.3, peek: 0.6, lean: 0.6, nap: 1.8, low: 0.8, high: 0 } },
+      Elephant: { has: BASIC, taste: { top: 1.0, dangle: 0.5, hang: 0.3, peek: 1.6, lean: 1.0, nap: 0.7, low: 0.6, high: 0 } },
+      Turtle:   { has: BASIC, taste: { top: 0.8, dangle: 0.5, hang: 0.3, peek: 0.8, lean: 0.8, nap: 1.2, low: 1.8, high: 0 } },
+      Deer:     { has: BASIC, taste: { top: 1.6, dangle: 0.9, hang: 0.4, peek: 0.8, lean: 0.8, nap: 0.5, low: 0, high: 0 } },
+      Owl:      { has: BASIC, taste: { top: 1.2, dangle: 0.8, hang: 0.3, peek: 0.9, lean: 0.7, nap: 0.5, low: 0, high: 1.5 } }
+    };
+    return this._animals;
+  }
+  get ANIMAL_NAMES() { return ["Cat", "Panda", "Dog", "Fox", "Capybara", "Elephant", "Turtle", "Deer", "Owl"]; }
+
+  // ------------------------------------------------------------------
+  // THE PERCHES, per screen. x, y = the contact point ON THE FURNITURE
+  // in screen px. The first perch of a screen is its home (Still mode).
+  //   translate = (x - pin.x * 100 * scale, y - pin.y * 84 * scale)
+  // Every one was checked by hand: at rest the box covers no words and
+  // nothing you can tap. react: false = it holds on, no greeting.
+  // ------------------------------------------------------------------
+  get SCREENS() {
+    if (this._screens) { return this._screens; }
+    this._screens = [
+      { name: 'Chats', tab: 0, perches: [
+        { id: 'searchTop', type: 'top',    x: 330, y: 168, scale: 0.9 },   // search bar, top edge, right
+        { id: 'hangRow',   type: 'hang',   x: 60,  y: 606, scale: 1, react: false }, // under the last conversation row, left
+        { id: 'peekNew',   type: 'peek',   x: 322, y: 668, scale: 0.9 },   // over the New chat key's top edge
+        { id: 'leanNew',   type: 'lean',   x: 186, y: 736, scale: 1 },     // stands on the tab bar, shoulder to the New chat key
+        { id: 'napTab',    type: 'nap',    x: 100, y: 736, scale: 0.86 }   // asleep on the tab bar's top edge, left
+      ] },
+      { name: 'Path', tab: 1, perches: [
+        { id: 'cardTop',    type: 'top',    x: 322, y: 172, scale: 0.9 },  // community card, top edge, right
+        { id: 'promptTop',  type: 'top',    x: 330, y: 420, scale: 0.86 }, // first question row, top edge, right (beside the heading)
+        { id: 'hangCard',   type: 'hang',   x: 336, y: 335, scale: 0.8, react: false }, // under the community card
+        { id: 'dangleTalk', type: 'dangle', x: 340, y: 600, scale: 0.86 }, // talk card, top edge, its word-free right corner
+        { id: 'napTalk',    type: 'nap',    x: 120, y: 600, scale: 0.86 }  // asleep on the talk card's top edge, left
+      ] },
+      { name: 'Journal', tab: 2, perches: [
+        { id: 'todayTop',   type: 'top',    x: 320, y: 196, scale: 0.9 },  // today card, top edge, right
+        { id: 'dangleBook', type: 'dangle', x: 140, y: 500, scale: 0.78 }, // book "Yesterday", top edge, its word-free right corner
+        { id: 'peekWrite',  type: 'peek',   x: 322, y: 668, scale: 0.9 },  // over the write bar's top edge
+        { id: 'leanWrite',  type: 'lean',   x: 150, y: 736, scale: 1 },    // stands on the tab bar, shoulder to the write bar
+        { id: 'napBook',    type: 'nap',    x: 248, y: 500, scale: 0.78 }  // asleep on book "Mon 15", the quiet day
+      ] },
+      { name: 'Profile', tab: 3, perches: [
+        { id: 'personaTop', type: 'top',    x: 322, y: 172, scale: 0.9 },  // persona card, top edge, right
+        { id: 'hangRow',    type: 'hang',   x: 336, y: 622, scale: 1, react: false }, // under the last row
+        { id: 'peekTab',    type: 'peek',   x: 84,  y: 736, scale: 0.9 },  // over the tab bar's top edge, left
+        { id: 'tabTop',     type: 'top',    x: 180, y: 736, scale: 0.86 }, // sits on the tab bar's top edge
+        { id: 'napTab',     type: 'nap',    x: 262, y: 736, scale: 0.86 }  // asleep on the tab bar's top edge
+      ] },
+      { name: 'One day', tab: 2, perches: [
+        { id: 'keptTop',    type: 'top',    x: 322, y: 172, scale: 0.9 },  // kept guidance card, top edge, right
+        { id: 'hangWrote',  type: 'hang',   x: 330, y: 445, scale: 1, react: false }, // under the "Then you wrote" card
+        { id: 'peekTab',    type: 'peek',   x: 300, y: 736, scale: 0.9 },  // over the tab bar's top edge, right
+        { id: 'tabTop',     type: 'top',    x: 200, y: 736, scale: 0.86 }, // sits on the tab bar's top edge
+        { id: 'napTab',     type: 'nap',    x: 104, y: 736, scale: 0.86 }  // asleep on the tab bar's top edge, left
+      ] }
+    ];
+    return this._screens;
+  }
+
+  rgb(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { h = 'A2533A'; }
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+  rgba(hex, a) {
+    var c = this.rgb(hex);
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  }
+  mix(hex, to, t) {
+    var c = this.rgb(hex);
+    var out = '#';
+    for (var i = 0; i < 3; i++) { out += ('0' + Math.round(c[i] + (to - c[i]) * t).toString(16)).slice(-2); }
+    return out;
+  }
+
+  // ---- state: one flat object, mirrored on the instance -------------
+  cur() {
+    var s = this._s || this.state || {};
+    return {
+      mode: s.mode || 'alive',                       // alive | still
+      animal: s.animal || 'Cat',
+      screen: s.screen == null ? 2 : s.screen,       // where the companion is placed
+      shown: s.shown == null ? 2 : s.shown,          // which screen's content is visible (-1 = between screens)
+      tab: s.tab == null ? 2 : s.tab,
+      perch: s.perch || 'todayTop',
+      pose: s.pose || 'idle',                        // the visible pose layer
+      poseDur: s.poseDur == null ? 200 : s.poseDur,
+      ghost: s.ghost == null ? 1 : s.ghost,
+      ghostDur: s.ghostDur == null ? 200 : s.ghostDur,
+      mood: s.mood == null ? -1 : s.mood
+    };
+  }
+  put(patch) {
+    var c = this.cur();
+    for (var k in patch) { c[k] = patch[k]; }
+    this._s = c;
+    if (this._gone) { return; }
+    try { this.setState(c); } catch (e) {}
+  }
+  clearTimers() {
+    var t = this._timers || [];
+    for (var i = 0; i < t.length; i++) { clearTimeout(t[i]); }
+    this._timers = [];
+  }
+  later(ms, fn) {
+    if (typeof setTimeout !== 'function') { return; }
+    var self = this;
+    if (!this._timers) { this._timers = []; }
+    this._timers.push(setTimeout(function () { if (!self._gone) { fn(); } }, ms));
+  }
+  componentWillUnmount() {
+    this._gone = true;
+    this.clearTimers();
+    if (super.componentWillUnmount) { super.componentWillUnmount(); }
+  }
+  disconnectedCallback() {
+    this._gone = true;
+    this.clearTimers();
+    if (super.disconnectedCallback) { super.disconnectedCallback(); }
+  }
+
+  // Seeded randomness: a tiny LCG, so the same taps give the same places (per day + member in the app).
+  rand() {
+    if (this._seed == null) { this._seed = 20260919; }
+    this._seed = (this._seed * 1664525 + 1013904223) % 4294967296;
+    return this._seed / 4294967296;
+  }
+  osReduced() {
+    try {
+      return typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) { return false; }
+  }
+
+  findPerch(screen, id) {
+    var list = this.SCREENS[screen].perches;
+    for (var i = 0; i < list.length; i++) { if (list[i].id === id) { return list[i]; } }
+    return list[0];
+  }
+  // The pose layer an animal shows for a wish. Falls back gently: joy -> greet, comfort -> idle.
+  layerFor(animal, wish) {
+    var has = this.ANIMALS[animal].has;
+    if (has.indexOf(wish) >= 0) { return wish; }
+    if (wish === 'joy' && has.indexOf('greet') >= 0) { return 'greet'; }
+    return 'idle';
+  }
+  eligible(animal, perch) {
+    return this.ANIMALS[animal].has.indexOf(this.TYPE_POSE[perch.type]) >= 0;
+  }
+  // One arrival = one seeded, weighted pick among the eligible perches of that screen,
+  // never the one used on the last visit to that screen.
+  choose(screen, animal) {
+    var list = this.SCREENS[screen].perches;
+    var taste = this.ANIMALS[animal].taste;
+    var last = (this._last || {})[screen];
+    var pool = [];
+    var total = 0;
+    var i;
+    for (i = 0; i < list.length; i++) {
+      var p = list[i];
+      if (!this.eligible(animal, p)) { continue; }
+      if (p.id === last) { continue; }
+      var depth = p.y / 736;
+      var w = taste[p.type] * (1 + taste.low * depth) * (1 + taste.high * (1 - depth));
+      pool.push({ p: p, w: w });
+      total += w;
+    }
+    if (!pool.length) { return list[0]; }
+    var r = this.rand() * total;
+    for (i = 0; i < pool.length; i++) {
+      r -= pool[i].w;
+      if (r <= 0) { return pool[i].p; }
+    }
+    return pool[pool.length - 1].p;
+  }
+  place(screen, animal, mode) {
+    var p = mode === 'still' ? this.SCREENS[screen].perches[0] : this.choose(screen, animal);
+    if (!this._last) { this._last = {}; }
+    this._last[screen] = p.id;
+    var wish = mode === 'still' ? 'comfort' : this.TYPE_POSE[p.type];
+    return { screen: screen, perch: p.id, pose: this.layerFor(animal, wish), poseDur: 0 };
+  }
+
+  // Arriving somewhere. The companion never crosses the screen: it fades out with the
+  // old screen (120 ms), is placed while hidden (transform has no transition, the pose
+  // layer swaps in 0 ms), and fades in with the new screen (200 ms). It is simply there.
+  arrive(screen, fadeScreen) {
+    var self = this;
+    var c = this.cur();
+    this.clearTimers();
+    var leave = { ghost: 0, ghostDur: 120, tab: this.SCREENS[screen].tab };
+    if (fadeScreen) { leave.shown = -1; }
+    this.put(leave);
+    this.later(fadeScreen ? 200 : 130, function () {
+      var d = self.cur();
+      var next = self.place(screen, d.animal, d.mode);
+      next.shown = screen;
+      next.ghost = 1;
+      next.ghostDur = 200;
+      self.put(next);
+    });
+  }
+
+  // A small reaction, in place. Same contact point: a 200 ms crossfade of the pose layer.
+  // Different contact point (peek, dangle): it ducks out (120 ms), swaps while hidden, and
+  // is back (200 ms). Nothing slides.
+  react(wish, hold) {
+    var self = this;
+    var c = this.cur();
+    if (c.mode !== 'alive' || this.osReduced() || c.ghost !== 1 || c.shown !== c.screen) { return; }
+    var perch = this.findPerch(c.screen, c.perch);
+    if (perch.react === false) { return; }
+    var rest = this.layerFor(c.animal, this.TYPE_POSE[perch.type]);
+    var show = this.layerFor(c.animal, wish);
+    if (show === rest) { return; }
+    var a = this.POSES[rest].pin;
+    var b = this.POSES[show].pin;
+    this.clearTimers();
+    if (a.x === b.x && a.y === b.y) {
+      this.put({ pose: show, poseDur: 200 });
+      this.later(hold, function () { self.put({ pose: rest, poseDur: 200 }); });
+      return;
+    }
+    this.put({ ghost: 0, ghostDur: 120 });
+    this.later(130, function () { self.put({ pose: show, poseDur: 0, ghost: 1, ghostDur: 200 }); });
+    this.later(130 + hold, function () { self.put({ ghost: 0, ghostDur: 120 }); });
+    this.later(260 + hold, function () { self.put({ pose: rest, poseDur: 0, ghost: 1, ghostDur: 200 }); });
+  }
+
+  boot() {
+    if (this._booted) { return; }
+    this._booted = true;
+    this._timers = this._timers || [];
+    this._last = { 2: 'todayTop' }; // it is already on the Journal's today card when the board opens
+  }
+
+  renderVals() {
+    var self = this;
+    this._gone = false;
+    this.boot();
+    var accent = this.props.accent ?? '#A2533A';
+    var accentTint = this.mix(accent, 255, 0.8);
+    var accentTintEdge = this.mix(accent, 255, 0.6);
+    var c = this.cur();
+    var reduced = this.osReduced();
+
+    var perch = this.findPerch(c.screen, c.perch);
+    var geo = this.POSES[c.pose] || this.POSES.idle;
+    var s = perch.scale;
+    var tx = perch.x - geo.pin.x * 100 * s;
+    var ty = perch.y - geo.pin.y * 84 * s;
+    var canReact = c.mode === 'alive' && !reduced && perch.react !== false;
+
+    var vals = {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: accentTint,
+      accentTintEdge: accentTintEdge,
+      sky1: this.rgba(accent, 0.20),
+      sky1Soft: this.rgba(accent, 0.07),
+
+      catTf: 'translate(' + tx.toFixed(1) + 'px, ' + ty.toFixed(1) + 'px) scale(' + s + ')',
+      ghostOp: String(c.ghost),
+      ghostDur: c.ghostDur + 'ms',
+      poseDur: c.poseDur + 'ms',
+      breathName: reduced ? 'none' : 'breathe',
+      hitL: geo.hit.l + 'px',
+      hitT: geo.hit.t + 'px',
+      hitW: geo.hit.w + 'px',
+      hitH: geo.hit.h + 'px',
+      companionPe: canReact ? 'auto' : 'none',
+      companionLabel: 'Your ' + c.animal.toLowerCase() + ' companion. Tap to say hello.',
+      pillTf: 'translateX(' + (85 * c.tab) + 'px)'
+    };
+
+    // Pose layers: exactly one is visible.
+    var names = this.ANIMAL_NAMES;
+    var A = this.ANIMALS;
+    for (var n = 0; n < names.length; n++) {
+      var has = A[names[n]].has;
+      for (var h = 0; h < has.length; h++) {
+        vals['op_' + names[n] + '_' + has[h]] = (names[n] === c.animal && has[h] === c.pose) ? '1' : '0';
+      }
+      vals['on_' + names[n]] = names[n] === c.animal ? 'true' : 'false';
+      vals['ring_' + names[n]] = names[n] === c.animal ? ('0 0 0 2px #EFE9DF, 0 0 0 4px ' + accent) : '0 0 0 1px #D9D1C2';
+      (function (name) {
+        // Whose companion: a new member arrives, so it is placed afresh on the screen you are on.
+        vals['pick_' + name] = function () {
+          var d = self.cur();
+          if (d.animal === name) { return; }
+          self.clearTimers();
+          self.put({ ghost: 0, ghostDur: 120 });
+          self.later(130, function () {
+            var e = self.cur();
+            var next = self.place(e.shown < 0 ? e.screen : e.shown, name, e.mode);
+            next.animal = name;
+            next.shown = next.screen;
+            next.ghost = 1;
+            next.ghostDur = 200;
+            self.put(next);
+          });
+        };
+      })(names[n]);
+    }
+
+    // Screens and tabs.
+    for (var i = 0; i < 5; i++) {
+      var on = c.shown === i;
+      vals['scrOp' + i] = on ? '1' : '0';
+      vals['pe' + i] = on ? 'auto' : 'none';
+      vals['hid' + i] = on ? 'false' : 'true';
+    }
+    for (var t = 0; t < 4; t++) {
+      vals['cur' + t] = c.tab === t ? 'true' : 'false';
+      vals['fg' + t] = c.tab === t ? accent : '#5E5A53';
+      (function (idx) {
+        // Every tab tap is an arrival, even on the tab you are already on.
+        vals['go' + idx] = function () { self.arrive(idx, true); };
+      })(t);
+    }
+    vals.openDay = function () { self.arrive(4, true); };
+    vals.backToJournal = function () { self.arrive(2, true); };
+
+    // Board-only switch.
+    var modes = ['alive', 'still'];
+    for (var m = 0; m < modes.length; m++) {
+      var sel = c.mode === modes[m];
+      vals[modes[m] + 'W'] = sel ? '700' : '600';
+      vals[modes[m] + 'Fg'] = sel ? '#2B2B2B' : '#5E5A53';
+      vals[modes[m] + 'Line'] = sel ? ('0 2px 0 ' + accent) : '0 2px 0 rgba(43,43,43,0)';
+      vals[modes[m] + 'Pressed'] = sel ? 'true' : 'false';
+    }
+    function setMode(mode) {
+      return function () {
+        var d = self.cur();
+        if (d.mode === mode) { return; }
+        self.clearTimers();
+        // Still: home perch, comfort (or plain sit), no randomness, no reactions.
+        // Back to Alive: it stays where it is until the next arrival.
+        self.put({ mode: mode, ghost: 0, ghostDur: 120 });
+        self.later(130, function () {
+          var e = self.cur();
+          var next;
+          if (mode === 'still') {
+            next = self.place(e.screen, e.animal, 'still');
+          } else {
+            var p = self.findPerch(e.screen, e.perch);
+            next = { pose: self.layerFor(e.animal, self.TYPE_POSE[p.type]), poseDur: 0 };
+          }
+          next.ghost = 1;
+          next.ghostDur = 200;
+          self.put(next);
+        });
+      };
+    }
+    vals.setAlive = setMode('alive');
+    vals.setStill = setMode('still');
+
+    // Reactions, in place.
+    vals.tapCompanion = function () { self.react('greet', 900); };
+    function moodTap(k) {
+      return function () {
+        self.put({ mood: k });
+        self.react('joy', 1100);
+      };
+    }
+    for (var k = 0; k < 5; k++) {
+      var picked = c.mood === k;
+      vals['m' + k + 'Bg'] = picked ? accentTint : '#FBF8F2';
+      vals['m' + k + 'Bd'] = picked ? accentTintEdge : '#E6DFD3';
+      vals['m' + k + 'Sh'] = picked ? accentTintEdge : '#D9D1C2';
+      vals['m' + k + 'Fg'] = picked ? accent : '#2B2B2B';
+      vals['m' + k + 'Pressed'] = picked ? 'true' : 'false';
+      vals['mood' + k] = moodTap(k);
+    }
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

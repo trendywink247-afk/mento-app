@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — After a conversation, a private check-in</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#EFE9DF;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+input::placeholder{color:#5E5A53;opacity:1}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.rng{-webkit-appearance:none;appearance:none;background:transparent;margin:0;padding:0;cursor:pointer;opacity:0}
+.rng::-webkit-slider-runnable-track{height:52px;background:transparent}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:44px;height:52px;background:transparent;border:0}
+.rng::-moz-range-track{height:52px;background:transparent}
+.rng::-moz-range-thumb{width:44px;height:52px;background:transparent;border:0}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+.sl{transition:transform 0.35s cubic-bezier(0.22,1,0.36,1)}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; z-index: 0; padding: 44px 24px 20px; display: flex; flex-direction: column; background: #EFE9DF; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;">
+<div style="position: absolute; left: -150px; top: -190px; width: 690px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, {{accentTint}}, rgba(239,233,223,0));"></div>
+<div style="position: absolute; right: -280px; top: 250px; width: 520px; height: 460px; border-radius: 50%; background: radial-gradient(closest-side, rgba(70,112,84,0.16), rgba(239,233,223,0));"></div>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<a class="key" href="A06_Chats.dc.html" aria-label="Skip this and go to My Chats" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+</a>
+<span style="height: 32px; box-sizing: border-box; padding: 0 12px 0 10px; display: flex; align-items: center; gap: 6px; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 13px; line-height: 18px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14z"></path><path d="M5 19l8-8"></path></svg>
+<span>Conversation ended</span>
+</span>
+</div>
+
+<div style="position: relative; height: 168px; box-sizing: border-box; padding-bottom: 6px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center;">
+<div aria-hidden="true" style="position: absolute; left: 50%; bottom: 0; width: 124px; height: 16px; border-radius: 999px; background: #DDD4C4; transform: translateX(-50%);"></div>
+<img class="breathe" src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="Your cat companion, sitting quietly with you" style="position: relative; width: 118px; height: 160px; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%;">
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 4px; padding-top: 12px; text-align: center;">
+<h1 class="arr" style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 800;">How do you feel <span style="color: {{accent}};">now</span>?</h1>
+<p class="arr a1" style="margin: 0; font-size: 14px; line-height: 20px; color: #5E5A53; text-wrap: balance;">Your chat with Steady Cedar is closed. A quiet check-in, with no right answers.</p>
+</div>
+
+<div style="padding-top: 14px; display: flex; flex-direction: column;">
+<div class="arr a2" style="box-sizing: border-box; padding: 12px 15px 4px; display: flex; flex-direction: column; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+<label for="a23-energy" style="font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">My energy</label>
+<div aria-live="polite" style="font-size: 24px; line-height: 30px; font-weight: 800; color: {{accent}};">
+<sc-if value="{{ e1 }}" hint-placeholder-val="{{ false }}"><span>Drained</span></sc-if>
+<sc-if value="{{ e2 }}" hint-placeholder-val="{{ false }}"><span>Low</span></sc-if>
+<sc-if value="{{ e3 }}" hint-placeholder-val="{{ true }}"><span>Steady</span></sc-if>
+<sc-if value="{{ e4 }}" hint-placeholder-val="{{ false }}"><span>Lighter</span></sc-if>
+<sc-if value="{{ e5 }}" hint-placeholder-val="{{ false }}"><span>Clear</span></sc-if>
+</div>
+</div>
+
+<div style="position: relative; width: 310px; height: 52px; align-self: center;">
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 14px; height: 24px; box-sizing: border-box; overflow: hidden; border-radius: 999px; background: #EFE9DF; border: 1px solid #DDD4C4; box-shadow: inset 0 3px 0 #E0D8CA;">
+<div class="sl" style="position: absolute; left: 0; top: 0; width: 310px; height: 100%; background: {{accentTint}}; box-shadow: inset 0 3px 0 {{accentTintEdge}}; transform: {{ fillTf }};"></div>
+<div style="position: absolute; left: 0; right: 0; top: 0; bottom: 0; box-sizing: border-box; padding: 0 18px; display: flex; align-items: center; justify-content: space-between;">
+<span style="width: 6px; height: 6px; border-radius: 999px; background: #B9AF9C;"></span>
+<span style="width: 6px; height: 6px; border-radius: 999px; background: #B9AF9C;"></span>
+<span style="width: 6px; height: 6px; border-radius: 999px; background: #B9AF9C;"></span>
+<span style="width: 6px; height: 6px; border-radius: 999px; background: #B9AF9C;"></span>
+<span style="width: 6px; height: 6px; border-radius: 999px; background: #B9AF9C;"></span>
+</div>
+</div>
+<div class="sl" aria-hidden="true" style="position: absolute; left: 0; top: 2px; width: 44px; height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{accent}}; box-shadow: 0 4px 0 {{accentEdge}}; transform: {{ thumbTf }};">
+<span style="width: 14px; height: 14px; border-radius: 999px; background: #FFFFFF;"></span>
+</div>
+<input class="rng" id="a23-energy" type="range" min="1" max="5" step="1" tabindex="-1" onClick="{{ onSlide }}" style="position: absolute; left: 0; top: 0; width: 310px; height: 52px; z-index: 3;">
+</div>
+
+<div style="margin: 0 -11px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));">
+<button onClick="{{ set1 }}" style="height: 44px; background: transparent; border: 0; font-size: 13px; line-height: 18px; font-weight: {{ w1 }}; color: {{ c1 }};">Drained</button>
+<button onClick="{{ set2 }}" style="height: 44px; background: transparent; border: 0; font-size: 13px; line-height: 18px; font-weight: {{ w2 }}; color: {{ c2 }};">Low</button>
+<button onClick="{{ set3 }}" style="height: 44px; background: transparent; border: 0; font-size: 13px; line-height: 18px; font-weight: {{ w3 }}; color: {{ c3 }};">Steady</button>
+<button onClick="{{ set4 }}" style="height: 44px; background: transparent; border: 0; font-size: 13px; line-height: 18px; font-weight: {{ w4 }}; color: {{ c4 }};">Lighter</button>
+<button onClick="{{ set5 }}" style="height: 44px; background: transparent; border: 0; font-size: 13px; line-height: 18px; font-weight: {{ w5 }}; color: {{ c5 }};">Clear</button>
+</div>
+</div>
+</div>
+
+<div class="arr a3" style="padding-top: 10px; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; align-items: flex-start; justify-content: center; gap: 6px; font-size: 13px; line-height: 18px; color: #5E5A53;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; padding-top: 1px;"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Only you see this. It is not shared with your mentor.</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+<label for="a23-take" style="font-size: 14px; line-height: 20px; font-weight: 700;">One thing I am taking with me</label>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Optional</span>
+</div>
+<input id="a23-take" type="text" placeholder="A sentence is plenty" style="width: 100%; height: 52px; box-sizing: border-box; padding: 0 16px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; outline: none; font-size: 16px; line-height: 24px;">
+<span style="padding-top: 4px; display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: #5E5A53;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"></path><path d="M9 4v16"></path></svg>
+<span>If you write something, it is kept in your Journal.</span>
+</span>
+</div>
+</div>
+
+<div style="flex-grow: 1; min-height: 8px;"></div>
+
+<div class="arr a4" style="display: flex; flex-direction: column;">
+<a class="key" href="A06_Chats.dc.html" style="height: 58px; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">Done</a>
+</div>
+<div class="arr a5" style="padding-top: 8px; display: flex; justify-content: center;">
+<a href="A11_Feedback.dc.html" style="height: 44px; padding: 0 12px; display: flex; align-items: center; font-size: 15px; line-height: 20px; font-weight: 700; color: #5E5A53; text-decoration: underline; text-underline-offset: 4px;">Tell us how this felt</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var energy = (this.state && this.state.energy) || 3;
+    var step = 66.5;
+    var setTo = function (n) {
+      if (typeof n !== 'number' || isNaN(n)) { return; }
+      n = Math.max(1, Math.min(5, Math.round(n)));
+      self.setState({ energy: n });
+    };
+    var vals = {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6),
+      thumbTf: 'translateX(' + ((energy - 1) * step) + 'px)',
+      fillTf: 'translateX(' + ((energy - 1) * step + 22 - 310) + 'px)',
+      onSlide: function (e) {
+        var n = NaN;
+        try {
+          var t = e && (e.currentTarget || e.target);
+          if (e && e.type === 'click' && t && t.getBoundingClientRect && typeof e.clientX === 'number' && e.clientX > 0) {
+            var r = t.getBoundingClientRect();
+            if (r.width > 0) { n = ((((e.clientX - r.left) / r.width) * 310) - 22) / step + 1; }
+          } else {
+            if (!t || t.value == null) {
+              t = document.getElementById('a23-energy');
+              if (!t) {
+                var host = document.querySelector('x-dc');
+                t = host && host.shadowRoot ? host.shadowRoot.getElementById('a23-energy') : null;
+              }
+            }
+            if (t && t.value != null && t.value !== '') { n = parseInt(t.value, 10); }
+          }
+        } catch (err) { n = NaN; }
+        setTo(n);
+      }
+    };
+    for (var k = 1; k <= 5; k++) {
+      (function (n) {
+        vals['e' + n] = (energy === n);
+        vals['w' + n] = (energy === n) ? '800' : '600';
+        vals['c' + n] = (energy === n) ? '#2B2B2B' : '#5E5A53';
+        vals['set' + n] = function () { setTo(n); };
+      })(k);
+    }
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

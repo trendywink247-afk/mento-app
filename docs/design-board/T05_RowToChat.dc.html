@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — transition: a conversation opens from its row</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+input::placeholder{color:#5E5A53;opacity:1}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.mv{transition:transform 500ms cubic-bezier(0.22,1,0.36,1),opacity 350ms cubic-bezier(0.22,1,0.36,1)}
+.fd{transition:opacity 350ms cubic-bezier(0.22,1,0.36,1)}
+.perch{transition:transform 500ms cubic-bezier(0.22,1,0.36,1)}
+.slot{transition:transform 500ms cubic-bezier(0.22,1,0.36,1)}
+.surf{transition-property:transform,opacity;transition-duration:500ms,200ms;transition-timing-function:cubic-bezier(0.22,1,0.36,1)}
+.face{transition:transform 120ms cubic-bezier(0.22,1,0.36,1)}
+.hit:active ~ .face{transform:translateY(4px) !important}
+.sky{transition:opacity 700ms cubic-bezier(0.22,1,0.36,1),transform 700ms cubic-bezier(0.22,1,0.36,1);will-change:opacity,transform}
+.key3{transition:transform 120ms cubic-bezier(0.22,1,0.36,1)}
+.key3:active{transform:translateY(3px)}
+@keyframes driftA{from{transform:translate(0,0) rotate(-18deg) scale(1)}to{transform:translate(64px,38px) rotate(-9deg) scale(1.12)}}
+@keyframes driftB{from{transform:translate(0,0) rotate(14deg) scale(1.06)}to{transform:translate(-58px,46px) rotate(4deg) scale(0.96)}}
+@keyframes breathe{from{transform:scale(1,1)}to{transform:scale(1.025,1.05)}}
+@keyframes presence{from{transform:scale(1);opacity:0.4}to{transform:scale(1.14);opacity:0}}
+@media (prefers-reduced-motion: no-preference){
+.driftA{animation:driftA 46s ease-in-out infinite alternate}
+.driftB{animation:driftB 58s ease-in-out infinite alternate}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+.presence{animation:presence 2.6s cubic-bezier(0.22,1,0.36,1) infinite}
+}
+@media (prefers-reduced-motion: reduce){
+.mv{transition:opacity 150ms linear !important;transition-delay:0ms !important;transform:none !important}
+.fd{transition:opacity 150ms linear !important;transition-delay:0ms !important}
+.sky{transition:opacity 150ms linear !important;transition-delay:0ms !important;transform:none !important}
+.surf{transition:opacity 150ms linear !important;transition-delay:0ms !important}
+.perch,.slot,.face{transition:none !important}
+.key3{transition:none !important}
+}
+@keyframes linkA{from{transform:translateX(-1px)}to{transform:translateX(0.75px)}}
+@keyframes linkB{from{transform:translateX(1px)}to{transform:translateX(-0.75px)}}
+@media (prefers-reduced-motion: no-preference){.linkA{animation:linkA 5.2s ease-in-out infinite alternate}.linkB{animation:linkB 5.2s ease-in-out infinite alternate}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" class="sky" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: {{ coolOp }}; transform: {{ skyTf }};">
+<div class="driftA" style="position: absolute; left: -270px; top: -230px; width: 660px; height: 520px; border-radius: 50%; background: radial-gradient(closest-side, {{ sky1 }}, {{ sky1Soft }} 55%, rgba(244,239,230,0));"></div>
+<div class="driftB" style="position: absolute; right: -320px; top: 140px; width: 600px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(107,76,140,0.18), rgba(107,76,140,0.06) 55%, rgba(244,239,230,0));"></div>
+<div class="driftB" style="position: absolute; left: -260px; top: 420px; width: 560px; height: 400px; border-radius: 50%; background: radial-gradient(closest-side, rgba(70,112,84,0.18), rgba(70,112,84,0.06) 55%, rgba(244,239,230,0));"></div>
+</div>
+<div aria-hidden="true" class="sky" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: {{ warmOp }}; transform: {{ skyTf }};">
+<div class="driftB" style="position: absolute; right: -240px; top: -190px; width: 640px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(214,160,52,0.26), rgba(214,160,52,0.08) 55%, rgba(244,239,230,0));"></div>
+<div class="driftA" style="position: absolute; left: -280px; top: 230px; width: 640px; height: 520px; border-radius: 50%; background: radial-gradient(closest-side, rgba(205,120,80,0.22), rgba(205,120,80,0.07) 55%, rgba(244,239,230,0));"></div>
+</div>
+<div aria-hidden="true" class="fd" style="position: absolute; left: -60px; right: -60px; top: -150px; height: 300px; z-index: 0; border-radius: 50%; background: radial-gradient(closest-side, {{accentTint}}, rgba(244,239,230,0)); pointer-events: none; opacity: {{ glowOp }}; transition-duration: {{ glowDur }}; transition-delay: {{ glowDelay }};"></div>
+
+<div class="mv" style="position: absolute; inset: 0; z-index: 1; box-sizing: border-box; padding-top: 44px; display: flex; flex-direction: column; transform-origin: 195px 440px; opacity: {{ chromeOp }}; transform: {{ chromeTf }}; transition-duration: {{ chromeDur }}; transition-delay: {{ chromeDelay }}; transition-timing-function: {{ chromeEase }}; pointer-events: {{ chromePe }};">
+
+<div style="height: 78px; flex-shrink: 0; box-sizing: border-box; padding: 4px 24px 10px; display: flex; flex-direction: column;">
+<div style="height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">My <span style="color: {{accent}};">Chats</span></h1>
+<a class="key3" href="A11_Feedback.dc.html" aria-label="Send feedback about this screen" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #E3DCCF; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg>
+<span>Feedback</span>
+</a>
+</div>
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">Your conversations with mentors</p>
+</div>
+
+<div style="height: 183px; flex-shrink: 0; box-sizing: border-box; padding: 0 16px 14px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #E6DFD3; box-shadow: 0 3px 0 #EAE3D6;">
+<div style="height: 52px; flex-shrink: 0; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; color: #5E5A53;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+<label for="t05-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Search conversations</label>
+<input id="t05-search" type="search" placeholder="Search conversations…" style="flex-grow: 1; min-width: 0; height: 44px; background: transparent; border: 0; outline: none; font-size: 16px; line-height: 24px; color: #2B2B2B;">
+</div>
+<div role="tablist" aria-label="Which conversations to show" style="height: 52px; flex-shrink: 0; box-sizing: border-box; display: flex; gap: 0; padding: 4px; background: #EFE9DF; border-radius: 999px;">
+<button class="key3" role="tab" aria-selected="{{ isAll }}" onClick="{{ showAll }}" style="flex: 1 1 0; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 999px; font-size: 15px; line-height: 20px; font-weight: 700; background: {{ allBg }}; color: {{ allFg }}; box-shadow: {{ allShadow }};">All chats</button>
+<button class="key3" role="tab" aria-selected="{{ isTouch }}" onClick="{{ showTouch }}" style="flex: 1 1 0; height: 44px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 999px; font-size: 15px; line-height: 20px; font-weight: 700; background: {{ touchBg }}; color: {{ touchFg }}; box-shadow: {{ touchShadow }};">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 0 1 0 8h-1"></path><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 0 1 0-8h1"></path></svg>
+<span>In touch · 2 of 2</span>
+</button>
+</div>
+<div class="fd" role="group" aria-label="Filter conversations" style="height: 44px; flex-shrink: 0; display: flex; gap: 8px; opacity: {{ chipsOp }}; pointer-events: {{ chipsPe }};">
+<button class="key3" aria-pressed="true" style="height: 44px; padding: 0 20px; background: #2B2B2B; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 #141414; font-size: 14px; line-height: 20px; font-weight: 700;">All</button>
+<button class="key3" aria-pressed="false" style="height: 44px; box-sizing: border-box; padding: 0 18px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF; font-size: 14px; line-height: 20px; font-weight: 700;">Active</button>
+<button class="key3" aria-pressed="false" style="height: 44px; box-sizing: border-box; padding: 0 18px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF; font-size: 14px; line-height: 20px; font-weight: 700;">Completed</button>
+</div>
+</div>
+
+<div class="slot" style="position: absolute; left: 16px; top: 515px; width: 358px; height: 88px; transform: {{ slot3Tf }};">
+<div style="width: 358px; height: 88px; box-sizing: border-box; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #F5E8C4;">
+<img src="/_blob/b05ef1ab4529da5a9ea03cab0dc894ac" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 800; white-space: nowrap;">Soft Tamarind</span>
+<span style="height: 22px; box-sizing: border-box; padding: 0 8px 0 6px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; border-radius: 999px; background: {{accentTint}}; border: 1.5px solid {{accent}}; box-shadow: 0 2px 0 {{accent}}; color: {{accent}}; font-size: 11px; line-height: 16px; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap;"><svg width="15" height="12" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle class="linkA" cx="6" cy="7" r="4.25"></circle><circle class="linkB" cx="12" cy="7" r="4.25"></circle></svg><span>In touch</span></span>
+<span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">yesterday</span>
+</span>
+<span style="font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Your mentor · first talked as Amber Monsoon</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Take the evening off. The syllabus will wait.</span>
+</span>
+</div>
+</div>
+
+<div class="fd" style="position: absolute; left: 16px; top: 613px; width: 358px; height: 76px; box-sizing: border-box; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 10px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #D9D1C2; opacity: {{ row4Op }};">
+<span style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #E8DFF0;">
+<img src="/_blob/e52544b864eb0f9024d2277ffb296b33" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 800; white-space: nowrap;">Patient Banyan</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Wiped</span>
+<span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">3 days ago</span>
+</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Messages wiped — gone from both sides.</span>
+</span>
+</div>
+
+<div class="fd" style="position: absolute; left: 16px; top: 515px; width: 358px; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; pointer-events: none; opacity: {{ infoOp }}; transition-delay: {{ infoDelay }};">
+<div style="display: flex; align-items: center; gap: 10px;">
+<span aria-hidden="true" style="display: flex; gap: 6px;">
+<span style="width: 28px; height: 10px; border-radius: 999px; background: {{accent}};"></span>
+<span style="width: 28px; height: 10px; border-radius: 999px; background: {{accent}};"></span>
+</span>
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Both places are taken</span>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #5E5A53;">You can stay in touch with two mentors at a time. It keeps each conversation unhurried, and it protects their time.</p>
+</div>
+
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 224px; pointer-events: none; background: linear-gradient(to bottom, rgba(244,239,230,0), rgba(244,239,230,0.95) 22%, #F4EFE6 100%);"></div>
+
+<div style="position: absolute; left: 16px; right: 16px; bottom: 124px; box-sizing: border-box; padding: 10px 10px 10px 14px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 10px 22px rgba(43,43,43,0.12);">
+<p id="t05-newchat-help" style="margin: 0; flex-grow: 1; min-width: 0; font-size: 13px; line-height: 18px; color: #2B2B2B;">You have a question open with Calm Peepal. You can ask another once they reply or you close it.</p>
+<button aria-disabled="true" aria-describedby="t05-newchat-help" style="flex-shrink: 0; height: 48px; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 6px; background: #EFE9DF; border: 1px dashed #CFC6B5; border-radius: 14px; color: #5E5A53; font-size: 15px; line-height: 20px; font-weight: 700; cursor: default;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+<span>New chat</span>
+</button>
+</div>
+
+<p style="position: absolute; left: 16px; right: 16px; bottom: 96px; margin: 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; line-height: 18px; color: #5E5A53;">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Your conversations are private.</span>
+</p>
+</div>
+
+<div class="fd" style="position: absolute; left: 12px; top: 44px; width: 366px; height: 116px; z-index: 2; box-sizing: border-box; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF; pointer-events: none; opacity: {{ headAOp }}; transition-duration: {{ headADur }}; transition-delay: {{ headADelay }};">
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; height: 42px; box-sizing: border-box; background: #FBF8F2; border-top: 1px solid #E6DFD3; border-radius: 0 0 21px 21px;"></div>
+</div>
+
+<main style="position: absolute; left: 0; right: 0; top: 164px; bottom: 129px; z-index: 2; pointer-events: none;">
+<div style="position: absolute; inset: 0; box-sizing: border-box; padding: 12px 16px 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px;">
+<div class="mv" style="align-self: center; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53; opacity: {{ b10Op }}; transform: {{ b10Tf }}; transition-duration: {{ b10Dur }}; transition-delay: {{ b10Delay }}; transition-timing-function: {{ b10Ease }};">Today</div>
+<div class="mv" style="align-self: flex-end; max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px; opacity: {{ b11Op }}; transform: {{ b11Tf }}; transition-duration: {{ b11Dur }}; transition-delay: {{ b11Delay }}; transition-timing-function: {{ b11Ease }};">That I've given three years to this and I still freeze in the exam hall.</div>
+<div class="mv" style="align-self: flex-start; max-width: 264px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px; opacity: {{ b12Op }}; transform: {{ b12Tf }}; transition-duration: {{ b12Dur }}; transition-delay: {{ b12Delay }}; transition-timing-function: {{ b12Ease }};">Freezing doesn't erase three years of work. Can we look at the minute just before it happens?</div>
+<div class="mv" style="align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; opacity: {{ b13Op }}; transform: {{ b13Tf }}; transition-duration: {{ b13Dur }}; transition-delay: {{ b13Delay }}; transition-timing-function: {{ b13Ease }};">
+<div style="max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">I will try tonight. I have not slept properly in days.</div>
+<span style="padding-right: 6px; font-size: 12px; line-height: 16px; color: #5E5A53;">Read</span>
+</div>
+<div class="mv" style="align-self: flex-start; max-width: 264px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px; opacity: {{ b14Op }}; transform: {{ b14Tf }}; transition-duration: {{ b14Dur }}; transition-delay: {{ b14Delay }}; transition-timing-function: {{ b14Ease }};">Rest is part of preparation, not a break from it.</div>
+</div>
+<div style="position: absolute; inset: 0; box-sizing: border-box; padding: 12px 16px 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px;">
+<div class="mv" style="align-self: center; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53; opacity: {{ b20Op }}; transform: {{ b20Tf }}; transition-duration: {{ b20Dur }}; transition-delay: {{ b20Delay }}; transition-timing-function: {{ b20Ease }};">Today</div>
+<div class="mv" style="align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; opacity: {{ b21Op }}; transform: {{ b21Tf }}; transition-duration: {{ b21Dur }}; transition-delay: {{ b21Delay }}; transition-timing-function: {{ b21Ease }};">
+<div style="max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">That I've given three years to this and I still freeze in the exam hall. How did you get past it?</div>
+<span style="padding-right: 6px; font-size: 12px; line-height: 16px; color: #5E5A53;">Sent</span>
+</div>
+<div class="mv" style="align-self: flex-start; max-width: 256px; box-sizing: border-box; padding: 10px 14px 10px 12px; display: flex; align-items: flex-start; gap: 8px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; font-size: 14px; line-height: 20px; color: #5E5A53; opacity: {{ b22Op }}; transform: {{ b22Tf }}; transition-duration: {{ b22Dur }}; transition-delay: {{ b22Delay }}; transition-timing-function: {{ b22Ease }};">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#674711" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+<span>Calm Peepal replies when they are free. We will let you know.</span>
+</div>
+</div>
+</main>
+
+<div class="mv" style="position: absolute; left: 16px; top: 319px; width: 358px; height: 92px; z-index: 3; transform-origin: 179px 121px; pointer-events: none; opacity: {{ row1Op }}; transform: {{ row1Tf }}; transition-duration: {{ row1Dur }}; transition-delay: {{ row1Delay }}; transition-timing-function: {{ row1Ease }};">
+<button class="hit" onClick="{{ open1 }}" aria-label="Open your conversation with Quiet Banyan, your mentor, first talked as Steady Cedar. One new message." style="position: absolute; left: 0; top: 0; width: 358px; height: 92px; z-index: 5; background: transparent; border: 0; border-radius: 22px; pointer-events: {{ hit1Pe }};"></button>
+<span aria-hidden="true" class="surf" style="position: absolute; left: 0; top: 4px; width: 358px; height: 88px; border-radius: 22px; background: #E3DCCF; transform-origin: 50% 0; opacity: {{ surf1Op }}; transform: {{ surf1Tf }}; transition-duration: {{ surf1Dur }}; transition-delay: {{ surf1Delay }};"></span>
+<span class="face" style="position: absolute; left: 0; top: 0; width: 358px; height: 88px; transform: {{ face1Tf }};">
+<span aria-hidden="true" class="surf" style="position: absolute; left: 0; top: 0; width: 358px; height: 88px; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #E6DFD3; transform-origin: 50% 0; opacity: {{ surf1Op }}; transform: {{ surf1Tf }}; transition-duration: {{ surf1Dur }}; transition-delay: {{ surf1Delay }};"></span>
+<span class="fd" style="position: absolute; left: 73px; right: 14px; top: 14px; display: flex; flex-direction: column; gap: 1px; opacity: {{ text1Op }}; transition-duration: {{ text1Dur }}; transition-delay: {{ text1Delay }};">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span aria-hidden="true" style="visibility: hidden; font-size: 16px; line-height: 22px; font-weight: 800; white-space: nowrap;">Quiet Banyan</span>
+<span style="height: 22px; box-sizing: border-box; padding: 0 8px 0 6px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; border-radius: 999px; background: {{accentTint}}; border: 1.5px solid {{accent}}; box-shadow: 0 2px 0 {{accent}}; color: {{accent}}; font-size: 11px; line-height: 16px; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap;"><svg width="15" height="12" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle class="linkA" cx="6" cy="7" r="4.25"></circle><circle class="linkB" cx="12" cy="7" r="4.25"></circle></svg><span>In touch</span></span>
+<span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">just now</span>
+</span>
+<span style="font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Your mentor · first talked as Steady Cedar</span>
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Rest is part of preparation, not a break from it.</span>
+</span>
+<span class="perch" style="position: absolute; left: 9px; top: 16px; width: 56px; height: 56px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD; border: 2px solid #FFFFFF; transform: {{ av1Tf }}; transition-duration: {{ fly1Dur }}; transition-delay: {{ fly1Delay }};">
+<img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 50px; height: 50px; object-fit: contain;">
+</span>
+<span aria-hidden="true" class="fd" style="position: absolute; left: 50px; top: 17px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: {{accent}}; border: 2px solid #FFFFFF; opacity: {{ text1Op }}; transition-duration: {{ text1Dur }}; transition-delay: {{ text1Delay }};"></span>
+<span class="perch" style="position: absolute; left: 73px; top: 13px; height: 24px; font-size: 19px; line-height: 24px; font-weight: 800; white-space: nowrap; transform-origin: 0 50%; transform: {{ name1Tf }}; transition-duration: {{ fly1Dur }}; transition-delay: {{ fly1Delay }};">Quiet Banyan</span>
+</span>
+</div>
+
+<div class="mv" style="position: absolute; left: 16px; top: 417px; width: 358px; height: 92px; z-index: 3; transform-origin: 179px 23px; pointer-events: none; opacity: {{ row2Op }}; transform: {{ row2Tf }}; transition-duration: {{ row2Dur }}; transition-delay: {{ row2Delay }}; transition-timing-function: {{ row2Ease }};">
+<button class="hit" onClick="{{ open2 }}" aria-label="Open your question to Calm Peepal, waiting for a reply" style="position: absolute; left: 0; top: 0; width: 358px; height: 92px; z-index: 5; background: transparent; border: 0; border-radius: 22px; pointer-events: {{ hit2Pe }};"></button>
+<span aria-hidden="true" class="surf" style="position: absolute; left: 0; top: 4px; width: 358px; height: 88px; border-radius: 22px; background: #E3DCCF; transform-origin: 50% 0; opacity: {{ surf2Op }}; transform: {{ surf2Tf }}; transition-duration: {{ surf2Dur }}; transition-delay: {{ surf2Delay }};"></span>
+<span class="face" style="position: absolute; left: 0; top: 0; width: 358px; height: 88px; transform: {{ face2Tf }};">
+<span aria-hidden="true" class="surf" style="position: absolute; left: 0; top: 0; width: 358px; height: 88px; box-sizing: border-box; border-radius: 22px; background: #FFFFFF; border: 1px solid #E6DFD3; transform-origin: 50% 0; opacity: {{ surf2Op }}; transform: {{ surf2Tf }}; transition-duration: {{ surf2Dur }}; transition-delay: {{ surf2Delay }};"></span>
+<span class="fd" style="position: absolute; left: 73px; right: 14px; top: 14px; display: flex; flex-direction: column; gap: 1px; opacity: {{ text2Op }}; transition-duration: {{ text2Dur }}; transition-delay: {{ text2Delay }};">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span aria-hidden="true" style="visibility: hidden; font-size: 16px; line-height: 22px; font-weight: 800; white-space: nowrap;">Calm Peepal</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 11px; line-height: 14px; font-weight: 700; white-space: nowrap;">
+<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+<span>Waiting</span>
+</span>
+<span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">today</span>
+</span>
+<span style="font-size: 14px; line-height: 20px; color: #2B2B2B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Waiting for Calm Peepal · they reply when free</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">You: That I've given three years to this and I still freeze…</span>
+</span>
+<span class="perch" style="position: absolute; left: 9px; top: 16px; width: 56px; height: 56px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE8F2; border: 2px solid #FFFFFF; transform: {{ av2Tf }}; transition-duration: {{ fly2Dur }}; transition-delay: {{ fly2Delay }};">
+<img src="/_blob/3b21fb5f931931698542b5b81540e76d" alt="" style="width: 50px; height: 50px; object-fit: contain;">
+</span>
+<span class="perch" style="position: absolute; left: 73px; top: 13px; height: 24px; font-size: 19px; line-height: 24px; font-weight: 800; white-space: nowrap; transform-origin: 0 50%; transform: {{ name2Tf }}; transition-duration: {{ fly2Dur }}; transition-delay: {{ fly2Delay }};">Calm Peepal</span>
+</span>
+</div>
+
+<div class="perch" style="position: absolute; left: 290px; top: 640px; width: 76px; height: 108px; z-index: 3; pointer-events: none; transform: {{ foxTf }}; transition-duration: {{ foxDur }}; transition-delay: {{ foxDelay }};">
+<img class="breathe" src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="Your cat companion" style="width: 76px; height: 108px; object-fit: contain; transform-origin: 50% 100%;">
+</div>
+
+<div class="fd" style="position: absolute; left: 12px; top: 44px; width: 366px; z-index: 4; box-sizing: border-box; border: 1px solid transparent; display: flex; flex-direction: column; opacity: {{ headBOp }}; transition-duration: {{ headBDur }}; transition-delay: {{ headBDelay }}; pointer-events: {{ headBPe }};">
+<div style="display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 4px;">
+<button class="key3" onClick="{{ back }}" aria-label="Back to My Chats" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; border-radius: 999px;">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</button>
+<span style="flex-grow: 1; min-width: 0; min-height: 56px; display: flex; align-items: center; gap: 12px;">
+<span aria-hidden="true" style="position: relative; width: 56px; height: 56px; flex-shrink: 0; opacity: {{ w1Op }};">
+<span class="presence" style="position: absolute; inset: -4px; border-radius: 999px; border: 2px solid {{accent}}; opacity: 0.35;"></span>
+<span style="position: absolute; right: 0; bottom: 1px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 2.5px solid #FFFFFF;"></span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span aria-hidden="true" style="height: 24px;"></span>
+<span style="position: relative; height: 18px;">
+<span style="position: absolute; left: 0; top: 0; font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; opacity: {{ w1Op }};">Your mentor · here now</span>
+<span style="position: absolute; left: 0; top: 0; font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; opacity: {{ w2Op }};">Mentor · replies when they are free</span>
+</span>
+</span>
+</span>
+<button class="key3" aria-label="Conversation options" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #D9D1C2;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="19" cy="12" r="1.7"></circle></svg>
+</button>
+</div>
+<div style="box-sizing: border-box; height: 42px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border-top: 1px solid transparent; white-space: nowrap; overflow: hidden;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">In this chat</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 12px; line-height: 16px; font-weight: 700;">Exam stress</span>
+<span style="position: relative; flex-grow: 1; height: 26px;">
+<span style="position: absolute; left: 0; top: 0; display: flex; gap: 8px; opacity: {{ w1Op }};">
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"></path></svg>
+<span>Saved 2</span>
+</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 0 1 0 8h-1"></path><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 0 1 0-8h1"></path></svg>
+<span>In touch</span>
+</span>
+</span>
+<span style="position: absolute; left: 0; top: 0; display: flex; gap: 8px; opacity: {{ w2Op }};">
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+<span>Waiting for a reply</span>
+</span>
+</span>
+</span>
+</div>
+</div>
+
+<nav class="mv" aria-label="Main" style="position: absolute; left: 16px; right: 16px; bottom: 20px; height: 68px; z-index: 4; box-sizing: border-box; padding: 8px; display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 6px 18px rgba(43,43,43,0.10); opacity: {{ tabOp }}; transform: {{ tabTf }}; transition-duration: {{ tabDur }}; transition-delay: {{ tabDelay }}; transition-timing-function: {{ tabEase }}; pointer-events: {{ tabPe }};">
+<a href="A06_Chats.dc.html" aria-current="page" style="flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; background: {{accentTint}}; box-shadow: 0 3px 0 {{accentTintEdge}}; color: {{accent}}; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+<span>Chats</span>
+</a>
+<a href="A07_Path.dc.html" style="flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; color: #5E5A53; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
+<span>Path</span>
+</a>
+<a href="A08_Journals.dc.html" style="flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; color: #5E5A53; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>
+<span>Journal</span>
+</a>
+<a href="A09_Profile.dc.html" style="flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; color: #5E5A53; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>
+<span>Profile</span>
+</a>
+</nav>
+
+<footer class="mv" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; box-sizing: border-box; padding: 8px 16px 28px; display: flex; flex-direction: column; gap: 8px; background: #F4EFE6; border-top: 1px solid #E6DFD3; opacity: {{ compOp }}; transform: {{ compTf }}; transition-duration: {{ compDur }}; transition-delay: {{ compDelay }}; transition-timing-function: {{ compEase }}; pointer-events: {{ compPe }};">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 32px;">
+<span role="img" aria-label="Message allowance: 7 of 10 left" style="flex-shrink: 0; display: flex; align-items: center; gap: 2px;">
+<span style="box-sizing: border-box; padding: 3px; display: flex; gap: 3px; background: #FBF8F2; border: 1.5px solid #CFC6B5; border-radius: 7px;">
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+</span>
+<span style="width: 3px; height: 8px; border-radius: 0 2px 2px 0; background: #CFC6B5;"></span>
+</span>
+<span style="font-size: 13px; line-height: 16px; color: #5E5A53;">7 of 10 messages left today · up to 3 in a row</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<label for="t05-message" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Message</label>
+<input id="t05-message" type="text" placeholder="Type a message…" style="flex-grow: 1; min-width: 0; height: 52px; box-sizing: border-box; padding: 0 16px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; outline: none; font-size: 16px; line-height: 24px;">
+<button class="key3" aria-label="Send message" style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentEdge}};">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14-7-5 15-3-6z"></path></svg>
+</button>
+</div>
+</footer>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  rgba(hex, a) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return 'rgba(162,83,58,' + a + ')'; }
+    return 'rgba(' + parseInt(h.substr(0, 2), 16) + ',' + parseInt(h.substr(2, 2), 16) + ',' + parseInt(h.substr(4, 2), 16) + ',' + a + ')';
+  }
+  clearTimers() {
+    var t = this._timers || [];
+    for (var i = 0; i < t.length; i++) { clearTimeout(t[i]); }
+    this._timers = [];
+  }
+  cur() {
+    var st = this.state || {};
+    return { phase: st.phase || 'list', which: st.which || 1, touch: !!st.touch, last: st.last || 'back' };
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    /* phase: 'list' -> 'press' (130ms, the pillow travels) -> 'chat'. which = the row that opened (1 or 2). */
+    var st = this.cur();
+    var chat = st.phase === 'chat';
+    var which = st.which;
+    var touch = st.touch;
+    var ARRIVE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    var EXIT = 'cubic-bezier(0.4, 0, 1, 1)';
+    var REST = 'translate(0px, 0px) scale(1)';
+    var on = { bg: '#FFFFFF', fg: '#2B2B2B', shadow: '0 3px 0 #D9D1C2' };
+    var off = { bg: 'transparent', fg: '#5E5A53', shadow: 'none' };
+    var a = touch ? off : on;
+    var t = touch ? on : off;
+    var vals = {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6),
+      sky1: this.rgba(accent, 0.24),
+      sky1Soft: this.rgba(accent, 0.08),
+      isAll: !touch,
+      isTouch: touch,
+      allBg: a.bg, allFg: a.fg, allShadow: a.shadow,
+      touchBg: t.bg, touchFg: t.fg, touchShadow: t.shadow
+    };
+    /* A content layer: leaves fast on the exit curve, arrives slow on the arrival curve after its delay. */
+    function layer(name, isOn, delay, dur, offTf, exitDur) {
+      vals[name + 'Op'] = isOn ? '1' : '0';
+      vals[name + 'Tf'] = isOn ? REST : offTf;
+      vals[name + 'Dur'] = isOn ? dur + 'ms' : (exitDur || 200) + 'ms';
+      vals[name + 'Delay'] = isOn ? delay + 'ms' : '0ms';
+      vals[name + 'Ease'] = isOn ? ARRIVE : EXIT;
+      vals[name + 'Pe'] = isOn ? 'auto' : 'none';
+    }
+    var SINK = 'translate(0px, 0px) scale(0.97)';
+    var BELOW = 'translate(0px, 24px) scale(1)';
+    var listDelay = st.last === 'touch' ? 120 : 480;
+
+    layer('chrome', !chat, 480, 350, SINK);
+    layer('tab', !chat, 560, 350, 'translate(0px, 120px) scale(1)', 350);
+    layer('row1', !(chat && which !== 1), listDelay, 350, SINK);
+    layer('row2', !(chat && which !== 2) && !touch, listDelay, 350, (chat && which !== 2) ? SINK : REST);
+    layer('text1', !(chat && which === 1), 560, 350, REST);
+    layer('text2', !(chat && which === 2), 560, 350, REST);
+    layer('glow', chat, 200, 500, REST);
+    layer('headB', chat, 500, 350, REST);
+    layer('b10', chat && which === 1, 620, 500, BELOW);
+    layer('b11', chat && which === 1, 620, 500, BELOW);
+    layer('b12', chat && which === 1, 700, 500, BELOW);
+    layer('b13', chat && which === 1, 780, 500, BELOW);
+    layer('b14', chat && which === 1, 860, 500, BELOW);
+    layer('b20', chat && which === 2, 620, 500, BELOW);
+    layer('b21', chat && which === 2, 620, 500, BELOW);
+    layer('b22', chat && which === 2, 700, 500, BELOW);
+    layer('comp', chat, 940, 500, 'translate(0px, 140px) scale(1)');
+
+    /* The true header card waits under the arriving row surface, then the surface hands over (no jump, no stretch left behind). */
+    vals.headAOp = chat ? '1' : '0';
+    vals.headADur = chat ? '200ms' : '80ms';
+    vals.headADelay = chat ? '480ms' : '100ms';
+
+    /* Row surfaces (face + 4px underside): transition lists are (transform, opacity). */
+    var SURF_REST = 'translate(0px, 0px) scale(1, 1)';
+    var surfTo = { 1: 'translate(0px, -275px) scale(1.0223, 1.3182)', 2: 'translate(0px, -373px) scale(1.0223, 1.3182)' };
+    var avTo = { 1: 'translate(42px, -282px) scale(1)', 2: 'translate(42px, -380px) scale(1)' };
+    var nameTo = { 1: 'translate(46px, -272px) scale(1)', 2: 'translate(46px, -370px) scale(1)' };
+    for (var n = 1; n <= 2; n++) {
+      var open = chat && which === n;
+      vals['surf' + n + 'Tf'] = open ? surfTo[n] : SURF_REST;
+      vals['surf' + n + 'Op'] = open ? '0' : '1';
+      vals['surf' + n + 'Dur'] = open ? '500ms, 200ms' : '500ms, 100ms';
+      vals['surf' + n + 'Delay'] = open ? '80ms, 640ms' : '180ms, 0ms';
+      vals['av' + n + 'Tf'] = open ? avTo[n] : 'translate(0px, 0px) scale(0.9286)';
+      vals['name' + n + 'Tf'] = open ? nameTo[n] : 'translate(0px, 0px) scale(0.842)';
+      vals['fly' + n + 'Dur'] = '500ms';
+      vals['fly' + n + 'Delay'] = open ? '80ms' : '180ms';
+      vals['face' + n + 'Tf'] = (st.phase === 'press' && which === n) ? 'translateY(4px)' : 'translateY(0px)';
+    }
+    vals.hit1Pe = st.phase === 'list' ? 'auto' : 'none';
+    vals.hit2Pe = (st.phase === 'list' && !touch) ? 'auto' : 'none';
+    vals.w1Op = which === 1 ? '1' : '0';
+    vals.w2Op = which === 2 ? '1' : '0';
+
+    /* In touch view: rows 2 and 4 step back, row 3 moves up a slot, the note takes slot 3. */
+    vals.slot3Tf = touch ? 'translate(0px, -98px)' : 'translate(0px, 0px)';
+    vals.row4Op = touch ? '0' : '1';
+    vals.infoOp = touch ? '1' : '0';
+    vals.infoDelay = touch ? '200ms' : '0ms';
+    vals.chipsOp = touch ? '0' : '1';
+    vals.chipsPe = touch ? 'none' : 'auto';
+
+    /* The member's companion: from the edge of the filter bar down to the composer, one element. */
+    vals.foxTf = chat ? 'translate(0px, 0px) scale(1)' : 'translate(12px, -416px) scale(0.639)';
+    vals.foxDur = chat ? '700ms' : '500ms';
+    vals.foxDelay = chat ? '200ms' : '180ms';
+
+    vals.coolOp = chat ? '0.55' : '1';
+    vals.warmOp = chat ? '1' : '0';
+    vals.skyTf = chat ? 'translate(0px, 24px)' : 'translate(0px, 0px)';
+
+    function openRow(n) {
+      return function () {
+        var c = self.cur();
+        if (c.phase !== 'list') { return; }
+        self.clearTimers();
+        self.setState({ phase: 'press', which: n, touch: c.touch, last: 'open' });
+        self._timers.push(setTimeout(function () {
+          var d = self.cur();
+          self.setState({ phase: 'chat', which: n, touch: d.touch, last: 'open' });
+        }, 130));
+      };
+    }
+    vals.open1 = openRow(1);
+    vals.open2 = openRow(2);
+    vals.back = function () {
+      var c = self.cur();
+      self.clearTimers();
+      self.setState({ phase: 'list', which: c.which, touch: c.touch, last: 'back' });
+    };
+    vals.showAll = function () {
+      var c = self.cur();
+      self.setState({ phase: c.phase, which: c.which, touch: false, last: 'touch' });
+    };
+    vals.showTouch = function () {
+      var c = self.cur();
+      self.setState({ phase: c.phase, which: c.which, touch: true, last: 'touch' });
+    };
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

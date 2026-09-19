@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Mentor decides on a stay-in-touch ask</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; box-sizing: border-box; padding: 48px 24px 0; display: flex; flex-direction: column; gap: 14px; background: #F4EFE6; border-radius: 22px; transform: scale(0.96) translateY(8px);">
+<div style="font-size: 26px; line-height: 34px; font-weight: 800;">Good to see you,<br>Steady Cedar</div>
+<div style="height: 70px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px;"></div>
+<div style="height: 60px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px;"></div>
+<div style="height: 150px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px;"></div>
+</div>
+<a class="arrDim" href="A10_MentorHome.dc.html" aria-label="Decide later and go back to Mentor Home" style="position: absolute; inset: 0; background: rgba(43,43,43,0.35);"></a>
+
+<div class="arrSheet" role="dialog" aria-label="A member asked to stay in touch" style="position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 12px 24px 28px; display: flex; flex-direction: column; gap: 16px; background: #F4EFE6; border-radius: 28px 28px 0 0; box-shadow: 0 -4px 24px rgba(43,43,43,0.12);">
+<div aria-hidden="true" style="align-self: center; width: 44px; height: 5px; border-radius: 999px; background: #D9D1C2;"></div>
+
+<div class="arr a2" style="display: flex; align-items: center; gap: 14px;">
+<span style="width: 64px; height: 64px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #F6D9CB;">
+<img src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="" style="width: 58px; height: 58px; object-fit: contain;">
+</span>
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 800;">Gentle Harbor would like to <span style="color: {{accent}};">stay in touch</span></h1>
+</div>
+</div>
+
+<p class="arr a3" style="margin: 0; font-size: 16px; line-height: 24px; color: #2B2B2B;">If you agree, they can write to you again after your name changes. They will see your new name with a quiet "your mentor" note. Nothing else about you is shared.</p>
+
+<div class="arr a4" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 20px; color: #5E5A53;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>It does not use one of your three seats until they write.</span>
+</div>
+<div style="display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 20px; color: #5E5A53;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>You can end it whenever you need to protect your own time.</span>
+</div>
+<div style="display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 20px; color: #5E5A53;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Saying "not now" is quiet. They are not told why, and nothing counts against you.</span>
+</div>
+</div>
+
+<div class="arr a5" style="display: flex; gap: 12px;">
+<a class="key" href="A10_MentorHome.dc.html" style="flex: 1 1 0; height: 56px; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 16px; line-height: 24px; font-weight: 700;">Not now</a>
+<a class="key" href="A10_MentorHome.dc.html" style="flex: 1.4 1 0; height: 56px; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 17px; line-height: 24px; font-weight: 700;">Yes, stay in touch</a>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return { accent: accent, accentEdge: this.mix(accent, 0, 0.22) };
+  }
+}
+</script>
+</body>
+</html>

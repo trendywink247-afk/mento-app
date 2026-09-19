@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Pathfinder, life first then exams</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+@keyframes sky{from{transform:translate(0,0) scale(1)}to{transform:translate(-46px,30px) scale(1.1)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+.sky{animation:sky 48s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 20px 0; display: flex; flex-direction: column; gap: 10px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;">
+<div class="sky" style="position: absolute; right: -210px; top: -220px; width: 520px; height: 460px; border-radius: 50%; background: radial-gradient(closest-side, {{accentTint}}, rgba(244,239,230,0));"></div>
+</div>
+
+<div style="position: relative; z-index: 1; height: 44px; display: flex; align-items: center; gap: 12px;">
+<a class="key" href="A07_Path.dc.html" aria-label="Back to your path" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<div class="arrDeep" style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">Your path</span>
+<span style="font-size: 17px; line-height: 24px; font-weight: 700;">Pathfinder</span>
+</div>
+</div>
+
+<div class="arrDeep" style="position: relative; z-index: 1;">
+<div class="arr a1" style="box-sizing: border-box; padding-right: 76px; display: flex; flex-direction: column; gap: 2px;">
+<h1 style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 800;">What's on your<br><span style="color: {{accent}};">mind</span> lately?</h1>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #5E5A53;">No wrong answers. Change it anytime.</p>
+</div>
+</div>
+
+<div style="position: relative; z-index: 1;">
+<img class="breathe" src="/_blob/ca61e83f28c39e94950642c2a809833d" alt="Your cat companion perched on the first choice" style="position: absolute; right: 14px; bottom: calc(100% - 6px); width: 52px; height: 74px; object-fit: contain; transform-origin: 50% 100%; z-index: 2; pointer-events: none;">
+<div class="arrDeep" role="group" aria-label="Choose a route" style="display: flex; flex-direction: column; gap: 8px;">
+
+<div class="arr a2" style="display: flex; flex-direction: column;">
+<button class="key" onClick="{{ pickLife }}" aria-pressed="{{ lifePressed }}" style="min-height: 60px; box-sizing: border-box; padding: 7px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: {{ lifeBg }}; border: 1px solid {{ lifeBorder }}; border-radius: 22px; box-shadow: {{ lifeShadow }};">
+<span style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14"></path><path d="M5 19c2-4 5-7 9-9"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">Life in general</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">a heavy stretch · a big decision</span>
+</span>
+<span aria-hidden="true" style="width: 22px; height: 22px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{ lifeDot }}; border: 2px solid {{ lifeDotBorder }}; color: #FFFFFF;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+</button>
+</div>
+
+<div class="arr a3" style="display: flex; flex-direction: column;">
+<button class="key" onClick="{{ pickWork }}" aria-pressed="{{ workPressed }}" style="min-height: 60px; box-sizing: border-box; padding: 7px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: {{ workBg }}; border: 1px solid {{ workBorder }}; border-radius: 22px; box-shadow: {{ workShadow }};">
+<span style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE8F2; color: #2F4F6B;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="8" width="17" height="11" rx="2.5"></rect><path d="M9 8V6a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 6v2"></path><path d="M3.5 13h17"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">Work and career</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">pressure · interviews · the search</span>
+</span>
+<span aria-hidden="true" style="width: 22px; height: 22px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{ workDot }}; border: 2px solid {{ workDotBorder }}; color: #FFFFFF;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+</button>
+</div>
+
+<div class="arr a4" style="display: flex; flex-direction: column;">
+<button class="key" onClick="{{ pickExam }}" aria-pressed="{{ examPressed }}" style="min-height: 60px; box-sizing: border-box; padding: 7px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: {{ examBg }}; border: 1px solid {{ examBorder }}; border-radius: 22px; box-shadow: {{ examShadow }};">
+<span style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 7c-2-1.6-4.6-2-8-2v13c3.4 0 6 .4 8 2 2-1.6 4.6-2 8-2V5c-3.4 0-6 .4-8 2z"></path><path d="M12 7v13"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">An exam I'm preparing for</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">UPSC · state services · NEET · JEE</span>
+</span>
+<span aria-hidden="true" style="width: 22px; height: 22px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{ examDot }}; border: 2px solid {{ examDotBorder }}; color: #FFFFFF;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+</button>
+</div>
+
+<div class="arr a5" style="display: flex; flex-direction: column;">
+<button class="key" onClick="{{ pickUnsure }}" aria-pressed="{{ unsurePressed }}" style="min-height: 60px; box-sizing: border-box; padding: 7px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: {{ unsureBg }}; border: 1px solid {{ unsureBorder }}; border-radius: 22px; box-shadow: {{ unsureShadow }};">
+<span style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">I'm not sure yet</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">start anywhere, a mentor will help</span>
+</span>
+<span aria-hidden="true" style="width: 22px; height: 22px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{ unsureDot }}; border: 2px solid {{ unsureDotBorder }}; color: #FFFFFF;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+</button>
+</div>
+
+</div>
+</div>
+
+<div class="arrDeep" style="position: relative; z-index: 1;">
+<div class="arr a6" style="display: flex; flex-direction: column; gap: 6px;">
+<div style="padding: 0 4px; display: flex; align-items: baseline; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 700;">{{ stepLabel }}</h2>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">{{ stepHint }}</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+
+<sc-if value="{{ isExam }}" hint-placeholder-val="{{ true }}">
+<div role="group" aria-label="Where in the cycle" style="box-sizing: border-box; padding: 4px; display: flex; gap: 4px; background: #EFE9DF; border: 1px solid #E6DFD3; border-radius: 14px;">
+<sc-for list="{{ segs }}" as="s" hint-placeholder-count="4">
+<button class="key" onClick="{{ s.pick }}" aria-pressed="{{ s.pressed }}" style="flex: 1 1 0; min-width: 0; height: 44px; box-sizing: border-box; padding: 0 4px; display: flex; align-items: center; justify-content: center; text-align: center; background: {{ s.bg }}; border: 1px solid {{ s.border }}; border-radius: 10px; box-shadow: {{ s.shadow }}; color: {{ s.ink }}; font-size: 12px; line-height: 14px; font-weight: 700;">{{ s.label }}</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasMoments }}" hint-placeholder-val="{{ true }}">
+<div role="group" aria-label="Which moment is closest" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding-bottom: 4px;">
+<sc-for list="{{ moments }}" as="m" hint-placeholder-count="4">
+<button class="key" onClick="{{ m.pick }}" aria-pressed="{{ m.pressed }}" style="min-height: 48px; box-sizing: border-box; padding: 6px 12px; display: flex; align-items: center; text-align: left; background: {{ m.bg }}; border: 1px solid {{ m.border }}; border-radius: 14px; box-shadow: {{ m.shadow }}; color: {{ m.ink }}; font-size: 13px; line-height: 17px; font-weight: 700;">{{ m.label }}</button>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{ isUnsure }}" hint-placeholder-val="{{ false }}">
+<div style="box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">That's a fine place to begin</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53;">Say what's on your mind in your own words. A mentor will help you find the question. Mentors are peers, not therapists.</span>
+</div>
+</sc-if>
+</div>
+</div>
+</div>
+
+<div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; box-sizing: border-box; padding: 24px 20px 24px; background: linear-gradient(to bottom, rgba(244,239,230,0), #F4EFE6 24px);">
+<div class="arrDeep">
+<div class="arr a6" style="display: flex; flex-direction: column; gap: 10px;">
+<p style="margin: 0; text-align: center; font-size: 13px; line-height: 18px; color: #5E5A53;">This only tunes who you meet. You can clear it anytime.</p>
+<div style="display: flex; gap: 12px; padding-bottom: 4px;">
+<a class="key" href="A07_Path.dc.html" style="flex: 1 1 0; height: 56px; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 16px; line-height: 24px; font-weight: 700;">Not now</a>
+<a class="key" href="A07_Path.dc.html" style="flex: 1.5 1 0; height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 17px; line-height: 24px; font-weight: 700;">
+<span>Use this path</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+</div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var accentEdge = this.mix(accent, 0, 0.22);
+    var accentTint = this.mix(accent, 255, 0.8);
+    var accentTintEdge = this.mix(accent, 255, 0.6);
+    var accentWash = this.mix(accent, 255, 0.93);
+
+    var s = this.state || {};
+    var cur = {
+      route: s.route === undefined ? 'exam' : s.route,
+      seg: s.seg === undefined ? 'around' : s.seg,
+      moment: s.moment === undefined ? 'mains_wait' : s.moment
+    };
+    function set(patch) {
+      var next = { route: cur.route, seg: cur.seg, moment: cur.moment };
+      for (var k in patch) { next[k] = patch[k]; }
+      self.setState(next);
+    }
+
+    var vals = {
+      accent: accent,
+      accentEdge: accentEdge,
+      accentTint: accentTint
+    };
+
+    ['life', 'work', 'exam', 'unsure'].forEach(function (id) {
+      var on = cur.route === id;
+      var name = id.charAt(0).toUpperCase() + id.slice(1);
+      vals[id + 'Pressed'] = on ? 'true' : 'false';
+      vals[id + 'Bg'] = on ? accentWash : '#FFFFFF';
+      vals[id + 'Border'] = on ? accent : '#E6DFD3';
+      vals[id + 'Shadow'] = on ? ('inset 0 0 0 1px ' + accent + ', 0 4px 0 ' + accentTintEdge) : '0 4px 0 #E3DCCF';
+      vals[id + 'Dot'] = on ? accent : '#FFFFFF';
+      vals[id + 'DotBorder'] = on ? accent : '#CFC6B6';
+      vals['pick' + name] = function () { set({ route: id }); };
+    });
+
+    var segDefs = [
+      { id: 'starting', label: 'Starting out' },
+      { id: 'preparing', label: 'Preparing' },
+      { id: 'around', label: 'Around an exam' },
+      { id: 'after', label: 'After a result' }
+    ];
+    vals.segs = segDefs.map(function (d) {
+      var on = cur.seg === d.id;
+      return {
+        label: d.label,
+        pressed: on ? 'true' : 'false',
+        bg: on ? '#FFFFFF' : 'transparent',
+        border: on ? '#E6DFD3' : 'transparent',
+        shadow: on ? '0 2px 0 #D9D1C2' : 'none',
+        ink: on ? accentEdge : '#5E5A53',
+        pick: function () { set({ seg: d.id }); }
+      };
+    });
+
+    var examMoments = {
+      starting: [
+        { id: 'thinking_of_starting', label: 'Thinking about starting' },
+        { id: 'foundation', label: 'Foundation days' },
+        { id: 'first_tests', label: 'The first reality check' }
+      ],
+      preparing: [
+        { id: 'mid_prep', label: 'Deep in preparation' },
+        { id: 'mains_stage', label: 'Mains territory' }
+      ],
+      around: [
+        { id: 'final_stretch', label: 'The last weeks before prelims' },
+        { id: 'prelims_wait', label: 'The wait after prelims' },
+        { id: 'mains_wait', label: 'The quiet after mains' },
+        { id: 'interview_stage', label: 'Interview and the last wait' }
+      ],
+      after: [
+        { id: 'prelims_not_cleared', label: "Prelims didn't go through" },
+        { id: 'after_setback', label: 'After a setback' },
+        { id: 'many_attempts', label: 'Many attempts in' }
+      ]
+    };
+    var routeMoments = {
+      exam: examMoments[cur.seg] || [],
+      work: [
+        { id: 'job_pressure', label: 'Pressure at work' },
+        { id: 'job_interview', label: 'An interview ahead' },
+        { id: 'job_search', label: 'Looking for work' }
+      ],
+      life: [
+        { id: 'stuck_decision', label: 'A decision I keep circling' },
+        { id: 'heavy_days', label: 'A heavy stretch' },
+        { id: 'crossroads', label: 'At a crossroads' },
+        { id: 'open_door', label: 'Just someone to talk to' }
+      ],
+      unsure: []
+    };
+    var list = routeMoments[cur.route] || [];
+    vals.moments = list.map(function (d) {
+      var on = cur.moment === d.id;
+      return {
+        label: d.label,
+        pressed: on ? 'true' : 'false',
+        bg: on ? accentTint : '#FFFFFF',
+        border: on ? accent : '#E6DFD3',
+        shadow: on ? ('inset 0 0 0 1px ' + accent + ', 0 4px 0 ' + accentTintEdge) : '0 4px 0 #E3DCCF',
+        ink: on ? accentEdge : '#2B2B2B',
+        pick: function () { set({ moment: on ? '' : d.id }); }
+      };
+    });
+
+    var labels = {
+      exam: 'UPSC · where in the cycle',
+      work: 'Work · which is closest',
+      life: 'Life · which is closest',
+      unsure: 'Nothing to choose here'
+    };
+    vals.stepLabel = labels[cur.route];
+    vals.stepHint = cur.route === 'unsure' ? '' : 'optional';
+    vals.isExam = cur.route === 'exam';
+    vals.isUnsure = cur.route === 'unsure';
+    vals.hasMoments = list.length > 0;
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

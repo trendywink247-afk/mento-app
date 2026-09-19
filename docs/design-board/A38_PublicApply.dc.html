@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Public apply page, become a mentor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 36px 24px 0; display: flex; flex-direction: column; gap: 12px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;">
+<div style="position: absolute; left: -250px; top: -200px; width: 660px; height: 520px; border-radius: 50%; background: radial-gradient(closest-side, {{sky1}}, {{sky1Soft}} 55%, rgba(244,239,230,0));"></div>
+<div style="position: absolute; right: -300px; top: 80px; width: 600px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(107,76,140,0.26), rgba(107,76,140,0.09) 55%, rgba(244,239,230,0));"></div>
+<div style="position: absolute; left: -230px; top: 330px; width: 560px; height: 400px; border-radius: 50%; background: radial-gradient(closest-side, rgba(70,112,84,0.24), rgba(70,112,84,0.08) 55%, rgba(244,239,230,0));"></div>
+<div style="position: absolute; left: 0; right: 0; top: 440px; bottom: 0; background: linear-gradient(to bottom, rgba(244,239,230,0), rgba(244,239,230,0.92) 40%, #F4EFE6 100%);"></div>
+</div>
+
+<div style="position: relative; z-index: 1; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
+<span style="font-size: 30px; line-height: 40px; font-weight: 800; letter-spacing: -0.5px;">mento</span>
+<span style="height: 28px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; border-radius: 999px; background: #DCE6DD; border: 1px solid #BFD2C3; color: #2C5C3C; font-size: 13px; line-height: 18px; font-weight: 700;">For mentors</span>
+</div>
+
+<div style="position: relative; z-index: 1; align-self: center; width: 342px; height: 176px; flex-shrink: 0;">
+<svg aria-hidden="true" width="196" height="196" viewBox="0 0 196 196" fill="none" style="position: absolute; left: 73px; top: -14px;">
+<circle cx="98" cy="98" r="96" stroke-opacity="0.38" stroke-width="1.25" stroke-dasharray="2 9" stroke-linecap="round" style="stroke: {{accent}};"></circle>
+<circle cx="98" cy="2" r="4" style="fill: {{accent}};"></circle>
+<circle cx="181" cy="146" r="3" fill="#467054"></circle>
+</svg>
+<div aria-hidden="true" style="position: absolute; left: 87px; top: 0; width: 168px; height: 168px; border-radius: 50%; background: radial-gradient(circle at 50% 38%, #FFFFFF, #FFFFFF 38%, {{discTint}} 100%);"></div>
+<div aria-hidden="true" style="position: absolute; left: 50px; right: 50px; bottom: -8px; height: 22px; border-radius: 50%; background: radial-gradient(closest-side, rgba(43,43,43,0.18), rgba(43,43,43,0));"></div>
+<img src="/_blob/2c70cbc610b8fe00d67098f06afcf7c0" alt="Two people sit across a small table, deep in conversation" style="position: absolute; left: 26px; bottom: 0; width: 290px; height: 172px; object-fit: contain;">
+</div>
+
+<div style="position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px;">
+<h1 class="arr" style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 800; letter-spacing: -0.2px; text-wrap: balance;">Be the steady voice for someone on the same <span style="color: {{accent}};">road.</span></h1>
+<p class="arr a1" style="margin: 0; font-size: 16px; line-height: 22px; color: #5E5A53;">On Mento, people in a hard stretch talk privately with someone who has already walked it.</p>
+</div>
+
+<div class="arr a2" style="position: relative; z-index: 1; box-sizing: border-box; padding: 14px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<div style="display: flex; align-items: flex-start; gap: 12px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">What mentoring is</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53;">You listen, and share what helped you on the same road.</span>
+</span>
+</div>
+<div style="display: flex; align-items: flex-start; gap: 12px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">The time it takes</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53;">A few hours a week, when it suits you. You reply when you are free.</span>
+</span>
+</div>
+<div style="display: flex; align-items: flex-start; gap: 12px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Voluntary and unpaid</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53;">Nobody is paid to mentor here. You give the time you can.</span>
+</span>
+</div>
+</div>
+
+<div style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; box-sizing: border-box; padding: 28px 24px 20px; display: flex; flex-direction: column; gap: 10px; background: linear-gradient(to bottom, rgba(244,239,230,0), #F4EFE6 28px, #F4EFE6 100%);">
+<div class="arr a3" style="display: flex; flex-direction: column;">
+<a class="key" href="A37_MentorApplication.dc.html" style="height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">
+<span>Apply to mentor</span>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+</div>
+<p style="margin: 0; padding-top: 2px; text-align: center; font-size: 13px; line-height: 18px; color: #5E5A53;"><span style="font-weight: 700; color: #2B2B2B;">Mentors are peers, not therapists.</span><br>For people 18 and older. No app needed to apply.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  rgb(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { h = 'A2533A'; }
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+  rgba(hex, a) {
+    var c = this.rgb(hex);
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  }
+  mix(hex, to, t) {
+    var c = this.rgb(hex);
+    var out = '#';
+    for (var i = 0; i < 3; i++) { out += ('0' + Math.round(c[i] + (to - c[i]) * t).toString(16)).slice(-2); }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      discTint: this.mix(accent, 255, 0.78),
+      sky1: this.rgba(accent, 0.36),
+      sky1Soft: this.rgba(accent, 0.12)
+    };
+  }
+}
+</script>
+</body>
+</html>

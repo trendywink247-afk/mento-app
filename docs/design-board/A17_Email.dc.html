@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Optional email, skipping is an equal choice</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+input::placeholder{color:#5E5A53;opacity:1}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.field:focus-within{border-color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+@keyframes skyA{from{transform:translate(0,0) rotate(-18deg) scale(1)}to{transform:translate(64px,38px) rotate(-9deg) scale(1.12)}}
+@keyframes skyB{from{transform:translate(0,0) rotate(14deg) scale(1.06)}to{transform:translate(-58px,46px) rotate(4deg) scale(0.96)}}
+@media (prefers-reduced-motion: no-preference){
+.skyA{animation:skyA 46s ease-in-out infinite alternate}
+.skyB{animation:skyB 58s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 24px 28px; display: flex; flex-direction: column; gap: 16px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;">
+<div class="skyA" style="position: absolute; left: -250px; top: -200px; width: 660px; height: 520px; border-radius: 50%; background: radial-gradient(closest-side, {{sky1}}, {{sky1Soft}} 55%, rgba(244,239,230,0));"></div>
+<div class="skyB" style="position: absolute; right: -300px; top: 80px; width: 600px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(107,76,140,0.14), rgba(107,76,140,0.05) 55%, rgba(244,239,230,0));"></div>
+<div class="skyB" style="position: absolute; left: -230px; top: 330px; width: 560px; height: 400px; border-radius: 50%; background: radial-gradient(closest-side, rgba(70,112,84,0.13), rgba(70,112,84,0.05) 55%, rgba(244,239,230,0));"></div>
+<div style="position: absolute; left: 0; right: 0; top: 440px; bottom: 0; background: linear-gradient(to bottom, rgba(244,239,230,0), rgba(244,239,230,0.92) 40%, #F4EFE6 100%);"></div>
+</div>
+
+<div style="position: relative; z-index: 1; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
+<a class="key" href="A16_AgeGate.dc.html" aria-label="Back" style="width: 44px; height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<div role="img" aria-label="Step 2 of 4" style="display: flex; align-items: center; gap: 8px;">
+<span style="width: 8px; height: 8px; border-radius: 999px; background: {{accent}};"></span>
+<span style="width: 24px; height: 8px; border-radius: 999px; background: {{accent}};"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #CFC6B5;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #CFC6B5;"></span>
+</div>
+<span aria-hidden="true" style="width: 44px; height: 44px;"></span>
+</div>
+
+<div style="position: relative; z-index: 1; display: flex; flex-direction: column; gap: 8px;">
+<h1 class="arr" style="margin: 0; font-size: 30px; line-height: 38px; font-weight: 800;">Optional, but <span style="color: {{accent}};">helpful.</span></h1>
+<p class="arr a1" style="margin: 0; font-size: 16px; line-height: 24px; color: #5E5A53;">Add an email only if you would like a way to recover your space later. It is never required.</p>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div style="position: relative; z-index: 1; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<div aria-hidden="true" style="position: absolute; right: 28px; top: 36px; width: 68px; height: 12px; border-radius: 999px; background: #E3DCCF; z-index: 1;"></div>
+<img class="breathe" src="/_blob/c5932cbe7933051e63ca71be87e0d6f1" alt="Your cat companion, keeping you company beside the email field" style="position: absolute; right: 20px; bottom: calc(100% - 46px); width: 84px; height: 116px; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%; z-index: 3; pointer-events: none;">
+<div class="arr a2" style="position: relative; z-index: 2; display: flex; flex-direction: column; gap: 6px;">
+<label for="a17-email" style="font-size: 14px; line-height: 20px; font-weight: 700;">Email address <span style="font-weight: 400; color: #5E5A53;">(optional)</span></label>
+<div class="field" style="box-sizing: border-box; height: 58px; padding: 0 14px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span aria-hidden="true" style="flex-shrink: 0; display: flex; color: {{accent}};">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"></rect><path d="M3.5 7.5l8.5 6 8.5-6"></path></svg>
+</span>
+<input id="a17-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" style="flex-grow: 1; min-width: 0; height: 44px; padding: 0; background: transparent; border: 0; outline: none; font-size: 16px; line-height: 24px;">
+</div>
+</div>
+<div class="arr a3" style="position: relative; z-index: 2; display: flex; align-items: flex-start; gap: 10px; padding-bottom: 2px;">
+<span aria-hidden="true" style="flex-shrink: 0; height: 20px; display: flex; align-items: center; color: {{accent}};">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+</span>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #5E5A53;">We would only use it to help you get back into your space. It is never shown to mentors or other members, and nothing is sent to it today.</p>
+</div>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div class="arr a4" style="position: relative; z-index: 1; display: flex; gap: 12px; padding-bottom: 4px;">
+<a class="key" href="A03_Companion.dc.html" style="flex: 1 1 0; box-sizing: border-box; height: 58px; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 18px; line-height: 24px; font-weight: 700;">Skip for now</a>
+<a class="key" href="A03_Companion.dc.html" style="flex: 1 1 0; box-sizing: border-box; height: 58px; display: flex; align-items: center; justify-content: center; gap: 8px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">
+<span>Continue</span>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+</div>
+<p class="arr a5" style="position: relative; z-index: 1; margin: 0; text-align: center; font-size: 13px; line-height: 18px; color: #5E5A53;">Skipping is fine. Mento works the same either way.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  rgb(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { h = 'A2533A'; }
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+  rgba(hex, a) {
+    var c = this.rgb(hex);
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  }
+  mix(hex, to, t) {
+    var c = this.rgb(hex);
+    var out = '#';
+    for (var i = 0; i < 3; i++) { out += ('0' + Math.round(c[i] + (to - c[i]) * t).toString(16)).slice(-2); }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      sky1: this.rgba(accent, 0.2),
+      sky1Soft: this.rgba(accent, 0.07)
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Mentor-side chat with Gentle Harbor</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+input::placeholder{color:#5E5A53;opacity:1}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; display: flex; flex-direction: column; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<header style="position: relative; z-index: 3; flex-shrink: 0; box-sizing: border-box; padding: 44px 12px 0;">
+<div aria-hidden="true" style="position: absolute; left: -60px; right: -60px; top: -150px; height: 300px; border-radius: 50%; background: radial-gradient(closest-side, #DCE6DD, rgba(244,239,230,0)); pointer-events: none;"></div>
+<div style="position: relative; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<div style="display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 4px;">
+<a class="key" href="A10_MentorHome.dc.html" aria-label="Back to Mentor Home" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px;">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<a href="A36_MemberBrief.dc.html" aria-label="Open the member brief for Gentle Harbor" style="flex-grow: 1; min-width: 0; min-height: 56px; display: flex; align-items: center; gap: 12px;">
+<span style="position: relative; width: 56px; height: 56px; flex-shrink: 0;">
+<span style="position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE8F2; border: 2px solid #FFFFFF; box-sizing: border-box; box-shadow: 0 0 0 1px #C6D6E3;">
+<img class="breathe" src="/_blob/c5932cbe7933051e63ca71be87e0d6f1" alt="" style="width: 50px; height: 52px; object-fit: contain; transform-origin: 50% 100%;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 1px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 2.5px solid #FFFFFF;"></span>
+</span>
+<span style="min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 19px; line-height: 24px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Gentle Harbor</span>
+<span style="display: flex; align-items: center; gap: 2px; font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap;">
+<span>Member · here now</span>
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+</span>
+</a>
+<button class="key" onClick="{{ toggleMenu }}" aria-label="Conversation options: report or end" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #D9D1C2;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="19" cy="12" r="1.7"></circle></svg>
+</button>
+</div>
+<div style="box-sizing: border-box; height: 56px; padding: 0 8px 3px 12px; display: flex; align-items: center; gap: 8px; background: #FBF8F2; border-top: 1px solid #E6DFD3; border-radius: 0 0 21px 21px; white-space: nowrap; overflow: hidden;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">Path</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: #E8DFF0; color: #4D3765; font-size: 12px; line-height: 16px; font-weight: 700;">UPSC · second attempt</span>
+<span style="flex-grow: 1;"></span>
+<button class="key" onClick="{{ toggleHelp }}" style="height: 44px; box-sizing: border-box; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 6px; background: #DCE6DD; border: 1px solid #BFD2C3; border-radius: 999px; box-shadow: 0 3px 0 #BFD2C3; color: #2C5C3C; font-size: 14px; line-height: 20px; font-weight: 700;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2 2A15 15 0 0 1 4 6a2 2 0 0 1 2-2z"></path></svg>
+<span>Helplines</span>
+</button>
+</div>
+</div>
+</header>
+
+<main style="flex-grow: 1; min-height: 0; position: relative; z-index: 1; box-sizing: border-box; padding: 12px 16px 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; overflow: hidden;">
+<div class="arr" style="align-self: center; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">Today</div>
+
+<div class="arr a1" style="align-self: flex-start; max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px;">I missed mains by eleven marks. Starting again feels heavier than the first time.</div>
+
+<div class="arr a2" style="align-self: flex-end; max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">Eleven marks is close enough to hurt. What has already helped you get back to the desk?</div>
+
+<div class="arr a3" style="align-self: flex-start; max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px;">Mornings. If I start before anyone is awake, I can do two hours.</div>
+
+<div class="arr a4" style="align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+<div style="max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">Then the mornings are yours. Shall we protect them first?</div>
+<span style="padding-right: 6px; font-size: 12px; line-height: 16px; color: #5E5A53;">Read</span>
+</div>
+
+<div class="arr a5" style="align-self: flex-start; max-width: 250px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px;">Yes. I would like that.</div>
+
+<div class="arr a6" style="align-self: flex-start; display: flex; align-items: center; gap: 8px;">
+<span aria-hidden="true" style="height: 28px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 2px 0 #E3DCCF;">
+<span style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53;"></span>
+<span style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53; opacity: 0.6;"></span>
+<span style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53; opacity: 0.35;"></span>
+</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Gentle Harbor is typing…</span>
+</div>
+</main>
+
+<img class="breathe" src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="Your owl companion peeking over the message field" style="position: absolute; right: 22px; bottom: 98px; width: 78px; height: 90px; object-fit: contain; transform-origin: 50% 100%; z-index: 2;">
+
+<footer style="position: relative; z-index: 3; flex-shrink: 0; box-sizing: border-box; padding: 8px 16px 28px; display: flex; flex-direction: column; gap: 8px; background: #F4EFE6; border-top: 1px solid #E6DFD3;">
+<div style="display: flex; align-items: center; gap: 8px; min-height: 32px; color: #5E5A53;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+<span style="font-size: 13px; line-height: 16px;">Reply when you are free. Nobody expects instant.</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<label for="a35-message" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Message to Gentle Harbor</label>
+<input id="a35-message" type="text" placeholder="Write to Gentle Harbor…" style="flex-grow: 1; min-width: 0; height: 52px; box-sizing: border-box; padding: 0 16px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; outline: none; font-size: 16px; line-height: 24px;">
+<button class="key" aria-label="Send message" style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentEdge}};">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14-7-5 15-3-6z"></path></svg>
+</button>
+</div>
+</footer>
+
+<sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; z-index: 5;">
+<button onClick="{{ closeAll }}" aria-label="Close options" style="position: absolute; inset: 0; width: 390px; height: 844px; background: rgba(43,43,43,0.12); border: 0; cursor: default;"></button>
+<div class="arr" role="menu" aria-label="Conversation options" style="position: absolute; right: 12px; top: 104px; width: 248px; box-sizing: border-box; padding: 8px; display: flex; flex-direction: column; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 12px 28px rgba(43,43,43,0.16);">
+<button class="key" role="menuitem" onClick="{{ closeAll }}" style="height: 52px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: transparent; border: 0; border-radius: 14px; font-size: 16px; line-height: 22px; font-weight: 700;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 21V4"></path><path d="M6 5h11l-2 4 2 4H6"></path></svg>
+</span>
+<span>Report</span>
+</button>
+<a class="key" role="menuitem" href="A10_MentorHome.dc.html" style="height: 52px; box-sizing: border-box; padding: 0 12px; display: flex; align-items: center; gap: 12px; border-radius: 14px; font-size: 16px; line-height: 22px; font-weight: 700; color: #8E2F2A;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F8DEDC; color: #8E2F2A;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M9 9l6 6"></path><path d="M15 9l-6 6"></path></svg>
+</span>
+<span>End conversation</span>
+</a>
+<p style="margin: 0; padding: 4px 12px 8px; font-size: 13px; line-height: 18px; color: #5E5A53;">Ending tells the member kindly. Nobody is left guessing.</p>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ helpOpen }}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; inset: 0; z-index: 6;">
+<button onClick="{{ closeAll }}" aria-label="Close helplines" style="position: absolute; inset: 0; width: 390px; height: 844px; background: rgba(43,43,43,0.35); border: 0; cursor: default;"></button>
+<div role="dialog" aria-label="Helplines to point to" style="position: absolute; left: 12px; right: 12px; top: 186px; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #F4EFE6; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 12px 28px rgba(43,43,43,0.18);">
+<div style="display: flex; align-items: center; gap: 12px;">
+<span style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2 2A15 15 0 0 1 4 6a2 2 0 0 1 2-2z"></path></svg>
+</span>
+<h2 style="margin: 0; flex-grow: 1; font-size: 19px; line-height: 24px; font-weight: 800;">Helplines to point to</h2>
+<button class="key" onClick="{{ closeAll }}" aria-label="Close" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #E3DCCF;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+</button>
+</div>
+<p style="margin: 0; font-size: 15px; line-height: 22px;">When a conversation is heavier than guidance can hold, stay kind and point here. Mento shows these to the member too, and flags the chat for our safety team. You are not alone with it.</p>
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div style="box-sizing: border-box; min-height: 56px; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Tele-MANAS</span>
+<span style="font-size: 20px; line-height: 26px; font-weight: 800; color: #2C5C3C;">14416</span>
+</div>
+<div style="box-sizing: border-box; min-height: 56px; padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">KIRAN</span>
+<span style="font-size: 20px; line-height: 26px; font-weight: 800; color: #2C5C3C;">1800-599-0019</span>
+</div>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">Point, do not counsel. You are a mentor, not a therapist.</p>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var open = (this.state && this.state.open) || 'none';
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6),
+      menuOpen: open === 'menu',
+      helpOpen: open === 'help',
+      toggleMenu: function () { self.setState({ open: open === 'menu' ? 'none' : 'menu' }); },
+      toggleHelp: function () { self.setState({ open: open === 'help' ? 'none' : 'help' }); },
+      closeAll: function () { self.setState({ open: 'none' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

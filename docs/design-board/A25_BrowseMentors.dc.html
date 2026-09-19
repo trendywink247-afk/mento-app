@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Browse mentors, in touch first</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.noBar{scrollbar-width:none}.noBar::-webkit-scrollbar{display:none}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 0 0; display: flex; flex-direction: column; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div style="height: 50px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 12px;">
+<a class="key" href="A06_Chats.dc.html" aria-label="Back to My Chats" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<div class="arrDeep" style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<h1 style="margin: 0; font-size: 26px; line-height: 32px; font-weight: 800;">Mentors</h1>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">Real people. Always private.</p>
+</div>
+</div>
+
+<div style="position: relative; z-index: 3; box-sizing: border-box; padding: 12px 16px 10px; background: #F4EFE6; border-bottom: 1px solid #E6DFD3; box-shadow: 0 3px 0 #EAE3D6;">
+<img class="breathe" src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="Your cat companion sitting on the edge of the next available key" style="position: absolute; right: 34px; top: -49px; width: 48px; height: 69px; object-fit: contain; transform-origin: 50% 100%; z-index: 2; pointer-events: none;">
+<div class="arrDeep" style="display: flex; flex-direction: column; gap: 12px;">
+<div class="arr a1" style="display: flex; flex-direction: column;">
+<a class="key" href="A19_Connecting.dc.html" aria-label="Next available mentor. Right away if someone is online." style="height: 60px; box-sizing: border-box; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 12px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}};">
+<span style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #FFFFFF; color: {{accent}};">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l9-11h-6.5z"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Next available mentor</span>
+<span style="font-size: 13px; line-height: 18px;">Right away if someone is online</span>
+</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+</div>
+<div class="arr a2" role="group" aria-label="Filter mentors" style="display: flex; gap: 6px; padding-bottom: 4px;">
+<button class="key" onClick="{{ pickAll }}" aria-pressed="{{ allPressed }}" style="flex: 1 1 auto; min-width: 44px; height: 44px; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; justify-content: center; white-space: nowrap; background: {{ allBg }}; color: {{ allFg }}; border: 1px solid {{ allBorder }}; border-radius: 999px; box-shadow: {{ allShadow }}; font-size: 13px; line-height: 18px; font-weight: 700;">All</button>
+<button class="key" onClick="{{ pickOnline }}" aria-pressed="{{ onlinePressed }}" style="flex: 1 1 auto; min-width: 44px; height: 44px; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; justify-content: center; white-space: nowrap; background: {{ onlineBg }}; color: {{ onlineFg }}; border: 1px solid {{ onlineBorder }}; border-radius: 999px; box-shadow: {{ onlineShadow }}; font-size: 13px; line-height: 18px; font-weight: 700;">Online now</button>
+<button class="key" onClick="{{ pickUpsc }}" aria-pressed="{{ upscPressed }}" style="flex: 1 1 auto; min-width: 44px; height: 44px; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; justify-content: center; white-space: nowrap; background: {{ upscBg }}; color: {{ upscFg }}; border: 1px solid {{ upscBorder }}; border-radius: 999px; box-shadow: {{ upscShadow }}; font-size: 13px; line-height: 18px; font-weight: 700;">UPSC</button>
+<button class="key" onClick="{{ pickLife }}" aria-pressed="{{ lifePressed }}" style="flex: 1 1 auto; min-width: 44px; height: 44px; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; justify-content: center; white-space: nowrap; background: {{ lifeBg }}; color: {{ lifeFg }}; border: 1px solid {{ lifeBorder }}; border-radius: 999px; box-shadow: {{ lifeShadow }}; font-size: 13px; line-height: 18px; font-weight: 700;">Life</button>
+<button class="key" onClick="{{ pickTouch }}" aria-pressed="{{ touchPressed }}" style="flex: 1 1 auto; min-width: 44px; height: 44px; box-sizing: border-box; padding: 0 6px; display: flex; align-items: center; justify-content: center; white-space: nowrap; background: {{ touchBg }}; color: {{ touchFg }}; border: 1px solid {{ touchBorder }}; border-radius: 999px; box-shadow: {{ touchShadow }}; font-size: 13px; line-height: 18px; font-weight: 700;">In touch</button>
+</div>
+</div>
+</div>
+
+<main class="noBar arrDeep" style="flex: 1 1 0; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 14px 16px 104px; display: flex; flex-direction: column; gap: 10px;">
+
+<sc-if value="{{ show1 }}" hint-placeholder-val="{{ true }}">
+<div class="arr a3" style="display: flex; flex-direction: column;">
+<a class="key" href="A14_StayInTouch.dc.html" aria-label="Quiet Banyan, your mentor, first talked as Steady Cedar. In touch. Here now." style="box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="position: relative; width: 52px; height: 52px; flex-shrink: 0;">
+<span style="width: 52px; height: 52px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD;">
+<img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 2px solid #FFFFFF;"></span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Quiet Banyan</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 11px; line-height: 14px; font-weight: 700; white-space: nowrap;">
+<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 0 1 0 8h-1"></path><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 0 1 0-8h1"></path></svg>
+<span>In touch</span>
+</span>
+<span style="flex-grow: 1;"></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+<span style="font-size: 12px; line-height: 16px; color: #5E5A53;">Your mentor · first talked as Steady Cedar</span>
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; color: #2C5C3C;">Here now</span>
+<span style="padding-top: 3px; font-size: 14px; line-height: 20px; color: #2B2B2B;">“I sat the exam three times. I mostly just listen.”</span>
+<span style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px;">
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">UPSC</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Exam pressure</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Feeling stuck</span>
+</span>
+</span>
+</a>
+</div>
+</sc-if>
+
+<sc-if value="{{ show2 }}" hint-placeholder-val="{{ true }}">
+<div class="arr a4" style="display: flex; flex-direction: column;">
+<a class="key" href="A14_StayInTouch.dc.html" aria-label="Soft Tamarind, your mentor, first talked as Amber Monsoon. In touch. Usually replies in a few hours." style="box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="position: relative; width: 52px; height: 52px; flex-shrink: 0;">
+<span style="width: 52px; height: 52px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #F5E8C4;">
+<img src="/_blob/b05ef1ab4529da5a9ea03cab0dc894ac" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #D9D1C2; border: 2px solid #FFFFFF;"></span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Soft Tamarind</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 11px; line-height: 14px; font-weight: 700; white-space: nowrap;">
+<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 0 1 0 8h-1"></path><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 0 1 0-8h1"></path></svg>
+<span>In touch</span>
+</span>
+<span style="flex-grow: 1;"></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+<span style="font-size: 12px; line-height: 16px; color: #5E5A53;">Your mentor · first talked as Amber Monsoon</span>
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; color: #5E5A53;">Usually replies in a few hours</span>
+<span style="padding-top: 3px; font-size: 14px; line-height: 20px; color: #2B2B2B;">“Took the long way through my twenties. Happy to think out loud.”</span>
+<span style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px;">
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Life</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Family</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Motivation</span>
+</span>
+</span>
+</a>
+</div>
+</sc-if>
+
+<sc-if value="{{ show3 }}" hint-placeholder-val="{{ true }}">
+<div class="arr a5" style="display: flex; flex-direction: column;">
+<a class="key" href="A14_StayInTouch.dc.html" aria-label="Bright Meadow. Here now." style="box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="position: relative; width: 52px; height: 52px; flex-shrink: 0;">
+<span style="width: 52px; height: 52px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE8F2;">
+<img src="/_blob/be6b271629bf919edef2304b6b8942d2" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 2px solid #FFFFFF;"></span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Bright Meadow</span>
+<span style="flex-grow: 1;"></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; color: #2C5C3C;">Here now</span>
+<span style="padding-top: 3px; font-size: 14px; line-height: 20px; color: #2B2B2B;">“Prelims twice, mains once. Ask me about the waiting.”</span>
+<span style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px;">
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">UPSC</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Exam pressure</span>
+</span>
+</span>
+</a>
+</div>
+</sc-if>
+
+<sc-if value="{{ show4 }}" hint-placeholder-val="{{ true }}">
+<div class="arr a6" style="display: flex; flex-direction: column;">
+<a class="key" href="A14_StayInTouch.dc.html" aria-label="Quiet River. Usually replies in a few hours." style="box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="position: relative; width: 52px; height: 52px; flex-shrink: 0;">
+<span style="width: 52px; height: 52px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #E8DFF0;">
+<img src="/_blob/b47c4f3b8b5fa207fa454ab0a64791ba" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #D9D1C2; border: 2px solid #FFFFFF;"></span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Quiet River</span>
+<span style="flex-grow: 1;"></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; color: #5E5A53;">Usually replies in a few hours</span>
+<span style="padding-top: 3px; font-size: 14px; line-height: 20px; color: #2B2B2B;">“My first job in a new city was lonely. No advice unless you ask.”</span>
+<span style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px;">
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Life</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Loneliness</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Work</span>
+</span>
+</span>
+</a>
+</div>
+</sc-if>
+
+<sc-if value="{{ show5 }}" hint-placeholder-val="{{ true }}">
+<div class="arr a6" style="display: flex; flex-direction: column;">
+<a class="key" href="A14_StayInTouch.dc.html" aria-label="Soft Field. Here now." style="box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="position: relative; width: 52px; height: 52px; flex-shrink: 0;">
+<span style="width: 52px; height: 52px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #F6D9CB;">
+<img src="/_blob/e52544b864eb0f9024d2277ffb296b33" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 2px solid #FFFFFF;"></span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Soft Field</span>
+<span style="flex-grow: 1;"></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; color: #2C5C3C;">Here now</span>
+<span style="padding-top: 3px; font-size: 14px; line-height: 20px; color: #2B2B2B;">“Slow is fine. It took me two attempts to find my own pace.”</span>
+<span style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px;">
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">UPSC</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Motivation</span>
+</span>
+</span>
+</a>
+</div>
+</sc-if>
+
+<sc-if value="{{ show6 }}" hint-placeholder-val="{{ true }}">
+<div class="arr a6" style="display: flex; flex-direction: column;">
+<a class="key" href="A14_StayInTouch.dc.html" aria-label="Warm Hillside. Usually replies in a few hours." style="box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="position: relative; width: 52px; height: 52px; flex-shrink: 0;">
+<span style="width: 52px; height: 52px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD;">
+<img src="/_blob/3bc70fffdaa6f2f10776977f9b130f77" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 0; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #D9D1C2; border: 2px solid #FFFFFF;"></span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Warm Hillside</span>
+<span style="flex-grow: 1;"></span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; color: #5E5A53;">Usually replies in a few hours</span>
+<span style="padding-top: 3px; font-size: 14px; line-height: 20px; color: #2B2B2B;">“Family pressure was my hardest paper. We can start there.”</span>
+<span style="display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px;">
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Family</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">UPSC</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Life</span>
+</span>
+</span>
+</a>
+</div>
+</sc-if>
+
+<div style="box-sizing: border-box; padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px;">
+<span style="display: flex; padding-top: 1px; color: {{accent}};">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5.5c0 4.4-2.8 7.7-7 9.5-4.2-1.8-7-5.1-7-9.5V6z"></path><path d="M9 12l2 2 4-4"></path></svg>
+</span>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">Names change every day. A mentor you are in touch with stays reachable under any name. Mentors are peers, not therapists.</p>
+</div>
+</main>
+
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 4; height: 84px; pointer-events: none; background: linear-gradient(to bottom, rgba(244,239,230,0), rgba(244,239,230,0.9) 70%, #F4EFE6 100%);"></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var s = this.state || {};
+    var filter = s.filter === undefined ? 'all' : s.filter;
+    var vals = {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6)
+    };
+    ['all', 'online', 'upsc', 'life', 'touch'].forEach(function (id) {
+      var on = filter === id;
+      var name = id.charAt(0).toUpperCase() + id.slice(1);
+      vals[id + 'Pressed'] = on ? 'true' : 'false';
+      vals[id + 'Bg'] = on ? '#2B2B2B' : '#FFFFFF';
+      vals[id + 'Fg'] = on ? '#FFFFFF' : '#2B2B2B';
+      vals[id + 'Border'] = on ? '#2B2B2B' : '#E6DFD3';
+      vals[id + 'Shadow'] = on ? '0 4px 0 #141414' : '0 4px 0 #E3DCCF';
+      vals['pick' + name] = function () { self.setState({ filter: (on && id !== 'all') ? 'all' : id }); };
+    });
+    var mentors = [
+      { online: true, upsc: true, life: false, touch: true },
+      { online: false, upsc: false, life: true, touch: true },
+      { online: true, upsc: true, life: false, touch: false },
+      { online: false, upsc: false, life: true, touch: false },
+      { online: true, upsc: true, life: false, touch: false },
+      { online: false, upsc: true, life: true, touch: false }
+    ];
+    mentors.forEach(function (m, i) {
+      vals['show' + (i + 1)] = filter === 'all' ? true : !!m[filter];
+    });
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

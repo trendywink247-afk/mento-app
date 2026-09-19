@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — transition: moving between the four tabs</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.key:active{transform:translateY(3px)}
+.scr{transition:opacity 200ms cubic-bezier(0.4,0,1,1)}
+.mv{transition:transform 350ms cubic-bezier(0.22,1,0.36,1),opacity 350ms cubic-bezier(0.22,1,0.36,1);will-change:transform,opacity}
+.sky{transition:transform 700ms cubic-bezier(0.22,1,0.36,1);will-change:transform}
+.perch{transition:transform 350ms cubic-bezier(0.22,1,0.36,1);will-change:transform}
+.tint{transition:color 350ms cubic-bezier(0.22,1,0.36,1)}
+@keyframes nodA{0%{transform:rotate(0deg)}45%{transform:rotate(2deg)}100%{transform:rotate(0deg)}}
+@keyframes nodB{0%{transform:rotate(0deg)}45%{transform:rotate(2deg)}100%{transform:rotate(0deg)}}
+@keyframes breathe{from{transform:scale(1,1)}to{transform:scale(1.025,1.05)}}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.2,0.7,0.2,1)}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+@media (prefers-reduced-motion: reduce){
+.scr{transition:opacity 150ms linear !important;transition-delay:0ms !important}
+.mv{transition:opacity 150ms linear !important;transition-delay:0ms !important;transform:none !important}
+.sky{transition:none !important;transform:none !important}
+.perch{transition:none !important}
+.tint{transition:color 150ms linear !important}
+.nod{animation:none !important}
+}
+@keyframes linkA{from{transform:translateX(-1px)}to{transform:translateX(0.75px)}}
+@keyframes linkB{from{transform:translateX(1px)}to{transform:translateX(-0.75px)}}
+@media (prefers-reduced-motion: no-preference){.linkA{animation:linkA 5.2s ease-in-out infinite alternate}.linkB{animation:linkB 5.2s ease-in-out infinite alternate}}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;">
+<div class="sky" style="position: absolute; left: -260px; top: -230px; width: 680px; height: 540px; border-radius: 50%; background: radial-gradient(closest-side, {{ sky1 }}, {{ sky1Soft }} 55%, rgba(244,239,230,0)); transform: {{ skyTfA }};"></div>
+<div class="sky" style="position: absolute; right: -320px; top: 120px; width: 620px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(107,76,140,0.20), rgba(107,76,140,0.07) 55%, rgba(244,239,230,0)); transform: {{ skyTfB }};"></div>
+<div class="sky" style="position: absolute; left: -240px; top: 400px; width: 580px; height: 420px; border-radius: 50%; background: radial-gradient(closest-side, rgba(70,112,84,0.20), rgba(70,112,84,0.07) 55%, rgba(244,239,230,0)); transform: {{ skyTfC }};"></div>
+</div>
+
+<section aria-label="Chats" aria-hidden="{{ hid0 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; box-sizing: border-box; padding: 44px 16px 0; display: flex; flex-direction: column; gap: 12px; opacity: {{ scrOp0 }}; transition-duration: {{ scrDur0 }}; pointer-events: {{ pe0 }};">
+<div class="mv" style="padding: 4px 64px 0 8px; display: flex; flex-direction: column; opacity: {{ op0 }}; transform: {{ tf0 }}; transition-delay: {{ d0a }};">
+<h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">My <span style="color: {{accent}};">Chats</span></h1>
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">Your conversations with mentors</p>
+</div>
+<div class="mv" style="display: flex; flex-direction: column; gap: 10px; opacity: {{ op0 }}; transform: {{ tf0 }}; transition-delay: {{ d0b }};">
+<div style="height: 52px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; color: #5E5A53; font-size: 16px; line-height: 24px;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4 4"></path></svg>
+<span>Search conversations…</span>
+</div>
+<div role="group" aria-label="Filter conversations" style="display: flex; gap: 8px; padding-bottom: 4px;">
+<button class="key" aria-pressed="true" style="height: 44px; padding: 0 20px; background: #2B2B2B; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 #141414; font-size: 14px; line-height: 20px; font-weight: 700;">All</button>
+<button class="key" aria-pressed="false" style="height: 44px; padding: 0 18px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF; font-size: 14px; line-height: 20px; font-weight: 700;">Active</button>
+<button class="key" aria-pressed="false" style="height: 44px; padding: 0 18px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF; font-size: 14px; line-height: 20px; font-weight: 700;">Completed</button>
+</div>
+</div>
+<div class="mv" style="display: flex; opacity: {{ op0 }}; transform: {{ tf0 }}; transition-delay: {{ d0c }};">
+<button class="key" aria-label="Conversation with Quiet Banyan, your mentor, first talked as Steady Cedar. Active, one new message." style="flex: 1 1 0; min-width: 0; box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="position: relative; width: 52px; height: 52px; flex-shrink: 0;">
+<span style="width: 52px; height: 52px; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD;">
+<img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: -1px; top: -1px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: {{accent}}; border: 2px solid #FFFFFF;"></span>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Quiet Banyan</span>
+<span style="height: 22px; box-sizing: border-box; padding: 0 8px 0 6px; display: flex; align-items: center; gap: 5px; flex-shrink: 0; border-radius: 999px; background: {{accentTint}}; border: 1.5px solid {{accent}}; box-shadow: 0 2px 0 {{accent}}; color: {{accent}}; font-size: 11px; line-height: 16px; font-weight: 800; letter-spacing: 0.02em; white-space: nowrap;"><svg width="15" height="12" viewBox="0 0 18 14" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true"><circle class="linkA" cx="6" cy="7" r="4.25"></circle><circle class="linkB" cx="12" cy="7" r="4.25"></circle></svg><span>In touch</span></span>
+<span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">just now</span>
+</span>
+<span style="font-size: 12px; line-height: 16px; color: #5E5A53;">Your mentor · first talked as Steady Cedar</span>
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Rest is part of preparation, not a break from it.</span>
+<span style="display: flex; align-items: center; gap: 8px; padding-top: 3px;">
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 11px; line-height: 14px; font-weight: 700;">Active</span>
+</span>
+</span>
+</button>
+</div>
+<div class="mv" style="display: flex; opacity: {{ op0 }}; transform: {{ tf0 }}; transition-delay: {{ d0d }};">
+<button class="key" aria-label="Your open question with Calm Peepal, waiting for a reply" style="flex: 1 1 0; min-width: 0; box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: flex-start; gap: 10px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE8F2;">
+<img src="/_blob/3b21fb5f931931698542b5b81540e76d" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Calm Peepal</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 11px; line-height: 14px; font-weight: 700;">Waiting</span>
+<span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">today</span>
+</span>
+<span style="font-size: 14px; line-height: 20px; color: #2B2B2B;">Waiting for Calm Peepal · they reply when free</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">You: That I've given three years to this and I still freeze…</span>
+</span>
+</button>
+</div>
+<div class="mv" style="display: flex; opacity: {{ op0 }}; transform: {{ tf0 }}; transition-delay: {{ d0e }};">
+<button class="key" aria-label="Conversation with Soft Tamarind, your mentor, first talked as Amber Monsoon. Completed." style="flex: 1 1 0; min-width: 0; box-sizing: border-box; padding: 12px 14px 12px 10px; display: flex; align-items: center; gap: 10px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #F5E8C4;">
+<img src="/_blob/b05ef1ab4529da5a9ea03cab0dc894ac" alt="" style="width: 48px; height: 48px; object-fit: contain;">
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;">
+<span style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; white-space: nowrap;">Soft Tamarind</span>
+<span style="height: 20px; padding: 0 8px; display: flex; align-items: center; border-radius: 999px; background: #EFE9DF; color: #5E5A53; font-size: 11px; line-height: 14px; font-weight: 700;">Completed</span>
+<span style="flex-grow: 1; text-align: right; font-size: 12px; line-height: 16px; color: #5E5A53; white-space: nowrap;">yesterday</span>
+</span>
+<span style="font-size: 12px; line-height: 16px; color: #5E5A53;">Your mentor · first talked as Amber Monsoon</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Take the evening off. The syllabus will wait.</span>
+</span>
+</button>
+</div>
+<p class="mv" style="margin: 0; padding-top: 2px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; line-height: 18px; color: #5E5A53; opacity: {{ op0 }}; transform: {{ tf0 }}; transition-delay: {{ d0f }};">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Your conversations are private.</span>
+</p>
+</section>
+
+<section aria-label="Path" aria-hidden="{{ hid1 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; box-sizing: border-box; padding: 44px 16px 0; display: flex; flex-direction: column; gap: 12px; opacity: {{ scrOp1 }}; transition-duration: {{ scrDur1 }}; pointer-events: {{ pe1 }};">
+<div class="mv" style="padding: 4px 64px 0 8px; display: flex; flex-direction: column; opacity: {{ op1 }}; transform: {{ tf1 }}; transition-delay: {{ d1a }};">
+<h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">Your <span style="color: {{accent}};">path</span></h1>
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">Built around the stage you are in</p>
+</div>
+<div class="mv" style="opacity: {{ op1 }}; transform: {{ tf1 }}; transition-delay: {{ d1b }};">
+<div style="box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<div style="min-height: 44px; padding-left: 4px; display: flex; align-items: center; gap: 10px;">
+<span style="flex-grow: 1; display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">Your community</span>
+<span style="font-size: 22px; line-height: 26px; font-weight: 800;">UPSC</span>
+</span>
+<button class="key" aria-label="Change your community or stage" style="height: 44px; flex-shrink: 0; padding: 0 14px; display: flex; align-items: center; gap: 6px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #D9D1C2; font-size: 14px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13"></path><path d="M14 4l4 4-4 4"></path><path d="M20 16H7"></path><path d="M10 12l-4 4 4 4"></path></svg>
+<span>Change</span>
+</button>
+</div>
+<div style="box-sizing: border-box; padding: 10px 14px; display: flex; flex-direction: column; background: {{accentTint}}; border-radius: 14px;">
+<span style="font-size: 18px; line-height: 24px; font-weight: 800;">The quiet after mains</span>
+<span style="font-size: 14px; line-height: 20px; color: #2B2B2B;">The papers are done. The space after is bigger than expected.</span>
+</div>
+</div>
+</div>
+<div class="mv" style="opacity: {{ op1 }}; transform: {{ tf1 }}; transition-delay: {{ d1c }};">
+<div style="box-sizing: border-box; padding: 10px 14px; display: flex; align-items: flex-start; gap: 12px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="3"></rect><path d="M8 3v4"></path><path d="M16 3v4"></path><path d="M4 10h16"></path><path d="M9 15l2 2 4-4"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Mains is behind you</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">The rush fades and a wide quiet opens. A good time to talk about what comes next.</span>
+</span>
+</div>
+</div>
+<div class="mv" style="display: flex; flex-direction: column; gap: 10px; opacity: {{ op1 }}; transform: {{ tf1 }}; transition-delay: {{ d1d }};">
+<h2 style="margin: 0; padding: 2px 8px 0; font-size: 16px; line-height: 20px; font-weight: 700;">People at this stage often ask</h2>
+<button class="key" style="min-height: 48px; box-sizing: border-box; padding: 8px 10px 8px 14px; display: flex; align-items: center; gap: 8px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 15px; line-height: 20px; font-weight: 600;">
+<span style="flex-grow: 1;">What did you do in the weeks after mains?</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+<div class="mv" style="display: flex; flex-direction: column; opacity: {{ op1 }}; transform: {{ tf1 }}; transition-delay: {{ d1e }};">
+<button class="key" style="min-height: 48px; box-sizing: border-box; padding: 8px 10px 8px 14px; display: flex; align-items: center; gap: 8px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 15px; line-height: 20px; font-weight: 600;">
+<span style="flex-grow: 1;">How do I prepare for the interview without knowing the result?</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+<div class="mv" style="opacity: {{ op1 }}; transform: {{ tf1 }}; transition-delay: {{ d1f }};">
+<div style="box-sizing: border-box; padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<div style="display: flex; flex-direction: column;">
+<h2 style="margin: 0; font-size: 17px; line-height: 22px; font-weight: 700;">Talk to someone who's walked it</h2>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Mentors reply when they're free</span>
+</div>
+<div style="display: flex; gap: 12px; padding-bottom: 4px;">
+<button class="key" style="flex: 1.3 1 0; height: 48px; display: flex; align-items: center; justify-content: center; gap: 8px; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 16px; line-height: 24px; font-weight: 700;">
+<span>Ask a mentor</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</button>
+<button class="key" style="flex: 1 1 0; height: 48px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #D9D1C2; font-size: 16px; line-height: 24px; font-weight: 700;">Browse</button>
+</div>
+</div>
+</div>
+</section>
+
+<section aria-label="Journal" aria-hidden="{{ hid2 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; box-sizing: border-box; padding: 44px 16px 0; display: flex; flex-direction: column; gap: 12px; opacity: {{ scrOp2 }}; transition-duration: {{ scrDur2 }}; pointer-events: {{ pe2 }};">
+<div class="mv" style="padding: 4px 64px 0 8px; display: flex; flex-direction: column; opacity: {{ op2 }}; transform: {{ tf2 }}; transition-delay: {{ d2a }};">
+<h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">Journal</h1>
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">Yours alone. Never shared.</p>
+</div>
+<h2 class="mv" style="margin: 0; padding: 0 8px; display: flex; align-items: baseline; gap: 8px; font-size: 22px; line-height: 28px; font-weight: 700; opacity: {{ op2 }}; transform: {{ tf2 }}; transition-delay: {{ d2b }};"><span style="color: {{accent}};">Today</span><span style="font-size: 14px; line-height: 20px; font-weight: 400; color: #5E5A53;">Wednesday 17</span></h2>
+<div class="mv" style="opacity: {{ op2 }}; transform: {{ tf2 }}; transition-delay: {{ d2c }};">
+<article style="box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<button class="key" aria-label="Guidance you kept from Steady Cedar. Open the chat." style="box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; gap: 8px; text-align: left; background: {{accentTint}}; border: 0; border-radius: 14px; box-shadow: 0 3px 0 {{accentTintEdge}};">
+<span style="align-self: stretch; display: flex; align-items: center; gap: 10px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD;">
+<img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 33px; height: 33px; object-fit: contain;">
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{accent}};">Guidance you kept</span>
+<span style="font-size: 13px; line-height: 18px; color: #2B2B2B;">From your chat with <span style="font-weight: 700;">Steady Cedar</span></span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color: {{accent}};"><path d="M9 5l7 7-7 7"></path></svg>
+</span>
+<span style="font-size: 16px; line-height: 24px; font-weight: 600; color: #2B2B2B;">Freezing doesn't erase three years of work. Can we look at the minute just before it happens?</span>
+</button>
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 0 4px;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">Then you wrote</span>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">Tried the two-minute reset before the mock. Got through section one without blanking.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px; padding-top: 12px; border-top: 1px dashed #D9D1C2;">
+<span id="t04-mood" style="padding: 0 4px; font-size: 14px; line-height: 20px; font-weight: 700;">How is today sitting? <span style="font-weight: 400; color: #5E5A53;">One tap is enough.</span></span>
+<div role="group" aria-labelledby="t04-mood" style="display: flex; gap: 6px; padding-bottom: 3px;">
+<button class="key" style="flex: 1 1 0; height: 46px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #D9D1C2; font-size: 13px; line-height: 18px; font-weight: 700;">Heavy</button>
+<button class="key" style="flex: 1 1 0; height: 46px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #D9D1C2; font-size: 13px; line-height: 18px; font-weight: 700;">Low</button>
+<button class="key" style="flex: 1 1 0; height: 46px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #D9D1C2; font-size: 13px; line-height: 18px; font-weight: 700;">Okay</button>
+<button class="key" style="flex: 1 1 0; height: 46px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #D9D1C2; font-size: 13px; line-height: 18px; font-weight: 700;">Good</button>
+<button class="key" style="flex: 1 1 0; height: 46px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #D9D1C2; font-size: 13px; line-height: 18px; font-weight: 700;">Light</button>
+</div>
+</div>
+</article>
+</div>
+<h2 class="mv" style="margin: 0; padding: 2px 8px 0; font-size: 17px; line-height: 24px; font-weight: 700; opacity: {{ op2 }}; transform: {{ tf2 }}; transition-delay: {{ d2d }};">Past days</h2>
+<div style="display: flex; gap: 10px;">
+<div class="mv" style="flex-shrink: 0; display: flex; opacity: {{ op2 }}; transform: {{ tf2 }}; transition-delay: {{ d2d }};">
+<button class="key" style="width: 156px; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Yesterday</span>
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; color: #4D3765;">Low</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Results day.</span>
+</button>
+</div>
+<div class="mv" style="flex-shrink: 0; display: flex; opacity: {{ op2 }}; transform: {{ tf2 }}; transition-delay: {{ d2e }};">
+<button class="key" style="width: 132px; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #D9D1C2;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Mon 15</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">A quiet day. Nothing written, and that is fine.</span>
+</button>
+</div>
+<div class="mv" style="flex-shrink: 0; display: flex; opacity: {{ op2 }}; transform: {{ tf2 }}; transition-delay: {{ d2f }};">
+<button class="key" style="width: 156px; box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Sun 14</span>
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; color: {{accent}};">Kept from a chat</span>
+<span style="font-size: 13px; line-height: 18px; color: #2B2B2B;">Rest is part of preparation, not a break from it.</span>
+</button>
+</div>
+</div>
+</section>
+
+<section aria-label="Profile" aria-hidden="{{ hid3 }}" class="scr" style="position: absolute; inset: 0; z-index: 1; box-sizing: border-box; padding: 44px 16px 0; display: flex; flex-direction: column; gap: 12px; opacity: {{ scrOp3 }}; transition-duration: {{ scrDur3 }}; pointer-events: {{ pe3 }};">
+<div class="mv" style="padding: 4px 64px 0 8px; display: flex; flex-direction: column; opacity: {{ op3 }}; transform: {{ tf3 }}; transition-delay: {{ d3a }};">
+<h1 style="margin: 0; font-size: 30px; line-height: 40px; font-weight: 800;">Profile</h1>
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #5E5A53;">This is all anyone ever sees</p>
+</div>
+<div class="mv" style="opacity: {{ op3 }}; transform: {{ tf3 }}; transition-delay: {{ d3b }};">
+<div style="box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 24px; line-height: 30px; font-weight: 800;">Gentle Harbor</span>
+<span style="height: 24px; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 12px; line-height: 16px; font-weight: 700;">Private</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Your identity is never shared. Mentors see this name and your cat, nothing else.</span>
+</div>
+</div>
+<div class="mv" style="opacity: {{ op3 }}; transform: {{ tf3 }}; transition-delay: {{ d3c }};">
+<div style="box-sizing: border-box; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 8px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<h2 style="margin: 0; padding: 0 2px; font-size: 16px; line-height: 22px; font-weight: 700;">Your growth companion</h2>
+<div style="display: flex; justify-content: space-between; gap: 2px; padding: 4px 3px 6px;">
+<button aria-label="Terracotta theme" aria-pressed="true" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #A2533A; box-shadow: 0 0 0 3px #FBF8F2, 0 0 0 5px #2B2B2B;"></button>
+<button class="key" aria-label="Sage theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #467054; box-shadow: 0 4px 0 #33513C;"></button>
+<button class="key" aria-label="Sky theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #3B6D8F; box-shadow: 0 4px 0 #2A4F69;"></button>
+<button class="key" aria-label="Rose theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #A24C61; box-shadow: 0 4px 0 #7D3A4A;"></button>
+<button class="key" aria-label="Mustard theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #895F17; box-shadow: 0 4px 0 #674711;"></button>
+<button class="key" aria-label="Plum theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #6B4C8C; box-shadow: 0 4px 0 #4D3765;"></button>
+<button class="key" aria-label="Teal theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #286F6B; box-shadow: 0 4px 0 #1C4F4C;"></button>
+</div>
+<p style="margin: 0; padding: 0 2px; font-size: 13px; line-height: 18px; color: #5E5A53;">Switching colours re-tints the whole app, instantly.</p>
+</div>
+</div>
+<div class="mv" style="opacity: {{ op3 }}; transform: {{ tf3 }}; transition-delay: {{ d3d }};">
+<div style="box-sizing: border-box; min-height: 60px; padding: 8px 10px 8px 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE8F2; color: #2A4F69;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c3 3.5 3 14.5 0 18"></path><path d="M12 3c-3 3.5-3 14.5 0 18"></path></svg>
+</span>
+<span style="flex-grow: 1; font-size: 16px; line-height: 22px; font-weight: 700;">Language</span>
+<span role="group" aria-label="Language" style="display: flex; gap: 4px; padding: 3px; background: #EFE9DF; border-radius: 999px;">
+<button aria-pressed="true" style="height: 44px; padding: 0 14px; background: #2B2B2B; color: #FFFFFF; border: 0; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 700;">English</button>
+<button aria-pressed="false" lang="hi" style="height: 44px; padding: 0 14px; background: transparent; border: 0; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 700;">हिंदी</button>
+</span>
+</div>
+</div>
+<div class="mv" style="display: flex; flex-direction: column; opacity: {{ op3 }}; transform: {{ tf3 }}; transition-delay: {{ d3e }};">
+<button class="key" style="box-sizing: border-box; min-height: 60px; padding: 8px 12px 8px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10a5 5 0 0 1 10 0c0 3-3 4-3 7a3 3 0 0 1-5.5 1.5"></path><path d="M10 10a2 2 0 0 1 4 0"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Become a mentor</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Been through a hard season? Help someone through theirs.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+<div class="mv" style="display: flex; flex-direction: column; opacity: {{ op3 }}; transform: {{ tf3 }}; transition-delay: {{ d3f }};">
+<button class="key" style="box-sizing: border-box; min-height: 60px; padding: 8px 12px 8px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"></path><path d="M16 10h2a2 2 0 0 1 0 5h-2"></path><path d="M8 5v1"></path><path d="M12 5v1"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Buy the Mento Team a Coffee</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Optional, always. It keeps this space free and safe.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+</section>
+
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; height: 130px; pointer-events: none; background: linear-gradient(to bottom, rgba(244,239,230,0), rgba(244,239,230,0.94) 46%, #F4EFE6 100%);"></div>
+
+<div style="position: absolute; right: 22px; top: 40px; z-index: 3; width: 52px; height: 74px; pointer-events: none;">
+<div class="nod" style="width: 52px; height: 74px; transform-origin: 50% 100%; animation: {{ nodAnim }};">
+<img class="breathe" src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="Your cat companion, in the same place on every tab" style="width: 52px; height: 74px; object-fit: contain; transform-origin: 50% 100%;">
+</div>
+</div>
+
+<nav aria-label="Main" style="position: absolute; left: 16px; right: 16px; bottom: 20px; z-index: 5; height: 68px; box-sizing: border-box; padding: 8px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 6px 18px rgba(43,43,43,0.10);">
+<span aria-hidden="true" class="perch" style="position: absolute; left: 8px; top: 9px; width: 85px; height: 48px; border-radius: 999px; background: {{accentTint}}; box-shadow: 0 3px 0 {{accentTintEdge}}; transform: {{ pillTf }};"></span>
+<button class="tint" aria-label="Chats tab" aria-pressed="{{ cur0 }}" onClick="{{ go0 }}" style="position: relative; flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 0; border-radius: 999px; color: {{ fg0 }}; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+<span>Chats</span>
+</button>
+<button class="tint" aria-label="Path tab" aria-pressed="{{ cur1 }}" onClick="{{ go1 }}" style="position: relative; flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 0; border-radius: 999px; color: {{ fg1 }}; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
+<span>Path</span>
+</button>
+<button class="tint" aria-label="Journal tab" aria-pressed="{{ cur2 }}" onClick="{{ go2 }}" style="position: relative; flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 0; border-radius: 999px; color: {{ fg2 }}; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>
+<span>Journal</span>
+</button>
+<button class="tint" aria-label="Profile tab" aria-pressed="{{ cur3 }}" onClick="{{ go3 }}" style="position: relative; flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; background: transparent; border: 0; border-radius: 999px; color: {{ fg3 }}; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>
+<span>Profile</span>
+</button>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  rgb(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { h = 'A2533A'; }
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+  rgba(hex, a) {
+    var c = this.rgb(hex);
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  }
+  mix(hex, to, t) {
+    var c = this.rgb(hex);
+    var out = '#';
+    for (var i = 0; i < 3; i++) { out += ('0' + Math.round(c[i] + (to - c[i]) * t).toString(16)).slice(-2); }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var st = this.state || {};
+    var tab = typeof st.tab === 'number' ? st.tab : 0;
+    var prevTab = typeof st.prevTab === 'number' ? st.prevTab : 0;
+    var moves = typeof st.moves === 'number' ? st.moves : 0;
+
+    /* Direction comes from the index difference: +1 = moving right through the tabs. */
+    var dir = tab > prevTab ? 1 : (tab < prevTab ? -1 : 0);
+
+    var SLOT = 85;          /* (358 - 2 border - 16 padding) / 4 tabs */
+    var ENTER_AFTER = 200;  /* the old screen is fully gone before the new header starts */
+    var STAGGER = 80;
+    var names = ['a', 'b', 'c', 'd', 'e', 'f'];
+
+    var vals = {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6),
+      sky1: this.rgba(accent, 0.30),
+      sky1Soft: this.rgba(accent, 0.10),
+      /* Parallax: the sky drifts the OPPOSITE way, ~12px per tab index, each blob at its own depth. */
+      skyTfA: 'translateX(' + (-12 * tab) + 'px)',
+      skyTfB: 'translateX(' + (-18 * tab) + 'px)',
+      skyTfC: 'translateX(' + (-8 * tab) + 'px)',
+      pillTf: 'translateX(' + (SLOT * tab) + 'px)',
+      /* One soft nod per tab change: alternating two identical keyframes retriggers the animation. */
+      nodAnim: moves === 0 ? 'none' : ((moves % 2 === 1 ? 'nodA' : 'nodB') + ' 700ms cubic-bezier(0.22,1,0.36,1) 200ms 1 both')
+    };
+
+    for (var i = 0; i < 4; i++) {
+      var active = (i === tab);
+      /* Where a resting (hidden) screen waits: the side it would enter from, or where it just exited to. */
+      var off;
+      if (active) { off = 0; }
+      else if (i === prevTab && dir !== 0) { off = -40 * dir; }
+      else { off = i > tab ? 40 : -40; }
+
+      vals['cur' + i] = active;
+      vals['hid' + i] = !active;
+      vals['fg' + i] = active ? accent : '#5E5A53';
+      vals['pe' + i] = active ? 'auto' : 'none';
+      /* Section wrapper = the fast exit (200ms, exit curve). On enter it opens at once (0ms): every child is
+         still at opacity 0 and waits ENTER_AFTER, so the items alone carry the slow, staggered arrival. */
+      vals['scrOp' + i] = active ? 1 : 0;
+      vals['scrDur' + i] = active ? '0ms' : '200ms';
+      vals['op' + i] = active ? 1 : 0;
+      vals['tf' + i] = 'translateX(' + off + 'px)';
+      for (var k = 0; k < names.length; k++) {
+        vals['d' + i + names[k]] = active ? ((ENTER_AFTER + STAGGER * k) + 'ms') : '0ms';
+      }
+      (function (idx) {
+        vals['go' + idx] = function () {
+          if (idx === tab) { return; }
+          self.setState({ prevTab: tab, tab: idx, moves: moves + 1 });
+        };
+      })(i);
+    }
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

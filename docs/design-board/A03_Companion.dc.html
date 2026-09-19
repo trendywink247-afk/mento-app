@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Choose your companion (Pillow)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#EFE9DF;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+@keyframes alive{0%{transform:scale(1) rotate(-1.4deg)}50%{transform:scale(1.035) rotate(0.4deg)}100%{transform:scale(1) rotate(1.4deg)}}
+@keyframes poseA{0%,55%{opacity:1}62%,93%{opacity:0}100%{opacity:1}}
+@keyframes poseB{0%,55%{opacity:0}62%,93%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion: no-preference){
+.alive{animation:alive 5.2s ease-in-out infinite alternate}
+.poseA{animation:poseA 9s ease-in-out infinite}
+.poseB{animation:poseB 9s ease-in-out infinite}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 24px 24px; display: flex; flex-direction: column; gap: 18px; background: #EFE9DF; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+<div style="display: flex; align-items: flex-end; gap: 12px;">
+<div class="arr a1" style="flex-grow: 1; display: flex; flex-direction: column; gap: 6px;">
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 800;">Your growth,<br>your <span style="color: {{accent}};">theme</span></h1>
+<p style="margin: 0; font-size: 15px; line-height: 22px; color: #6B675F;">Your emotional growth will be represented by an animal and a colour.</p>
+</div>
+<div style="position: relative; width: 104px; height: 132px; flex-shrink: 0;">
+<div style="position: absolute; left: 8px; right: 8px; bottom: 0; height: 22px; border-radius: 999px; background: #E3DCCF;"></div>
+<div class="alive" style="position: absolute; left: 6px; bottom: 8px; width: 92px; height: 124px; transform-origin: 50% 100%;">
+<img class="poseA" src="/_blob/c5932cbe7933051e63ca71be87e0d6f1" alt="Your cat companion, waving hello" style="position: absolute; inset: 0; width: 92px; height: 124px; object-fit: contain; object-position: 50% 100%;">
+<img class="poseB" src="/_blob/4f2efcf71291b5c16ffd4f80ab2a3e70" alt="" style="position: absolute; inset: 0; width: 92px; height: 124px; object-fit: contain; object-position: 50% 100%; opacity: 0;">
+</div>
+</div>
+</div>
+<div class="arr a2" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-direction: column;">
+<h2 style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700;">1. Choose an animal</h2>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #6B675F;">This will be your growth companion</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; row-gap: 12px;">
+<button class="key" aria-label="Panda companion" aria-pressed="false" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<img src="/_blob/be6b271629bf919edef2304b6b8942d2" alt="" style="height: 62px; width: 76px; object-fit: contain;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Panda</span>
+</button>
+<button class="key" aria-label="Dog companion" aria-pressed="false" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<img src="/_blob/3bc70fffdaa6f2f10776977f9b130f77" alt="" style="height: 62px; width: 76px; object-fit: contain;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Dog</span>
+</button>
+<button class="key" aria-label="Cat companion" aria-pressed="true" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: {{accentTint}}; border: 2px solid {{accent}}; border-radius: 22px; box-shadow: 0 4px 0 {{accentEdge}};">
+<img class="alive" src="/_blob/c5932cbe7933051e63ca71be87e0d6f1" alt="" style="height: 62px; width: 76px; object-fit: contain; transform-origin: 50% 100%;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700; color: {{accent}};">Cat</span>
+</button>
+<button class="key" aria-label="Fox companion" aria-pressed="false" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<img src="/_blob/3703bec182b52f2b5a88352c05afb95f" alt="" style="height: 62px; width: 76px; object-fit: contain;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Fox</span>
+</button>
+<button class="key" aria-label="Capybara companion" aria-pressed="false" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<img src="/_blob/b47c4f3b8b5fa207fa454ab0a64791ba" alt="" style="height: 62px; width: 76px; object-fit: contain;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Capybara</span>
+</button>
+<button class="key" aria-label="Elephant companion" aria-pressed="false" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<img src="/_blob/ba9d583b28eb48f90f3a02e1baec1652" alt="" style="height: 62px; width: 76px; object-fit: contain;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Elephant</span>
+</button>
+<button class="key" aria-label="Turtle companion" aria-pressed="false" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<img src="/_blob/d0ec8cc81784cdafeee6c4b18fb1b180" alt="" style="height: 62px; width: 76px; object-fit: contain;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Turtle</span>
+</button>
+<button class="key" aria-label="Deer companion" aria-pressed="false" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<img src="/_blob/8ef6c1be0535818d6c849f939127f324" alt="" style="height: 62px; width: 76px; object-fit: contain;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Deer</span>
+</button>
+<button class="key" aria-label="Owl companion" aria-pressed="false" style="box-sizing: border-box; height: 96px; padding: 6px 4px 4px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<img src="/_blob/f7048216a2d9071456ef8cc908ab18ae" alt="" style="height: 62px; width: 76px; object-fit: contain;">
+<span style="font-size: 14px; line-height: 20px; font-weight: 700;">Owl</span>
+</button>
+</div>
+</div>
+<div class="arr a3" style="display: flex; flex-direction: column; gap: 10px;">
+<div style="display: flex; flex-direction: column;">
+<h2 style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700;">2. Choose a colour</h2>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #6B675F;">This will be your growth colour</p>
+</div>
+<div style="display: flex; justify-content: space-between; gap: 4px; padding: 4px 2px 8px;">
+<button class="key" aria-label="Terracotta theme" aria-pressed="true" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #A2533A; box-shadow: 0 0 0 3px #EFE9DF, 0 0 0 5px #2B2B2B;"></button>
+<button class="key" aria-label="Sage theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #467054; box-shadow: 0 4px 0 #33513C;"></button>
+<button class="key" aria-label="Sky theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #3B6D8F; box-shadow: 0 4px 0 #2A4F69;"></button>
+<button class="key" aria-label="Rose theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #A24C61; box-shadow: 0 4px 0 #7D3A4A;"></button>
+<button class="key" aria-label="Mustard theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #895F17; box-shadow: 0 4px 0 #674711;"></button>
+<button class="key" aria-label="Plum theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #6B4C8C; box-shadow: 0 4px 0 #4D3765;"></button>
+<button class="key" aria-label="Teal theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #286F6B; box-shadow: 0 4px 0 #1C4F4C;"></button>
+</div>
+</div>
+<div style="flex-grow: 1;"></div>
+<div class="arr a4" style="display: flex; flex-direction: column; gap: 14px;">
+<div style="display: flex; gap: 12px;">
+<button class="key" aria-label="Surprise me with a random theme" style="flex: 1 1 0; height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 16px; line-height: 24px; font-weight: 700;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l1.8 5.2L19 11l-5.2 1.8L12 18l-1.8-5.2L5 11l5.2-1.8z"></path></svg>
+<span>Surprise Me</span>
+</button>
+<a class="key" href="A18_Ready.dc.html" style="flex: 1.3 1 0; height: 56px; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">Continue</a>
+</div>
+<p style="margin: 0; text-align: center; font-size: 13px; line-height: 18px; color: #6B675F;">You can change your theme later from Profile.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6)
+    };
+  }
+}
+</script>
+</body>
+</html>

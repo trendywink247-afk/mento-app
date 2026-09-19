@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Profile (Pillow)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 16px 0; display: flex; flex-direction: column; gap: 14px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+<h1 class="arr" style="margin: 0; padding: 4px 8px 0; font-size: 22px; line-height: 28px; font-weight: 700;">Profile</h1>
+<div style="position: relative;">
+<img class="breathe" src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="Your cat companion standing on your profile card" style="position: absolute; right: 14px; bottom: 14px; width: 112px; height: 160px; object-fit: contain; transform-origin: 50% 100%; z-index: 2;">
+<div class="arr a1" style="position: relative; z-index: 1; box-sizing: border-box; min-height: 124px; padding: 16px 136px 16px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 24px; line-height: 30px; font-weight: 800;">Gentle Harbor</span>
+<span style="height: 24px; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 12px; line-height: 16px; font-weight: 700;">Private</span>
+<span style="font-size: 13px; line-height: 18px; color: #6B675F;">Your identity stays yours — this is all anyone ever sees.</span>
+</div>
+<div style="position: absolute; right: 22px; bottom: 6px; width: 96px; height: 16px; border-radius: 999px; background: #E3DCCF; z-index: 1;"></div>
+</div>
+<div class="arr a2" style="box-sizing: border-box; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 8px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<h2 style="margin: 0; padding: 0 2px; font-size: 16px; line-height: 22px; font-weight: 700;">Your growth companion</h2>
+<div style="display: flex; justify-content: space-between; gap: 2px; padding: 4px 3px 6px;">
+<button class="key" aria-label="Terracotta theme" aria-pressed="true" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #A2533A; box-shadow: 0 0 0 3px #FBF8F2, 0 0 0 5px #2B2B2B;"></button>
+<button class="key" aria-label="Sage theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #467054; box-shadow: 0 4px 0 #33513C;"></button>
+<button class="key" aria-label="Sky theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #3B6D8F; box-shadow: 0 4px 0 #2A4F69;"></button>
+<button class="key" aria-label="Rose theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #A24C61; box-shadow: 0 4px 0 #7D3A4A;"></button>
+<button class="key" aria-label="Mustard theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #895F17; box-shadow: 0 4px 0 #674711;"></button>
+<button class="key" aria-label="Plum theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #6B4C8C; box-shadow: 0 4px 0 #4D3765;"></button>
+<button class="key" aria-label="Teal theme" aria-pressed="false" style="width: 44px; height: 44px; border: 0; border-radius: 999px; background: #286F6B; box-shadow: 0 4px 0 #1C4F4C;"></button>
+</div>
+<p style="margin: 0; padding: 0 2px; font-size: 13px; line-height: 18px; color: #6B675F;">Switching colours re-tints the whole app, instantly.</p>
+</div>
+<div class="arr a3" style="display: flex; flex-direction: column; gap: 12px;">
+<div style="box-sizing: border-box; min-height: 60px; padding: 8px 10px 8px 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE8F2; color: #2A4F69;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3c3 3.5 3 14.5 0 18"></path><path d="M12 3c-3 3.5-3 14.5 0 18"></path></svg>
+</span>
+<span style="flex-grow: 1; font-size: 16px; line-height: 22px; font-weight: 700;">Language</span>
+<span role="group" aria-label="Language" style="display: flex; gap: 4px; padding: 3px; background: #EFE9DF; border-radius: 999px;">
+<button class="key" aria-pressed="true" style="height: 44px; padding: 0 14px; background: #2B2B2B; color: #FFFFFF; border: 0; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 700;">English</button>
+<button class="key" aria-pressed="false" lang="hi" style="height: 44px; padding: 0 14px; background: transparent; border: 0; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 700;">हिंदी</button>
+</span>
+</div>
+<a class="key" href="A37_MentorApplication.dc.html" style="box-sizing: border-box; min-height: 60px; padding: 8px 12px 8px 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 10a5 5 0 0 1 10 0c0 3-3 4-3 7a3 3 0 0 1-5.5 1.5"></path><path d="M10 10a2 2 0 0 1 4 0"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Become a mentor</span>
+<span style="font-size: 13px; line-height: 18px; color: #6B675F;">Been through a hard season? Help someone through theirs.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</a>
+<a class="key" href="A31_Coffee.dc.html" style="box-sizing: border-box; min-height: 60px; padding: 8px 12px 8px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 9h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"></path><path d="M16 10h2a2 2 0 0 1 0 5h-2"></path><path d="M8 5v1"></path><path d="M12 5v1"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Buy the Mento Team a Coffee</span>
+<span style="font-size: 13px; line-height: 18px; color: #6B675F;">Optional, always — it keeps this space free and safe.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</a>
+<button class="key" style="box-sizing: border-box; min-height: 60px; padding: 8px 12px 8px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F8DEDC; color: #8A2F2A;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+</span>
+<span style="flex-grow: 1; font-size: 16px; line-height: 22px; font-weight: 700;">Mentors, not therapists</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+<button class="key" style="box-sizing: border-box; min-height: 60px; padding: 8px 12px 8px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path></svg>
+</span>
+<span style="flex-grow: 1; font-size: 16px; line-height: 22px; font-weight: 700;">Privacy, plainly</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B675F" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+<a class="key" href="A32_StartFresh.dc.html" style="box-sizing: border-box; min-height: 60px; padding: 8px 12px 8px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #D9D1C2;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #EFE9DF; color: #2B2B2B;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 19c0-8 5-13 14-14 0 9-5 14-13 14"></path><path d="M5 19c3-5 6-8 10-10"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Start fresh</span>
+<span style="font-size: 13px; line-height: 18px; color: #6B675F;">Leave this persona behind and begin again as someone new.</span>
+</span>
+</a>
+</div>
+<p class="arr a4" style="margin: 0; text-align: center; font-size: 13px; line-height: 18px; color: #6B675F;">Mento · early access</p>
+<nav aria-label="Main" style="position: absolute; z-index: 5; left: 16px; right: 16px; bottom: 20px; height: 68px; box-sizing: border-box; padding: 8px; display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 6px 18px rgba(43,43,43,0.10);">
+<a href="A06_Chats.dc.html" style="flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; color: #6B675F; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+<span>Chats</span>
+</a>
+<a href="A07_Path.dc.html" style="flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; color: #6B675F; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
+<span>Path</span>
+</a>
+<a href="A08_Journals.dc.html" style="flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; color: #6B675F; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>
+<span>Journal</span>
+</a>
+<a href="A09_Profile.dc.html" aria-current="page" style="flex: 1 1 0; height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; border-radius: 999px; background: {{accentTint}}; box-shadow: 0 3px 0 {{accentTintEdge}}; color: {{accent}}; font-size: 12px; line-height: 14px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg>
+<span>Profile</span>
+</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6)
+    };
+  }
+}
+</script>
+</body>
+</html>

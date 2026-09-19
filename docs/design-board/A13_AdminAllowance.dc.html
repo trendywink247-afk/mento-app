@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento admin — message allowance counts</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+</style>
+</helmet>
+<div style="width: 960px; height: 600px; box-sizing: border-box; overflow: hidden; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">Admin · Overview</span>
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 800;">Message <span style="color: {{accent}};">allowance</span></h1>
+</div>
+<div style="display: flex; gap: 8px;">
+<button aria-pressed="true" style="height: 40px; padding: 0 16px; background: #2B2B2B; color: #FFFFFF; border: 0; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 700;">Today</button>
+<button aria-pressed="false" style="height: 40px; padding: 0 16px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 700;">7 days</button>
+<button aria-pressed="false" style="height: 40px; padding: 0 16px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; font-size: 14px; line-height: 20px; font-weight: 700;">30 days</button>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; flex-grow: 1;">
+<div style="box-sizing: border-box; padding: 20px 24px; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<h2 style="margin: 0 0 8px; font-size: 17px; line-height: 24px; font-weight: 700;">Counts <span style="font-size: 13px; font-weight: 600; color: #5E5A53;">· numbers only</span></h2>
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 12px 0; border-top: 1px solid #E6DFD3;">
+<span style="font-size: 16px; line-height: 22px;">Member messages sent</span>
+<span style="font-size: 22px; line-height: 28px; font-weight: 800; font-variant-numeric: tabular-nums;">[N]</span>
+</div>
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 12px 0; border-top: 1px solid #E6DFD3;">
+<span style="font-size: 16px; line-height: 22px;">Members who reached 10 for the day</span>
+<span style="font-size: 22px; line-height: 28px; font-weight: 800; font-variant-numeric: tabular-nums;">[N]</span>
+</div>
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 12px 0; border-top: 1px solid #E6DFD3;">
+<span style="font-size: 16px; line-height: 22px;">Times the 3-in-a-row pause showed</span>
+<span style="font-size: 22px; line-height: 28px; font-weight: 800; font-variant-numeric: tabular-nums;">[N]</span>
+</div>
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 12px 0; border-top: 1px solid #E6DFD3;">
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700; color: #8E2F2A;">Crisis-exempt sends</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Delivered past the cap because the safety scan flagged them. Never blocked, never counted against the member.</span>
+</span>
+<span style="font-size: 22px; line-height: 28px; font-weight: 800; color: #8E2F2A; font-variant-numeric: tabular-nums;">[N]</span>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 20px;">
+<div style="box-sizing: border-box; padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<h2 style="margin: 0; font-size: 17px; line-height: 24px; font-weight: 700;">The rule in force</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+<span style="height: 32px; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 14px; line-height: 20px; font-weight: 700;">3 in a row</span>
+<span style="height: 32px; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 14px; line-height: 20px; font-weight: 700;">10 per day</span>
+<span style="height: 32px; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; background: #F8DEDC; color: #8E2F2A; font-size: 14px; line-height: 20px; font-weight: 700;">Crisis traffic exempt</span>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #5E5A53;">Values live in server config, so they change without an app release.</p>
+</div>
+<div style="box-sizing: border-box; padding: 20px 24px; display: flex; gap: 14px; align-items: flex-start; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px;">
+<span style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Numbers only</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53;">This panel never shows message text, names or who hit the cap. Crisis-exempt sends link to Safety review, where access is audited.</span>
+</span>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":960,"height":600}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return { accent: accent, accentTint: this.mix(accent, 255, 0.8) };
+  }
+}
+</script>
+</body>
+</html>

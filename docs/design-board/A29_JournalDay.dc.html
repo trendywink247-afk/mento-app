@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Journal, one past day opened like a small book</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.lined28{background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 27px,#E6DFD3 27px,#E6DFD3 28px)}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 24px 24px; display: flex; flex-direction: column; gap: 28px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div style="height: 44px; display: flex; align-items: center; gap: 12px;">
+<a class="key" href="A08_Journals.dc.html" aria-label="Back to your Journal" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 17px; line-height: 24px; font-weight: 700;">Journal</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">A day from your shelf</span>
+</div>
+</div>
+
+<img class="breathe" src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="Your cat companion sitting on top of the book" style="position: absolute; right: 40px; top: 53px; width: 50px; height: 72px; object-fit: contain; transform-origin: 50% 100%; z-index: 3;">
+
+<div class="arrDeep" style="flex: 1 1 0; min-height: 0; display: flex; flex-direction: column;">
+
+<sc-if value="{{ d0 }}" hint-placeholder-val="{{ true }}">
+<div class="arr" style="position: relative;">
+<div aria-hidden="true" style="position: absolute; z-index: 0; left: 52px; bottom: -16px; width: 14px; height: 30px; background: {{accentEdge}}; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%);"></div>
+<div style="position: relative; z-index: 1; box-sizing: border-box; padding: 6px 6px 10px 14px; background: {{accent}}; border-radius: 22px; box-shadow: 0 4px 0 {{accentEdge}};">
+<div aria-hidden="true" style="position: absolute; left: 6px; top: 22px; bottom: 26px; width: 0; border-left: 2px dashed rgba(255,255,255,0.6);"></div>
+<article aria-label="Sunday, 14 September" style="box-sizing: border-box; padding: 18px 16px 18px 18px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-radius: 10px 17px 17px 10px; box-shadow: 0 2px 0 #E6DFD3, 0 4px 0 #FBF8F2, 0 5px 0 #E6DFD3;">
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">3 days ago</span>
+<h1 style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 800;">Sunday, <span style="color: {{accent}};">14 September</span></h1>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">The day felt</span>
+<span role="img" aria-label="Mood: okay, three of five" style="display: flex; align-items: center; gap: 3px;">
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #4D3765;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #4D3765;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #4D3765;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #DDD3E6;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #DDD3E6;"></span>
+</span>
+<span style="font-weight: 700; color: #4D3765;">Okay</span>
+</div>
+<div aria-hidden="true" style="height: 0; border-top: 1px dashed #D9D1C2;"></div>
+<section aria-label="Guidance you kept" style="display: flex; flex-direction: column; gap: 8px;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{accent}};">Guidance you kept</span>
+<div style="box-sizing: border-box; padding: 12px 12px 4px; display: flex; flex-direction: column; gap: 8px; background: {{accentTint}}; border-radius: 14px; box-shadow: 0 3px 0 {{accentTintEdge}};">
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD;">
+<img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 33px; height: 33px; object-fit: contain;">
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Steady Cedar</span>
+<span style="font-size: 12px; line-height: 16px; color: #2B2B2B;">Your mentor that day</span>
+</span>
+</div>
+<p style="margin: 0; padding-left: 10px; border-left: 3px solid {{accent}}; font-size: 16px; line-height: 24px; font-weight: 600;">Rest is part of preparation, not a break from it.</p>
+<p style="margin: 0; padding-left: 10px; border-left: 3px solid {{accent}}; font-size: 16px; line-height: 24px; font-weight: 600;">Pick one subject for tomorrow. Only one.</p>
+<a class="key" href="A05_Chat.dc.html" style="align-self: flex-start; height: 44px; display: flex; align-items: center; gap: 4px; font-size: 13px; line-height: 18px; font-weight: 700; color: {{accentEdge}};">
+<span style="text-decoration: underline; text-underline-offset: 4px;">From your chat with Steady Cedar</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+</a>
+</div>
+</section>
+<section aria-label="Then you wrote" style="display: flex; flex-direction: column; gap: 4px;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">Then you wrote</span>
+<p class="lined28" style="margin: 0; font-size: 16px; line-height: 28px; text-wrap: pretty;">Took the evening off. Slept before midnight for the first time this week. The syllabus was still there in the morning, and so was I.</p>
+</section>
+</article>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ d1 }}" hint-placeholder-val="{{ false }}">
+<div class="arr" style="position: relative;">
+<div aria-hidden="true" style="position: absolute; z-index: 0; left: 52px; bottom: -16px; width: 14px; height: 30px; background: {{accentEdge}}; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%);"></div>
+<div style="position: relative; z-index: 1; box-sizing: border-box; padding: 6px 6px 10px 14px; background: {{accent}}; border-radius: 22px; box-shadow: 0 4px 0 {{accentEdge}};">
+<div aria-hidden="true" style="position: absolute; left: 6px; top: 22px; bottom: 26px; width: 0; border-left: 2px dashed rgba(255,255,255,0.6);"></div>
+<article aria-label="Monday, 15 September" style="box-sizing: border-box; min-height: 300px; padding: 18px 16px 18px 18px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-radius: 10px 17px 17px 10px; box-shadow: 0 2px 0 #E6DFD3, 0 4px 0 #FBF8F2, 0 5px 0 #E6DFD3;">
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">2 days ago</span>
+<h1 style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 800;">Monday, <span style="color: {{accent}};">15 September</span></h1>
+</div>
+<div aria-hidden="true" style="height: 0; border-top: 1px dashed #D9D1C2;"></div>
+<div class="lined28" style="flex-grow: 1; min-height: 168px; display: flex; flex-direction: column;">
+<p style="margin: 0; font-size: 16px; line-height: 28px; color: #5E5A53;">A quiet day. Nothing written, and that is fine.</p>
+<p style="margin: 0; font-size: 16px; line-height: 28px; color: #5E5A53;">Blank pages are part of the book too.</p>
+</div>
+</article>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ d2 }}" hint-placeholder-val="{{ false }}">
+<div class="arr" style="position: relative;">
+<div aria-hidden="true" style="position: absolute; z-index: 0; left: 52px; bottom: -16px; width: 14px; height: 30px; background: {{accentEdge}}; clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 72%, 0 100%);"></div>
+<div style="position: relative; z-index: 1; box-sizing: border-box; padding: 6px 6px 10px 14px; background: {{accent}}; border-radius: 22px; box-shadow: 0 4px 0 {{accentEdge}};">
+<div aria-hidden="true" style="position: absolute; left: 6px; top: 22px; bottom: 26px; width: 0; border-left: 2px dashed rgba(255,255,255,0.6);"></div>
+<article aria-label="Tuesday, 16 September" style="box-sizing: border-box; padding: 18px 16px 18px 18px; display: flex; flex-direction: column; gap: 12px; background: #FFFFFF; border-radius: 10px 17px 17px 10px; box-shadow: 0 2px 0 #E6DFD3, 0 4px 0 #FBF8F2, 0 5px 0 #E6DFD3;">
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">Yesterday</span>
+<h1 style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 800;">Tuesday, <span style="color: {{accent}};">16 September</span></h1>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 14px; line-height: 20px;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">The day felt</span>
+<span role="img" aria-label="Mood: low, two of five" style="display: flex; align-items: center; gap: 3px;">
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #4D3765;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #4D3765;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #DDD3E6;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #DDD3E6;"></span>
+<span style="width: 8px; height: 8px; border-radius: 999px; background: #DDD3E6;"></span>
+</span>
+<span style="font-weight: 700; color: #4D3765;">Low</span>
+</div>
+<div aria-hidden="true" style="height: 0; border-top: 1px dashed #D9D1C2;"></div>
+<section aria-label="You wrote" style="display: flex; flex-direction: column; gap: 4px;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">You wrote</span>
+<p class="lined28" style="margin: 0; font-size: 16px; line-height: 28px; text-wrap: pretty;">Results day. Lower than the last mock. I did not tell anyone at home, and I kept the door shut most of the evening.</p>
+</section>
+<section aria-label="Grateful" style="display: flex; flex-direction: column; gap: 4px;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #674711;">Grateful</span>
+<p class="lined28" style="margin: 0; font-size: 16px; line-height: 28px; text-wrap: pretty;">Amma packed lunch without being asked.</p>
+</section>
+<p style="margin: 0; padding-top: 4px; font-size: 13px; line-height: 18px; color: #5E5A53;">No guidance kept this day.</p>
+</article>
+</div>
+</div>
+</sc-if>
+
+</div>
+
+<div class="arr a2" style="display: flex; flex-direction: column; padding-bottom: 4px;">
+<sc-if value="{{ d0 }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; gap: 12px;">
+<a class="key" href="A08_Journals.dc.html" style="flex: 1 1 0; height: 56px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 10px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #D9D1C2;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 14px; color: #5E5A53;">Earlier days</span>
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">On the shelf</span>
+</span>
+</a>
+<button class="key" onClick="{{ next }}" style="flex: 1 1 0; height: 56px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; text-align: right; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 14px; color: #5E5A53;">Next day</span>
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">Mon 15</span>
+</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+</sc-if>
+<sc-if value="{{ d1 }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; gap: 12px;">
+<button class="key" onClick="{{ prev }}" style="flex: 1 1 0; height: 56px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 10px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 14px; color: #5E5A53;">Previous day</span>
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">Sun 14</span>
+</span>
+</button>
+<button class="key" onClick="{{ next }}" style="flex: 1 1 0; height: 56px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; text-align: right; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 14px; color: #5E5A53;">Next day</span>
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">Tue 16</span>
+</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+</sc-if>
+<sc-if value="{{ d2 }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; gap: 12px;">
+<button class="key" onClick="{{ prev }}" style="flex: 1 1 0; height: 56px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 10px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 14px; color: #5E5A53;">Previous day</span>
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">Mon 15</span>
+</span>
+</button>
+<a class="key" href="A08_Journals.dc.html" style="flex: 1 1 0; height: 56px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; justify-content: flex-end; gap: 10px; text-align: right; background: {{accentTint}}; border: 1px solid {{accentTintEdge}}; border-radius: 14px; box-shadow: 0 4px 0 {{accentTintEdge}};">
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 14px; color: #2B2B2B;">Next day</span>
+<span style="font-size: 16px; line-height: 20px; font-weight: 700; color: {{accentEdge}};">Today</span>
+</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"></path></svg>
+</a>
+</div>
+</sc-if>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var d = (this.state && typeof this.state.d === 'number') ? this.state.d : 0;
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6),
+      d0: d === 0,
+      d1: d === 1,
+      d2: d === 2,
+      next: function () { self.setState({ d: Math.min(2, d + 1) }); },
+      prev: function () { self.setState({ d: Math.max(0, d - 1) }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

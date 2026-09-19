@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — First-question builder</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 20px 24px; display: flex; flex-direction: column; gap: 10px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div style="height: 44px; display: flex; align-items: center; gap: 12px;">
+<a class="key" href="A07_Path.dc.html" aria-label="Back to your path" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<div class="arrDeep" style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">UPSC · The quiet after mains</span>
+<span style="font-size: 17px; line-height: 24px; font-weight: 700;">Shape your first question</span>
+</div>
+</div>
+
+<div style="flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 10px;">
+
+<div class="arrDeep">
+<div class="arr a1" style="display: flex; flex-direction: column; gap: 4px;">
+<div style="min-height: 44px; display: flex; align-items: center; gap: 12px;">
+<span style="flex-grow: 1; min-width: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">A starter, not a script. Type your own anytime.</span>
+<button class="key" onClick="{{ another }}" aria-label="Show another starter question" style="height: 44px; flex-shrink: 0; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #E3DCCF; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a8 8 0 0 1 14-4l2 2"></path><path d="M20 3v4h-4"></path><path d="M20 15a8 8 0 0 1-14 4l-2-2"></path><path d="M4 21v-4h4"></path></svg>
+<span>Another</span>
+</button>
+</div>
+<h1 style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 800; text-wrap: pretty;">{{ qLead }} <span style="color: {{accent}};">{{ qWord }}</span>?</h1>
+</div>
+</div>
+
+<div class="arrDeep">
+<div class="arr a2" style="display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; align-items: baseline; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 700;">Where I am</h2>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">optional · adds a few words</span>
+</div>
+<div role="group" aria-label="Where I am" style="display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px;">
+<sc-for list="{{ whereChips }}" as="item" hint-placeholder-count="4">
+<button class="key" onClick="{{ item.pick }}" aria-pressed="{{ item.pressed }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; background: {{ item.bg }}; border: 1px solid {{ item.border }}; border-radius: 999px; box-shadow: {{ item.shadow }}; color: {{ item.ink }}; font-size: 14px; line-height: 20px; font-weight: 700;">{{ item.label }}</button>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div class="arrDeep">
+<div class="arr a3" style="display: flex; flex-direction: column; gap: 6px;">
+<div style="display: flex; align-items: baseline; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 700;">What I've tried</h2>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">optional</span>
+</div>
+<div role="group" aria-label="What I've tried" style="display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 4px;">
+<sc-for list="{{ triedChips }}" as="item" hint-placeholder-count="3">
+<button class="key" onClick="{{ item.pick }}" aria-pressed="{{ item.pressed }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; background: {{ item.bg }}; border: 1px solid {{ item.border }}; border-radius: 999px; box-shadow: {{ item.shadow }}; color: {{ item.ink }}; font-size: 14px; line-height: 20px; font-weight: 700;">{{ item.label }}</button>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<div class="arrDeep">
+<div class="arr a4" style="display: flex; align-items: baseline; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 18px; font-weight: 700;">Your message</h2>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">{{ count }} of 160 characters</span>
+</div>
+</div>
+<div style="position: relative;">
+<img class="breathe" src="/_blob/ca61e83f28c39e94950642c2a809833d" alt="Your cat companion peeking over your draft" style="position: absolute; right: 18px; bottom: calc(100% - 34px); width: 54px; height: 78px; object-fit: contain; transform-origin: 50% 100%; z-index: 0; pointer-events: none;">
+<div class="arrDeep" style="position: relative; z-index: 1;">
+<div class="arr a4" aria-live="polite" style="box-sizing: border-box; padding: 12px; display: flex; flex-direction: column; align-items: flex-end; background: #EFE9DF; border: 1px solid #E6DFD3; border-radius: 22px;">
+<div style="max-width: 100%; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">{{ message }}</div>
+</div>
+</div>
+</div>
+</div>
+
+<div class="arrDeep">
+<p class="arr a5" style="margin: 0; display: flex; align-items: flex-start; gap: 6px; font-size: 13px; line-height: 18px; color: #5E5A53;">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; height: 18px;"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Nothing is sent for you. It waits in the chat, and you can edit it before it goes.</span>
+</p>
+</div>
+
+</div>
+
+<div class="arrDeep">
+<div class="arr a6" style="display: flex; gap: 12px; padding-bottom: 4px;">
+<a class="key" href="A05_Chat.dc.html" aria-label="Edit this message in the chat before sending" style="flex: 1 1 0; height: 56px; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 15px; line-height: 20px; font-weight: 700; white-space: nowrap;">Edit in chat</a>
+<a class="key" href="A19_Connecting.dc.html" aria-label="Find a mentor and bring this message to the chat, unsent" style="flex: 1.6 1 0; height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 16px; line-height: 24px; font-weight: 700; white-space: nowrap;">
+<span>Take it to a mentor</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var accentEdge = this.mix(accent, 0, 0.22);
+    var accentTint = this.mix(accent, 255, 0.8);
+    var accentTintEdge = this.mix(accent, 255, 0.6);
+    var s = this.state || {};
+    var cur = {
+      q: s.q === undefined ? 0 : s.q,
+      attempt: s.attempt === undefined ? 'second' : s.attempt,
+      working: s.working === undefined ? false : s.working,
+      tried: s.tried === undefined ? 'prep' : s.tried
+    };
+    function set(patch) {
+      var next = { q: cur.q, attempt: cur.attempt, working: cur.working, tried: cur.tried };
+      for (var k in patch) { next[k] = patch[k]; }
+      self.setState(next);
+    }
+    var starters = [
+      { lead: 'What did you do in the weeks after', word: 'mains' },
+      { lead: 'How do I prepare for the interview without knowing the', word: 'result' },
+      { lead: 'Is it normal to feel this empty after the', word: 'papers' }
+    ];
+    var starter = starters[cur.q % starters.length];
+    var attemptClause = {
+      first: 'this was my first attempt',
+      second: 'this was my second attempt',
+      third: 'this was at least my third attempt'
+    };
+    var triedClause = {
+      rest: "I've been taking a break",
+      prep: "I've started interview prep",
+      none: "I haven't tried anything yet"
+    };
+    var clauses = [];
+    if (attemptClause[cur.attempt]) { clauses.push(attemptClause[cur.attempt]); }
+    if (cur.working) { clauses.push("I'm working alongside"); }
+    if (triedClause[cur.tried]) { clauses.push(triedClause[cur.tried]); }
+    var question = starter.lead + ' ' + starter.word + '?';
+    function assemble(list) {
+      var tail = '';
+      if (list.length === 1) { tail = list[0]; }
+      if (list.length === 2) { tail = list[0] + ', and ' + list[1]; }
+      if (list.length === 3) { tail = list[0] + ', ' + list[1] + ', and ' + list[2]; }
+      if (!tail) { return question; }
+      return question + ' ' + tail.charAt(0).toUpperCase() + tail.slice(1) + '.';
+    }
+    var message = assemble(clauses);
+    while (message.length > 160 && clauses.length > 0) {
+      clauses = clauses.slice(0, clauses.length - 1);
+      message = assemble(clauses);
+    }
+
+    function face(on) {
+      return {
+        pressed: on ? 'true' : 'false',
+        bg: on ? accentTint : '#FFFFFF',
+        border: on ? accent : '#E6DFD3',
+        shadow: on ? ('inset 0 0 0 1px ' + accent + ', 0 4px 0 ' + accentTintEdge) : '0 4px 0 #E3DCCF',
+        ink: on ? accentEdge : '#2B2B2B'
+      };
+    }
+    var whereChips = [
+      { id: 'first', label: 'First attempt' },
+      { id: 'second', label: 'Second attempt' },
+      { id: 'third', label: 'Third or more' },
+      { id: 'working', label: 'Working alongside' }
+    ].map(function (c) {
+      var on = c.id === 'working' ? cur.working : cur.attempt === c.id;
+      var f = face(on);
+      f.label = c.label;
+      f.pick = function () {
+        if (c.id === 'working') { set({ working: !cur.working }); }
+        else { set({ attempt: on ? '' : c.id }); }
+      };
+      return f;
+    });
+    var triedChips = [
+      { id: 'rest', label: 'Taking a break' },
+      { id: 'prep', label: 'Started interview prep' },
+      { id: 'none', label: 'Nothing yet' }
+    ].map(function (c) {
+      var on = cur.tried === c.id;
+      var f = face(on);
+      f.label = c.label;
+      f.pick = function () { set({ tried: on ? '' : c.id }); };
+      return f;
+    });
+
+    return {
+      accent: accent,
+      accentEdge: accentEdge,
+      accentTint: accentTint,
+      qLead: starter.lead,
+      qWord: starter.word,
+      whereChips: whereChips,
+      triedChips: triedChips,
+      message: message,
+      count: String(message.length),
+      another: function () { set({ q: (cur.q + 1) % starters.length }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

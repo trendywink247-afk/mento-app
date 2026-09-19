@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Journal, write today's entry</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+textarea{font:inherit;color:inherit}
+textarea::placeholder{color:#5E5A53;opacity:1}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.noBar{scrollbar-width:none}.noBar::-webkit-scrollbar{display:none}
+.lined{background-image:repeating-linear-gradient(to bottom,transparent 0,transparent 31px,#E6DFD3 31px,#E6DFD3 32px);background-attachment:local}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 24px 24px; display: flex; flex-direction: column; gap: 14px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div style="height: 44px; display: flex; align-items: center; gap: 12px;">
+<a class="key" href="A08_Journals.dc.html" aria-label="Back to your Journal" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: {{accent}};">Today</span>
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 800;">Wednesday, 17 September</h1>
+</div>
+</div>
+
+<img class="breathe" src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="Your cat companion sitting on the top edge of your page" style="position: absolute; right: 46px; top: 174px; width: 56px; height: 80px; object-fit: contain; transform-origin: 50% 100%; z-index: 3;">
+
+<div class="arrDeep" style="flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; gap: 12px;">
+
+<section class="arr a1" aria-label="A gentle prompt" style="display: flex; flex-direction: column;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53; padding-bottom: 4px;">A gentle prompt, if you want one</span>
+<div style="min-height: 56px; padding-right: 24px; padding-bottom: 8px; display: flex; flex-direction: column;">
+<sc-if value="{{ pr0 }}" hint-placeholder-val="{{ true }}">
+<p class="arr" style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 700; color: {{accent}}; text-wrap: pretty;">What is one thing that went right today?</p>
+</sc-if>
+<sc-if value="{{ pr1 }}" hint-placeholder-val="{{ false }}">
+<p class="arr" style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 700; color: {{accent}}; text-wrap: pretty;">What would you tell a friend who had your day?</p>
+</sc-if>
+<sc-if value="{{ pr2 }}" hint-placeholder-val="{{ false }}">
+<p class="arr" style="margin: 0; font-size: 20px; line-height: 28px; font-weight: 700; color: {{accent}}; text-wrap: pretty;">What can you set down before you sleep?</p>
+</sc-if>
+</div>
+<div style="display: flex; padding-bottom: 3px;">
+<button class="key" onClick="{{ nextPrompt }}" style="height: 44px; padding: 0 16px 0 12px; display: flex; align-items: center; gap: 8px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #E3DCCF; font-size: 14px; line-height: 20px; font-weight: 700; color: #2B2B2B;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a8 8 0 0 1 14-4l2 2"></path><path d="M20 4v4h-4"></path><path d="M20 15a8 8 0 0 1-14 4l-2-2"></path><path d="M4 20v-4h4"></path></svg>
+<span>Another prompt</span>
+</button>
+</div>
+</section>
+
+<article class="arr a2" style="position: relative; z-index: 1; flex: 1 1 0; min-height: 0; overflow: hidden; box-sizing: border-box; padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<div aria-hidden="true" style="position: absolute; left: 34px; top: 0; bottom: 0; width: 1px; background: {{accentTintEdge}};"></div>
+<label for="a28-entry" style="position: relative; padding-left: 30px; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">Your entry · a line is enough</label>
+<textarea id="a28-entry" class="lined noBar" placeholder="Start anywhere." style="position: relative; flex: 1 1 0; min-height: 0; width: 100%; box-sizing: border-box; padding: 0 0 0 30px; resize: none; background-color: transparent; border: 0; outline: none; font-size: 17px; line-height: 32px; color: #2B2B2B;">Tried the two-minute reset before the mock. Got through section one without blanking.</textarea>
+</article>
+
+<section class="arr a3" aria-label="Mood" style="display: flex; flex-direction: column; gap: 8px;">
+<span id="a28-mood" style="padding: 0 4px; font-size: 14px; line-height: 20px; font-weight: 700;">How is today sitting? <span style="font-weight: 400; color: #5E5A53;">One tap is enough.</span></span>
+<div role="group" aria-labelledby="a28-mood" style="display: flex; gap: 6px; padding-bottom: 3px;">
+<button class="key" aria-pressed="{{ m0On }}" onClick="{{ pick0 }}" style="flex: 1 1 0; height: 46px; box-sizing: border-box; border-radius: 14px; font-size: 13px; line-height: 18px; font-weight: 700; background: {{ m0Bg }}; color: {{ m0Fg }}; border: 1px solid {{ m0Bd }}; box-shadow: 0 3px 0 {{ m0Sh }};">Heavy</button>
+<button class="key" aria-pressed="{{ m1On }}" onClick="{{ pick1 }}" style="flex: 1 1 0; height: 46px; box-sizing: border-box; border-radius: 14px; font-size: 13px; line-height: 18px; font-weight: 700; background: {{ m1Bg }}; color: {{ m1Fg }}; border: 1px solid {{ m1Bd }}; box-shadow: 0 3px 0 {{ m1Sh }};">Low</button>
+<button class="key" aria-pressed="{{ m2On }}" onClick="{{ pick2 }}" style="flex: 1 1 0; height: 46px; box-sizing: border-box; border-radius: 14px; font-size: 13px; line-height: 18px; font-weight: 700; background: {{ m2Bg }}; color: {{ m2Fg }}; border: 1px solid {{ m2Bd }}; box-shadow: 0 3px 0 {{ m2Sh }};">Okay</button>
+<button class="key" aria-pressed="{{ m3On }}" onClick="{{ pick3 }}" style="flex: 1 1 0; height: 46px; box-sizing: border-box; border-radius: 14px; font-size: 13px; line-height: 18px; font-weight: 700; background: {{ m3Bg }}; color: {{ m3Fg }}; border: 1px solid {{ m3Bd }}; box-shadow: 0 3px 0 {{ m3Sh }};">Good</button>
+<button class="key" aria-pressed="{{ m4On }}" onClick="{{ pick4 }}" style="flex: 1 1 0; height: 46px; box-sizing: border-box; border-radius: 14px; font-size: 13px; line-height: 18px; font-weight: 700; background: {{ m4Bg }}; color: {{ m4Fg }}; border: 1px solid {{ m4Bd }}; box-shadow: 0 3px 0 {{ m4Sh }};">Light</button>
+</div>
+</section>
+
+<div class="arr a4" style="display: flex; flex-direction: column; gap: 12px; padding-top: 2px;">
+<a class="key" href="A08_Journals.dc.html" style="height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Save to today</span>
+</a>
+<p style="margin: 0; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; line-height: 18px; color: #5E5A53;">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Private. Only on your account.</span>
+</p>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var accentEdge = this.mix(accent, 0, 0.22);
+    var accentTint = this.mix(accent, 255, 0.8);
+    var accentTintEdge = this.mix(accent, 255, 0.6);
+    var st = this.state || {};
+    var p = st.p || 0;
+    var mood = (typeof st.mood === 'number') ? st.mood : -1;
+    var vals = {
+      accent: accent,
+      accentEdge: accentEdge,
+      accentTint: accentTint,
+      accentTintEdge: accentTintEdge,
+      pr0: p === 0,
+      pr1: p === 1,
+      pr2: p === 2,
+      nextPrompt: function () { self.setState({ p: (p + 1) % 3 }); }
+    };
+    function picker(i) {
+      return function () { self.setState({ mood: mood === i ? -1 : i }); };
+    }
+    for (var k = 0; k < 5; k++) {
+      var on = (mood === k);
+      vals['m' + k + 'On'] = on;
+      vals['m' + k + 'Bg'] = on ? accentTint : '#FBF8F2';
+      vals['m' + k + 'Fg'] = on ? accentEdge : '#2B2B2B';
+      vals['m' + k + 'Bd'] = on ? accent : '#E6DFD3';
+      vals['m' + k + 'Sh'] = on ? accentTintEdge : '#D9D1C2';
+      vals['pick' + k] = picker(k);
+    }
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

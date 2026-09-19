@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Request sent, a letter on its way</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#EFE9DF;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+@keyframes settle{0%{transform:translateY(-22px) rotate(-5deg);opacity:0}60%{opacity:1}100%{transform:translateY(0) rotate(-1.2deg);opacity:1}}
+@keyframes ripple{0%{transform:scale(1);opacity:0}12%{opacity:0.7}100%{transform:scale(2.4);opacity:0}}
+@keyframes fly{0%{transform:translate(0,0);opacity:0}7%{transform:translate(16px,-8px);opacity:1}17.5%{transform:translate(43px,-17px);opacity:1}35%{transform:translate(94px,-22px);opacity:1}52.5%{transform:translate(145px,-17px);opacity:1}63%{transform:translate(172px,-8px);opacity:1}70%{transform:translate(188px,0);opacity:0}100%{transform:translate(188px,0);opacity:0}}
+@media (prefers-reduced-motion: no-preference){
+.settle{animation:settle 0.8s cubic-bezier(0.2,0.7,0.2,1) 0.25s both}
+.ripple{animation:ripple 5.2s cubic-bezier(0.2,0.6,0.3,1) 1.1s infinite}
+.ripple2{animation:ripple 5.2s cubic-bezier(0.2,0.6,0.3,1) 3.7s infinite}
+.fly{animation:fly 7.8s linear 1.2s infinite}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 24px 28px; display: flex; flex-direction: column; gap: 12px; background: #EFE9DF; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div style="display: flex; align-items: center; justify-content: space-between;">
+<a class="key" href="A19_Connecting.dc.html" aria-label="Back" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<a class="key" href="A11_Feedback.dc.html" aria-label="Send feedback about this screen" style="height: 44px; padding: 0 14px; display: flex; align-items: center; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #E3DCCF; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+<span>Feedback</span>
+</a>
+</div>
+
+<h1 class="arr a1" style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 800;">Your question is<br>on its <span style="color: {{accent}};">way</span></h1>
+
+<div style="position: relative; padding-top: 84px;">
+<svg aria-hidden="true" width="192" height="40" viewBox="0 0 192 40" fill="none" style="position: absolute; left: 76px; top: 30px;"><path d="M2 34 C 50 4, 142 4, 190 34" stroke="{{accent}}" stroke-opacity="0.5" stroke-width="1.75" stroke-linecap="round" stroke-dasharray="2 8"></path></svg>
+<span class="fly" aria-hidden="true" style="position: absolute; left: 64px; top: 50px; width: 28px; height: 28px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 2px 0 #E3DCCF; color: {{accent}}; transform: translate(94px,-22px); z-index: 3;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"></rect><path d="M3.5 7.5l8.5 6 8.5-6"></path></svg>
+</span>
+<img class="breathe" src="/_blob/c5932cbe7933051e63ca71be87e0d6f1" alt="Your cat companion, sitting on the note it just sent" style="position: absolute; left: 10px; top: 2px; width: 62px; height: 88px; object-fit: contain; transform-origin: 50% 100%; z-index: 3;">
+<span style="position: absolute; right: 14px; top: 54px; width: 52px; height: 52px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD; border: 3px solid #EFE9DF; z-index: 3;">
+<img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="Steady Cedar's owl companion" style="width: 44px; height: 44px; object-fit: contain;">
+</span>
+<div aria-hidden="true" style="position: absolute; left: 6px; right: 6px; top: 88px; bottom: -2px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; transform: rotate(1.6deg);"></div>
+<div class="settle" style="position: relative; z-index: 2; box-sizing: border-box; padding: 16px; display: flex; flex-direction: column; gap: 8px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF; transform: rotate(-1.2deg);">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">Your question, to Steady Cedar</span>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">“I keep freezing in mock tests even when I know the answers. How did you get past it?”</p>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+<span style="display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 18px; color: #5E5A53;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#38734B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Sent just now · private</span>
+</span>
+<span aria-hidden="true" style="position: relative; width: 40px; height: 40px; flex-shrink: 0;">
+<span class="ripple" style="position: absolute; inset: 0; box-sizing: border-box; border-radius: 999px; border: 1.5px solid {{accent}}; opacity: 0;"></span>
+<span class="ripple2" style="position: absolute; inset: 0; box-sizing: border-box; border-radius: 999px; border: 1.5px solid {{accent}}; opacity: 0;"></span>
+<span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{accent}}; box-shadow: 0 3px 0 {{accentEdge}}; color: #FFFFFF; font-size: 20px; line-height: 24px; font-weight: 800;">m</span>
+</span>
+</div>
+</div>
+</div>
+
+<div class="arr a4" style="box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<div role="img" aria-label="Step one of three. Sent is done. Seen and Replying come next." style="display: flex; flex-direction: column; gap: 4px;">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span style="width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{accent}}; color: #FFFFFF;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+<span style="flex-grow: 1; height: 0; border-top: 2px dashed #CFC6B5;"></span>
+<span style="width: 28px; height: 28px; flex-shrink: 0; box-sizing: border-box; border-radius: 999px; background: #FFFFFF; border: 2px solid #CFC6B5;"></span>
+<span style="flex-grow: 1; height: 0; border-top: 2px dashed #CFC6B5;"></span>
+<span style="width: 28px; height: 28px; flex-shrink: 0; box-sizing: border-box; border-radius: 999px; background: #FFFFFF; border: 2px solid #CFC6B5;"></span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 14px; line-height: 20px;">
+<span style="font-weight: 700;">Sent</span>
+<span style="text-align: center; color: #5E5A53;">Seen</span>
+<span style="text-align: right; color: #5E5A53;">Replying</span>
+</div>
+</div>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #5E5A53;">One question goes to one mentor at a time. Steady Cedar replies when they are free, and we will notify you.</p>
+</div>
+
+<div class="arr a5" style="display: flex; flex-direction: column; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 700; color: #5E5A53;">Meanwhile</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+<a class="key" href="A08_Journals.dc.html" style="min-height: 64px; box-sizing: border-box; padding: 10px 12px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"></path><path d="M9 4v16"></path></svg>
+</span>
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Write in your journal</span>
+</a>
+<a class="key" href="A07_Path.dc.html" style="min-height: 64px; box-sizing: border-box; padding: 10px 12px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+</span>
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Read a warm-up prompt</span>
+</a>
+</div>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div class="arr a6" style="display: flex; flex-direction: column;">
+<a class="key" href="A06_Chats.dc.html" style="height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">
+<span>Go to My Chats</span>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6)
+    };
+  }
+}
+</script>
+</body>
+</html>

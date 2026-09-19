@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — transition: sheets rise, pages go deeper</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.key:active{transform:translateY(3px)}
+.world{transition:transform 350ms cubic-bezier(0.22,1,0.36,1);will-change:transform}
+.fade{transition:opacity 350ms cubic-bezier(0.22,1,0.36,1)}
+.exitFast{transition:opacity 200ms cubic-bezier(0.4,0,1,1)}
+.dual{transition:transform 500ms cubic-bezier(0.22,1,0.36,1),opacity 200ms linear;will-change:transform,opacity}
+.item{transition:transform 350ms cubic-bezier(0.22,1,0.36,1),opacity 350ms cubic-bezier(0.22,1,0.36,1);will-change:transform,opacity}
+.perch{transition:transform 500ms cubic-bezier(0.22,1,0.36,1);will-change:transform}
+.sky{transition:transform 700ms cubic-bezier(0.22,1,0.36,1);will-change:transform}
+@keyframes dot{0%,60%,100%{transform:translateY(0);opacity:0.35}30%{transform:translateY(-4px);opacity:1}}
+@keyframes lean{from{transform:scale(1) rotate(0deg)}to{transform:scale(1.04) rotate(-3.5deg)}}
+@keyframes presence{from{transform:scale(1);opacity:0.4}to{transform:scale(1.14);opacity:0}}
+@keyframes owl{from{transform:scale(1) rotate(-1.5deg)}to{transform:scale(1.05) rotate(1.5deg)}}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.2,0.7,0.2,1)}
+.dot{animation:dot 1.4s ease-in-out infinite}.d2{animation-delay:0.18s}.d3{animation-delay:0.36s}
+.lean{animation:lean 5.2s ease-in-out infinite alternate}
+.presence{animation:presence 2.6s cubic-bezier(0.2,0.7,0.2,1) infinite}
+.owl{animation:owl 5.2s ease-in-out infinite alternate}
+}
+@media (prefers-reduced-motion: reduce){
+.world{transition:none !important;transform:none !important}
+.dual{transition:opacity 150ms linear !important;transition-delay:0ms !important;transform:none !important}
+.item{transition:opacity 150ms linear !important;transition-delay:0ms !important;transform:none !important}
+.fade{transition:opacity 150ms linear !important;transition-delay:0ms !important}
+.exitFast{transition:opacity 150ms linear !important;transition-delay:0ms !important}
+.perch{transition:none !important}
+.sky{transition:none !important;transform:none !important}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;">
+<div class="sky" style="position: absolute; left: -260px; top: -250px; width: 680px; height: 540px; border-radius: 50%; background: radial-gradient(closest-side, {{ sky1 }}, {{ sky1Soft }} 55%, rgba(244,239,230,0)); transform: {{ skyTfA }};"></div>
+<div class="sky" style="position: absolute; right: -330px; top: 150px; width: 620px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(107,76,140,0.18), rgba(107,76,140,0.06) 55%, rgba(244,239,230,0)); transform: {{ skyTfB }};"></div>
+<div class="sky" style="position: absolute; left: -250px; top: 430px; width: 580px; height: 420px; border-radius: 50%; background: radial-gradient(closest-side, rgba(70,112,84,0.18), rgba(70,112,84,0.06) 55%, rgba(244,239,230,0)); transform: {{ skyTfC }};"></div>
+</div>
+
+<div aria-hidden="true" class="fade" style="position: absolute; inset: 0; z-index: 0; background: #2B2B2B; opacity: {{ backdropOp }}; transition-duration: {{ scrimDur }}; pointer-events: none;"></div>
+
+<div class="world" style="position: absolute; inset: 0; z-index: 1; overflow: hidden; border-radius: 28px; background: #F4EFE6; transform: {{ worldTf }};">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;">
+<div class="sky" style="position: absolute; left: -260px; top: -250px; width: 680px; height: 540px; border-radius: 50%; background: radial-gradient(closest-side, {{ sky1 }}, {{ sky1Soft }} 55%, rgba(244,239,230,0)); transform: {{ skyTfA }};"></div>
+<div class="sky" style="position: absolute; right: -330px; top: 150px; width: 620px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(107,76,140,0.18), rgba(107,76,140,0.06) 55%, rgba(244,239,230,0)); transform: {{ skyTfB }};"></div>
+<div class="sky" style="position: absolute; left: -250px; top: 430px; width: 580px; height: 420px; border-radius: 50%; background: radial-gradient(closest-side, rgba(70,112,84,0.18), rgba(70,112,84,0.06) 55%, rgba(244,239,230,0)); transform: {{ skyTfC }};"></div>
+</div>
+
+<div class="dual" aria-hidden="{{ chatHidden }}" style="position: absolute; inset: 0; z-index: 1; display: flex; flex-direction: column; opacity: {{ chatOp }}; transform: {{ chatTf }}; transition-duration: {{ chatDur }}; transition-delay: {{ chatDelay }}; transition-timing-function: {{ chatEase }}; pointer-events: {{ chatPe }};">
+
+<header style="position: relative; z-index: 3; flex-shrink: 0; box-sizing: border-box; padding: 44px 12px 0;">
+<div style="position: relative; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<div style="display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 4px;">
+<button class="key" aria-label="Leave conversation" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; border-radius: 999px;">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</button>
+<button aria-label="View Steady Cedar's profile" onClick="{{ openProfile }}" style="flex-grow: 1; min-width: 0; min-height: 56px; display: flex; align-items: center; gap: 12px; text-align: left; background: transparent; border: 0; border-radius: 14px;">
+<span style="position: relative; width: 56px; height: 56px; flex-shrink: 0;">
+<span aria-hidden="true" class="presence" style="position: absolute; inset: -4px; border-radius: 999px; border: 2px solid {{accent}}; opacity: 0.35;"></span>
+</span>
+<span style="min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 19px; line-height: 24px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Steady Cedar</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Mentor · here now · UPSC community</span>
+</span>
+</button>
+<button class="key" aria-label="Conversation options" onClick="{{ openSheet }}" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #D9D1C2;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="19" cy="12" r="1.7"></circle></svg>
+</button>
+</div>
+<div style="box-sizing: border-box; height: 42px; padding: 0 12px; display: flex; align-items: center; gap: 8px; background: #FBF8F2; border-top: 1px solid #E6DFD3; border-radius: 0 0 21px 21px; white-space: nowrap; overflow: hidden;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">In this chat</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 12px; line-height: 16px; font-weight: 700;">Exam stress</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"></path></svg>
+<span>Saved 2</span>
+</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 0 1 0 8h-1"></path><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 0 1 0-8h1"></path></svg>
+<span>In touch</span>
+</span>
+</div>
+</div>
+</header>
+
+<main style="flex-grow: 1; min-height: 0; position: relative; z-index: 1; box-sizing: border-box; padding: 12px 16px 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; overflow: hidden;">
+<div style="align-self: center; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">Today</div>
+<div style="align-self: flex-end; max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">Today felt heavy. Mock results came out and I couldn't tell anyone at home.</div>
+<div style="align-self: flex-start; max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px;">I'm glad you said it here. Heavy is allowed. What's sitting on you the most right now?</div>
+<div style="align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+<div style="max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">That I've given three years to this and I still freeze in the exam hall.</div>
+<span style="padding-right: 6px; font-size: 12px; line-height: 16px; color: #5E5A53;">Read</span>
+</div>
+<div style="align-self: flex-start; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
+<div style="max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px;">Freezing doesn't erase three years of work. Can we look at the minute just before it happens?</div>
+<button class="key" style="height: 44px; box-sizing: border-box; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 6px; background: {{accentTint}}; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentTintEdge}}; color: {{accent}}; font-size: 14px; line-height: 20px; font-weight: 700;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"></path></svg>
+<span>Save to Mentor Notes</span>
+</button>
+</div>
+<div style="align-self: flex-start; display: flex; align-items: center; gap: 8px;">
+<span style="height: 28px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 2px 0 #E3DCCF;">
+<span class="dot" style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53;"></span>
+<span class="dot d2" style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53; opacity: 0.6;"></span>
+<span class="dot d3" style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53; opacity: 0.35;"></span>
+</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Steady Cedar is typing…</span>
+</div>
+</main>
+
+<img class="lean" src="/_blob/ca61e83f28c39e94950642c2a809833d" alt="Your cat companion peeking over the message field" style="position: absolute; right: 24px; bottom: 96px; width: 76px; height: 108px; object-fit: contain; transform-origin: 50% 100%; z-index: 2;">
+
+<footer style="position: relative; z-index: 3; flex-shrink: 0; box-sizing: border-box; padding: 8px 16px 6px; display: flex; flex-direction: column; gap: 8px; background: #F4EFE6; border-top: 1px solid #E6DFD3;">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 24px;">
+<span role="img" aria-label="Message allowance: 7 of 10 left" style="flex-shrink: 0; display: flex; align-items: center; gap: 2px;">
+<span style="box-sizing: border-box; padding: 3px; display: flex; gap: 3px; background: #FBF8F2; border: 1.5px solid #CFC6B5; border-radius: 7px;">
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+</span>
+<span style="width: 3px; height: 8px; border-radius: 0 2px 2px 0; background: #CFC6B5;"></span>
+</span>
+<span style="font-size: 13px; line-height: 16px; color: #5E5A53;">7 of 10 messages left today · up to 3 in a row</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<div style="flex-grow: 1; min-width: 0; height: 52px; box-sizing: border-box; padding: 0 16px; display: flex; align-items: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 16px; line-height: 24px; color: #5E5A53;">Type a message…</div>
+<button class="key" aria-label="Send message" style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentEdge}};">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14-7-5 15-3-6z"></path></svg>
+</button>
+</div>
+<p style="margin: 0; padding-top: 2px; text-align: center; font-size: 12px; line-height: 16px; color: #5E5A53;">Prototype: tap the mentor's name, or the three dots.</p>
+</footer>
+</div>
+
+<div class="dual" aria-hidden="{{ profHidden }}" style="position: absolute; inset: 0; z-index: 2; opacity: {{ profOp }}; transform: {{ profTf }}; transition-duration: {{ profDur }}; transition-delay: {{ profDelay }}; transition-timing-function: {{ profEase }}; pointer-events: {{ profPe }};">
+<div class="exitFast" style="position: absolute; inset: 0; box-sizing: border-box; padding: 48px 24px 28px; display: flex; flex-direction: column; gap: 16px; opacity: {{ pcOp }}; transition-duration: {{ pcDur }};">
+
+<div class="item" style="display: flex; opacity: {{ pOp }}; transform: {{ pTf }}; transition-delay: {{ pd0 }};">
+<button class="key" aria-label="Back to the conversation" onClick="{{ back }}" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</button>
+</div>
+
+<div aria-hidden="true" style="position: relative; height: 120px; flex-shrink: 0;">
+<div class="item" style="position: absolute; left: 50%; top: 50%; width: 184px; height: 184px; margin: -92px 0 0 -92px; border-radius: 999px; background: radial-gradient(closest-side, {{accentTint}}, {{accentTint}} 62%, rgba(244,239,230,0)); opacity: {{ pOp }}; transform: {{ haloTf }}; transition-delay: {{ pdHalo }};"></div>
+</div>
+
+<div class="item" style="display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; opacity: {{ pOp }}; transform: {{ pTf }}; transition-delay: {{ pd1 }};">
+<h1 style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 800;">Steady <span style="color: {{accent}};">Cedar</span></h1>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 14px; line-height: 20px; color: #5E5A53;">
+<span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 999px; background: #38734B;"></span>
+<span>Mentor · here now · UPSC community</span>
+</div>
+</div>
+
+<div class="item" style="opacity: {{ pOp }}; transform: {{ pTf }}; transition-delay: {{ pd2 }};">
+<div style="box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">In their words</span>
+<p style="margin: 0; font-size: 17px; line-height: 26px; font-weight: 600;">I sat the exam three times. I mostly just listen.</p>
+</div>
+</div>
+
+<div class="item" style="display: flex; flex-direction: column; gap: 8px; opacity: {{ pOp }}; transform: {{ pTf }}; transition-delay: {{ pd3 }};">
+<span style="padding: 0 4px; font-size: 14px; line-height: 20px; font-weight: 700;">Talks about</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px;">
+<span style="height: 32px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 14px; line-height: 20px; font-weight: 700;">Exam stress</span>
+<span style="height: 32px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 14px; line-height: 20px; font-weight: 700;">The long middle</span>
+<span style="height: 32px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; background: #E8DFF0; color: #4D3765; font-size: 14px; line-height: 20px; font-weight: 700;">Family pressure</span>
+<span style="height: 32px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; border-radius: 999px; background: #DCE8F2; color: #2A4F69; font-size: 14px; line-height: 20px; font-weight: 700;">Starting again</span>
+</div>
+</div>
+
+<div class="item" style="opacity: {{ pOp }}; transform: {{ pTf }}; transition-delay: {{ pd4 }};">
+<div style="box-sizing: border-box; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a8 8 0 0 1 14-4l2 2"></path><path d="M20 4v4h-4"></path><path d="M20 15a8 8 0 0 1-14 4l-2-2"></path><path d="M4 20v-4h4"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column; gap: 2px;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Mentor names change every day</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Ask to stay in touch and they stay reachable under any name. They can say yes or not now.</span>
+</span>
+</div>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div class="item" style="display: flex; flex-direction: column; gap: 10px; padding-bottom: 4px; opacity: {{ pOp }}; transform: {{ pTf }}; transition-delay: {{ pd5 }};">
+<button class="key" style="height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 18px; line-height: 24px; font-weight: 700;">
+<span style="display: flex; color: {{accent}};">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 0 1 0 8h-1"></path><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 0 1 0-8h1"></path></svg>
+</span>
+<span>Stay in touch</span>
+</button>
+<p style="margin: 0; text-align: center; font-size: 13px; line-height: 18px; color: #5E5A53;">A real person, not a therapist.</p>
+</div>
+</div>
+</div>
+
+<div class="perch" style="position: absolute; left: 135px; top: 108px; z-index: 3; width: 120px; height: 120px; pointer-events: none; transform: {{ avTf }}; transition-delay: {{ avDelay }};">
+<span style="position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD; border: 4px solid #FFFFFF;">
+<img class="owl" src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="Steady Cedar's owl companion" style="width: 106px; height: 106px; object-fit: contain; transform-origin: 50% 100%;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 1px; bottom: 3px; width: 30px; height: 30px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 5px solid #FFFFFF;"></span>
+</div>
+
+</div>
+
+<button class="fade" aria-label="Close options" onClick="{{ closeSheet }}" style="position: absolute; inset: 0; z-index: 2; width: 390px; height: 844px; background: #2B2B2B; border: 0; border-radius: 0; cursor: default; opacity: {{ scrimOp }}; transition-duration: {{ scrimDur }}; pointer-events: {{ sheetPe }};"></button>
+
+<div class="dual" role="dialog" aria-label="Conversation options" aria-hidden="{{ sheetHidden }}" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; box-sizing: border-box; padding: 0 16px 32px; display: flex; flex-direction: column; gap: 10px; background: #F4EFE6; border-radius: 28px 28px 0 0; box-shadow: 0 -10px 30px rgba(43,43,43,0.18); opacity: {{ sheetOp }}; transform: {{ sheetTf }}; transition-duration: {{ sheetDur }}; transition-delay: {{ sheetDelay }}; transition-timing-function: {{ sheetEase }}; pointer-events: {{ sheetPe }};">
+
+<button aria-label="Close options" onClick="{{ closeSheet }}" style="align-self: center; width: 96px; height: 44px; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; box-sizing: border-box; background: transparent; border: 0;">
+<span aria-hidden="true" style="width: 44px; height: 5px; border-radius: 999px; background: #CFC6B5;"></span>
+</button>
+
+<div class="item" style="display: flex; align-items: center; gap: 12px; padding: 0 4px 2px; opacity: {{ rOp }}; transform: {{ rTf }}; transition-delay: {{ rd0 }};">
+<div style="flex-grow: 1; display: flex; flex-direction: column;">
+<h2 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 700;">Conversation options</h2>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">For this conversation only.</span>
+</div>
+<button class="key" aria-label="Close options" onClick="{{ closeSheet }}" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #E3DCCF;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+</button>
+</div>
+
+<div class="item" style="display: flex; flex-direction: column; opacity: {{ rOp }}; transform: {{ rTf }}; transition-delay: {{ rd1 }};">
+<button class="key" style="min-height: 58px; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Lock with a PIN</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Four digits keep this chat closed.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+
+<div class="item" style="display: flex; flex-direction: column; opacity: {{ rOp }}; transform: {{ rTf }}; transition-delay: {{ rd2 }};">
+<button class="key" style="min-height: 58px; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE8F2; color: #2A4F69;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l16 16"></path><path d="M10 6.2A9.6 9.6 0 0 1 12 6c5 0 8.4 4 9.5 6a13 13 0 0 1-2.4 3.2"></path><path d="M6.4 7.8C4.4 9.1 3.1 10.9 2.5 12c1.1 2 4.5 6 9.5 6 1.3 0 2.5-.3 3.6-.7"></path><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Away Mask</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Cover the chat if someone walks by.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+
+<div class="item" style="display: flex; flex-direction: column; opacity: {{ rOp }}; transform: {{ rTf }}; transition-delay: {{ rd3 }};">
+<button class="key" style="min-height: 58px; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Quiet Pause</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Step away for a while. Nothing is lost.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+
+<div class="item" style="display: flex; flex-direction: column; opacity: {{ rOp }}; transform: {{ rTf }}; transition-delay: {{ rd4 }};">
+<button class="key" style="min-height: 58px; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Save to Journal</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Keep the guidance that matters.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+
+<div class="item" style="display: flex; flex-direction: column; opacity: {{ rOp }}; transform: {{ rTf }}; transition-delay: {{ rd5 }};">
+<button class="key" style="min-height: 58px; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #EFE9DF; color: #2B2B2B;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"></path><path d="M5 4h12l-2 4 2 4H5"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Report or block</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">A person reads every report.</span>
+</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5E5A53" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><path d="M9 5l7 7-7 7"></path></svg>
+</button>
+</div>
+
+<div class="item" style="display: flex; flex-direction: column; opacity: {{ rOp }}; transform: {{ rTf }}; transition-delay: {{ rd6 }};">
+<button class="key" style="min-height: 58px; box-sizing: border-box; padding: 8px 12px; display: flex; align-items: center; gap: 12px; text-align: left; background: #F8DEDC; border: 1px solid #EBC4C0; border-radius: 14px; box-shadow: 0 4px 0 #E2B9B5; color: #8E2F2A;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #FFFFFF; color: #8E2F2A;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M9 9l6 6"></path><path d="M15 9l-6 6"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">End conversation</span>
+<span style="font-size: 13px; line-height: 18px; color: #8E2F2A;">Close it, or wipe it from both sides.</span>
+</span>
+</button>
+</div>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  rgb(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { h = 'A2533A'; }
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+  rgba(hex, a) {
+    var c = this.rgb(hex);
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  }
+  mix(hex, to, t) {
+    var c = this.rgb(hex);
+    var out = '#';
+    for (var i = 0; i < 3; i++) { out += ('0' + Math.round(c[i] + (to - c[i]) * t).toString(16)).slice(-2); }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+
+    /* One enum, so the two hand-overs can never overlap: 'chat' | 'sheet' | 'profile'. */
+    var view = (this.state && this.state.view) || 'chat';
+    var sheet = view === 'sheet';
+    var prof = view === 'profile';
+    var chat = view === 'chat';
+
+    var ARRIVE = 'cubic-bezier(0.22,1,0.36,1)';
+    var LEAVE = 'cubic-bezier(0.4,0,1,1)';
+
+    var vals = {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6),
+      sky1: this.rgba(accent, 0.30),
+      sky1Soft: this.rgba(accent, 0.10),
+
+      /* Going deeper drifts the sky the opposite way at a fraction of the distance (700ms). */
+      skyTfA: prof ? 'translateX(-16px)' : 'translateX(0px)',
+      skyTfB: prof ? 'translateX(-24px)' : 'translateX(0px)',
+      skyTfC: prof ? 'translateX(-10px)' : 'translateX(0px)',
+
+      /* (a) SHEET — the whole world settles back, a scrim dims it, the sheet rises. */
+      worldTf: sheet ? 'translateY(8px) scale(0.96)' : 'translateY(0px) scale(1)',
+      backdropOp: sheet ? 1 : 0,
+      scrimOp: sheet ? 0.35 : 0,
+      scrimDur: sheet ? '350ms' : '220ms',
+      sheetTf: sheet ? 'translateY(0%)' : 'translateY(100%)',
+      /* opacity is only a visibility switch (and the whole hand-over under reduced motion) */
+      sheetOp: sheet ? 1 : 0,
+      sheetDur: sheet ? '500ms, 1ms' : '220ms, 1ms',
+      sheetDelay: sheet ? '0ms, 0ms' : '0ms, 220ms',
+      sheetEase: sheet ? (ARRIVE + ', linear') : (LEAVE + ', linear'),
+      sheetPe: sheet ? 'auto' : 'none',
+      sheetHidden: !sheet,
+      rOp: sheet ? 1 : 0,
+      rTf: sheet ? 'translateY(0px)' : 'translateY(16px)',
+
+      /* (b) GOING DEEPER — chat drifts left 30% and is gone in 200ms; the page arrives from the right edge. */
+      chatTf: prof ? 'translateX(-30%)' : 'translateX(0%)',
+      chatOp: prof ? 0 : 1,
+      chatDur: prof ? '500ms, 200ms' : '500ms, 350ms',
+      chatDelay: prof ? '0ms, 0ms' : '0ms, 200ms',
+      chatEase: prof ? (ARRIVE + ', ' + LEAVE) : (ARRIVE + ', ' + ARRIVE),
+      chatPe: chat ? 'auto' : 'none',
+      chatHidden: !chat,
+
+      profTf: prof ? 'translateX(0%)' : 'translateX(100%)',
+      profOp: prof ? 1 : 0,
+      profDur: prof ? '500ms, 1ms' : '350ms, 1ms',
+      profDelay: prof ? '0ms, 0ms' : '0ms, 350ms',
+      profEase: prof ? (ARRIVE + ', linear') : (LEAVE + ', linear'),
+      profPe: prof ? 'auto' : 'none',
+      profHidden: !prof,
+      /* content wrapper = the fast 200ms exit; on enter it opens at once and the items carry the arrival */
+      pcOp: prof ? 1 : 0,
+      pcDur: prof ? '0ms' : '200ms',
+      pOp: prof ? 1 : 0,
+      pTf: prof ? 'translateX(0px)' : 'translateX(24px)',
+      haloTf: prof ? 'scale(1)' : 'scale(0.6)',
+      pdHalo: prof ? '100ms' : '0ms',
+
+      /* Shared element: drawn at hero size (120px) so it stays sharp, scaled DOWN into the 56px header slot.
+         Header slot centre (95, 81); hero centre (195, 168). Leaves first on the way in. */
+      avTf: prof ? 'translate(0px, 0px) scale(1)' : 'translate(-100px, -87px) scale(0.4667)',
+      avDelay: prof ? '0ms' : '100ms',
+
+      openSheet: function () { if (chat) { self.setState({ view: 'sheet' }); } },
+      closeSheet: function () { if (sheet) { self.setState({ view: 'chat' }); } },
+      openProfile: function () { if (chat) { self.setState({ view: 'profile' }); } },
+      back: function () { if (prof) { self.setState({ view: 'chat' }); } }
+    };
+
+    /* Sheet rows: 70ms apart once the sheet is on its way; on close they ride down intact, then reset unseen. */
+    for (var r = 0; r < 7; r++) { vals['rd' + r] = sheet ? ((120 + 70 * r) + 'ms') : '220ms'; }
+    /* Profile: back key, then name, line, chips, note, key — 80ms apart, after the avatar has set off. */
+    var pDelays = [150, 200, 280, 360, 440, 520];
+    for (var p = 0; p < pDelays.length; p++) { vals['pd' + p] = prof ? (pDelays[p] + 'ms') : '0ms'; }
+
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

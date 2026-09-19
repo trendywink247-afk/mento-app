@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Press lab, feel each button intent</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+.vh{position:absolute;width:1px;height:1px;margin:0;opacity:0;pointer-events:none}
+
+/* The pillow key: a fixed hit box, a solid edge, and a face that is the only part that moves. */
+.key{position:relative;display:block;box-sizing:border-box;border:0;background:transparent;padding:0 0 4px;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.edge{position:absolute;left:0;right:0;top:4px;bottom:0}
+.face{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;transition:transform 220ms cubic-bezier(.22,1,.36,1)}
+.key:focus-visible{outline:none}
+.key:focus-visible .face,.pk:focus-visible + .key .face{outline:2px solid #2B2B2B;outline-offset:2px}
+
+/* Commit: full 4px, firm. Lands in 120ms, settles back in 220ms. */
+.commit:active .face{transform:translateY(4px);transition:transform 120ms cubic-bezier(.2,.7,.2,1)}
+/* Navigate: a 2px dip, quick in and quick out. */
+.nav .face{transition:transform 160ms cubic-bezier(.22,1,.36,1)}
+.nav:active .face{transform:translateY(2px);transition:transform 70ms cubic-bezier(.2,.7,.2,1)}
+/* Select and toggle: 2px dip on a 3px / 4px edge. */
+.pick{padding-bottom:3px}
+.pick .edge{top:3px}
+.pick:active .face,.tog:active .face{transform:translateY(2px);transition:transform 80ms cubic-bezier(.2,.7,.2,1)}
+/* Hold: 5px deep, sinks through the whole 900ms hold, lets go softly. */
+.hold{padding-bottom:5px}
+.hold .edge{top:5px}
+.hold .face{transition:transform 350ms cubic-bezier(.22,1,.36,1)}
+.hold:active .face{transform:translateY(5px);transition:transform 900ms cubic-bezier(.15,.5,.5,1)}
+/* Still: no rule at all. It does not move. */
+.still{cursor:default}
+
+/* Selection state */
+.tint{position:absolute;left:0;right:0;top:0;bottom:0;border-radius:999px;opacity:0;transition:opacity 200ms linear}
+.ring{position:absolute;left:-1px;right:-1px;top:-1px;bottom:-1px;border:2px solid currentColor;border-radius:999px;opacity:0;pointer-events:none}
+.swatch .ring{left:-5px;right:-5px;top:-5px;bottom:-5px}
+.txt{position:relative;color:#2B2B2B}
+.swCheck{opacity:0;transition:opacity 200ms linear}
+.pk:checked + .key .ring{opacity:1}
+.pk:checked + .key .tint{opacity:1}
+.pk:checked + .key .txt{color:inherit}
+.pk:checked + .key .swCheck{opacity:1}
+.grp:not(:has(.pk:checked)) .dflt .ring{opacity:1}
+.grp:not(:has(.pk:checked)) .dflt .tint{opacity:1}
+.grp:not(:has(.pk:checked)) .dflt .txt{color:inherit}
+.grp:not(:has(.pk:checked)) .dflt .swCheck{opacity:1}
+
+/* Toggle: unchecked is Online, checked is On a break. */
+.knob{transform:translateX(18px);transition:transform 350ms cubic-bezier(.22,1,.36,1)}
+.trackOn{opacity:1;transition:opacity 350ms linear}
+.tOff{display:none}
+.pk:checked + .tog .knob{transform:translateX(0)}
+.pk:checked + .tog .trackOn{opacity:0}
+.pk:checked + .tog .tOn{display:none}
+.pk:checked + .tog .tOff{display:inline}
+.pk:checked + .tog .dotOn{opacity:0.25}
+
+/* Hold ring and label. Functional feedback, so it runs in every motion mode. */
+@keyframes holdFill{from{stroke-dashoffset:56.6}to{stroke-dashoffset:0}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes fadeOut{from{opacity:1}to{opacity:0}}
+.lbl{display:grid;justify-items:start}
+.l1,.l2{grid-area:1 / 1}
+.l2{opacity:0}
+.hold:active .ringFill{animation:holdFill 900ms linear both}
+.hold:active .l1{animation:fadeOut 120ms linear 900ms both}
+.hold:active .l2{animation:fadeIn 120ms linear 900ms both}
+@media (prefers-reduced-motion: reduce){
+.hold:active .ringFill{animation:holdFill 900ms steps(1,end) both}
+}
+
+/* Sent state */
+.stDone{display:none}
+.again{display:none;align-items:center}
+#x90-sent:checked ~ .status .stIdle{display:none}
+#x90-sent:checked ~ .status .stDone{display:flex}
+#x90-sent:checked ~ .status .again{display:inline-flex}
+#x90-sent:focus-visible ~ .sendRow .face{outline:2px solid #2B2B2B;outline-offset:2px}
+
+@keyframes rise{from{transform:translateY(14px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes settle{from{transform:scale(1.14);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes draw{from{stroke-dashoffset:14}to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion: no-preference){
+.rise1{animation:rise 0.6s cubic-bezier(0.2,0.7,0.2,1) 0.05s both}
+.rise2{animation:rise 0.6s cubic-bezier(0.2,0.7,0.2,1) 0.13s both}
+.rise3{animation:rise 0.6s cubic-bezier(0.2,0.7,0.2,1) 0.21s both}
+.rise4{animation:rise 0.6s cubic-bezier(0.2,0.7,0.2,1) 0.29s both}
+.rise5{animation:rise 0.6s cubic-bezier(0.2,0.7,0.2,1) 0.37s both}
+.rise6{animation:rise 0.6s cubic-bezier(0.2,0.7,0.2,1) 0.45s both}
+.pk:checked + .key .ring{animation:settle 350ms cubic-bezier(.22,1,.36,1) both}
+#x90-sent:checked ~ .status .chk{animation:draw 350ms cubic-bezier(.22,1,.36,1) 120ms both}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 24px 28px; display: flex; flex-direction: column; gap: 10px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<header class="rise1" style="display: flex; flex-direction: column; gap: 4px;">
+<h1 style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 800;">Feel what a press <span style="color: {{accent}};">means</span></h1>
+<div style="display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 18px; color: #5E5A53;">
+<svg width="16" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0;"><rect x="8" y="4" width="8" height="16" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path></svg>
+<span>Press and hold each key. Tags name the haptic a phone would fire.</span>
+</div>
+</header>
+
+<section class="rise2" aria-label="Commit" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Commit</h2>
+<span style="display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: #EFE9DF; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53; white-space: nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path></svg>impact medium</span>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">Full, firm travel. You are committing.</p>
+</div>
+<button type="button" class="key commit" style="width: 100%;">
+<span class="edge" style="background: {{accentEdge}}; border-radius: 14px;"></span>
+<span class="face" style="height: 48px; gap: 10px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; font-size: 18px; line-height: 24px; font-weight: 700;">
+<span>Start a Conversation</span>
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</span>
+</button>
+</section>
+
+<div class="rise3" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+<section aria-label="Navigate" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Navigate</h2>
+<span style="display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: #EFE9DF; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53; white-space: nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path></svg>light</span>
+</div>
+<p style="margin: 0; min-height: 36px; font-size: 13px; line-height: 18px; color: #5E5A53;">A light dip. You are moving, not deciding.</p>
+</div>
+<div style="display: flex; gap: 8px;">
+<button type="button" class="key nav" aria-label="Back" style="width: 48px; flex-shrink: 0;">
+<span class="edge" style="background: #E3DCCF; border-radius: 14px;"></span>
+<span class="face" style="height: 44px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+</span>
+</button>
+<button type="button" class="key nav" style="flex: 1 1 0;">
+<span class="edge" style="background: #E3DCCF; border-radius: 14px;"></span>
+<span class="face" style="height: 44px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; font-size: 16px; line-height: 24px; font-weight: 700;">Not now</span>
+</button>
+</div>
+</section>
+
+<section aria-label="Toggle" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Toggle</h2>
+<span style="display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: #EFE9DF; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53; white-space: nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path></svg>soft</span>
+</div>
+<p style="margin: 0; min-height: 36px; font-size: 13px; line-height: 18px; color: #5E5A53;">The knob slides. Your state changed, and stays.</p>
+</div>
+<div style="display: flex;">
+<input class="vh pk" type="checkbox" role="switch" id="x90-break" aria-label="On a break">
+<label class="key tog" for="x90-break" style="flex: 1 1 0;">
+<span class="edge" style="background: #E3DCCF; border-radius: 14px;"></span>
+<span class="face" style="height: 44px; padding: 0 10px 0 14px; justify-content: space-between; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px;">
+<span style="display: flex; align-items: center; gap: 8px; font-size: 16px; line-height: 24px; font-weight: 700;">
+<span class="dotOn" aria-hidden="true" style="width: 8px; height: 8px; border-radius: 50%; background: #38734B;"></span>
+<span class="tOn">Online</span><span class="tOff">On a break</span>
+</span>
+<span aria-hidden="true" style="position: relative; width: 44px; height: 26px; flex-shrink: 0; border-radius: 999px; background: #D9D1C2; overflow: hidden;">
+<span class="trackOn" style="position: absolute; left: 0; right: 0; top: 0; bottom: 0; background: #38734B;"></span>
+<span class="knob" style="position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #FFFFFF;"></span>
+</span>
+</span>
+</label>
+</div>
+</section>
+</div>
+
+<section class="rise4" aria-label="Select" style="display: flex; flex-direction: column; gap: 10px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Select</h2>
+<span style="display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: #EFE9DF; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53; white-space: nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path></svg>selection</span>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">A small dip; a ring settles on your choice.</p>
+</div>
+<div style="display: flex; align-items: center; gap: 8px;">
+<div class="grp" role="radiogroup" aria-label="Topic" style="display: flex; gap: 8px;">
+<input class="vh pk" type="radio" name="x90-topic" id="x90-t1">
+<label class="key pick dflt" for="x90-t1" style="color: {{accent}};">
+<span class="edge" style="background: #E3DCCF; border-radius: 999px;"></span>
+<span class="face" style="height: 44px; padding: 0 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; font-size: 15px; line-height: 20px; font-weight: 700;">
+<span class="tint" style="background: {{accentTint}};"></span><span class="ring"></span><span class="txt">Exams</span>
+</span>
+</label>
+<input class="vh pk" type="radio" name="x90-topic" id="x90-t2">
+<label class="key pick" for="x90-t2" style="color: {{accent}};">
+<span class="edge" style="background: #E3DCCF; border-radius: 999px;"></span>
+<span class="face" style="height: 44px; padding: 0 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; font-size: 15px; line-height: 20px; font-weight: 700;">
+<span class="tint" style="background: {{accentTint}};"></span><span class="ring"></span><span class="txt">Family</span>
+</span>
+</label>
+</div>
+<span aria-hidden="true" style="width: 1px; height: 28px; background: #E6DFD3;"></span>
+<div class="grp" role="radiogroup" aria-label="Companion colour" style="display: flex; gap: 8px;">
+<input class="vh pk" type="radio" name="x90-colour" id="x90-c1" aria-label="Your colour">
+<label class="key pick swatch dflt" for="x90-c1" style="color: {{accent}};">
+<span class="edge" style="background: {{accentEdge}}; border-radius: 999px;"></span>
+<span class="face" style="width: 44px; height: 44px; background: {{accent}}; border-radius: 999px; color: #FFFFFF;">
+<span class="ring" style="color: {{accent}};"></span>
+<svg class="swCheck" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+</label>
+<input class="vh pk" type="radio" name="x90-colour" id="x90-c2" aria-label="Rose">
+<label class="key pick swatch" for="x90-c2">
+<span class="edge" style="background: #7E3B4C; border-radius: 999px;"></span>
+<span class="face" style="width: 44px; height: 44px; background: #A24C61; border-radius: 999px; color: #FFFFFF;">
+<span class="ring" style="color: #A24C61;"></span>
+<svg class="swCheck" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+</label>
+<input class="vh pk" type="radio" name="x90-colour" id="x90-c3" aria-label="Teal">
+<label class="key pick swatch" for="x90-c3">
+<span class="edge" style="background: #1F5753; border-radius: 999px;"></span>
+<span class="face" style="width: 44px; height: 44px; background: #286F6B; border-radius: 999px; color: #FFFFFF;">
+<span class="ring" style="color: #286F6B;"></span>
+<svg class="swCheck" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+</label>
+</div>
+</div>
+</section>
+
+<section class="rise5" aria-label="Hold" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Hold</h2>
+<span style="display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: #EFE9DF; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53; white-space: nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path></svg>rigid, once, at the end</span>
+</div>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">Slow and deep. Hold to finish, or let go.</p>
+</div>
+<div style="display: flex; gap: 12px;">
+<button type="button" class="key hold" aria-label="End conversation, press and hold" style="flex: 1.25 1 0;">
+<span class="edge" style="background: #E3DCCF; border-radius: 14px;"></span>
+<span class="face" style="height: 48px; gap: 8px; padding: 0 8px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; color: #8E2F2A; font-size: 14px; line-height: 20px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true" style="transform: rotate(-90deg); flex-shrink: 0;"><circle cx="11" cy="11" r="9" stroke="#8E2F2A" stroke-opacity="0.22" stroke-width="2.5"></circle><circle class="ringFill" cx="11" cy="11" r="9" stroke="#8E2F2A" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="56.6" stroke-dashoffset="56.6"></circle></svg>
+<span class="lbl"><span class="l1">End conversation</span><span class="l2">Ended</span></span>
+</span>
+</button>
+<button type="button" class="key hold" aria-label="Clean Wipe, press and hold" style="flex: 1 1 0;">
+<span class="edge" style="background: #E2B9B6; border-radius: 14px;"></span>
+<span class="face" style="height: 48px; gap: 8px; padding: 0 8px; background: #F8DEDC; border-radius: 14px; color: #8E2F2A; font-size: 14px; line-height: 20px; font-weight: 700;">
+<svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true" style="transform: rotate(-90deg); flex-shrink: 0;"><circle cx="11" cy="11" r="9" stroke="#8E2F2A" stroke-opacity="0.22" stroke-width="2.5"></circle><circle class="ringFill" cx="11" cy="11" r="9" stroke="#8E2F2A" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="56.6" stroke-dashoffset="56.6"></circle></svg>
+<span class="lbl"><span class="l1">Clean Wipe</span><span class="l2">Wiped</span></span>
+</span>
+</button>
+</div>
+</section>
+
+<div class="rise6" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+<section aria-label="Limit reached" style="display: flex; flex-direction: column; gap: 8px;">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Limit reached</h2>
+<span style="display: inline-flex; align-items: center; height: 20px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: #FFFFFF; border: 1px solid #E6DFD3; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53; white-space: nowrap;">none</span>
+</div>
+<p style="margin: 0; min-height: 36px; font-size: 13px; line-height: 18px; color: #5E5A53;">Nothing moves. Stillness is the signal.</p>
+</div>
+<button type="button" class="key still" aria-disabled="true" aria-describedby="x90-why" style="width: 100%;">
+<span class="face" style="height: 44px; gap: 8px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; opacity: 0.55; font-size: 16px; line-height: 24px; font-weight: 700;">
+<span>Send</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14-7-5 15-3-6z"></path></svg>
+</span>
+</button>
+<p id="x90-why" style="margin: 0; font-size: 13px; line-height: 18px; color: #2B2B2B;">Three sent. Steady Cedar replies when free.</p>
+<button type="button" class="key nav" style="width: 100%;">
+<span class="edge" style="background: #D9D1C2; border-radius: 14px;"></span>
+<span class="face" style="height: 44px; gap: 6px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; font-size: 14px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path></svg>
+<span>Helplines · 14416</span>
+</span>
+</button>
+</section>
+
+<section aria-label="Sent" style="display: flex; flex-direction: column; gap: 8px;">
+<input class="vh" type="radio" name="x90-send" id="x90-sent" aria-label="Send the message">
+<input class="vh" type="radio" name="x90-send" id="x90-idle" aria-label="Reset the send demo">
+<div style="display: flex; flex-direction: column; gap: 2px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+<h2 style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 800;">Sent</h2>
+<span style="display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 8px; box-sizing: border-box; border-radius: 999px; background: #DCE6DD; font-size: 13px; line-height: 18px; font-weight: 700; color: #2C5C3C; white-space: nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"></rect><path d="M4 9v6"></path><path d="M20 9v6"></path></svg>success, once</span>
+</div>
+<p style="margin: 0; min-height: 36px; font-size: 13px; line-height: 18px; color: #5E5A53;">A check draws once, on confirmed send.</p>
+</div>
+<div class="sendRow" style="display: flex;">
+<label class="key commit" for="x90-sent" style="flex: 1 1 0;">
+<span class="edge" style="background: {{accentEdge}}; border-radius: 14px;"></span>
+<span class="face" style="height: 44px; gap: 8px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; font-size: 16px; line-height: 24px; font-weight: 700;">
+<span>Send</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14-7-5 15-3-6z"></path></svg>
+</span>
+</label>
+</div>
+<div class="status" role="status" style="display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; font-size: 13px; line-height: 18px;">
+<span class="stIdle" style="color: #5E5A53;">Not sent yet. The tap alone fires nothing.</span>
+<span class="stDone" style="align-items: center; gap: 6px; font-weight: 700; color: #2C5C3C;">
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="10" fill="#DCE6DD"></circle><path class="chk" d="M5.5 10.5l3 3 6-6.5" stroke="#2C5C3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="14" stroke-dashoffset="0"></path></svg>
+<span>Delivered</span>
+</span>
+<label class="again" for="x90-idle" style="height: 44px; padding: 0 4px; font-weight: 700; color: #2B2B2B; text-decoration: underline; cursor: pointer;">Again</label>
+</div>
+</section>
+</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return { accent: accent, accentEdge: this.mix(accent, 0, 0.22), accentTint: this.mix(accent, 255, 0.8) };
+  }
+}
+</script>
+</body>
+</html>

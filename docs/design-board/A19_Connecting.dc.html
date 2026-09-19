@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Connecting, finding then found (instant path)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+@keyframes skyA{from{transform:translate(0,0) rotate(-18deg) scale(1)}to{transform:translate(64px,38px) rotate(-9deg) scale(1.12)}}
+@keyframes skyB{from{transform:translate(0,0) rotate(14deg) scale(1.06)}to{transform:translate(-58px,46px) rotate(4deg) scale(0.96)}}
+@keyframes orb{from{transform:scale(0.95);opacity:0.65}to{transform:scale(1.04);opacity:1}}
+@keyframes lit{0%,55%,100%{opacity:0.25}20%{opacity:1}}
+@media (prefers-reduced-motion: no-preference){
+.skyA{animation:skyA 46s ease-in-out infinite alternate}
+.skyB{animation:skyB 58s ease-in-out infinite alternate}
+.orb{animation:orb 5.2s ease-in-out infinite alternate}
+.lit{animation:lit 2.4s ease-in-out infinite}
+.l2{animation-delay:0.3s}.l3{animation-delay:0.6s}.l4{animation-delay:0.9s}.l5{animation-delay:1.2s}
+.perch{transition:transform 700ms cubic-bezier(0.22,1,0.36,1);will-change:transform}
+.mv{transition:transform 500ms cubic-bezier(0.22,1,0.36,1),opacity 350ms cubic-bezier(0.22,1,0.36,1);will-change:transform,opacity}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 44px 24px 28px; display: flex; flex-direction: column; gap: 16px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;">
+<div class="skyA" style="position: absolute; left: -250px; top: -200px; width: 660px; height: 520px; border-radius: 50%; background: radial-gradient(closest-side, {{sky1}}, {{sky1Soft}} 55%, rgba(244,239,230,0));"></div>
+<div class="skyB" style="position: absolute; right: -300px; top: 80px; width: 600px; height: 560px; border-radius: 50%; background: radial-gradient(closest-side, rgba(107,76,140,0.14), rgba(107,76,140,0.05) 55%, rgba(244,239,230,0));"></div>
+<div class="skyB" style="position: absolute; left: -230px; top: 330px; width: 560px; height: 400px; border-radius: 50%; background: radial-gradient(closest-side, rgba(70,112,84,0.13), rgba(70,112,84,0.05) 55%, rgba(244,239,230,0));"></div>
+<div style="position: absolute; left: 0; right: 0; top: 440px; bottom: 0; background: linear-gradient(to bottom, rgba(244,239,230,0), rgba(244,239,230,0.92) 40%, #F4EFE6 100%);"></div>
+</div>
+
+<div style="position: relative; z-index: 2; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;">
+<a class="key" href="A18_Ready.dc.html" aria-label="Back" style="width: 44px; height: 44px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+</div>
+
+<div style="position: relative; z-index: 2; min-height: 128px; flex-shrink: 0;">
+<sc-if value="{{ finding }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 class="arr" style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 800;">Finding a mentor<br>who is <span style="color: {{accent}};">free</span> to talk</h1>
+<p class="arr a1" style="margin: 0; font-size: 16px; line-height: 24px; color: #5E5A53;">Your companion is waiting with you.</p>
+</div>
+</sc-if>
+<sc-if value="{{ found }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h1 class="arr" style="margin: 0; font-size: 28px; line-height: 36px; font-weight: 800;">Steady Cedar is<br><span style="color: {{accent}};">here</span> with you</h1>
+<p class="arr a1" style="margin: 0; font-size: 16px; line-height: 24px; color: #5E5A53;">A mentor, not a therapist. Say as much or as little as you like.</p>
+</div>
+</sc-if>
+</div>
+
+<div style="position: relative; z-index: 1; height: 220px; flex-shrink: 0;">
+<div aria-hidden="true" class="mv" style="position: absolute; left: 51px; top: -8px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(closest-side, {{halo}}, rgba(244,239,230,0)); opacity: {{ haloOp }}; transform: {{ haloTf }}; transition-delay: {{ haloDelay }}; pointer-events: none;"></div>
+
+<div aria-hidden="true" class="mv" style="position: absolute; left: 130px; top: 108px; width: 82px; height: 8px; display: flex; align-items: center; justify-content: center; gap: 8px; opacity: {{ dotsOp }};">
+<span class="lit" style="width: 8px; height: 8px; border-radius: 999px; background: {{accent}}; opacity: 0.9;"></span>
+<span class="lit l2" style="width: 8px; height: 8px; border-radius: 999px; background: {{accent}}; opacity: 0.7;"></span>
+<span class="lit l3" style="width: 8px; height: 8px; border-radius: 999px; background: {{accent}}; opacity: 0.5;"></span>
+<span class="lit l4" style="width: 8px; height: 8px; border-radius: 999px; background: {{accent}}; opacity: 0.35;"></span>
+<span class="lit l5" style="width: 8px; height: 8px; border-radius: 999px; background: {{accent}}; opacity: 0.25;"></span>
+</div>
+
+<div class="perch" style="position: absolute; left: 10px; top: 52px; width: 120px; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 12px; transform: {{ leftTf }};">
+<div style="width: 120px; height: 120px; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: {{accentTint}}; border: 3px solid #F4EFE6; box-shadow: 0 4px 0 {{accentTintEdge}};">
+<img class="breathe" src="/_blob/c5932cbe7933051e63ca71be87e0d6f1" alt="Your cat companion, waiting with you" style="width: 84px; height: 106px; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%;">
+</div>
+<div style="display: flex; flex-direction: column; align-items: center;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; white-space: nowrap;">Gentle Harbor</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">You</span>
+</div>
+</div>
+
+<div class="perch" style="position: absolute; right: 10px; top: 52px; width: 120px; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 12px; transform: {{ rightTf }};">
+<div style="position: relative; width: 120px; height: 120px;">
+<div aria-hidden="true" class="mv" style="position: absolute; inset: 0; opacity: {{ emptyOp }};">
+<div class="orb" style="position: absolute; inset: 0; box-sizing: border-box; border-radius: 999px; background: #FBF8F2; border: 2px dashed #B9AF9C;"></div>
+</div>
+<div class="mv" style="position: absolute; inset: 0; opacity: {{ fillOp }}; transform: {{ fillTf }}; transition-delay: {{ fillDelay }};">
+<div style="position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD; border: 3px solid #F4EFE6; box-shadow: 0 4px 0 #C3D2C5;">
+<img class="breathe" src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 100px; height: 104px; object-fit: contain; object-position: 50% 100%; transform-origin: 50% 100%; animation-delay: -2.6s;">
+</div>
+<span aria-hidden="true" style="position: absolute; right: 8px; bottom: 8px; width: 18px; height: 18px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 3px solid #F4EFE6;"></span>
+</div>
+</div>
+<div aria-hidden="true" style="position: relative; width: 120px; height: 36px;">
+<div class="mv" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; opacity: {{ emptyOp }};">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; white-space: nowrap;">A mentor</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap;">Looking</span>
+</div>
+<div class="mv" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; opacity: {{ fillOp }}; transition-delay: {{ fillDelay }};">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; white-space: nowrap;">Steady Cedar</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap;">Your mentor</span>
+</div>
+</div>
+</div>
+</div>
+
+<div style="position: relative; z-index: 1;">
+<sc-if value="{{ finding }}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<h2 class="arr a2" style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 700; color: #5E5A53;">While you wait</h2>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div class="arr a2" style="box-sizing: border-box; padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Not sure how to start?</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">“Today felt heavy” is more than enough for a first message.</span>
+</span>
+</div>
+<div class="arr a3" style="box-sizing: border-box; padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2.5"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Just two people, both private</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">You are Gentle Harbor here. Mentors are peers, not therapists.</span>
+</span>
+</div>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ found }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 14px;">
+<div class="arr a2" style="box-sizing: border-box; height: 36px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: #DCE6DD; border-radius: 999px; color: #2C5C3C; font-size: 13px; line-height: 18px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Connected · this conversation is private</span>
+</div>
+<div class="arr a3" style="align-self: stretch; box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">Steady Cedar's line</span>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">“I sat the exam three times. I mostly just listen.”</p>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div style="position: relative; z-index: 1;">
+<sc-if value="{{ finding }}" hint-placeholder-val="{{ true }}">
+<div class="arr a4" style="display: flex; justify-content: center;">
+<a class="key" href="A04_Connecting.dc.html" style="min-height: 44px; box-sizing: border-box; padding: 4px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 14px; line-height: 20px;">
+<span style="color: #5E5A53;">Nobody free right now?</span>
+<span style="font-weight: 700; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px;">Send your question instead</span>
+</a>
+</div>
+</sc-if>
+<sc-if value="{{ found }}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 8px;">
+<div class="arr a4" style="display: flex; flex-direction: column;">
+<a class="key" href="A05_Chat.dc.html" style="height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">
+<span>Open the chat</span>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+</div>
+<div class="arr a5" style="display: flex; justify-content: center;">
+<button class="key" onClick="{{ replay }}" style="min-height: 44px; padding: 0 12px; display: flex; align-items: center; gap: 6px; background: transparent; border: 0; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.6-5.9"></path><path d="M4 4v4.5h4.5"></path></svg>
+<span>Play again</span>
+</button>
+</div>
+</div>
+</sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  rgb(hex) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { h = 'A2533A'; }
+    return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
+  }
+  rgba(hex, a) {
+    var c = this.rgb(hex);
+    return 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+  }
+  mix(hex, to, t) {
+    var c = this.rgb(hex);
+    var out = '#';
+    for (var i = 0; i < 3; i++) { out += ('0' + Math.round(c[i] + (to - c[i]) * t).toString(16)).slice(-2); }
+    return out;
+  }
+  // One timer per "finding" run. Arming is idempotent for a run, so however many
+  // times renderVals() is called the hand-over to "found" can only fire once;
+  // "Play again" starts a new run, which is the only thing that arms it again.
+  arm(run) {
+    if (this._armedRun === run) { return; }
+    this.disarm();
+    this._armedRun = run;
+    if (typeof setTimeout !== 'function') { return; }
+    var self = this;
+    this._timer = setTimeout(function () {
+      self._timer = null;
+      if (self._gone) { return; }
+      var st = self.state || {};
+      if (st.found || (st.run || 0) !== run) { return; }
+      try { self.setState({ found: true, run: run }); } catch (e) {}
+    }, 2600);
+  }
+  disarm() {
+    if (this._timer) { clearTimeout(this._timer); this._timer = null; }
+  }
+  componentWillUnmount() {
+    this._gone = true;
+    this.disarm();
+    if (super.componentWillUnmount) { super.componentWillUnmount(); }
+  }
+  disconnectedCallback() {
+    this._gone = true;
+    this.disarm();
+    if (super.disconnectedCallback) { super.disconnectedCallback(); }
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var s = this.state || {};
+    var found = !!s.found;
+    var run = s.run || 0;
+    this._gone = false;
+    if (found) { this.disarm(); } else { this.arm(run); }
+
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6),
+      halo: this.rgba(accent, 0.22),
+      sky1: this.rgba(accent, 0.2),
+      sky1Soft: this.rgba(accent, 0.07),
+
+      finding: !found,
+      found: found,
+
+      // The two orbs are shared elements: they never leave, they only move closer.
+      leftTf: found ? 'translateX(50px)' : 'translateX(0px)',
+      rightTf: found ? 'translateX(-50px)' : 'translateX(0px)',
+      dotsOp: found ? 0 : 1,
+      emptyOp: found ? 0 : 1,
+      fillOp: found ? 1 : 0,
+      fillTf: found ? 'scale(1)' : 'scale(0.9)',
+      fillDelay: found ? '250ms' : '0ms',
+      haloOp: found ? 1 : 0,
+      haloTf: found ? 'scale(1)' : 'scale(0.8)',
+      haloDelay: found ? '350ms' : '0ms',
+
+      replay: function () { self.setState({ found: false, run: run + 1 }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

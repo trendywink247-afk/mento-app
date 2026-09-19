@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Start fresh sheet over Profile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; background: #2B2B2B; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; inset: 0; box-sizing: border-box; overflow: hidden; padding: 44px 16px 0; display: flex; flex-direction: column; gap: 14px; background: #F4EFE6; border-radius: 22px; transform: scale(0.96) translateY(8px);">
+<div style="padding: 4px 8px 0; font-size: 22px; line-height: 28px; font-weight: 700;">Profile</div>
+<div style="position: relative;">
+<img src="/_blob/1efb69b914df0befa72042da746fa6a7" alt="" style="position: absolute; right: 14px; bottom: 14px; width: 112px; height: 160px; object-fit: contain; z-index: 2;">
+<div style="position: relative; z-index: 1; box-sizing: border-box; min-height: 124px; padding: 16px 136px 16px 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 24px; line-height: 30px; font-weight: 800;">Gentle Harbor</span>
+<span style="height: 24px; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: {{accentTint}}; color: {{accentEdge}}; font-size: 12px; line-height: 16px; font-weight: 700;">Private</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">This name is all anyone ever sees.</span>
+</div>
+</div>
+<div style="box-sizing: border-box; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 8px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<span style="padding: 0 2px; font-size: 16px; line-height: 22px; font-weight: 700;">Your growth companion</span>
+<div style="display: flex; justify-content: space-between; gap: 2px; padding: 4px 3px 6px;">
+<span style="width: 44px; height: 44px; border-radius: 999px; background: #A2533A; box-shadow: 0 0 0 3px #FBF8F2, 0 0 0 5px #2B2B2B;"></span>
+<span style="width: 44px; height: 44px; border-radius: 999px; background: #467054; box-shadow: 0 4px 0 #33513C;"></span>
+<span style="width: 44px; height: 44px; border-radius: 999px; background: #3B6D8F; box-shadow: 0 4px 0 #2A4F69;"></span>
+<span style="width: 44px; height: 44px; border-radius: 999px; background: #A24C61; box-shadow: 0 4px 0 #7D3A4A;"></span>
+<span style="width: 44px; height: 44px; border-radius: 999px; background: #895F17; box-shadow: 0 4px 0 #674711;"></span>
+<span style="width: 44px; height: 44px; border-radius: 999px; background: #6B4C8C; box-shadow: 0 4px 0 #4D3765;"></span>
+<span style="width: 44px; height: 44px; border-radius: 999px; background: #286F6B; box-shadow: 0 4px 0 #1C4F4C;"></span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div style="height: 60px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; background: #DCE8F2;"></span>
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Language</span>
+</div>
+<div style="height: 60px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; background: #DCE6DD;"></span>
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Become a mentor</span>
+</div>
+<div style="height: 60px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; background: #F5E8C4;"></span>
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Support the team</span>
+</div>
+<div style="height: 60px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; background: #E8DFF0;"></span>
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Privacy, plainly</span>
+</div>
+<div style="height: 60px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 12px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #D9D1C2;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; background: #EFE9DF;"></span>
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Start fresh</span>
+</div>
+</div>
+<div style="position: absolute; left: 16px; right: 16px; bottom: 20px; height: 68px; box-sizing: border-box; padding: 8px; display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 6px 18px rgba(43,43,43,0.10); font-size: 12px; line-height: 14px; font-weight: 700; color: #5E5A53;">
+<span style="flex: 1 1 0; text-align: center;">Chats</span>
+<span style="flex: 1 1 0; text-align: center;">Path</span>
+<span style="flex: 1 1 0; text-align: center;">Journal</span>
+<span style="flex: 1 1 0; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{accentTint}}; color: {{accentEdge}};">Profile</span>
+</div>
+</div>
+
+<a class="arrDim" href="A09_Profile.dc.html" aria-label="Close this sheet and keep my space" style="position: absolute; inset: 0; background: rgba(43,43,43,0.35);"></a>
+
+<div class="arrSheet" role="dialog" aria-modal="true" aria-labelledby="a32-title" style="position: absolute; left: 0; right: 0; bottom: 0; box-sizing: border-box; padding: 12px 24px 28px; display: flex; flex-direction: column; gap: 14px; background: #F4EFE6; border-radius: 28px 28px 0 0; box-shadow: 0 -4px 24px rgba(43,43,43,0.12);">
+<div aria-hidden="true" style="align-self: center; width: 44px; height: 5px; border-radius: 999px; background: #D9D1C2;"></div>
+
+<div style="display: flex; flex-direction: column; gap: 4px;">
+<h1 id="a32-title" style="margin: 0; font-size: 24px; line-height: 32px; font-weight: 800;">Start <span style="color: {{accent}};">fresh</span></h1>
+<p style="margin: 0; font-size: 15px; line-height: 22px; color: #2B2B2B;">This deletes your Mento space and begins a new one, with a new name.</p>
+</div>
+
+<div style="box-sizing: border-box; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">What will be deleted</span>
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #EFE9DF; color: #2B2B2B;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"></path></svg>
+</span>
+<span style="font-size: 15px; line-height: 20px;"><span style="font-weight: 700;">Your chats</span> <span style="color: #5E5A53;">and the mentors you stay in touch with</span></span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #EFE9DF; color: #2B2B2B;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>
+</span>
+<span style="font-size: 15px; line-height: 20px;"><span style="font-weight: 700;">Your journal</span> <span style="color: #5E5A53;">and every piece of guidance you kept</span></span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #EFE9DF; color: #2B2B2B;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+</span>
+<span style="font-size: 15px; line-height: 20px;"><span style="font-weight: 700;">Your companion</span> <span style="color: #5E5A53;">and its colour</span></span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #EFE9DF; color: #2B2B2B;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M15.5 8.5l-2 5-5 2 2-5z"></path></svg>
+</span>
+<span style="font-size: 15px; line-height: 20px;"><span style="font-weight: 700;">Your path</span> <span style="color: #5E5A53;">and the name Gentle Harbor</span></span>
+</div>
+<p style="margin: 0; padding-top: 8px; border-top: 1px dashed #D9D1C2; font-size: 14px; line-height: 20px; color: #2B2B2B;">All of it is deleted from this device and from our servers.</p>
+</div>
+
+<div style="box-sizing: border-box; padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; background: #F8DEDC; border-radius: 14px; color: #8E2F2A;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="9"></circle><path d="M12 7.5v5.5"></path><path d="M12 16.5h.01"></path></svg>
+<span style="font-size: 15px; line-height: 22px; font-weight: 600;">This cannot be undone. Once it is deleted, we cannot bring any of it back.</span>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 14px; padding-top: 2px;">
+<a class="key" href="A01_Landing.dc.html" style="height: 58px; display: flex; align-items: center; justify-content: center; background: #8E2F2A; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 #6B2320; font-size: 17px; line-height: 24px; font-weight: 700;">Delete everything and start fresh</a>
+<a class="key" href="A09_Profile.dc.html" style="height: 58px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 17px; line-height: 24px; font-weight: 700;">Keep my space</a>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8)
+    };
+  }
+}
+</script>
+</body>
+</html>

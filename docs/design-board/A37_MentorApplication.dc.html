@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Become a mentor: application, in review, approved</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+input,textarea{font:inherit;color:inherit}
+input::placeholder,textarea::placeholder{color:#5E5A53;opacity:1}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; padding: 0 24px 24px; display: flex; flex-direction: column; gap: 12px; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<div aria-hidden="true" style="position: absolute; left: -60px; right: -60px; top: -150px; height: 330px; border-radius: 50%; background: radial-gradient(closest-side, #DCE6DD, rgba(244,239,230,0)); pointer-events: none;"></div>
+
+<div role="group" aria-label="Board only: switch the state shown on this artboard" style="position: relative; height: 44px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; border-bottom: 1px dashed #CFC6B5;">
+<span style="flex-grow: 1; font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #5E5A53;">Board only · state</span>
+<button onClick="{{ showForm }}" style="height: 44px; padding: 0 8px; background: transparent; border: 0; font-size: 12px; line-height: 16px; font-weight: 700; color: {{ s0Fg }}; text-decoration: {{ s0Line }}; text-underline-offset: 4px;">Form</button>
+<span aria-hidden="true" style="font-size: 12px; line-height: 16px; color: #5E5A53;">·</span>
+<button onClick="{{ showReview }}" style="height: 44px; padding: 0 8px; background: transparent; border: 0; font-size: 12px; line-height: 16px; font-weight: 700; color: {{ s1Fg }}; text-decoration: {{ s1Line }}; text-underline-offset: 4px;">In review</button>
+<span aria-hidden="true" style="font-size: 12px; line-height: 16px; color: #5E5A53;">·</span>
+<button onClick="{{ showApproved }}" style="height: 44px; padding: 0 0 0 8px; background: transparent; border: 0; font-size: 12px; line-height: 16px; font-weight: 700; color: {{ s2Fg }}; text-decoration: {{ s2Line }}; text-underline-offset: 4px;">Approved</button>
+</div>
+
+<div style="position: relative; flex-shrink: 0; display: flex; align-items: center; gap: 12px;">
+<a class="key" href="A09_Profile.dc.html" aria-label="Back to Profile" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 4px 0 #E3DCCF;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<div style="display: flex; flex-direction: column;">
+<span style="font-size: 13px; line-height: 18px; font-weight: 700; color: #2C5C3C;">Reviewed and approved by the Mento team</span>
+<span style="font-size: 17px; line-height: 24px; font-weight: 700;">Become a mentor</span>
+</div>
+</div>
+
+<sc-if value="{{ isForm }}" hint-placeholder-val="{{ true }}">
+<div style="position: relative; height: 708px; display: flex; flex-direction: column; gap: 14px;">
+
+<div class="arr" style="display: flex; flex-direction: column; gap: 6px;">
+<label for="a37-why" style="font-size: 15px; line-height: 20px; font-weight: 700;">Why do you want to mentor?</label>
+<textarea id="a37-why" rows="4" style="box-sizing: border-box; width: 342px; height: 100px; padding: 12px 14px; resize: none; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; outline: none; font-size: 15px; line-height: 22px;">I sat the exam three times. The second attempt was the loneliest, and one steady person made the difference.</textarea>
+</div>
+
+<div class="arr a1" role="group" aria-label="Communities you know" style="display: flex; flex-direction: column; gap: 6px;">
+<span style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">Communities you know</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Pick any</span>
+</span>
+<div style="display: flex; flex-wrap: wrap; gap: 10px 8px; padding-bottom: 4px;">
+<button class="key" onClick="{{ c0Tap }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ c0Line }}; border-radius: 999px; background: {{ c0Bg }}; color: {{ c0Fg }}; box-shadow: 0 4px 0 {{ c0Edge }}; font-size: 15px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: {{ c0Tick }};"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>UPSC</span>
+</button>
+<button class="key" onClick="{{ c1Tap }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ c1Line }}; border-radius: 999px; background: {{ c1Bg }}; color: {{ c1Fg }}; box-shadow: 0 4px 0 {{ c1Edge }}; font-size: 15px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: {{ c1Tick }};"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>NEET</span>
+</button>
+<button class="key" onClick="{{ c2Tap }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ c2Line }}; border-radius: 999px; background: {{ c2Bg }}; color: {{ c2Fg }}; box-shadow: 0 4px 0 {{ c2Edge }}; font-size: 15px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: {{ c2Tick }};"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>JEE</span>
+</button>
+<button class="key" onClick="{{ c3Tap }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ c3Line }}; border-radius: 999px; background: {{ c3Bg }}; color: {{ c3Fg }}; box-shadow: 0 4px 0 {{ c3Edge }}; font-size: 15px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: {{ c3Tick }};"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Other exams</span>
+</button>
+<button class="key" onClick="{{ c4Tap }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ c4Line }}; border-radius: 999px; background: {{ c4Bg }}; color: {{ c4Fg }}; box-shadow: 0 4px 0 {{ c4Edge }}; font-size: 15px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: {{ c4Tick }};"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Life</span>
+</button>
+</div>
+</div>
+
+<div class="arr a2" role="group" aria-label="When you are usually free" style="display: flex; flex-direction: column; gap: 6px;">
+<span style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">When you are usually free</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">A few hours a week</span>
+</span>
+<div style="display: flex; flex-wrap: wrap; gap: 10px 8px; padding-bottom: 4px;">
+<button class="key" onClick="{{ v0Tap }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ v0Line }}; border-radius: 999px; background: {{ v0Bg }}; color: {{ v0Fg }}; box-shadow: 0 4px 0 {{ v0Edge }}; font-size: 15px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: {{ v0Tick }};"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Mornings</span>
+</button>
+<button class="key" onClick="{{ v1Tap }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ v1Line }}; border-radius: 999px; background: {{ v1Bg }}; color: {{ v1Fg }}; box-shadow: 0 4px 0 {{ v1Edge }}; font-size: 15px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: {{ v1Tick }};"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Evenings</span>
+</button>
+<button class="key" onClick="{{ v2Tap }}" style="height: 44px; box-sizing: border-box; padding: 0 14px; display: flex; align-items: center; gap: 6px; border: 1px solid {{ v2Line }}; border-radius: 999px; background: {{ v2Bg }}; color: {{ v2Fg }}; box-shadow: 0 4px 0 {{ v2Edge }}; font-size: 15px; line-height: 20px; font-weight: 700;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display: {{ v2Tick }};"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Weekends</span>
+</button>
+</div>
+</div>
+
+<div class="arr a3" style="display: flex; flex-direction: column; gap: 6px;">
+<span style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+<label for="a37-email" style="font-size: 15px; line-height: 20px; font-weight: 700;">Email</label>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Optional</span>
+</span>
+<input id="a37-email" type="email" placeholder="you@example.com" style="box-sizing: border-box; width: 342px; height: 52px; padding: 0 16px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; outline: none; font-size: 16px; line-height: 24px;">
+<span style="padding-top: 4px; font-size: 13px; line-height: 18px; color: #5E5A53;">Only so the Mento team can reach you about this application. Members never see it.</span>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div class="arr a4" style="display: flex; flex-direction: column;">
+<sc-if value="{{ notPledged }}" hint-placeholder-val="{{ true }}">
+<button class="key" role="checkbox" aria-checked="false" onClick="{{ togglePledge }}" style="box-sizing: border-box; width: 342px; min-height: 60px; padding: 8px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF;">
+<span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; box-sizing: border-box; border-radius: 8px; background: #FBF8F2; border: 2px solid #8A8377;"></span>
+<span style="font-size: 15px; line-height: 20px; font-weight: 700;">I understand I am a mentor, not a therapist</span>
+</button>
+</sc-if>
+<sc-if value="{{ pledged }}" hint-placeholder-val="{{ false }}">
+<button class="key" role="checkbox" aria-checked="true" onClick="{{ togglePledge }}" style="box-sizing: border-box; width: 342px; min-height: 60px; padding: 8px 14px; display: flex; align-items: center; gap: 12px; text-align: left; background: #DCE6DD; border: 1px solid #BFD2C3; border-radius: 14px; box-shadow: 0 4px 0 #BFD2C3;">
+<span aria-hidden="true" style="width: 28px; height: 28px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 8px; background: #2C5C3C; color: #FFFFFF;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+<span style="font-size: 15px; line-height: 20px; font-weight: 700; color: #2C5C3C;">I understand I am a mentor, not a therapist</span>
+</button>
+</sc-if>
+</div>
+
+<div class="arr a5" style="display: flex; flex-direction: column; padding-bottom: 4px;">
+<sc-if value="{{ notPledged }}" hint-placeholder-val="{{ true }}">
+<button aria-disabled="true" aria-describedby="a37-gate" style="width: 342px; height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; background: #EFE9DF; border: 1px dashed #CFC6B5; border-radius: 14px; color: #5E5A53; font-size: 17px; line-height: 24px; font-weight: 700; cursor: default;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3"></path></svg>
+<span>Submit application</span>
+</button>
+<p id="a37-gate" style="margin: 0; padding-top: 10px; text-align: center; font-size: 13px; line-height: 18px; color: #5E5A53;">Tick the line above to submit.</p>
+</sc-if>
+<sc-if value="{{ pledged }}" hint-placeholder-val="{{ false }}">
+<button class="key" onClick="{{ submit }}" style="width: 342px; height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">
+<span>Submit application</span>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</button>
+<p style="margin: 0; padding-top: 10px; text-align: center; font-size: 13px; line-height: 18px; color: #5E5A53;">Reviewed by the Mento team, usually within a few days.</p>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isReview }}" hint-placeholder-val="{{ false }}">
+<div style="position: relative; height: 708px; display: flex; flex-direction: column; gap: 14px;">
+
+<div style="position: relative; padding-top: 92px;">
+<img class="breathe" src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="Your owl companion, waiting with you on the status card" style="position: absolute; left: 20px; top: 0; width: 100px; height: 114px; object-fit: contain; transform-origin: 50% 100%; z-index: 2;">
+<div class="arr" style="position: relative; z-index: 1; box-sizing: border-box; padding: 28px 20px 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="height: 26px; box-sizing: border-box; padding: 0 12px 0 8px; display: flex; align-items: center; gap: 6px; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 13px; line-height: 18px; font-weight: 700;">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>
+<span>In review</span>
+</span>
+<h1 style="margin: 0; font-size: 26px; line-height: 34px; font-weight: 800;">Your application is with the <span style="color: {{accent}};">Mento team.</span></h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">Reviewed by the Mento team, usually within a few days.</p>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #5E5A53;">The answer will appear right here. There is nothing more you need to do.</p>
+</div>
+</div>
+
+<div class="arr a1" role="list" aria-label="Where your application is" style="box-sizing: border-box; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px;">
+<div role="listitem" style="display: flex; align-items: center; gap: 12px;">
+<span style="width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+</span>
+<span style="flex-grow: 1; font-size: 15px; line-height: 20px; font-weight: 700;">Sent</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">today</span>
+</div>
+<div role="listitem" style="display: flex; align-items: center; gap: 12px;">
+<span style="width: 28px; height: 28px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: {{accentTint}}; border: 2px solid {{accent}};">
+<span style="width: 10px; height: 10px; border-radius: 999px; background: {{accent}};"></span>
+</span>
+<span style="flex-grow: 1; font-size: 15px; line-height: 20px; font-weight: 700;">Being read by the Mento team</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">now</span>
+</div>
+<div role="listitem" style="display: flex; align-items: center; gap: 12px;">
+<span style="width: 28px; height: 28px; flex-shrink: 0; box-sizing: border-box; border-radius: 999px; background: #FFFFFF; border: 2px solid #D9D1C2;"></span>
+<span style="flex-grow: 1; font-size: 15px; line-height: 20px; font-weight: 700; color: #5E5A53;">If approved, Mentor Home opens from here</span>
+</div>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div class="arr a2" style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 4px;">
+<a class="key" href="A12_MentorReading.dc.html" style="height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; font-size: 17px; line-height: 24px; font-weight: 700;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>
+<span>Read how we mentor, meanwhile</span>
+</a>
+<a href="A09_Profile.dc.html" style="align-self: center; height: 44px; padding: 0 16px; display: flex; align-items: center; font-size: 15px; line-height: 20px; font-weight: 700; color: #5E5A53; text-decoration: underline; text-underline-offset: 4px;">Back to Profile</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isApproved }}" hint-placeholder-val="{{ false }}">
+<div style="position: relative; height: 708px; display: flex; flex-direction: column; gap: 14px;">
+
+<div style="position: relative; padding-top: 108px;">
+<img class="breathe" src="/_blob/f7048216a2d9071456ef8cc908ab18ae" alt="Your owl companion, lifting a wing to welcome you" style="position: absolute; left: 18px; top: 0; width: 116px; height: 132px; object-fit: contain; transform-origin: 50% 100%; z-index: 2;">
+<div class="arr" style="position: relative; z-index: 1; box-sizing: border-box; padding: 30px 20px 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="height: 26px; box-sizing: border-box; padding: 0 12px 0 8px; display: flex; align-items: center; gap: 6px; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 13px; line-height: 18px; font-weight: 700;">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg>
+<span>Approved</span>
+</span>
+<h1 style="margin: 0; font-size: 26px; line-height: 34px; font-weight: 800;">Welcome. You are a <span style="color: {{accent}};">mentor</span> here.</h1>
+<p style="margin: 0; font-size: 16px; line-height: 24px;">The Mento team has read and approved your application. Thank you for offering your time.</p>
+</div>
+</div>
+
+<div class="arr a1" style="box-sizing: border-box; padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 3px 0 #E3DCCF;">
+<span style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #E8DFF0; color: #4D3765;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9a8 8 0 0 1 14-4l2 2"></path><path d="M20 4v4h-4"></path><path d="M20 15a8 8 0 0 1-14 4l-2-2"></path><path d="M4 20v-4h4"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Today you are Steady Cedar</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53;">Your name changes every day. Members only ever see a persona.</span>
+</span>
+</div>
+
+<div class="arr a2" style="box-sizing: border-box; padding: 12px 14px; display: flex; align-items: center; gap: 12px; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 22px;">
+<span style="width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"></path><path d="M5 17a3 3 0 0 1 3-3h11"></path></svg>
+</span>
+<span style="display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 22px; font-weight: 700;">Reading 1 is waiting in Mentor Home</span>
+<span style="font-size: 14px; line-height: 20px; color: #5E5A53;">About 5 minutes, before your first chat.</span>
+</span>
+</div>
+
+<div style="flex-grow: 1;"></div>
+
+<div style="display: flex; flex-direction: column; gap: 12px;">
+<div class="arr a3" style="display: flex; flex-direction: column;">
+<a class="key" href="A10_MentorHome.dc.html" style="height: 58px; display: flex; align-items: center; justify-content: center; gap: 10px; background: {{accent}}; color: #FFFFFF; border-radius: 14px; box-shadow: 0 4px 0 {{accentEdge}}; font-size: 18px; line-height: 24px; font-weight: 700;">
+<span>Open Mentor Home</span>
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+</div>
+<p style="margin: 0; text-align: center; font-size: 13px; line-height: 18px; color: #5E5A53;">Mentors are peers, not therapists.</p>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var st = this.state || {};
+    var view = st.view || 'form';
+    var picks = st.picks || { c0: true, v1: true, v2: true };
+    var pledged = !!st.pledged;
+    var put = function (patch) {
+      var next = { view: view, picks: picks, pledged: pledged };
+      for (var k in patch) { next[k] = patch[k]; }
+      self.setState(next);
+    };
+    var vals = {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      isForm: view === 'form',
+      isReview: view === 'review',
+      isApproved: view === 'approved',
+      pledged: pledged,
+      notPledged: !pledged,
+      showForm: function () { put({ view: 'form' }); },
+      showReview: function () { put({ view: 'review' }); },
+      showApproved: function () { put({ view: 'approved' }); },
+      togglePledge: function () { put({ pledged: !pledged }); },
+      submit: function () { put({ view: 'review' }); }
+    };
+    var views = ['form', 'review', 'approved'];
+    for (var s = 0; s < 3; s++) {
+      vals['s' + s + 'Fg'] = view === views[s] ? '#2B2B2B' : '#5E5A53';
+      vals['s' + s + 'Line'] = view === views[s] ? 'underline' : 'none';
+    }
+    var ids = ['c0', 'c1', 'c2', 'c3', 'c4', 'v0', 'v1', 'v2'];
+    ids.forEach(function (id) {
+      var on = !!picks[id];
+      vals[id + 'Bg'] = on ? '#DCE6DD' : '#FFFFFF';
+      vals[id + 'Fg'] = on ? '#2C5C3C' : '#2B2B2B';
+      vals[id + 'Line'] = on ? '#BFD2C3' : '#E6DFD3';
+      vals[id + 'Edge'] = on ? '#BFD2C3' : '#E3DCCF';
+      vals[id + 'Tick'] = on ? 'block' : 'none';
+      vals[id + 'Tap'] = function () {
+        var next = {};
+        for (var k in picks) { next[k] = picks[k]; }
+        next[id] = !on;
+        put({ picks: next });
+      };
+    });
+    return vals;
+  }
+}
+</script>
+</body>
+</html>

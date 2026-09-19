@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Chat with Steady Cedar, alive</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+input::placeholder{color:#5E5A53;opacity:1}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+@keyframes rise{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes glow{0%{opacity:0}22%{opacity:1}100%{opacity:0}}
+@keyframes settle{0%{transform:translateY(6px) scale(0.92);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+@keyframes dot{0%,60%,100%{transform:translateY(0);opacity:0.35}30%{transform:translateY(-4px);opacity:1}}
+@keyframes lean{from{transform:scale(1) rotate(0deg)}to{transform:scale(1.04) rotate(-3.5deg)}}
+@keyframes pip{from{opacity:1}to{opacity:0.5}}
+@keyframes presence{from{transform:scale(1);opacity:0.4}to{transform:scale(1.14);opacity:0}}
+@keyframes owl{from{transform:scale(1) rotate(-1.5deg)}to{transform:scale(1.05) rotate(1.5deg)}}
+@media (prefers-reduced-motion: no-preference){
+.m5{animation:rise 0.8s cubic-bezier(0.2,0.7,0.2,1) 0.9s both}
+.glow{animation:glow 3.2s cubic-bezier(0.2,0.7,0.2,1) 1.3s both}
+.settle{animation:settle 0.6s cubic-bezier(0.2,0.7,0.2,1) 1.7s both}
+.nudge{animation:fadeIn 0.7s cubic-bezier(0.2,0.7,0.2,1) 1.95s both}
+.typing{animation:fadeIn 0.7s cubic-bezier(0.2,0.7,0.2,1) 2.6s both}
+.dot{animation:dot 1.4s ease-in-out infinite}.d2{animation-delay:0.18s}.d3{animation-delay:0.36s}
+.lean{animation:lean 5.2s ease-in-out infinite alternate}
+.pip{animation:pip 5.2s ease-in-out infinite alternate}
+.presence{animation:presence 2.6s cubic-bezier(0.2,0.7,0.2,1) infinite}
+.owl{animation:owl 5.2s ease-in-out infinite alternate}
+.strip{animation:settle 0.5s cubic-bezier(0.2,0.7,0.2,1) both}
+.st1{animation-delay:0.35s}.st2{animation-delay:0.43s}.st3{animation-delay:0.51s}.st4{animation-delay:0.59s}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; display: flex; flex-direction: column; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<header style="position: relative; z-index: 3; flex-shrink: 0; box-sizing: border-box; padding: 44px 12px 0;">
+<div aria-hidden="true" style="position: absolute; left: -60px; right: -60px; top: -150px; height: 300px; border-radius: 50%; background: radial-gradient(closest-side, {{accentTint}}, rgba(244,239,230,0)); pointer-events: none;"></div>
+<div style="position: relative; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<div style="display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 4px;">
+<a class="key" href="A06_Chats.dc.html" aria-label="Leave conversation" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px;">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<a class="arr" href="A14_StayInTouch.dc.html" aria-label="View Steady Cedar's profile" style="flex-grow: 1; min-width: 0; min-height: 56px; display: flex; align-items: center; gap: 12px;">
+<span style="position: relative; width: 56px; height: 56px; flex-shrink: 0;">
+<span aria-hidden="true" class="presence" style="position: absolute; inset: -4px; border-radius: 999px; border: 2px solid {{accent}}; opacity: 0.35;"></span>
+<span style="position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD; border: 2px solid #FFFFFF; box-sizing: border-box;">
+<img class="owl" src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 50px; height: 50px; object-fit: contain; transform-origin: 50% 100%;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 1px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 2.5px solid #FFFFFF;"></span>
+</span>
+<span style="min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 19px; line-height: 24px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Steady Cedar</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Mentor · here now · UPSC community</span>
+</span>
+</a>
+<a class="key" href="A20_ChatOptions.dc.html" aria-label="Conversation options" style="box-sizing: border-box; width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #D9D1C2;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="19" cy="12" r="1.7"></circle></svg>
+</a>
+</div>
+<div style="box-sizing: border-box; height: 42px; padding: 0 12px; display: flex; align-items: center; gap: 8px; background: #FBF8F2; border-top: 1px solid #E6DFD3; border-radius: 0 0 21px 21px; white-space: nowrap; overflow: hidden;">
+<span class="strip st1" style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">In this chat</span>
+<span class="strip st2" style="height: 26px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 12px; line-height: 16px; font-weight: 700;">Exam stress</span>
+<span class="strip st3" style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"></path></svg>
+<span>Saved 2</span>
+</span>
+<span class="strip st4" style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 0 1 0 8h-1"></path><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 0 1 0-8h1"></path></svg>
+<span>In touch</span>
+</span>
+</div>
+</div>
+</header>
+
+<main style="flex-grow: 1; min-height: 0; position: relative; z-index: 1; box-sizing: border-box; padding: 12px 16px 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; overflow: hidden;">
+<div class="arr a1" style="align-self: center; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">Today</div>
+
+<div class="arr a1" style="align-self: flex-end; max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">Today felt heavy. Mock results came out and I couldn't tell anyone at home.</div>
+
+<div class="arr a2" style="align-self: flex-start; position: relative; padding-top: 8px;">
+<div style="max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px;">I'm glad you said it here. Heavy is allowed. What's sitting on you the most right now?</div>
+<span style="position: absolute; right: 14px; top: -2px; height: 20px; box-sizing: border-box; padding: 0 8px 0 6px; display: flex; align-items: center; gap: 4px; background: #DCE6DD; border: 1px solid #BFD2C3; border-radius: 999px; color: #2C5C3C; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"></path></svg>
+<span>Saved</span>
+</span>
+</div>
+
+<div class="arr a3" style="align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+<div style="max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">That I've given three years to this and I still freeze in the exam hall.</div>
+<span style="padding-right: 6px; font-size: 12px; line-height: 16px; color: #5E5A53;">Read</span>
+</div>
+
+<div style="align-self: flex-start; display: flex; flex-direction: column; align-items: flex-start; gap: 8px;">
+<div class="m5" style="position: relative; max-width: 288px;">
+<span class="glow" aria-hidden="true" style="position: absolute; inset: 0; border-radius: 22px 22px 22px 8px; box-shadow: 0 0 0 6px {{accentTint}}; opacity: 0;"></span>
+<div style="position: relative; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px;">Freezing doesn't erase three years of work. Can we look at the minute just before it happens?</div>
+</div>
+<span class="settle" style="display: flex;">
+<button class="key" style="height: 40px; box-sizing: border-box; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 6px; background: {{accentTint}}; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentTintEdge}}; color: {{accent}}; font-size: 14px; line-height: 20px; font-weight: 700;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"></path></svg>
+<span>Save to Mentor Notes</span>
+</button>
+</span>
+<span class="nudge" style="max-width: 260px; font-size: 13px; line-height: 18px; color: #5E5A53;">Important guidance? Save it to your journal so it stays with you.</span>
+</div>
+
+<div class="typing" style="align-self: flex-start; display: flex; align-items: center; gap: 8px;">
+<span style="height: 28px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; gap: 4px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 2px 0 #E3DCCF;">
+<span class="dot" style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53;"></span>
+<span class="dot d2" style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53; opacity: 0.6;"></span>
+<span class="dot d3" style="width: 6px; height: 6px; border-radius: 999px; background: #5E5A53; opacity: 0.35;"></span>
+</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Steady Cedar is typing…</span>
+</div>
+</main>
+
+<img class="lean" src="/_blob/ca61e83f28c39e94950642c2a809833d" alt="Your cat companion peeking over the message field, leaning toward the new message" style="position: absolute; right: 24px; bottom: 96px; width: 76px; height: 108px; object-fit: contain; transform-origin: 50% 100%; z-index: 2;">
+
+<footer style="position: relative; z-index: 3; flex-shrink: 0; box-sizing: border-box; padding: 8px 16px 28px; display: flex; flex-direction: column; gap: 8px; background: #F4EFE6; border-top: 1px solid #E6DFD3;">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 32px;">
+<span role="img" aria-label="Message allowance: 7 of 10 left" style="flex-shrink: 0; display: flex; align-items: center; gap: 2px;">
+<span style="box-sizing: border-box; padding: 3px; display: flex; gap: 3px; background: #FBF8F2; border: 1.5px solid #CFC6B5; border-radius: 7px;">
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span class="pip" style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+</span>
+<span style="width: 3px; height: 8px; border-radius: 0 2px 2px 0; background: #CFC6B5;"></span>
+</span>
+<span style="font-size: 13px; line-height: 16px; color: #5E5A53;">7 of 10 messages left today · up to 3 in a row</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<label for="x05a-message" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Message</label>
+<input id="x05a-message" type="text" placeholder="Type a message…" style="flex-grow: 1; min-width: 0; height: 52px; box-sizing: border-box; padding: 0 16px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; outline: none; font-size: 16px; line-height: 24px;">
+<button class="key" aria-label="Send message" style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentEdge}};">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14-7-5 15-3-6z"></path></svg>
+</button>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var accent = this.props.accent ?? '#A2533A';
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      accentTintEdge: this.mix(accent, 255, 0.6)
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mento — Chat with the support lines showing, still</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;font-family:'Baloo 2','Trebuchet MS',system-ui,sans-serif;background:#F4EFE6;color:#2B2B2B}
+button{font:inherit;color:inherit;cursor:pointer;padding:0}
+input{font:inherit;color:inherit}
+input::placeholder{color:#5E5A53;opacity:1}
+a{color:#2B2B2B;text-decoration:none}a:hover{color:#2B2B2B}
+@keyframes arr{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes arrSheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes arrDeep{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes arrDim{from{opacity:0}to{opacity:1}}
+@keyframes breathe{from{transform:scale(1) rotate(-1deg)}to{transform:scale(1.035) rotate(0.8deg)}}
+.key:active{transform:translateY(3px)}
+@media (prefers-reduced-motion: no-preference){
+.key{transition:transform 0.12s cubic-bezier(0.22,1,0.36,1)}
+.arr{animation:arr 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.a1{animation-delay:0.08s}.a2{animation-delay:0.16s}.a3{animation-delay:0.24s}.a4{animation-delay:0.32s}.a5{animation-delay:0.40s}.a6{animation-delay:0.48s}
+.arrSheet{animation:arrSheet 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDeep{animation:arrDeep 0.5s cubic-bezier(0.22,1,0.36,1) both}
+.arrDim{animation:arrDim 0.35s linear both}
+.breathe{animation:breathe 5.2s ease-in-out infinite alternate}
+}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; overflow: hidden; position: relative; display: flex; flex-direction: column; background: #F4EFE6; color: #2B2B2B; font-family: 'Baloo 2', 'Trebuchet MS', system-ui, sans-serif;">
+
+<header style="position: relative; z-index: 3; flex-shrink: 0; box-sizing: border-box; padding: 44px 12px 0;">
+<div aria-hidden="true" style="position: absolute; left: -60px; right: -60px; top: -150px; height: 300px; border-radius: 50%; background: radial-gradient(closest-side, {{accentTint}}, rgba(244,239,230,0)); pointer-events: none;"></div>
+<div style="position: relative; display: flex; flex-direction: column; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px; box-shadow: 0 4px 0 #E3DCCF;">
+<div style="display: flex; align-items: center; gap: 6px; padding: 8px 8px 8px 4px;">
+<a class="key" href="A06_Chats.dc.html" aria-label="Leave conversation" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px;">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+</a>
+<a href="A14_StayInTouch.dc.html" aria-label="View Steady Cedar's profile" style="flex-grow: 1; min-width: 0; min-height: 56px; display: flex; align-items: center; gap: 12px;">
+<span style="position: relative; width: 56px; height: 56px; flex-shrink: 0;">
+<span aria-hidden="true" style="position: absolute; inset: -4px; border-radius: 999px; border: 2px solid {{accent}}; opacity: 0.35;"></span>
+<span style="position: absolute; inset: 0; display: flex; align-items: flex-end; justify-content: center; overflow: hidden; border-radius: 999px; background: #DCE6DD; border: 2px solid #FFFFFF; box-sizing: border-box;">
+<img src="/_blob/902f0cecc2f1387e57d248d962191f3e" alt="" style="width: 50px; height: 50px; object-fit: contain;">
+</span>
+<span aria-hidden="true" style="position: absolute; right: 0; bottom: 1px; width: 14px; height: 14px; box-sizing: border-box; border-radius: 999px; background: #38734B; border: 2.5px solid #FFFFFF;"></span>
+</span>
+<span style="min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 19px; line-height: 24px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Steady Cedar</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Mentor · here now · UPSC community</span>
+</span>
+</a>
+<a class="key" href="A20_ChatOptions.dc.html" aria-label="Conversation options" style="box-sizing: border-box; width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: #FBF8F2; border: 1px solid #E6DFD3; border-radius: 999px; box-shadow: 0 3px 0 #D9D1C2;">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none" aria-hidden="true"><circle cx="5" cy="12" r="1.7"></circle><circle cx="12" cy="12" r="1.7"></circle><circle cx="19" cy="12" r="1.7"></circle></svg>
+</a>
+</div>
+<div style="box-sizing: border-box; height: 42px; padding: 0 12px; display: flex; align-items: center; gap: 8px; background: #FBF8F2; border-top: 1px solid #E6DFD3; border-radius: 0 0 21px 21px; white-space: nowrap; overflow: hidden;">
+<span style="font-size: 12px; line-height: 16px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #5E5A53;">In this chat</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; background: #F5E8C4; color: #674711; font-size: 12px; line-height: 16px; font-weight: 700;">Exam stress</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: #DCE6DD; color: #2C5C3C; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v16l-5-4-5 4z"></path></svg>
+<span>Saved 2</span>
+</span>
+<span style="height: 26px; box-sizing: border-box; padding: 0 10px 0 8px; display: flex; align-items: center; gap: 4px; border-radius: 999px; background: {{accentTint}}; color: {{accent}}; font-size: 12px; line-height: 16px; font-weight: 700;">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12a4 4 0 0 1 4-4h3a4 4 0 0 1 0 8h-1"></path><path d="M15 12a4 4 0 0 1-4 4H8a4 4 0 0 1 0-8h1"></path></svg>
+<span>In touch</span>
+</span>
+</div>
+</div>
+</header>
+
+<main style="flex-grow: 1; min-height: 0; position: relative; z-index: 1; box-sizing: border-box; padding: 12px 16px 8px; display: flex; flex-direction: column; justify-content: flex-end; gap: 10px; overflow: hidden;">
+<div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 0; height: 28px; z-index: 2; background: linear-gradient(to bottom, #F4EFE6 30%, rgba(244,239,230,0)); pointer-events: none;"></div>
+<div style="align-self: center; font-size: 13px; line-height: 18px; font-weight: 700; color: #5E5A53;">Today</div>
+
+<div style="align-self: flex-start; max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 22px 22px 22px 8px; box-shadow: 0 3px 0 #E3DCCF; font-size: 16px; line-height: 24px;">That sounds exhausting. How long has it felt this way?</div>
+
+<div style="align-self: flex-end; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+<div style="max-width: 288px; box-sizing: border-box; padding: 10px 14px; background: {{accent}}; color: #FFFFFF; border-radius: 22px 22px 8px 22px; box-shadow: 0 3px 0 {{accentEdge}}; font-size: 16px; line-height: 24px;">I don't see the point of any of this anymore.</div>
+<span style="padding-right: 6px; font-size: 12px; line-height: 16px; color: #5E5A53;">Delivered</span>
+</div>
+
+<section aria-label="Support lines you can call now" style="align-self: stretch; box-sizing: border-box; padding: 16px 16px 6px; display: flex; flex-direction: column; gap: 12px; background: #EFE9DF; border: 1px solid #DDD4C4; border-radius: 22px; box-shadow: 0 3px 0 #D9D1C2;">
+<div style="display: flex; align-items: center; gap: 10px;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #F5E8C4; color: #674711;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"></path></svg>
+</span>
+<p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700;">You deserve more support than a chat can give right now.</p>
+</div>
+
+<a href="tel:14416" aria-label="Call Tele-MANAS on 14416" style="height: 56px; box-sizing: border-box; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #D9D1C2;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h3l2 5-2 1.5a12 12 0 0 0 5.5 5.5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 4 5a2 2 0 0 1 2-2z"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">Tele-MANAS</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Free, any hour</span>
+</span>
+<span style="flex-shrink: 0; font-size: 19px; line-height: 24px; font-weight: 800; letter-spacing: 0.01em;">14416</span>
+</a>
+
+<a href="tel:18005990019" aria-label="Call KIRAN on 1800-599-0019" style="height: 56px; box-sizing: border-box; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 10px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #D9D1C2;">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: 999px; background: #DCE6DD; color: #2C5C3C;">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h3l2 5-2 1.5a12 12 0 0 0 5.5 5.5L16 13l5 2v3a2 2 0 0 1-2 2A16 16 0 0 1 4 5a2 2 0 0 1 2-2z"></path></svg>
+</span>
+<span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column;">
+<span style="font-size: 16px; line-height: 20px; font-weight: 700;">KIRAN</span>
+<span style="font-size: 13px; line-height: 18px; color: #5E5A53;">Free, any hour</span>
+</span>
+<span style="flex-shrink: 0; font-size: 19px; line-height: 24px; font-weight: 800; letter-spacing: 0.01em;">1800-599-0019</span>
+</a>
+
+<div style="box-sizing: border-box; padding-right: 84px; display: flex; flex-direction: column; align-items: flex-start;">
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #5E5A53;">Steady Cedar is still here with you. Mentors are peers, not therapists.</p>
+<sc-if value="{{ whyOpen }}" hint-placeholder-val="{{ false }}">
+<p style="margin: 0; padding-top: 8px; font-size: 13px; line-height: 18px; color: #2B2B2B;">Something in your last message sounded heavy, so Mento shows these lines. Your message was delivered as usual. Nothing is blocked, and nothing is counted.</p>
+</sc-if>
+<sc-if value="{{ whyClosed }}" hint-placeholder-val="{{ true }}">
+<button onClick="{{ toggleWhy }}" aria-expanded="false" style="height: 44px; display: flex; align-items: center; background: transparent; border: 0; font-size: 14px; line-height: 20px; font-weight: 700; color: #5E5A53; text-decoration: underline; text-underline-offset: 4px;">Why am I seeing this?</button>
+</sc-if>
+<sc-if value="{{ whyOpen }}" hint-placeholder-val="{{ false }}">
+<button onClick="{{ toggleWhy }}" aria-expanded="true" style="height: 44px; display: flex; align-items: center; background: transparent; border: 0; font-size: 14px; line-height: 20px; font-weight: 700; color: #5E5A53; text-decoration: underline; text-underline-offset: 4px;">Hide this note</button>
+</sc-if>
+</div>
+</section>
+</main>
+
+<img src="/_blob/5ef7c66e2ec3a36385bafc98e11b92ed" alt="Your cat companion sitting quietly beside you, a paw on its heart" style="position: absolute; right: 24px; bottom: 96px; width: 76px; height: 108px; object-fit: contain; z-index: 2;">
+
+<footer style="position: relative; z-index: 3; flex-shrink: 0; box-sizing: border-box; padding: 8px 16px 28px; display: flex; flex-direction: column; gap: 8px; background: #F4EFE6; border-top: 1px solid #E6DFD3;">
+<div style="display: flex; align-items: center; gap: 10px; min-height: 32px;">
+<span role="img" aria-label="Message allowance: 7 of 10 left" style="flex-shrink: 0; display: flex; align-items: center; gap: 2px;">
+<span style="box-sizing: border-box; padding: 3px; display: flex; gap: 3px; background: #FBF8F2; border: 1.5px solid #CFC6B5; border-radius: 7px;">
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: {{accent}};"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+<span style="width: 8px; height: 12px; border-radius: 3px; background: #E3DCCF;"></span>
+</span>
+<span style="width: 3px; height: 8px; border-radius: 0 2px 2px 0; background: #CFC6B5;"></span>
+</span>
+<span style="font-size: 13px; line-height: 16px; color: #5E5A53;">7 of 10 left today. That last message was not counted.</span>
+</div>
+<div style="display: flex; align-items: center; gap: 10px;">
+<label for="a21-message" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;">Message</label>
+<input id="a21-message" type="text" placeholder="Type a message…" style="flex-grow: 1; min-width: 0; height: 52px; box-sizing: border-box; padding: 0 16px; background: #FFFFFF; border: 1px solid #E6DFD3; border-radius: 14px; box-shadow: 0 4px 0 #E3DCCF; outline: none; font-size: 16px; line-height: 24px;">
+<button aria-label="Send message" style="width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: {{accent}}; color: #FFFFFF; border: 0; border-radius: 999px; box-shadow: 0 4px 0 {{accentEdge}};">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l14-7-5 15-3-6z"></path></svg>
+</button>
+</div>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#A2533A","options":["#A2533A","#467054","#3B6D8F","#6B4C8C"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  mix(hex, to, t) {
+    var h = String(hex || '').replace('#', '');
+    if (h.length === 3) { h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; }
+    if (!/^[0-9a-fA-F]{6}$/.test(h)) { return hex; }
+    var out = '#';
+    for (var i = 0; i < 3; i++) {
+      var c = parseInt(h.substr(i * 2, 2), 16);
+      var v = Math.round(c + (to - c) * t);
+      out += ('0' + v.toString(16)).slice(-2);
+    }
+    return out;
+  }
+  renderVals() {
+    var self = this;
+    var accent = this.props.accent ?? '#A2533A';
+    var why = !!(this.state && this.state.why);
+    return {
+      accent: accent,
+      accentEdge: this.mix(accent, 0, 0.22),
+      accentTint: this.mix(accent, 255, 0.8),
+      whyOpen: why,
+      whyClosed: !why,
+      toggleWhy: function () { self.setState({ why: !why }); }
+    };
+  }
+}
+</script>
+</body>
+</html>
