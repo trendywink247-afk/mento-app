@@ -61,6 +61,20 @@ PROMPTS: dict[str, list[str]] = {
         "Ask what's helped them get through hard stretches before.",
         "Ask what they need most right now — company, or a plan.",
     ],
+    "feeling_stuck": [
+        "Ask where they feel most stuck right now, in one sentence.",
+        "Ask what the smallest possible next step would look like.",
+        "Reflect back how long they have been carrying this.",
+        "Ask what has moved, even a little, since it started.",
+        "Ask whether they want to be heard first or to think it through.",
+    ],
+    "motivation": [
+        "Ask what used to make this feel worth it.",
+        "Ask what a realistic day would look like, not a perfect one.",
+        "Reflect back the effort they have already put in.",
+        "Ask what is draining their energy most at the moment.",
+        "Ask what one thing would make tomorrow feel a little easier to start.",
+    ],
 }
 
 

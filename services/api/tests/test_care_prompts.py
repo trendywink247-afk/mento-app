@@ -42,3 +42,10 @@ def test_pick_varies_across_seeds():
     confirm more than one prompt shows up."""
     seen = {pick("exam_stress", f"convo-{i}") for i in range(20)}
     assert len(seen) > 1
+
+
+def test_every_issue_category_has_its_own_prompts():
+    """The New chat sheet's topic chips map onto these slugs; each one gets
+    prompts written for it rather than falling back to general."""
+    for slug in ISSUE_CATEGORIES:
+        assert slug in PROMPTS, slug

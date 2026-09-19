@@ -13,6 +13,8 @@ ISSUE_CATEGORIES: dict[str, str] = {
     "career_doubt": "Career doubt",
     "relationships": "Relationships",
     "life": "Life in general",
+    "feeling_stuck": "Feeling stuck",
+    "motivation": "Motivation",
 }
 
 
