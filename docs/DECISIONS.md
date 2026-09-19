@@ -182,6 +182,10 @@ Source: the developer relayed these after the recovered 2026-09-06 walkthrough c
 
 **8. Design picks (2026-09-19, direction A board).** Request sent = "a letter on its way"; Chat = "alive" + the "In this chat" strip (topic · saved count · in-touch state) inside a composed header card; My Chats = richer rows + the In touch view; Path = the stage-centred home with the first-question builder and the "life rather than exams" finder; Journal = "today first, then the shelf" — one unified journal where anything saved from a chat lands beside the member's own notes. Direction A ("Pillow") is the working direction by use; B and C are parked, not rejected. These are board decisions — none is built in the app yet.
 
+**9. Snooze 24 h on Mentor Home — founder, 2026-09-19 ("let's complete it").** Board A10's quiet **Snooze 24 h** key on a conversation that is waiting on the mentor is built end to end. It is the mentor's honest "I can't reply today" for one chat: for 24 hours the chat sorts below the awake ones and reads "Snoozed · back at <time>", the mentor gets no message pushes for it, and the capacity sweep does not end it. It **never hides a crisis**: a crisis-flagged member message ends the snooze at once (after the scan, in the Stream hooks), so the mentor is pushed and the chat returns to the top. The member is never told "snoozed"; they read the kind half of the promise — "<mentor> will reply within a day". Built (pending veto on the details under L.9 below).
+
+**10. Mentor availability — founder delegated ("you sort it out"), 2026-09-19.** Board A37 draws multi-select time-of-day chips **Mornings · Evenings · Weekends** with a quiet "A few hours a week" caption. Decision: **keep both fields.** The single-choice commitment (`availability`: a few hours a week / most evenings / weekends / it varies) stays in the contract and is the quiet caption (tap to change); the chips are an additive `available_times` (the API also accepts afternoons and late nights for later), optional in the API so older builds still submit, at least one required by the current app. Approval turns the chips into the mentor's member-facing availability note ("usually here mornings and weekends"); the admin queue shows both. Nothing identifying is derived from it. **The paid-mentoring opt-in stays removed** from every member and mentor surface (founder: yes; where it lives later is his call) — `mentor_interest` is always false from the app. Built.
+
 ### L — pending founder veto (implementation choices made where §L is silent)
 
 Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code already follows; strike or amend any of them. Client wiring: `docs/superpowers/specs/2026-09-19-board-port-api.md`.
@@ -218,3 +222,14 @@ Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code al
 - **w. No screenshot yet.** A11 draws one; the API has no file storage, and a screenshot of a chat would attach what the sheet says is never attached. If it is wanted: refuse it on chat screens, or blur message bodies on the device first.
 - **x. Crisis words typed into the feedback box get the helplines back, are NOT kept as feedback, and raise a signal-only safety flag** (which does carry the member's id, like every other safety flag — it is a safety record, not feedback). The helplines answer is never rate-limited.
 - **y. Reading the feedback list is an audited admin read** (`feedback.viewed`).
+
+**L.9 snooze (item 9)**
+- **z. "Waiting on you" means the member wrote, the mentor has read it, and has not replied.** An unread message keeps the "N new" pill instead (board A10's other row), so the key appears only once the mentor has actually seen what is waiting. Computed on the device from the Stream channel; the age reads "N min / N h / N d".
+- **aa. Snoozing again never extends the window** (no rolling postponement); Undo is always available; the mentor's own reply ends the snooze (nothing is waiting on them any more); a member's ordinary message does not (the point is "I can't reply today").
+- **bb. While snoozed, the stale sweep leaves the chat alone only until the window closes** — a 23-hour-old chat snoozed now is swept at the next pass after the snooze ends (the 24 h age rule, audit F8, is unchanged).
+- **cc. The member's kind line lives in two places:** the My Chats row's second line ("<mentor> will reply within a day", above "first talked as") and the chat header's status ("Replies within a day", in place of here / away). Nowhere else; never the word "snoozed".
+- **dd. 30 snooze changes an hour per mentor**, fail-open like every other limit.
+
+**L.10 availability (item 10)**
+- **ee. The commitment caption steps through its four values on tap** (a small select without a new sheet), defaulting to "A few hours a week" as the board draws it.
+- **ff. The approval note uses the chips when present, else the commitment** ("a few hours a week"); the mentor can edit it afterwards from "Your line".
