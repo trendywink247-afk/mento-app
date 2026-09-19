@@ -35,3 +35,10 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   badge. Resets rate limits + capacity accounting (docker exec) before each run and
   retries once on a 503/429/missing-listener flake. Normal + reduced-motion, 0 page
   errors.
+- chat-header.e2e.js — the member chat's header card + "In this chat" strip (DECISIONS
+  §L.8): mentor name + "here now" with the presence ring/dot; no strip while nothing is
+  kept; a mentor note seeded for THIS conversation → back in the chat → "Saved 1" (a note
+  from another conversation is not counted); identity area → mentor profile → back; the
+  mentor flipped to away (docker exec, restored in `finally`) → "Mentor · away", no ring,
+  no dot. `SHOT=<path>` writes a screenshot. Normal + reduced-motion, 0 page errors. The
+  live save-from-message tick-up is asserted in two-party-chat.e2e.js.

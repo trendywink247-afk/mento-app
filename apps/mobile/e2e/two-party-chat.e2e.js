@@ -117,6 +117,19 @@ async function onboardMember(page, tid) {
   await mpage.waitForSelector(`text=${LISTENER_MSG}`, { timeout: 30000 });
   console.log('OK listener->member delivery confirmed');
 
+  // Core talk->action loop, live: the member keeps the mentor's message from its
+  // actions, and the header card's "In this chat" strip ticks up to "Saved 1" — the
+  // chip follows the server's count, not the tap (components/chat/ChatHeaderCard.tsx).
+  if (await mtid('chat-strip').count()) throw new Error('strip rendered before anything was saved');
+  await mpage.locator('[data-testid^="msg-"]').first().click();
+  await mpage.locator('[data-testid^="save-card-"]').first().click();
+  await mpage.waitForFunction(
+    () => /Saved 1/.test(document.querySelector('[data-testid="chat-strip-saved"]')?.textContent || ''),
+    null,
+    { timeout: 15000 },
+  );
+  console.log('OK saving a mentor message ticks the header strip to "Saved 1"');
+
   await ltid('listener-composer-input').fill(LISTENER_ENTER_MSG);
   await ltid('listener-composer-input').press('Enter');
   await lpage.waitForSelector(`text=${LISTENER_ENTER_MSG}`, { timeout: 20000 });

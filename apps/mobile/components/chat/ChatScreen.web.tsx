@@ -18,6 +18,7 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PressKey } from '@/components/motion/PressKey';
+import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { ComposerField } from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
@@ -31,6 +32,7 @@ import { useI18n, type TFunc } from '@/lib/i18n';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
+import { useChatHeader } from '@/lib/useChatHeader';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { duration, easing } from '@/theme/motion';
@@ -344,6 +346,11 @@ export default function ChatScreenWeb() {
     starter?: string;
   }>();
   const listenerName = listener ?? t('chat.yourListener');
+  // Presence, community and the saved count for the header card. The header may know
+  // the mentor's name even when the route did not carry it (a notification tap).
+  const header = useChatHeader(conversationId);
+  const { refreshSaved } = header;
+  const headerName = listener ?? header.profile?.persona_name ?? listenerName;
   const [optionsOpen, setOptionsOpen] = useState(false);
   // Set right before pendingOption.take() opens the sheet with the Report flow
   // pre-selected (the mentor-profile screen's "Report or block" hand-off) — cleared
@@ -510,12 +517,13 @@ export default function ChatScreenWeb() {
             stream_message_id: m.id,
           });
           setSaved((prev) => new Set(prev).add(m.id));
+          refreshSaved(); // the "Saved N" chip follows the server, not the tap
         } catch {
           // Soft-fail: keep the tooltip open so the user can retry.
         }
       })();
     },
-    [conversationId, listenerName],
+    [conversationId, listenerName, refreshSaved],
   );
 
   const toggleActions = useCallback(
@@ -544,68 +552,21 @@ export default function ChatScreenWeb() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      {/* Mentor header card (mockup #7) */}
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.surface, borderBottomWidth: 1.5, borderBottomColor: colors.border },
-        ]}
-      >
-        <Pressable
-          onPress={() => router.replace('/chats')}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.leaveA11y')}
-        >
-          <Ionicons name="chevron-back" size={26} color={colors.ink} />
-        </Pressable>
-        {/* reason: this row is header chrome, not a card — face + edge are both
-            colors.surface (flush with the header background, no visible lip) so the
-            pillow travel + haptic on press are the only cue it's tappable. */}
-        <PressKey
-          onPress={() =>
-            router.push({
-              pathname: '/mentor-profile/[id]',
-              params: { id: conversationId ?? '', name: listenerName },
-            })
-          }
-          edge={colors.surface}
-          travel={2}
-          testID="mentor-header"
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.mentorHeaderA11y', { name: listenerName })}
-          style={[styles.headerPressFace, { backgroundColor: colors.surface }]}
-          containerStyle={styles.headerPressContainer}
-        >
-          <PersonaAvatar name={listenerName} size={52} online />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-              {listenerName}
-            </Text>
-            <View style={styles.statusRow}>
-              <Ionicons name="shield-checkmark" size={12} color={colors.accentSoft} />
-              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-                {t('chat.statusLine')}
-              </Text>
-            </View>
-          </View>
-        </PressKey>
-        <View
-          style={[styles.connectedDot, { backgroundColor: colors.surfaceAlt }]}
-          accessibilityLabel={t('chat.connectedA11y')}
-        >
-          <View style={[styles.dot, { backgroundColor: colors.success }]} />
-        </View>
-        <Pressable
-          onPress={() => setOptionsOpen(true)}
-          hitSlop={12}
-          testID="open-options"
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.optionsA11y')}
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
-        </Pressable>
-      </View>
+      {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the native chat. */}
+      <ChatHeaderCard
+        name={headerName}
+        status={header.profile?.status ?? null}
+        community={header.community}
+        savedCount={header.savedCount}
+        onBack={() => router.replace('/chats')}
+        onOpenProfile={() =>
+          router.push({
+            pathname: '/mentor-profile/[id]',
+            params: { id: conversationId ?? '', name: headerName },
+          })
+        }
+        onOpenOptions={() => setOptionsOpen(true)}
+      />
 
       {/* Dismissible first-run privacy line (mockup #20 shows it collapsed) */}
       {privacyNote ? (
@@ -698,32 +659,16 @@ export default function ChatScreenWeb() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderBottomLeftRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
-  },
-  personaName: { fontFamily: font.serifBold, fontSize: 19, lineHeight: 24 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
-  headerPressContainer: { flex: 1 },
-  headerPressFace: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-  connectedDot: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.pill,
-    padding: 6,
-  },
-  dot: { width: 8, height: 8, borderRadius: radius.pill },
+  // Inset + rounded to sit under the floating header card (same 12px gutter).
   privacy: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
+    marginHorizontal: space.sm + 4,
+    marginTop: space.xs,
+    borderRadius: radius.md,
+    paddingVertical: space.xs + 2,
+    paddingHorizontal: space.sm + 4,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
   list: { padding: space.md, gap: space.xs },

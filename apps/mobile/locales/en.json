@@ -251,8 +251,14 @@
   },
   "chat": {
     "yourListener": "Your mentor",
-    "statusLine": "Here to listen and support",
-    "connectedA11y": "Connected",
+    "header": {
+      "mentor": "Mentor",
+      "here": "Mentor · here now",
+      "away": "Mentor · away",
+      "inThisChat": "In this chat",
+      "saved": "Saved %{count}",
+      "savedA11y": "%{count} saved to your journal from this chat"
+    },
     "leaveA11y": "Leave conversation",
     "optionsA11y": "Conversation options",
     "privacy": "This conversation is private. Your identity is never shared.",
