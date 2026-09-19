@@ -60,6 +60,16 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     companion_animal: Mapped[str | None] = mapped_column(String(32), nullable=True)
     companion_colour: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
+    # Stepping back (board A32 / capture 409, lane u14): a live mentor who wants to Start
+    # fresh asks the team to step their mentor side back (POST /listener-applications/me/
+    # step-back). The team sees it at the top of the admin Listeners panel and suspends
+    # with the existing, audited tool — after which erasure is no longer refused.
+    # Cleared on reinstate. The reason is optional, bounded, and admin-only.
+    step_back_requested_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    step_back_reason: Mapped[str | None] = mapped_column(String(280), nullable=True)
+
 
 @event.listens_for(ListenerProfile, "before_insert")
 def _deal_face(_mapper, _connection, target: ListenerProfile) -> None:

@@ -145,13 +145,15 @@ export function ConversationRow({
     );
   }
 
+  // Every row says something: the live line when there is one, otherwise how long the
+  // conversation has been open — an empty second line left the row looking half-drawn.
   const stateLine = !active
     ? t('mentor.ended')
     : typing
       ? t('mentor.typing')
       : conversation.member_masked
         ? t('mentor.masked')
-        : (live?.preview ?? '');
+        : live?.preview || t('mentorHomePage.started', { age: waitedFor(new Date(conversation.created_at).getTime(), t) });
 
   return (
     <PressKey

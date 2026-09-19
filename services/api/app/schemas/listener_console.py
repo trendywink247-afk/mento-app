@@ -47,6 +47,9 @@ class DevListenerItem(BaseModel):
     persona_name: str
     persona_avatar: str
     status: str
+    # The mentor's face (services/mentor_face.py) — the picker draws it, never a landscape.
+    companion_animal: str = "Owl"
+    companion_colour: str = "sage"
 
 
 class DevTokenOut(BaseModel):

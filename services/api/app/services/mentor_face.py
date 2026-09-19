@@ -8,12 +8,15 @@ is the ONE source of truth; the client never derives a mentor's look on its own.
 
 Rules
 -----
+- **Every mentor is an Owl** (founder, 2026-09-20: "the Owl is the default on the mentor
+  side"). Mentors are told apart by the wash COLOUR, which is still dealt per mentor.
+  Migration `d14a0owl0001` turned every older row into an Owl and kept its colour.
 - **Stable.** Assigned once — on insert (every creation path: admin approval, admin
-  provisioning, seeds, tests) and by the backfill migration for older rows — and never
+  provisioning, seeds, tests) and by the backfill migrations for older rows — and never
   touched by the daily name rotation ("same owl, new name", DECISIONS §L.6 l).
-- **Deterministic from the listener id**, never from the persona name (it rotates) or the
-  persona avatar (an approved mentor's avatar seed is copied from their member account,
-  so deriving from it would tie the two identities together).
+- **The colour is deterministic from the listener id**, never from the persona name (it
+  rotates) or the persona avatar (an approved mentor's avatar seed is copied from their
+  member account, so deriving from it would tie the two identities together).
 - **Carries nothing about a person.** It is a presentation choice made by the server,
   not the mentor's own member companion (that would link a dual-role person's two sides).
 
@@ -32,36 +35,25 @@ from app.services.companions import ANIMALS, COLOURS
 if TYPE_CHECKING:
     from app.models.listener import ListenerProfile
 
-# The board draws mentors mostly as owls on a sage wash (A06 / A10 / A14 / A25), with other
-# mentors as other animals (A25's cards). Order is part of the contract: the backfill
-# migration carries a frozen copy of these two tuples and of `derive`, so changing either
-# would only re-deal NEW mentors — never an existing face.
-FACE_ANIMALS: tuple[str, ...] = (
-    "Owl",
-    "Fox",
-    "Deer",
-    "Turtle",
-    "Elephant",
-    "Capybara",
-    "Dog",
-    "Panda",
-    "Cat",
-)
+# The mentor side's animal (founder, 2026-09-20). The colours' order is part of the
+# contract: the backfill migrations carry a frozen copy of this tuple and of the colour half
+# of `derive`, so changing it would only re-deal NEW mentors — never an existing wash.
+MENTOR_ANIMAL = "Owl"
 FACE_COLOURS: tuple[str, ...] = ("sage", "mustard", "sky", "terracotta", "rose", "plum", "teal")
 
 DEFAULT_ANIMAL = "Owl"
 DEFAULT_COLOUR = "sage"
 
-assert set(FACE_ANIMALS) == set(ANIMALS), "a mentor face must be an animal the app can draw"
+assert MENTOR_ANIMAL in ANIMALS, "a mentor face must be an animal the app can draw"
 assert set(FACE_COLOURS) == set(COLOURS), "a mentor wash must be a companion colour"
 
 
 def derive(listener_id: str) -> tuple[str, str]:
-    """The face a listener id is dealt. Pure, stable across processes and releases."""
+    """The face a listener id is dealt: the Owl, in a colour dealt from the id. Pure,
+    stable across processes and releases."""
     digest = hashlib.sha256(f"mento-mentor-face:{listener_id}".encode()).digest()
-    animal = FACE_ANIMALS[int.from_bytes(digest[:4], "big") % len(FACE_ANIMALS)]
     colour = FACE_COLOURS[int.from_bytes(digest[4:8], "big") % len(FACE_COLOURS)]
-    return animal, colour
+    return MENTOR_ANIMAL, colour
 
 
 def assign(li: ListenerProfile) -> None:

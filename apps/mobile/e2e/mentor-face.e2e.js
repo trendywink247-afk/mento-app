@@ -97,6 +97,7 @@ async function pass(browser, reduced) {
   flushLimits();
   const M = await mentor();
   const want = M.animal;
+  expect(want === 'Owl', `[${label}] a new mentor was dealt ${want}, not the Owl (founder: mentors are Owls)`);
   const same = async (page, scope, where) => {
     const got = await faceIn(page, scope);
     expect(got === want, `[${label}] ${where} draws the mentor as ${got}, expected ${want}`);

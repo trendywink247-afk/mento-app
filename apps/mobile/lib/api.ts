@@ -344,6 +344,8 @@ export type ListenerApplication = {
   console_url: string | null;
   /** Declined only: when the server's 30-day cooldown lets them apply again (ISO time). */
   reapply_after?: string | null;
+  /** Approved only: when this mentor asked the team to step their mentor side back. */
+  step_back_requested_at?: string | null;
 };
 export type ListenerApplicationIn = {
   motivation: string;
@@ -556,4 +558,12 @@ export const api = {
    * Refusals carry a `code`: 409 `mentor_active` (also a live mentor — nothing touched),
    * 503 `erase_incomplete` (chats ended, the rest not yet — keep the session and retry). */
   eraseMe: () => request<{ status: 'erased' }>('/me', { method: 'DELETE' }, true),
+  /** A live mentor asks the team to step their mentor side back (board A32 / 409, lane u14).
+   * Idempotent; 409 `not_live_mentor` when there is no live mentor side. */
+  requestStepBack: (reason?: string) =>
+    request<{ status: 'requested'; requested_at: string }>(
+      '/listener-applications/me/step-back',
+      { method: 'POST', body: JSON.stringify(reason ? { reason } : {}) },
+      true,
+    ),
 };

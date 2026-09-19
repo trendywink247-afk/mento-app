@@ -62,6 +62,14 @@ class AdminListenerItem(BaseModel):
     max_concurrent: int
     rank: int
     public_line: str | None
+    # The mentor's face (services/mentor_face.py) — the panel draws the mentor as members
+    # see them, never a landscape avatar.
+    companion_animal: str = "Owl"
+    companion_colour: str = "sage"
+    # A live mentor asked the team to step their mentor side back (lane u14). The
+    # panel lists these first while the side is still approved; suspend handles it.
+    step_back_requested_at: str | None = None
+    step_back_reason: str | None = None
 
 
 class AdminListenerCreateIn(BaseModel):

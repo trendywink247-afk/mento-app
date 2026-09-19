@@ -480,9 +480,11 @@ function ConsoleBody({
             />
           ))
         ) : (
-          <Text style={[type.caption, styles.pad, { color: colors.inkMuted }]} testID="mentor-requests-empty">
-            {t('mentor.requestsEmpty')}
-          </Text>
+          <EmptyNote
+            title={t('mentorHomePage.requestsEmptyTitle')}
+            body={t('mentor.requestsEmpty')}
+            testID="mentor-requests-empty"
+          />
         )}
       </Entrance>
 
@@ -507,11 +509,28 @@ function ConsoleBody({
             />
           ))
         ) : (
-          <Text style={[type.caption, styles.pad, { color: colors.inkMuted }]} testID="mentor-convos-empty">
-            {t('mentor.conversationsEmpty')}
-          </Text>
+          <EmptyNote
+            title={t('mentorHomePage.conversationsEmptyTitle')}
+            body={t('mentor.conversationsEmpty')}
+            testID="mentor-convos-empty"
+          />
         )}
       </Entrance>
+    </View>
+  );
+}
+
+/** A section with nothing in it yet (board A10's calm console): a still, dashed card that
+ * holds the section's place, rather than a stray caption under the heading. */
+function EmptyNote({ title, body, testID }: { title: string; body: string; testID: string }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={[styles.empty, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
+      testID={testID}
+    >
+      <Text style={[type.bodySemi, { color: colors.ink }]}>{title}</Text>
+      <Text style={[type.caption, { color: colors.inkMuted }]}>{body}</Text>
     </View>
   );
 }
@@ -536,4 +555,12 @@ const styles = StyleSheet.create({
   intro: { marginBottom: space.md },
   unavailable: { marginTop: space.xs },
   note: { marginBottom: space.sm },
+  empty: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 2,
+  },
 });

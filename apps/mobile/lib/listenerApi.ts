@@ -90,6 +90,9 @@ export type DevListenerItem = {
   persona_name: string;
   persona_avatar: string;
   status: 'online' | 'away' | 'offline';
+  /** The mentor's face (services/mentor_face.py), drawn with `MentorFace`. */
+  companion_animal?: string | null;
+  companion_colour?: string | null;
 };
 
 export type ListenerReportReason = 'abuse' | 'harassment' | 'spam' | 'other';

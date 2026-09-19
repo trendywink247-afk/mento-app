@@ -58,7 +58,7 @@ from app.schemas import (
     OkResult,
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
-from app.services import allowance, audit, conversations, in_touch, stream
+from app.services import allowance, audit, conversations, in_touch, mentor_face, stream
 from app.services.categories import availability_note, ordered_times
 from app.services.links import admin_link, mentor_console_link
 from app.services.matching import reconcile_listener_capacity
@@ -361,6 +361,9 @@ def reinstate_listener(
     if li is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
     li.vetting_status = VettingStatus.approved
+    # Back on the mentor side: any earlier step-back ask is settled.
+    li.step_back_requested_at = None
+    li.step_back_reason = None
     audit.record(db, admin, "listener.reinstated", subject_type="listener", subject_id=listener_id)
     db.commit()
     return OkResult(status="reinstated")
@@ -394,6 +397,12 @@ def _listener_item(li: ListenerProfile) -> AdminListenerItem:
         max_concurrent=li.max_concurrent,
         rank=li.rank,
         public_line=li.public_line,
+        companion_animal=mentor_face.face(li)[0],
+        companion_colour=mentor_face.face(li)[1],
+        step_back_requested_at=(
+            li.step_back_requested_at.isoformat() if li.step_back_requested_at else None
+        ),
+        step_back_reason=li.step_back_reason,
     )
 
 
@@ -407,7 +416,17 @@ def admin_listeners(
         .scalars()
         .all()
     )
-    return [_listener_item(li) for li in rows]
+    # A live mentor waiting to be stepped back is the team's to-do: oldest ask first,
+    # above everyone else (the order is otherwise unchanged).
+    waiting = sorted(
+        (li for li in rows if _awaits_step_back(li)), key=lambda li: li.step_back_requested_at
+    )
+    rest = [li for li in rows if not _awaits_step_back(li)]
+    return [_listener_item(li) for li in [*waiting, *rest]]
+
+
+def _awaits_step_back(li: ListenerProfile) -> bool:
+    return li.step_back_requested_at is not None and li.vetting_status == VettingStatus.approved
 
 
 @router.post("/listeners", response_model=AdminListenerItem)

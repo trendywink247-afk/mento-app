@@ -51,6 +51,12 @@ export function PresenceHeader({
   const face: CompanionAnimal = (me.companion_animal as CompanionAnimal | undefined) ?? animal ?? 'Owl';
   const hours = hoursUntil(me.name_changes_at);
   const sage = COMPANION_COLORS.sage;
+  // The name story is told ONCE, under the greeting; the presence card keeps the seats.
+  // (Both said it before: "…names change every day at 4 am" and "· your name changes in 2 h".)
+  // The rule under the greeting, the countdown in the card — each says its own thing.
+  // (Before, both carried the whole sentence: "…names change every day at 4 am" and
+  // "· your name changes in 2 h".)
+  const rotation = t('mentorHomePage.rotationLine');
   const sub = [
     t('mentor.seats', { used: me.active_conversations, max: me.max_concurrent }),
     hours ? t('mentorHomePage.namesIn', { hours }) : null,
@@ -67,7 +73,7 @@ export function PresenceHeader({
           <Text style={{ color: colors.accent }}>{me.persona_name}</Text>
         </Text>
         <Text style={[type.caption, styles.hint, styles.clearOfPerch, { color: colors.inkMuted }]} testID="mentor-rotation-hint">
-          {t('mentorHomePage.rotationHint', { name: me.persona_name })}
+          {rotation}
         </Text>
       </Entrance>
 

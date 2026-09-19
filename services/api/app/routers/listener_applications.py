@@ -15,12 +15,15 @@ from sqlalchemy.orm import Session
 from app import ratelimit
 from app.config import get_settings
 from app.db import get_db
+from app.errors import ApiProblem
+from app.models.admin import AdminAuditLog
 from app.models.enums import ApplicationStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.schemas import ConsoleSessionOut, ListenerApplicationIn, ListenerApplicationOut
+from app.schemas.applications import StepBackIn, StepBackOut
 from app.security import current_user_id, issue_listener_token
-from app.services import categories, locks, stream
+from app.services import categories, locks, moderation, stream
 from app.services.links import mentor_console_link
 from app.services.paths_data import COMMUNITIES
 
@@ -31,6 +34,7 @@ REAPPLY_COOLDOWN = timedelta(days=30)
 
 def _out(db: Session, a: ListenerApplication) -> ListenerApplicationOut:
     console_url = None
+    step_back_requested_at = None
     if a.status == ApplicationStatus.approved and a.listener_id:
         # Mirror the admin console-link endpoint: a listener suspended after
         # approval must never be handed a fresh console token (T&S #9 —
@@ -39,6 +43,8 @@ def _out(db: Session, a: ListenerApplication) -> ListenerApplicationOut:
         if listener is not None and listener.vetting_status == VettingStatus.approved:
             token = issue_listener_token(a.listener_id)
             console_url = mentor_console_link(token)
+            if listener.step_back_requested_at is not None:
+                step_back_requested_at = listener.step_back_requested_at.isoformat()
     reapply_after = None
     if a.status == ApplicationStatus.declined:
         reapply_after = (_declined_at(a) + REAPPLY_COOLDOWN).isoformat()
@@ -49,6 +55,7 @@ def _out(db: Session, a: ListenerApplication) -> ListenerApplicationOut:
         created_at=a.created_at.isoformat(),
         console_url=console_url,
         reapply_after=reapply_after,
+        step_back_requested_at=step_back_requested_at,
     )
 
 
@@ -169,3 +176,63 @@ def console_session(
         stream_token=stream.user_token(listener.id),
         expires_at=(datetime.now(UTC) + ttl).isoformat(),
     )
+
+
+STEP_BACK_AUDIT_ACTOR_ID = "system"
+STEP_BACK_AUDIT_ACTOR_NAME = "Mentor step-back"
+
+
+@router.post(
+    "/me/step-back",
+    response_model=StepBackOut,
+    responses={409: {"description": "`not_live_mentor` — no approved, live mentor side"}},
+)
+def step_back(
+    payload: StepBackIn | None = None,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> StepBackOut:
+    """A live mentor asks the team to step their mentor side back (board A32 / capture
+    409): Start fresh refuses a live mentor (DECISIONS §L.11 ii), so this is their
+    self-serve way to get there. Records the request on the mentor's profile, where the
+    admin Listeners panel lists it first; the team then suspends with the existing,
+    audited tool, after which erasure proceeds. Nothing is suspended here — the mentor
+    may be mid-conversation with members, and the team decides how to hand those over.
+
+    Idempotent: a second ask answers the first one's time and keeps its reason. Refused
+    with 409 `not_live_mentor` when there is no approved application whose mentor
+    profile is still approved (a suspended side does not block Start fresh anyway)."""
+    ratelimit.enforce(
+        f"step-back:{user_id}", 5, 3600, detail="Too many tries — please wait a little."
+    )
+    latest = _latest(db, user_id)
+    listener = (
+        db.get(ListenerProfile, latest.listener_id)
+        if latest is not None and latest.status == ApplicationStatus.approved and latest.listener_id
+        else None
+    )
+    if listener is None or listener.vetting_status != VettingStatus.approved:
+        raise ApiProblem(
+            status.HTTP_409_CONFLICT,
+            "not_live_mentor",
+            "There is no active mentor side on this account.",
+        )
+    if listener.step_back_requested_at is None:
+        reason = (payload.reason or "").strip() if payload is not None else ""
+        listener.step_back_requested_at = datetime.now(UTC)
+        # Contact details typed into the box are masked, as in chat and feedback.
+        listener.step_back_reason = moderation.redact(reason).text if reason else None
+        # THAT a mentor asked, keyed to the mentor profile (the admin's subject) — never
+        # the member id, and never the reason (the panel shows it; the trail does not).
+        db.add(
+            AdminAuditLog(
+                admin_id=STEP_BACK_AUDIT_ACTOR_ID,
+                admin_name=STEP_BACK_AUDIT_ACTOR_NAME,
+                action="listener.step_back_requested",
+                subject_type="listener",
+                subject_id=listener.id,
+                meta={},
+            )
+        )
+        db.commit()
+    return StepBackOut(requested_at=listener.step_back_requested_at.isoformat())

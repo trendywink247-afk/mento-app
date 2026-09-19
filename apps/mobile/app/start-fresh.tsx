@@ -9,6 +9,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { forgetAnalyticsId } from '@/lib/analytics';
 import { ApiError, api } from '@/lib/api';
 import { forgetPlacements } from '@/lib/companionPlacement';
+import { leaveToMentorHome } from '@/lib/leaveToChats';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { clearListenerSession } from '@/lib/listenerSession';
 import { disconnectListenerClient } from '@/lib/listenerStreamClient';
@@ -34,7 +35,11 @@ import { dangerKeyEdge, font, radius, type, wash, washInk } from '@/theme/tokens
  * leaves the device and one still line says so, with the key turned into "Try deleting
  * again" — the same session retries. A member who is ALSO a live mentor (409
  * `mentor_active`, or known up front from their approved application) is told calmly why
- * it cannot be done from here yet, and only "Keep my space" remains.
+ * it cannot be done from here yet, and gets a self-serve way forward (capture 409, lane
+ * u14): "Notify the Mento team" (`POST /listener-applications/me/step-back` — the team sees
+ * it at the top of the admin Listeners panel and steps the mentor side back, after which this
+ * sheet erases) and "Back to mentoring" (Mentor Home, `dismissTo`). Once told, the sheet
+ * says so (also on reopening — the application carries `step_back_requested_at`).
  *
  * A screens-backed `transparentModal` route, not an RN <Modal> (blank on Android new arch).
  */
@@ -57,6 +62,8 @@ export default function StartFreshSheet() {
   const [failure, setFailure] = useState<'incomplete' | 'unreachable' | null>(null);
   // Also a live mentor: erasing would strand the people they talk with (DECISIONS §L.11 ii).
   const [mentorActive, setMentorActive] = useState(false);
+  // The live mentor's way forward: tell the team (idle → sending → told, or failed).
+  const [stepBack, setStepBack] = useState<'idle' | 'sending' | 'told' | 'failed'>('idle');
 
   useEffect(() => {
     let active = true;
@@ -68,7 +75,10 @@ export default function StartFreshSheet() {
     void api
       .getListenerApplication()
       .then((a) => {
-        if (active && a?.status === 'approved' && a.console_url) setMentorActive(true);
+        if (active && a?.status === 'approved' && a.console_url) {
+          setMentorActive(true);
+          if (a.step_back_requested_at) setStepBack('told');
+        }
       })
       .catch(() => {});
     return () => {
@@ -99,6 +109,19 @@ export default function StartFreshSheet() {
     router.dismissAll();
     router.replace('/');
   };
+
+  const notifyTeam = async () => {
+    if (stepBack === 'sending' || stepBack === 'told') return;
+    setStepBack('sending');
+    try {
+      await api.requestStepBack();
+      setStepBack('told');
+    } catch {
+      setStepBack('failed');
+    }
+  };
+
+  const backToMentoring = () => leaveToMentorHome(router);
 
   const keep = () => {
     if (leaving) return;
@@ -157,9 +180,15 @@ export default function StartFreshSheet() {
 
       {/* Still, like every limit state: a line, never a shake. */}
       {mentorActive ? (
-        <View style={[styles.warn, { backgroundColor: colors.surfaceAlt }]} testID="start-fresh-mentor">
-          <Ionicons name="people-outline" size={20} color={colors.ink} />
-          <Text style={[styles.warnText, { color: colors.ink }]}>{t('erase.mentorActive')}</Text>
+        <View
+          style={[styles.warn, { backgroundColor: colors.surfaceAlt }]}
+          testID={stepBack === 'told' ? 'start-fresh-told' : 'start-fresh-mentor'}
+          accessibilityLiveRegion="polite"
+        >
+          <Ionicons name={stepBack === 'told' ? 'checkmark-circle-outline' : 'people-outline'} size={20} color={colors.ink} />
+          <Text style={[styles.warnText, { color: colors.ink }]}>
+            {stepBack === 'told' ? t('stepBack.done') : stepBack === 'failed' ? t('stepBack.failed') : t('erase.mentorActive')}
+          </Text>
         </View>
       ) : (
         <View style={[styles.warn, { backgroundColor: wash.danger }]}>
@@ -171,9 +200,44 @@ export default function StartFreshSheet() {
       )}
 
       {/* Two keys of exactly the same size: leaving is never the easier tap. A live mentor
-          keeps only "Keep my space" — the other key could only be refused. */}
+          gets their own two instead — tell the team, or go back to mentoring — since the
+          delete key could only be refused. */}
+      {mentorActive ? (
+        <View style={styles.keys}>
+          {stepBack === 'told' ? null : (
+            <PressKey
+              onPress={() => void notifyTeam()}
+              disabled={stepBack === 'sending'}
+              edge={colors.accentEdge}
+              radius={radius.md}
+              testID="start-fresh-notify"
+              style={[styles.key, { backgroundColor: colors.accent }]}
+            >
+              {stepBack === 'sending' ? (
+                <ActivityIndicator color={colors.onBrand} />
+              ) : (
+                <Text style={[styles.keyText, { color: colors.onBrand }]} numberOfLines={1} adjustsFontSizeToFit>
+                  {stepBack === 'failed' ? t('stepBack.retry') : t('stepBack.notify')}
+                </Text>
+              )}
+            </PressKey>
+          )}
+          <PressKey
+            onPress={backToMentoring}
+            disabled={stepBack === 'sending'}
+            edge={colors.edgeSurface}
+            radius={radius.md}
+            testID="start-fresh-back-to-mentoring"
+            style={[styles.key, styles.keyPlain, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          >
+            <Text style={[styles.keyText, { color: colors.ink }]} numberOfLines={1} adjustsFontSizeToFit>
+              {t('stepBack.backToMentoring')}
+            </Text>
+          </PressKey>
+        </View>
+      ) : (
       <View style={styles.keys}>
-        {mentorActive ? null : (
+        {(
         <PressKey
           onPress={() => void confirm()}
           disabled={leaving}
@@ -205,6 +269,7 @@ export default function StartFreshSheet() {
           </Text>
         </PressKey>
       </View>
+      )}
     </BoardSheet>
   );
 }
