@@ -6,8 +6,8 @@
 #   bash scripts/lanes/gate.sh fast e2e/chat-header.e2e.js …   # fast + named extras
 #
 # Needs: the dev API on :8000 and Expo on :8081 (started WITHOUT CI), Docker up.
-# Each parallel worker gets its own database (a clone of the seeded dev DB) and its own
-# Redis index, so specs never reset each other. pytest runs across 4 processes, each on
+# The browser specs share the dev database (the API on :8000 is bound to it); seats are reset
+# once up front and Redis is flushed periodically. pytest runs across 4 processes, each on
 # its own database (see tests/conftest.py).
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -45,31 +45,26 @@ TOKEN=$(cd "$ROOT/services/api" && "$PY" -m scripts.issue_admin_token --owner --
   | grep -o 'token=[A-Za-z0-9._-]*' | head -1 | sed 's/token=//')
 export MENTO_ADMIN_TOKEN="$TOKEN" ADMIN_TOKEN="$TOKEN"
 
-# --- parallel browser workers: one database + one Redis index each ---------------------
-for w in $(seq 1 "$WORKERS"); do
-  db="mento_gate$w"
-  docker exec mento-postgres psql -U mento -d postgres -t -A -c \
-    "SELECT 1 FROM pg_database WHERE datname='$db'" 2>/dev/null | grep -q 1 || {
-      docker exec mento-postgres psql -U mento -d postgres -c \
-        "CREATE DATABASE $db WITH TEMPLATE mento OWNER mento" >/dev/null 2>&1 || \
-      docker exec mento-postgres psql -U mento -d postgres -c "CREATE DATABASE $db OWNER mento" >/dev/null 2>&1; }
-done
+# --- the browser workers share the dev database (the API on :8000 is bound to it) ---------
+# Reset ONCE here rather than per spec: with 3 specs in flight a per-spec reset would pull
+# the ground out from under the other two. Seats are plentiful (every seeded mentor is free),
+# and a background flush keeps the per-IP onboarding limit from tripping a long run.
+docker exec mento-redis redis-cli -n 0 FLUSHDB >/dev/null 2>&1
+docker exec mento-postgres psql -U mento -d mento -c   "UPDATE listener_profiles SET status='online', last_seen_at=NULL, active_conversations=0;" >/dev/null 2>&1
+( while :; do sleep 45; docker exec mento-redis redis-cli -n 0 FLUSHDB >/dev/null 2>&1; done ) &
+FLUSHER=$!
+trap 'kill $FLUSHER 2>/dev/null' EXIT
 
 run_spec() {
-  local spec="$1" w="$2" name db rdb code
-  name=$(basename "$spec" .e2e.js); db="mento_gate$w"; rdb=$((20 + w))
-  docker exec mento-redis redis-cli -n "$rdb" FLUSHDB >/dev/null 2>&1
-  psqlc "$db" "UPDATE listener_profiles SET status='online', last_seen_at=NULL, active_conversations=0;"
-  MENTO_DB="$db" MENTO_REDIS_DB="$rdb" MENTO_API="${MENTO_API:-http://localhost:8000/api/v1}" \
-    timeout 900 node "$spec" > "$OUT/$name.log" 2>&1
+  local spec="$1" name code
+  name=$(basename "$spec" .e2e.js)
+  MENTO_DB=mento MENTO_REDIS_DB=0 MENTO_API="${MENTO_API:-http://localhost:8000/api/v1}"     timeout 900 node "$spec" > "$OUT/$name.log" 2>&1
   code=$?
   echo "$name exit=$code :: $(grep -v '^[[:space:]]*$' "$OUT/$name.log" | tail -1 | cut -c1-140)" >> "$OUT/summary.txt"
 }
 
-i=0
 for spec in $SPECS; do
-  i=$(( (i % WORKERS) + 1 ))
-  run_spec "$spec" "$i" &
+  run_spec "$spec" &
   # keep at most WORKERS browsers alive at once
   while [ "$(jobs -rp | wc -l)" -ge "$((WORKERS + 3))" ]; do sleep 2; done
 done
