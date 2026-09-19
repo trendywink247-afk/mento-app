@@ -75,6 +75,16 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: 'transparent' },
                 }}
               />
+              {/* Board sheets (components/motion/BoardSheet.tsx): the sheet animates itself and
+                  the screen underneath settles back, so the route itself never animates. */}
+              <Stack.Screen
+                name="new-chat"
+                options={{
+                  presentation: 'transparentModal',
+                  animation: 'none',
+                  contentStyle: { backgroundColor: 'transparent' },
+                }}
+              />
             </Stack>
           </WebFrame>
         </ThemeProvider>
