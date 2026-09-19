@@ -70,6 +70,12 @@ export type PersonalRequest = {
   created_at: string;
 };
 
+/** `GET /conversations/{id}/mentor`: the mentor's profile plus THIS conversation's topic. */
+export type ConversationMentor = ListenerProfile & {
+  issue_category: string | null;
+  issue_category_label: string | null;
+};
+
 export type ConversationListItem = {
   id: string;
   status: 'active' | 'ended' | 'wiped';
@@ -79,6 +85,11 @@ export type ConversationListItem = {
   is_locked: boolean;
   created_at: string;
   ended_at: string | null;
+  /** What the conversation is about, set at match / accept. Null for a General match
+   * started without a topic (every member-side General match today). */
+  issue_category: string | null;
+  /** The server's member-facing words for `issue_category` ("Exam stress"). */
+  issue_category_label: string | null;
 };
 
 export type ConversationState = {
@@ -274,7 +285,7 @@ export const api = {
 
   // --- Mentor profile ("Two in the room") + favourites ---
   mentorProfile: (convoId: string) =>
-    request<ListenerProfile>(`/conversations/${convoId}/mentor`, {}, true),
+    request<ConversationMentor>(`/conversations/${convoId}/mentor`, {}, true),
 
   listenerProfile: (listenerId: string) =>
     request<ListenerProfile>(`/listeners/${listenerId}`, {}, true),

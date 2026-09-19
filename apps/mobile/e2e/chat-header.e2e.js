@@ -63,6 +63,13 @@ async function run(browser, reduced) {
   });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(String(e)));
+  // What the server says this conversation is about — the topic chip must follow it.
+  let topicLabel;
+  page.on('response', async (res) => {
+    if (!/\/conversations\/[^/]+\/mentor$/.test(new URL(res.url()).pathname) || !res.ok()) return;
+    const body = await res.json().catch(() => null);
+    if (body && 'issue_category_label' in body) topicLabel = body.issue_category_label;
+  });
   const tid = (id) => page.locator(`[data-testid="${id}"]`);
 
   // Onboard to a real session + a live chat.
@@ -124,8 +131,33 @@ async function run(browser, reduced) {
   // The chip leads with an icon-font glyph (a private-use character) — read the words only.
   const chip = (await tid('chat-strip-saved').innerText()).replace(/[^ -~]/g, '').trim();
   if (chip !== 'Saved 1') throw new Error(`Saved chip reads "${chip}", expected "Saved 1"`);
-  if (await tid('chat-strip-topic').count()) throw new Error('no topic is known member-side — the chip must not render');
-  console.log(`[${label}] OK back in the chat: "In this chat" + "Saved 1" (other conversations not counted)`);
+  // Topic chip = `issue_category_label` from GET /conversations/{id}/mentor. A General match
+  // carries no topic → null → no chip at all (never an empty or placeholder chip).
+  if (topicLabel === undefined) throw new Error('the mentor response carried no issue_category_label field');
+  if (topicLabel === null) {
+    if (await tid('chat-strip-topic').count()) throw new Error('topic is null — the chip must not render');
+  } else {
+    const shown = (await tid('chat-strip-topic').innerText()).trim();
+    if (shown !== topicLabel) throw new Error(`topic chip reads "${shown}", server says "${topicLabel}"`);
+  }
+  console.log(`[${label}] OK back in the chat: "In this chat" + "Saved 1" (other conversations not counted); topic ${topicLabel === null ? 'null → no chip' : `chip "${topicLabel}"`}`);
+
+  // ...and when the server DOES name a topic the chip shows those words. Nothing on the member
+  // side can set one through the UI yet, so the mentor response is patched in flight here —
+  // this proves the wiring (label → chip), not the matcher.
+  const mentorRoute = /\/conversations\/[^/]+\/mentor$/;
+  await page.route(mentorRoute, async (route) => {
+    const res = await route.fetch();
+    const body = await res.json();
+    await route.fulfill({ response: res, json: { ...body, issue_category: 'exam_stress', issue_category_label: 'Exam stress' } });
+  });
+  await page.reload({ waitUntil: 'networkidle', timeout: 60000 });
+  await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
+  await tid('chat-strip-topic').waitFor({ timeout: 15000 });
+  const topicShown = (await tid('chat-strip-topic').innerText()).trim();
+  if (topicShown !== 'Exam stress') throw new Error(`topic chip reads "${topicShown}", expected "Exam stress"`);
+  await page.unroute(mentorRoute);
+  console.log(`[${label}] OK a named topic renders as the chip: "${topicShown}"`);
 
   if (process.env.SHOT && !reduced) {
     await page.waitForTimeout(1200); // let the chip entrances settle before the picture

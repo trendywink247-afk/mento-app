@@ -32,7 +32,6 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
-import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { COMPANION_COLORS } from '@/theme/companion';
@@ -55,8 +54,8 @@ type Props = {
   status: 'online' | 'away' | 'offline' | null;
   /** The mentor's community as a member reads it ("UPSC"), when they have one. */
   community?: string | null;
-  /** The conversation's topic slug (`exam_stress`). Unfed today: no member endpoint
-   * returns `conversations.issue_category` yet — the chip appears once one does. */
+  /** The conversation's topic as the server words it for a member ("Exam stress" —
+   * `issue_category_label`). Null when the chat was started without one: no chip. */
   topic?: string | null;
   /** Mentor notes saved from this conversation; the chip hides at 0. */
   savedCount: number;
@@ -238,7 +237,7 @@ export function ChatHeaderCard({
                 <Entrance index={3} distance={6}>
                   <View style={[styles.chip, { backgroundColor: wash.orange }]} testID="chat-strip-topic">
                     <Text style={[styles.chipText, { color: COMPANION_COLORS.mustard.accentEdge }]} numberOfLines={1}>
-                      {formatTopic(topic)}
+                      {topic}
                     </Text>
                   </View>
                 </Entrance>

@@ -254,6 +254,7 @@ export default function ChatScreen() {
         name={headerName}
         status={header.profile?.status ?? null}
         community={header.community}
+        topic={header.topic}
         savedCount={header.savedCount}
         onBack={() => leaveToChats(router)}
         onOpenProfile={() =>

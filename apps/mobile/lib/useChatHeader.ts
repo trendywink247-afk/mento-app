@@ -17,7 +17,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { api, type ListenerProfile, type PathTree } from '@/lib/api';
+import { api, type ConversationMentor, type PathTree } from '@/lib/api';
 import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
 
 /** How often an open chat re-reads the mentor's presence. A polling interval, not a
@@ -26,7 +26,10 @@ const PRESENCE_POLL_MS = 60_000;
 
 export type ChatHeaderData = {
   /** `null` until the mentor profile has loaded (or when it could not be). */
-  profile: ListenerProfile | null;
+  profile: ConversationMentor | null;
+  /** What this conversation is about, in the server's member-facing words ("Exam
+   * stress"); null when it was started without a topic — then there is no chip. */
+  topic: string | null;
   /** The mentor's community as a member reads it ("UPSC"), when they have one. */
   community: string | null;
   /** Mentor notes this member has saved from this conversation. */
@@ -36,7 +39,7 @@ export type ChatHeaderData = {
 };
 
 export function useChatHeader(conversationId: string | undefined): ChatHeaderData {
-  const [profile, setProfile] = useState<ListenerProfile | null>(null);
+  const [profile, setProfile] = useState<ConversationMentor | null>(null);
   // undefined = still loading (no label yet, so it never flickers from a title-cased
   // slug to the real name); null = the tree could not be read (slug fallback).
   const [tree, setTree] = useState<PathTree | null | undefined>(undefined);
@@ -100,6 +103,7 @@ export function useChatHeader(conversationId: string | undefined): ChatHeaderDat
 
   return {
     profile,
+    topic: profile?.issue_category_label ?? null,
     community: slug && tree !== undefined ? communityLabel(tree, slug) : null,
     savedCount,
     refreshSaved,
