@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { ApplicationForm } from '@/components/ApplicationForm';
+import { ApplicationStatusCard } from '@/components/mentor/ApplicationStatusCard';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -183,10 +184,7 @@ export default function MentorHome() {
         </Entrance>
       ) : application.status === 'declined' ? (
         <Entrance index={1}>
-          <View style={[styles.card, elevation.sm, { backgroundColor: colors.surface }]} testID="mentor-status">
-            <Text style={[type.label, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.declinedBody')}</Text>
-          </View>
+          <ApplicationStatusCard state="declined" application={application} animal={animal} />
           {/* The server owns the 30-day reapply cooldown (anchored on decline time,
               which this client doesn't have) — always offer the form and let its
               own error display surface a 409 if it's too soon, exactly like the
@@ -235,15 +233,12 @@ export default function MentorHome() {
           </View>
         )
       ) : (
-        <Entrance index={1}>
-          <View style={[styles.card, styles.row, elevation.sm, { backgroundColor: colors.surface }]} testID="mentor-status">
-            <IconBadge icon="ear-outline" tone="accent" size={44} />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>{t('profile.receivedTitle')}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('profile.receivedBody')}</Text>
-            </View>
-          </View>
-        </Entrance>
+        <ApplicationStatusCard
+          state="review"
+          application={application}
+          animal={animal}
+          onRead={() => router.push('/mentor/reading')}
+        />
       )}
 
       <Entrance index={2}>
