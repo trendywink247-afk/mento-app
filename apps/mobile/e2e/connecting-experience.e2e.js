@@ -34,10 +34,10 @@ async function runFull(browser) {
 
   await driveToReady(page, tid);
 
-  // The story: searching headline + a rotating line + the warm-up card carousel.
-  await page.waitForSelector('text=Connecting you to an', { timeout: 30000 });
+  // The story: the finding headline + the two quiet wait cards under the orbs.
+  await page.waitForSelector('text=Finding a mentor', { timeout: 30000 });
   await page.waitForSelector('text=While you wait', { timeout: 15000 });
-  console.log('OK searching story visible (headline + carousel)');
+  console.log('OK finding story visible (headline + wait cards)');
 
   // The crescendo: the persona card lands before navigation — and must DWELL.
   await page.waitForSelector('[data-testid="found-card"]', { timeout: 30000 });

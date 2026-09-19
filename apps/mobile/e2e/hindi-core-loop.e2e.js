@@ -37,7 +37,7 @@ async function walk(ctx, { assertConnecting }) {
   await tid('enter').click();
 
   if (assertConnecting) {
-    await page.waitForSelector('text=जोड़ रहे हैं', { timeout: 30000 }); // connecting headline
+    await page.waitForSelector('text=ढूँढ रहे हैं', { timeout: 30000 }); // connecting headline
     console.log('OK hi connecting story');
   }
 

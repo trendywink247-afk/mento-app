@@ -57,6 +57,11 @@ export const wash = {
 } as const;
 export type Wash = keyof typeof wash;
 
+/** Pillow undersides for wash faces (decorative, never text). Only the ones in use. */
+export const washEdge = {
+  green: '#C3D2C5',
+} as const;
+
 export const space = {
   xs: 4,
   sm: 8,
