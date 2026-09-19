@@ -145,6 +145,9 @@ def console_session(
     listener = db.get(ListenerProfile, latest.listener_id)
     if listener is None or listener.vetting_status != VettingStatus.approved:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "not_approved")
+    # Idempotent and best-effort: heals a mentor whose Stream user never landed at
+    # approval time, so their first channel can be created.
+    stream.ensure_user(listener.id, listener.persona_name, listener.persona_avatar)
     ttl = timedelta(days=get_settings().listener_jwt_ttl_days)
     return ConsoleSessionOut(
         listener_token=issue_listener_token(listener.id),

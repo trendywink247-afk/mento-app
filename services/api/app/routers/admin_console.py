@@ -574,7 +574,10 @@ def approve_application(
     # phasing) — without this upsert the listener's first channel creation fails
     # in prod (only seed_listeners upserted until now).
     db.commit()
-    stream.upsert_user(*new_listener)
+    # The approval is committed; the Stream user is a follow-up. A Stream timeout here
+    # used to surface as a 500 over a real approval (and a retry then 409'd). The
+    # mentor's first console sign-in re-ensures the user either way.
+    stream.ensure_user(*new_listener)
     return item
 
 

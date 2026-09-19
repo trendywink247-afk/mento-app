@@ -45,6 +45,24 @@ def upsert_user(user_id: str, persona_name: str, avatar: str) -> None:
     client.upsert_user({"id": user_id, "name": persona_name, "image": avatar, "role": "user"})
 
 
+def ensure_user(user_id: str, persona_name: str, avatar: str) -> bool:
+    """`upsert_user` for paths where the Stream user is a follow-up, not the point of
+    the request (an admin approval, a mentor's console sign-in): the database write
+    has already happened, so a slow or unreachable Stream must not turn it into a 500.
+    Idempotent. False (logged, never raised) when Stream did not take it — the next
+    sign-in tries again."""
+    try:
+        upsert_user(user_id, persona_name, avatar)
+        return True
+    except Exception as exc:  # noqa: BLE001 — any client/transport failure is the same outcome
+        logger.warning(
+            "Stream upsert for %s did not land (%s); will retry on sign-in",
+            user_id,
+            type(exc).__name__,
+        )
+        return False
+
+
 def rename_user(user_id: str, persona_name: str) -> bool:
     """Rotating mentor names (DECISIONS §L.6): the Stream user's display name follows
     the rename, so the chat header and every bubble in the thread agree. A partial

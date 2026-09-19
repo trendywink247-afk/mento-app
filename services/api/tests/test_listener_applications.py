@@ -286,3 +286,36 @@ def test_admin_endpoints_require_admin(client):
     assert client.post(
         "/api/v1/admin/applications/nope/decline", json={"reason": "why not"}
     ).status_code in (401, 403)
+
+
+def test_approve_survives_a_stream_timeout_and_sign_in_heals_it(client, admin_headers, monkeypatch):
+    """The approval commits before the Stream call. A Stream timeout used to turn a
+    real approval into a 500 (and a retry into a 409): it must return 200, and the
+    mentor's console sign-in must try the Stream user again."""
+    import requests
+
+    from app.services import stream
+
+    calls: list[str] = []
+
+    def flaky(user_id, persona_name, avatar):
+        calls.append(user_id)
+        if len(calls) == 1:
+            raise requests.exceptions.ReadTimeout("stream is slow")
+
+    monkeypatch.setattr(stream, "upsert_user", flaky)
+    with TestSession() as s:
+        uid = _user(s)
+    client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid))
+    app_id = client.get("/api/v1/admin/applications?status=pending", headers=admin_headers).json()[
+        0
+    ]["id"]
+
+    ok = client.post(f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers)
+    assert ok.status_code == 200, ok.text
+    assert ok.json()["status"] == "approved"
+    assert len(calls) == 1
+
+    session = client.post("/api/v1/listener-applications/me/console-session", headers=_auth(uid))
+    assert session.status_code == 200, session.text
+    assert calls == [calls[0], session.json()["listener_id"]]
