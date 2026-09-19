@@ -1245,5 +1245,10 @@
     "profileApprovedTitle": "Open the mentor side",
     "profileApprovedBody": "You have mentor access. Mentor Home is one tap away.",
     "accessChip": "Mentor access"
+  },
+  "mentorPaid": {
+    "title": "Paid mentoring sessions",
+    "soon": "Coming soon",
+    "body": "We have not confirmed this yet. Nothing changes for you today."
   }
 }

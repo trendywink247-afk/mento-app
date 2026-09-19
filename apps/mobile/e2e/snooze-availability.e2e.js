@@ -239,7 +239,12 @@ async function pass(browser, reduced) {
     await at('apply-time-weekends').click();
     await at('apply-time-weekends').click(); // a second tap unpicks
     expect(await at('apply-submit').isEnabled(), `${label}: Submit stayed disabled with a chip picked`);
-    expect(!PAID.test(await ap.locator('body').innerText()), `${label}: the form hints at a paid tier`);
+    // The founder's "coming soon" placeholder (DECISIONS §L.13) is the ONE paid mention the
+    // form may carry — nothing else on the page may hint at a paid tier.
+    const bodyText = await ap.locator('body').innerText();
+    const placeholderText = await at('apply-paid-placeholder').innerText();
+    expect(!PAID.test(bodyText.replace(placeholderText, '')), `${label}: the form hints at a paid tier`);
+    expect(!/₹|\bfee\b|price/i.test(placeholderText), `${label}: the placeholder names a price`);
     await at('apply-submit').click();
     await ap.waitForFunction(() => !document.querySelector('[data-testid="apply-motivation"]'), null, { timeout: 30000 });
     const queue = await j('/admin/applications?status=pending', { token: ADMIN });

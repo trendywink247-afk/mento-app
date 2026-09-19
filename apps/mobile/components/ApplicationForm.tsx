@@ -248,13 +248,36 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         </PressKey>
       </Entrance>
 
+      {/* Paid mentoring — founder 2026-09-19: "a placeholder, we are yet to confirm that. Coming
+          soon." (DECISIONS §L.13). Mentor sign-up only (this form never renders on a member
+          screen); a still, non-interactive card: no checkbox, no price, no promise, and
+          `mentor_interest` stays false. Nothing here may suggest that members pay (T&S #4). */}
+      <Entrance index={5}>
+        <EdgeSurface
+          edge={colors.edgeAlt}
+          travel={3}
+          radius={radius.md}
+          style={[styles.soon, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+          testID="apply-paid-placeholder"
+        >
+          <Ionicons name="hourglass-outline" size={18} color={colors.inkMuted} />
+          <View style={styles.shrink}>
+            <Text style={[type.rowTitle, { color: colors.ink }]}>
+              {t('mentorPaid.title')}
+              <Text style={{ color: colors.inkMuted }}>{` · ${t('mentorPaid.soon')}`}</Text>
+            </Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorPaid.body')}</Text>
+          </View>
+        </EdgeSurface>
+      </Entrance>
+
       {error ? (
         <Text style={[type.note, styles.center, { color: colors.ink }]} testID="apply-error" accessibilityLiveRegion="polite">
           {error}
         </Text>
       ) : null}
 
-      <Entrance index={5} style={styles.submitWrap}>
+      <Entrance index={6} style={styles.submitWrap}>
         {valid ? (
           <PrimaryButton
             label={t('mentorApply.submit')}
@@ -325,6 +348,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  soon: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
   },
   submitWrap: { paddingBottom: space.xs },
   gated: {

@@ -3,7 +3,8 @@
  *
  *  1. Not applied — Profile says "Become a mentor" → the story (A38, in-app: a back key, no
  *     "no app needed") → NO age gate (the member passed it at sign-up) → the primer (A33)
- *     → the application (A37) → Submit → In review.
+ *     → the application (A37) with the paid-mentoring placeholder (still, non-interactive,
+ *     no price) → Submit → In review.
  *  2. In review — back on Profile the row reads "Mentor application · in review"; the door
  *     now lands straight on In review ("already applied"), no story, no form.
  *  3. Approved (admin approves) — the row reads "Open the mentor side" with the "Mentor
@@ -25,6 +26,7 @@ if (!ADMIN) {
   console.error('Set MENTO_ADMIN_TOKEN (python -m scripts.issue_admin_token --owner --name e2e).');
   process.exit(2);
 }
+const PRICE = /₹|\bfee\b|per session|\bprice\b|premium|membership/i;
 
 const j = async (path, { token, method = 'GET', body } = {}) => {
   const r = await fetch(`${API}${path}`, {
@@ -102,6 +104,18 @@ async function pass(browser, reduced) {
   await tid('primer-continue').click();
 
   await tid('apply-motivation').waitFor({ timeout: 30000 });
+  const placeholder = tid('apply-paid-placeholder');
+  await placeholder.waitFor({ timeout: 15000 });
+  const ph = (await placeholder.innerText()).replace(/\s+/g, ' ');
+  expect(/Paid mentoring sessions/.test(ph) && /Coming soon/.test(ph), `${label}: placeholder copy: "${ph}"`);
+  expect(!PRICE.test(ph), `${label}: the placeholder names a price or a tier: "${ph}"`);
+  const interactive = await placeholder.evaluate(
+    (el) => el.querySelectorAll('button, input, a, [role="button"], [role="checkbox"], [tabindex="0"]').length +
+      (['button', 'checkbox'].includes(el.getAttribute('role') || '') ? 1 : 0)
+  );
+  expect(interactive === 0, `${label}: the placeholder is interactive (${interactive} controls)`);
+  console.log(`${label}: OK the form shows the paid-mentoring placeholder — still, no control, no price`);
+
   await tid('apply-motivation').fill('I sat the exam three times and know how lonely the second attempt gets for people.');
   await tid('apply-community-upsc').click();
   await tid('apply-time-evenings').click();
