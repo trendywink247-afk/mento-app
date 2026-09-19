@@ -36,7 +36,7 @@ const STAGE_SIDE = 15;
 const STAGE_AIR = 34;
 const TEXT_BLOCK_ESTIMATE = 308;
 const CARD_SIDE = 14;
-const CARD_LAP_MAX = 40;
+const CARD_LAP_MAX = 12;
 /** Where the drawing sits inside the square 1200² Lottie canvas (measured on frame 0): it
  * spans this share of the width, and its ground line is this far down the side. */
 const LOTTIE_BAND = { width: 0.775, ground: 0.869 };
