@@ -36,12 +36,22 @@ const COMPACT_BELOW = 780;
  * mentor has not picked a companion at this point of the journey, so it is the board's
  * Owl unless the draft carries one. The "not a therapist" pledge checkbox is NOT here —
  * it stays a hard gate on the application form (T&S #2). */
-export function PrimerStep({ onNext }: { onNext: () => void }) {
+export function PrimerStep({
+  onNext,
+  animal: animalProp,
+  companion = true,
+}: {
+  onNext: () => void;
+  /** The member's own animal when the mentor path hosts the primer (lib/mentorPath). */
+  animal?: CompanionAnimal | null;
+  /** false on the public web page, which carries no animal art (founder rule). */
+  companion?: boolean;
+}) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const breathing = useBreathing();
   const compact = useFrameSize().height < COMPACT_BELOW;
-  const animal = (getDraft().companionAnimal as CompanionAnimal | null) ?? 'Owl';
+  const animal = animalProp ?? (getDraft().companionAnimal as CompanionAnimal | null) ?? 'Owl';
 
   return (
     <StepScaffold
@@ -59,7 +69,7 @@ export function PrimerStep({ onNext }: { onNext: () => void }) {
         </>
       }
     >
-      <Entrance index={0} style={styles.head}>
+      <Entrance index={0} style={[styles.head, !companion && styles.headWide]}>
         <Text style={[type.eyebrow, { color: COMPANION_COLORS.sage.accentEdge }]}>{t('mentorPrimer.eyebrow')}</Text>
         <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
           {t('mentorPrimer.headline')}
@@ -71,6 +81,7 @@ export function PrimerStep({ onNext }: { onNext: () => void }) {
       <View style={[styles.rows, compact && styles.rowsCompact]}>
         {/* No arrival: the companion is simply already there (board). Drawn before the
           * cards' siblings but lifted above the first card, so it perches on its rim. */}
+        {companion ? (
         <View
           style={styles.perch}
           accessible
@@ -83,6 +94,7 @@ export function PrimerStep({ onNext }: { onNext: () => void }) {
             <Companion animal={animal} size={PERCH} awake />
           </Animated.View>
         </View>
+        ) : null}
 
         {ROWS.map((row, i) => (
           <Entrance key={row.title} index={1 + i}>
@@ -109,6 +121,7 @@ export function PrimerStep({ onNext }: { onNext: () => void }) {
 
 const styles = StyleSheet.create({
   head: { gap: space.xs, paddingRight: HEAD_CLEAR },
+  headWide: { paddingRight: 0 },
   rows: { marginTop: space.md, gap: 10 },
   rowsCompact: { gap: 6 },
   perch: { position: 'absolute', right: 12, top: -(PERCH - PERCH_SINK), width: PERCH, height: PERCH, zIndex: 2 },

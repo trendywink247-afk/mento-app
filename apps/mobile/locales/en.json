@@ -1231,5 +1231,19 @@
     "unreachable": "We could not reach Mento, so nothing is confirmed as deleted. Nothing has left this device. Please try again.",
     "retry": "Try deleting again",
     "mentorActive": "You are also a mentor here. Deleting everything would leave the people you talk with mid-conversation, so it cannot be done from here yet. Ask the Mento team to close your mentor side first. After that, Start fresh deletes everything."
+  },
+  "mentorPath": {
+    "cooldownLater": "You can apply again from %{date}. The team keeps a month between applications.",
+    "cooldownNow": "A month has passed. You can apply again whenever you are ready.",
+    "applyAgain": "Apply again",
+    "loadError": "We could not load where your application is.",
+    "handoffSub": "Next: what mentoring here asks of you, then a short application. It is reviewed and approved by the Mento team before your first conversation.",
+    "profileReviewTitle": "Mentor application · in review",
+    "profileReviewBody": "The Mento team is reading it. Tap to see where it is.",
+    "profileDeclinedLater": "Not this time, and truly, thank you. You can apply again from %{date}.",
+    "profileDeclinedNow": "Not this time, and truly, thank you. You can apply again now.",
+    "profileApprovedTitle": "Open the mentor side",
+    "profileApprovedBody": "You have mentor access. Mentor Home is one tap away.",
+    "accessChip": "Mentor access"
   }
 }

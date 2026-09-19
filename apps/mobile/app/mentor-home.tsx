@@ -3,8 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ApplicationForm } from '@/components/ApplicationForm';
-import { ApplicationStatusCard } from '@/components/mentor/ApplicationStatusCard';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -23,8 +21,8 @@ import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { listenerApi, type StayInTouchAsk } from '@/lib/listenerApi';
 import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
-import { setDraft } from '@/lib/onboardingDraft';
-import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
+import { continueAsMember, loadApplication as readApplication } from '@/lib/mentorPath';
+import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
 import { registerPush } from '@/lib/pushNotifications';
 import { useMentorConsole } from '@/lib/useMentorConsole';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
@@ -32,10 +30,12 @@ import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
-/** Mentor Home (DECISIONS §K.7): the mentor branch's landing, and — once approved —
- * the native console itself (spec 2026-09-05). Outside the tab shell. Hosts the
- * shared ApplicationForm inline (no application yet), the status card (pending /
- * declined), the console (approved), and a quiet switch back to the talking side. */
+/** Mentor Home (DECISIONS §K.7): the mentor side — the native console itself (spec
+ * 2026-09-05) — for an APPROVED mentor only. Outside the tab shell. Anyone who reaches it
+ * without approval (a returning role-fork mentor from the landing, an old link, a
+ * notification) is handed to the ONE mentor path (lib/mentorPath.ts, `/listener-apply`),
+ * which shows the story, the application or where it stands (DECISIONS §L.12). "I'd rather
+ * talk today" continues the member sign-up with only the missing steps (`continueAsMember`). */
 export default function MentorHome() {
   useSessionGuard();
   const router = useRouter();
@@ -97,17 +97,22 @@ export default function MentorHome() {
 
   const loadApplication = useCallback(async () => {
     try {
-      const app = await api.getListenerApplication();
-      setApplication(app);
+      const app = await readApplication();
       setLoadError(false);
-      if (app?.status === 'approved') await ensureConsole();
-      else setConsoleReady(null);
+      if (app?.status !== 'approved') {
+        // Not the mentor side yet: the one mentor path takes over (story / application /
+        // where it stands). Replace — this screen must not stay behind it.
+        router.replace('/listener-apply');
+        return;
+      }
+      setApplication(app);
+      await ensureConsole();
     } catch {
       // Leave `application` as-is (no spinner flash, no accidental form reveal —
       // an unknown status must never show the form, that risks a duplicate apply).
       setLoadError(true);
     }
-  }, [ensureConsole]);
+  }, [ensureConsole, router]);
 
   const load = useCallback(async () => {
     await Promise.all([loadIdentity(), loadApplication()]);
@@ -132,20 +137,10 @@ export default function MentorHome() {
     if (switching) return;
     setSwitching(true);
     try {
-      // Mentors never chose a companion. The chosen animal is the star of the talking
-      // side (DECISIONS §I.5), so a first switch walks the rest of the member journey —
-      // companion → ready → connecting — on the SAME account. The role flips to
-      // mentee only once the pick is made (OnboardingJourney), so backing out leaves
-      // them a mentor.
-      if (!(await getCompanionAnimal())) {
-        setDraft({ role: 'mentee', sessionBacked: true });
-        router.dismissAll();
-        router.replace({ pathname: '/onboarding', params: { step: 'companion' } });
-        return;
-      }
-      await saveRole('mentee');
-      router.dismissAll();
-      router.replace('/chats');
+      // The member sign-up continues with ONLY what the account is missing (founder ruling,
+      // 2026-09-19): no companion yet → the companion pick on this same session, then Ready
+      // → My Chats; nothing missing → straight to My Chats (dismissTo, never a second tabs).
+      await continueAsMember(router);
     } catch {
       // Stay still and silent (T&S: no shaking/buzzing at a struggling user) —
       // release the spinner so the button is tappable again.
@@ -204,25 +199,10 @@ export default function MentorHome() {
             <PrimaryButton label={t('connecting.tryAgain')} variant="ghost" onPress={() => void load()} testID="mentor-retry" />
           </View>
         </Entrance>
-      ) : application === undefined ? (
+      ) : !application ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.accent} />
         </View>
-      ) : application === null ? (
-        <Entrance index={1}>
-          <Text style={[type.body, styles.intro, { color: colors.inkMuted }]}>{t('mentorHome.applyIntro')}</Text>
-          <ApplicationForm onSuccess={(result) => setApplication(result)} />
-        </Entrance>
-      ) : application.status === 'declined' ? (
-        <Entrance index={1}>
-          <ApplicationStatusCard state="declined" application={application} animal={animal} />
-          {/* The server owns the 30-day reapply cooldown (anchored on decline time,
-              which this client doesn't have) — always offer the form and let its
-              own error display surface a 409 if it's too soon, exactly like the
-              Profile → apply path already does. */}
-          <Text style={[type.body, styles.intro, { color: colors.inkMuted }]}>{t('mentorHome.applyIntro')}</Text>
-          <ApplicationForm onSuccess={(result) => setApplication(result)} />
-        </Entrance>
       ) : application.status === 'approved' ? (
         consoleReady === true ? (
           <ConsoleBody
@@ -266,14 +246,7 @@ export default function MentorHome() {
             <ActivityIndicator color={colors.accent} />
           </View>
         )
-      ) : (
-        <ApplicationStatusCard
-          state="review"
-          application={application}
-          animal={animal}
-          onRead={() => router.push('/mentor/reading')}
-        />
-      )}
+      ) : null}
 
       <View style={styles.grow} />
       <Entrance index={showConsole ? 5 : 2} style={styles.foot}>

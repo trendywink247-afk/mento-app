@@ -17,6 +17,12 @@ export type Persona = { id: string; persona_name: string; persona_avatar: string
 export type Me = Persona & {
   companion_animal: string | null;
   companion_colour: string | null;
+  /** The account passed the server-side age gate (always true today — a session only comes
+   * from onboarding/start). Optional: an older server omits it. */
+  has_dob?: boolean;
+  /** Everything the member side needs is on the account (age gate + companion), so a mentor
+   * switching to talk goes straight to My Chats. Optional: an older server omits it. */
+  member_setup_complete?: boolean;
 };
 
 /** `PUT /me/companion`: an omitted field is left as it is, `null` clears it. */

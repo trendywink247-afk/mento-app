@@ -2,7 +2,7 @@
  * Native mentor console proof (spec 2026-09-05-native-mentor-console-design.md).
  * Requires MENTO_ADMIN_TOKEN (mint: cd services/api; python -m scripts.issue_admin_token --owner --name e2e).
  *
- *  A (mentor): landing → listen door → age → email → primer → Mentor Home → applies;
+ *  A (mentor): landing → listen door → age → email → hand-off → story → primer → applies;
  *              admin approves via API; reload → Mentor Home IS the console; toggles online.
  *  B (member): onboards, browses mentors, sends a Personal request to A's persona.
  *  A: accepts → conversation row → opens the chat → mentor helplines key visible → replies.
@@ -47,9 +47,15 @@ async function mentorApply(page, tid) {
   await tid('continue').click();
   await page.waitForSelector('text=Optional, but helpful.', { timeout: 30000 });
   await tid('skip').click();
+  // The hand-off mints the session and joins the ONE mentor path: story → primer → form.
+  await tid('handoff-go').waitFor({ timeout: 30000 });
+  await tid('handoff-go').click();
+  await tid('apply-start').waitFor({ timeout: 60000 });
+  await page.waitForTimeout(700);
+  await tid('apply-start').click();
   await tid('primer-continue').waitFor({ timeout: 30000 });
+  await page.waitForTimeout(700);
   await tid('primer-continue').click();
-  await page.waitForSelector('[data-testid="mentor-home"]', { timeout: 60000 });
   await tid('apply-motivation').fill(
     'I have walked the UPSC road twice and know how lonely the wait after prelims gets.',
   );

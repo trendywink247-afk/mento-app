@@ -1,7 +1,10 @@
-/** Role fork (DECISIONS §K.7): landing → listen door → age → email → primer →
- * handoff → Mentor Home (inline application) → pending → switch to talking →
- * Chats. Then a fresh page with the same stored session must land on Mentor Home
- * straight from `/`. Runs once normally and once under reducedMotion: 'reduce'. */
+/** Role fork (DECISIONS §K.7, §L.12): landing → listen door → age → email → hand-off →
+ * the ONE mentor path (story → primer → application) → In review → "I'd rather talk
+ * today" continues the MEMBER sign-up with only what the account is missing (founder ruling
+ * D, 2026-09-19: the companion pick → Ready → My Chats, same session; age and email are not
+ * asked again) → a second tap goes straight to My Chats. Then a fresh page with the same
+ * stored mentor session lands on the mentor path from `/` (Mentor Home only once approved).
+ * Runs once normally and once under reducedMotion: 'reduce'. */
 const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
@@ -103,14 +106,21 @@ async function run(browser, reduced) {
   await tid('continue').click();
   await page.waitForSelector('text=Optional, but helpful.', { timeout: 30000 });
   await tid('skip').click();
-  await tid('primer-continue').waitFor({ timeout: 30000 });
-  console.log(`${label}: OK listen door → age → email → primer`);
-  await tid('primer-continue').click();
+  await tid('handoff-go').waitFor({ timeout: 30000 });
+  console.log(`${label}: OK listen door → age → email → hand-off (A34)`);
+  await tid('handoff-go').click();
 
-  await page.waitForURL('**/mentor-home', { timeout: 60000 });
-  await tid('mentor-home').waitFor({ timeout: 30000 });
+  // The hand-off joins the one mentor path at its story (never Mentor Home before approval).
+  await page.waitForURL((u) => u.pathname.endsWith('/listener-apply'), { timeout: 60000 });
+  await tid('apply-start').waitFor({ timeout: 30000 });
+  await page.waitForTimeout(reduced ? 200 : 700);
+  await tid('apply-start').click();
+  await tid('primer-continue').waitFor({ timeout: 30000 });
+  if ((await tid('apply-dob-continue').count()) !== 0) throw new Error('the fork asked the age twice');
+  await page.waitForTimeout(reduced ? 200 : 700);
+  await tid('primer-continue').click();
   await tid('apply-motivation').waitFor({ timeout: 30000 });
-  console.log(`${label}: OK handoff → Mentor Home with inline application form`);
+  console.log(`${label}: OK hand-off → story (A38) → primer (A33) → the application (A37)`);
 
   // Fill the shared ApplicationForm (same testIDs the member flow uses).
   await tid('apply-motivation').fill(MOTIVATION);
@@ -123,25 +133,34 @@ async function run(browser, reduced) {
   await page.waitForSelector('text=In review', { timeout: 30000 });
   console.log(`${label}: OK application submitted → In review card (board A37)`);
 
-  // First switch: a mentor never chose a companion, so "I'd rather talk today" walks the
-  // rest of the member journey on the SAME account — never a silent default Panda, never
-  // a second account.
+  // First switch: a mentor never chose a companion, so "I'd rather talk today" continues
+  // the MEMBER sign-up with only what the account is missing — asked of the server
+  // (GET /me: has_dob true, member_setup_complete false) — on the SAME account: never a
+  // silent default Panda, never a second account, never the age or email steps again.
   const tokenBefore = await page.evaluate(() => globalThis.localStorage.getItem('mento.session_token'));
   const meBefore = await serverMe(tokenBefore);
   if (meBefore.companion_animal !== null) {
     throw new Error(`a mentor account already has a companion on the server: ${meBefore.companion_animal}`);
   }
-  await tid('mentor-switch-talk').click();
+  if (meBefore.has_dob !== true || meBefore.member_setup_complete !== false) {
+    throw new Error(`GET /me should say age passed + setup incomplete: ${JSON.stringify(meBefore)}`);
+  }
+  const talk = tid('apply-back-profile');
+  if (!(await talk.innerText()).includes("I'd rather talk today")) {
+    throw new Error(`the way back reads "${await talk.innerText()}", expected "I'd rather talk today"`);
+  }
+  await talk.click();
   await page.waitForSelector('text=Your growth, your theme', { timeout: 30000 });
+  if ((await page.locator('text=How old are you?').count()) !== 0) throw new Error('the switch asked the age again');
   if ((await page.evaluate(() => globalThis.localStorage.getItem('mento.role'))) !== 'mentor') {
     throw new Error('role flipped to mentee before a companion was confirmed');
   }
-  // Back from the pick = "never mind": still a mentor, back on Mentor Home.
+  // Back from the pick = "never mind": still a mentor, back where the application stands.
   await tid('back').click();
-  await tid('mentor-switch-talk').waitFor({ timeout: 30000 });
-  console.log(`${label}: OK first switch opens the companion pick; back returns to Mentor Home as a mentor`);
+  await tid('apply-in-review').waitFor({ timeout: 30000 });
+  console.log(`${label}: OK "I'd rather talk today" opens ONLY the companion pick; back returns to In review as a mentor`);
 
-  await tid('mentor-switch-talk').click();
+  await tid('apply-back-profile').click();
   await page.waitForSelector('text=Your growth, your theme', { timeout: 30000 });
   await tid('animal-capybara').scrollIntoViewIfNeeded();
   await tid('animal-capybara').click();
@@ -149,8 +168,9 @@ async function run(browser, reduced) {
   await tid('continue').click();
   await page.waitForSelector('text=Your Mento space is ready.', { timeout: 30000 });
   await tid('enter').click();
-  await page.waitForURL('**/chat/**', { timeout: 60000 });
-  await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
+  // Ready → the member side (My Chats), not a match: they came to look around.
+  await page.waitForURL((u) => u.pathname.endsWith('/chats'), { timeout: 60000 });
+  await tid('tab-chats').waitFor({ timeout: 30000 });
   const after = await page.evaluate(() => ({
     token: globalThis.localStorage.getItem('mento.session_token'),
     role: globalThis.localStorage.getItem('mento.role'),
@@ -159,7 +179,7 @@ async function run(browser, reduced) {
   if (after.token !== tokenBefore) throw new Error('switching to talk minted a second account');
   if (after.role !== 'mentee') throw new Error(`role is ${after.role}, expected mentee`);
   if (after.animal !== 'Capybara') throw new Error(`companion is ${after.animal}, expected the one they picked`);
-  console.log(`${label}: OK companion → ready → live chat on the same account, as the chosen Capybara`);
+  console.log(`${label}: OK companion → Ready → My Chats on the same account, as the chosen Capybara`);
 
   // The pick is on the ACCOUNT too (PUT /me/companion), not only on this device. The save is
   // fire-and-forget, so give it a moment to land.
@@ -173,9 +193,16 @@ async function run(browser, reduced) {
   }
   console.log(`${label}: OK the server has the companion (GET /me → ${me.companion_animal} / ${me.companion_colour})`);
 
-  await page.goto(`${WEB}/chats`, { waitUntil: 'networkidle', timeout: 60000 });
+  // A second tap from the mentor side goes straight to My Chats: nothing is missing now.
+  await page.goto(`${WEB}/listener-apply`, { waitUntil: 'networkidle', timeout: 60000 });
+  await tid('apply-in-review').waitFor({ timeout: 30000 });
+  await tid('apply-back-profile').click();
+  await page.waitForURL((u) => u.pathname.endsWith('/chats'), { timeout: 30000 });
   await tid('tab-chats').waitFor({ timeout: 30000 });
-  console.log(`${label}: OK Chats tab renders`);
+  if ((await page.locator('text=Your growth, your theme').count()) !== 0) throw new Error('the second switch asked for the companion again');
+  const again = await page.evaluate(() => globalThis.localStorage.getItem('mento.session_token'));
+  if (again !== tokenBefore) throw new Error('the second switch changed the session');
+  console.log(`${label}: OK a second "talk" goes straight to My Chats, same session`);
 
   await ctx.close();
   return errors;
@@ -197,14 +224,17 @@ async function returningMentor(browser) {
   await tid('continue').click();
   await page.waitForSelector('text=Optional, but helpful.', { timeout: 30000 });
   await tid('skip').click();
-  await tid('primer-continue').click();
-  await page.waitForURL('**/mentor-home', { timeout: 60000 });
+  await tid('handoff-go').click();
+  await page.waitForURL((u) => u.pathname.endsWith('/listener-apply'), { timeout: 60000 });
 
+  // Not approved yet: `/` → Mentor Home hands over to the mentor path (story, since they
+  // have not applied) — Mentor Home itself only opens once approved.
   const again = await ctx.newPage();
   again.on('pageerror', (e) => errors.push(String(e)));
   await again.goto(WEB, { waitUntil: 'networkidle', timeout: 120000 });
-  await again.waitForURL('**/mentor-home', { timeout: 30000 });
-  console.log('returning: OK stored mentor session lands on Mentor Home from /');
+  await again.waitForURL((u) => u.pathname.endsWith('/listener-apply'), { timeout: 30000 });
+  await again.locator('[data-testid="apply-start"]').waitFor({ timeout: 30000 });
+  console.log('returning: OK a stored, not-yet-approved mentor session lands on the mentor path from /');
 
   await ctx.close();
   return errors;

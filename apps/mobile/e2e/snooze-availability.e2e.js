@@ -217,6 +217,13 @@ async function pass(browser, reduced) {
     ap.on('pageerror', (e) => errors.push(`${label} apply: ${String(e)}`));
     const at = (id) => ap.locator(`[data-testid="${id}"]`);
     await ap.goto(`${WEB}/listener-apply`, { waitUntil: 'networkidle', timeout: 120000 });
+    // The one mentor path: the story and the primer come first (lib/mentorPath.ts).
+    await at('apply-start').waitFor({ timeout: 60000 });
+    await ap.waitForTimeout(700);
+    await at('apply-start').click();
+    await at('primer-continue').waitFor({ timeout: 30000 });
+    await ap.waitForTimeout(700);
+    await at('primer-continue').click();
     await at('apply-time-mornings').waitFor({ timeout: 60000 });
     for (const [id, text] of [['mornings', 'Mornings'], ['evenings', 'Evenings'], ['weekends', 'Weekends']])
       expect((await at(`apply-time-${id}`).innerText()).trim() === text, `${label}: chip ${id} reads wrong`);
@@ -270,6 +277,12 @@ async function pass(browser, reduced) {
       const fp = await fc.newPage();
       fp.on('pageerror', (e) => errors.push(`shots form ${lang}-${width}: ${String(e)}`));
       await fp.goto(`${WEB}/listener-apply`, { waitUntil: 'networkidle', timeout: 120000 });
+      await fp.locator('[data-testid="apply-start"]').waitFor({ timeout: 60000 });
+      await fp.waitForTimeout(700);
+      await fp.locator('[data-testid="apply-start"]').click();
+      await fp.locator('[data-testid="primer-continue"]').waitFor({ timeout: 30000 });
+      await fp.waitForTimeout(700);
+      await fp.locator('[data-testid="primer-continue"]').click();
       await fp.locator('[data-testid="apply-time-mornings"]').waitFor({ timeout: 60000 });
       await fp.locator('[data-testid="apply-time-mornings"]').click();
       await fp.locator('[data-testid="apply-time-weekends"]').click();

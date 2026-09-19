@@ -1,5 +1,7 @@
-/** Become a listener: profile → apply → pending card (approval path is pytest-proven).
- * Optional: set MENTO_ADMIN_TOKEN to also drive approve → approved card + console link. */
+/** Become a mentor from Profile — the ONE mentor path (lib/mentorPath.ts): Profile → the
+ * story (A38) → the primer (A33) → the application (A37) → In review → back on Profile the
+ * row says "in review". Optional: set MENTO_ADMIN_TOKEN to also drive approve → the row
+ * opens the mentor side (Mentor Home). The full state × door matrix is mentor-path.e2e.js. */
 const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
@@ -34,6 +36,13 @@ const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
     // Profile → apply screen → submit → back on profile with the pending card.
     await page.goto(`${WEB}/profile`, { waitUntil: 'networkidle', timeout: 60000 });
     await tid('profile-become-listener').click();
+    await tid('apply-start').waitFor({ timeout: 60000 });
+    await page.waitForTimeout(700);
+    await tid('apply-start').click();
+    await tid('primer-continue').waitFor({ timeout: 30000 });
+    await page.waitForTimeout(700);
+    await tid('primer-continue').click();
+    console.log(`${label}: OK Profile → story (A38) → primer (A33) → the application`);
     await tid('apply-motivation').fill(
       "I've walked the UPSC road twice and know how lonely the wait after prelims gets."
     );
@@ -67,7 +76,10 @@ const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
       if (!approve.ok) throw new Error(`approve failed: ${approve.status}`);
       await page.reload({ waitUntil: 'networkidle' });
       await tid('profile-open-console').waitFor({ timeout: 30000 });
-      console.log(`${label}: OK approved → approved card + console link`);
+      await tid('profile-open-console').click();
+      await page.waitForURL((u) => u.pathname.endsWith('/mentor-home'), { timeout: 30000 });
+      await tid('mentor-console').waitFor({ timeout: 60000 });
+      console.log(`${label}: OK approved → "Open the mentor side" → Mentor Home`);
     }
 
     console.log(`${label}: OK`);
