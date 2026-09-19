@@ -10,7 +10,9 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
 import AdminsPanel from './panels/AdminsPanel.web';
+import AllowancePanel from './panels/AllowancePanel.web';
 import ContributionsPanel from './panels/ContributionsPanel.web';
+import FeedbackPanel from './panels/FeedbackPanel.web';
 import HealthPanel from './panels/HealthPanel.web';
 import ListenersPanel from './panels/ListenersPanel.web';
 import ModerationPanel from './panels/ModerationPanel.web';
@@ -21,7 +23,8 @@ import SafetyPanel from './panels/SafetyPanel.web';
  * Admin dashboard shell (spec 2026-07-13) — web-only. Token-link auth mirrors the
  * listener console (#token= fragment → saved → stripped; per-request revocation is
  * server-side). Cockpit: top tabs, Overview landing, unreviewed badges on Safety /
- * Moderation. The Admins tab is owner-only.
+ * Moderation. The Admins tab is owner-only. Allowance (board A13) and Feedback (A11's notes)
+ * are counts / anonymous notes; both reads are audited server-side.
  */
 const TABS = [
   'Overview',
@@ -30,6 +33,8 @@ const TABS = [
   'Listeners',
   'Contributions',
   'Health',
+  'Allowance',
+  'Feedback',
   'Admins',
 ] as const;
 type Tab = (typeof TABS)[number];
@@ -173,6 +178,10 @@ export default function AdminConsoleWeb() {
           <ContributionsPanel />
         ) : tab === 'Health' ? (
           <HealthPanel />
+        ) : tab === 'Allowance' ? (
+          <AllowancePanel onGoto={goto} />
+        ) : tab === 'Feedback' ? (
+          <FeedbackPanel />
         ) : (
           <AdminsPanel />
         )}

@@ -90,6 +90,48 @@ export type AdminApplication = {
   created_at: string;
 };
 
+/** Board A13 — one IST day of message-allowance counts. Numbers only: no ids, names, text. */
+export type AdminAllowanceDay = {
+  /** "YYYY-MM-DD" (IST); on `totals` it is the window, "first/last". */
+  day: string;
+  messages_sent: number;
+  crisis_exempt_sends: number;
+  in_a_row_pauses: number;
+  members_paused_in_a_row: number;
+  daily_cap_holds: number;
+  members_reached_daily_cap: number;
+};
+export type AdminAllowance = {
+  rule: {
+    in_a_row: number;
+    per_day: number;
+    enforced: boolean;
+    crisis_exempt_hours: number;
+    timezone: string;
+  };
+  /** Oldest first, zero-filled. */
+  days: AdminAllowanceDay[];
+  totals: AdminAllowanceDay;
+};
+export type FeedbackCategory = 'broken' | 'confusing' | 'idea';
+export type FeedbackRole = 'member' | 'mentor';
+/** Board A11's notes, as the team reads them. No author exists — only which side wrote. */
+export type AdminFeedbackItem = {
+  id: string;
+  created_at: string;
+  role: FeedbackRole;
+  category: FeedbackCategory;
+  text: string;
+  screen: string | null;
+  app_version: string | null;
+};
+export type AdminFeedbackPage = {
+  total: number;
+  limit: number;
+  offset: number;
+  items: AdminFeedbackItem[];
+};
+
 function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   return apiRequest<T>(path, init, getAdminToken);
 }
@@ -147,4 +189,17 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ reason }),
     }),
+
+  // --- Board port (2026-09-19): both reads are audited server-side ---
+  /** `allowance.viewed` audit row per read. `days` 1–30. */
+  allowance: (days = 14) => req<AdminAllowance>(`/admin/allowance?days=${days}`),
+  /** `feedback.viewed` audit row per read. Newest first. */
+  feedback: (
+    opts: { limit?: number; offset?: number; category?: FeedbackCategory | null; role?: FeedbackRole | null } = {},
+  ) => {
+    const q = new URLSearchParams({ limit: String(opts.limit ?? 50), offset: String(opts.offset ?? 0) });
+    if (opts.category) q.set('category', opts.category);
+    if (opts.role) q.set('role', opts.role);
+    return req<AdminFeedbackPage>(`/admin/feedback?${q.toString()}`);
+  },
 };

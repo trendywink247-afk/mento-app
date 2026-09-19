@@ -88,6 +88,8 @@ export const washInk = {
   /** The deep clay red: text on the danger wash, the face of a destructive key (white
    * text on it 8.6:1), and `dangerKeyEdge` beneath it. */
   danger: '#8E2F2A',
+  /** Board A13: the shield on the lavender (indigo) wash. */
+  indigo: '#4D3765',
 } as const;
 
 /** Pillow underside of a destructive key (board A32). Decorative. */
