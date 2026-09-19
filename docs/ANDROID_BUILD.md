@@ -365,3 +365,23 @@ free since it's HTTPS, not cleartext). Point `EXPO_PUBLIC_API_URL` at the printe
 the tunnel process restarts, and it only exists while that process is running. Fine to
 unblock a testing session; not a permanent answer. See also **mento-crisis-webhook**,
 which uses the same tool for a different purpose.
+
+### 8h. `build-android-release.ps1` fails to parse / Sentry upload fails the release build (2026-09-19)
+
+Two separate things stopped the 2026-09-19 release build; neither is a code problem.
+
+1. **`The string is missing the terminator`** when the script is run with Windows PowerShell 5
+   (`powershell -File …`): the file is UTF-8 without a BOM and contains an em dash inside a string,
+   which PS5 reads as a quote. Run it with PowerShell 7 (`pwsh -File scripts/build-android-release.ps1`)
+   or run its three steps by hand: `$env:NODE_ENV="production"`, `npx expo prebuild --platform android`,
+   `cd android; .\gradlew.bat assembleRelease`.
+2. **`createBundleReleaseJsAndAssets_SentryUpload … An organization ID or slug is required`**: the Sentry
+   gradle step tries to upload source maps and no Sentry org/project is configured. Until it is, build with
+   `$env:SENTRY_DISABLE_AUTO_UPLOAD = "true"` (JS error capture at runtime is unaffected; only symbolicated
+   stack traces need the upload).
+
+Known-good sequence from the short path (`C:\mento-build\mobile`, mirrored with
+`robocopy <repo>\apps\mobile C:\mento-build\mobile /MIR /XD android node_modules .cxx .expo dist`, which keeps
+the existing `android/` — and therefore the same signing keystore, so `adb install -r` works over the
+installed app): the three steps above with both env vars set. Output:
+`android\app\build\outputs\apk\release\app-release.apk` (~153 MB universal).
