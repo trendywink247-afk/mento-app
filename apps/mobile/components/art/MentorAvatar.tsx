@@ -77,6 +77,21 @@ export function MentorAvatar({
   );
 }
 
+/** The same mentor as a whole figure, standing free (board A14's hero). A still painting;
+ * the caller decides whether it breathes. */
+export function MentorFigure({ seed, width, height }: { seed: string; width: number; height: number }) {
+  const look = mentorLook(seed);
+  const set = COMPANION_GENERATED[look.animal] ?? COMPANION_GENERATED.Panda;
+  return (
+    <Image
+      source={set.poses.idle}
+      resizeMode="contain"
+      accessibilityIgnoresInvertColors
+      style={{ width, height }}
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   disc: { borderRadius: radius.pill, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' },
   dot: { position: 'absolute', right: -1, bottom: -1, borderRadius: radius.pill, borderWidth: 2 },
