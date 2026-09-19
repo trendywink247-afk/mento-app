@@ -45,6 +45,20 @@ export const colors = {
   success: '#38734B',
   warning: '#895F17', // darkened 4% from #8F6318 to clear 4.5:1 on bgLavender too
   danger: '#B8413A',
+
+  /** Board port, inside a conversation (A05 / A20 / A21 / A22). `borderStrong` rims the
+   * deeper-oat crisis card and the held send key; `held*` is the send key while the
+   * allowance asks for a pause — quiet, never red (decorative glyph, not text);
+   * `successWashBorder` rims the "Saved" chip; the danger-wash trio is the "End and wipe"
+   * key (ink on wash.danger = 6.6:1). `scrimSheet` is the board's 0.35 sheet scrim. */
+  borderStrong: '#DDD4C4',
+  heldFace: '#EAE3D6',
+  heldInk: '#857E72',
+  successWashBorder: '#BFD2C3',
+  dangerWashBorder: '#EBC3BF',
+  dangerWashEdge: '#E2B2AD',
+  dangerInk: '#8E2F2A',
+  scrimSheet: 'rgba(43,43,43,0.35)',
 } as const;
 
 /** Pastel clay washes for IconBadge — fixed, not themed by the companion accent. */
