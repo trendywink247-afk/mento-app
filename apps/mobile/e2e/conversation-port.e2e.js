@@ -265,7 +265,23 @@ async function run(browser, reduced) {
     if (!(await tid('allowance-text').innerText()).includes('not counted')) throw new Error(`[${label}] meter does not say "not counted"`);
     // The companion is absent while the card shows.
     if (await page.locator('[data-testid^="companion-slot-"]').count()) throw new Error(`[${label}] the companion is drawn beside the crisis card`);
-    console.log(`[${label}] OK A21 crisis card: still, both call keys, why toggle, no note at 3-in-a-row, composer live, no companion`);
+    // Crisis never blocks talking: the member writes again WITH the card up, and it lands.
+    const KEEP_TALKING = `still here, telling you ${Date.now()}`;
+    await tid('composer-input').fill(KEEP_TALKING);
+    await tid('composer-send').click();
+    await page.locator(`[data-testid^="mine-"]`, { hasText: KEEP_TALKING }).first().waitFor({ timeout: 30000 });
+    if (!(await tid('crisis-card').count())) throw new Error(`[${label}] the crisis card left when the member wrote again`);
+    // Nothing anywhere in the chat offers to attach media (Mento is text + emoji only).
+    const doors = await page.evaluate(() => ({
+      files: document.querySelectorAll('input[type="file"]').length,
+      attach: [...document.querySelectorAll('[aria-label],[data-testid]')].filter((n) =>
+        /attach|gallery|photo|camera|image picker|file picker/i.test(
+          `${n.getAttribute('aria-label') ?? ''} ${n.getAttribute('data-testid') ?? ''}`,
+        ),
+      ).length,
+    }));
+    if (doors.files || doors.attach) throw new Error(`[${label}] the chat offers attachments: ${JSON.stringify(doors)}`);
+    console.log(`[${label}] OK A21 crisis card: still, both call keys, why toggle, no note at 3-in-a-row, the member can keep writing beside it, no attachment door, no companion`);
   } finally {
     await page.unroute(sendRoute);
     psql(`UPDATE conversations SET member_streak=0 WHERE id='${conversationId}';`);
