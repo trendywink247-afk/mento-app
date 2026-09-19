@@ -33,18 +33,22 @@ export function PresenceHeader({
   busy,
   swept,
   onToggle,
+  onOpenLine,
 }: {
   me: ListenerMe;
   animal: CompanionAnimal | null;
   busy: boolean;
   swept: boolean;
   onToggle: () => void;
+  /** Opens the "Your line" sheet over this (settled-back) Mentor Home. */
+  onOpenLine: () => void;
 }) {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
   const breathing = useBreathing();
   const online = me.status === 'online';
+  const face: CompanionAnimal = (me.companion_animal as CompanionAnimal | undefined) ?? animal ?? 'Owl';
   const hours = hoursUntil(me.name_changes_at);
   const sage = COMPANION_COLORS.sage;
   const sub = [
@@ -76,7 +80,12 @@ export function PresenceHeader({
           accessibilityLabel={t('mentorHomePage.companionA11y')}
         >
           <Animated.View style={[styles.originBottom, breathing]}>
-            <Companion animal={animal ?? 'Owl'} size={90} awake />
+            {/* The mentor's OWN face — the same animal members see for them in Browse, My
+                Chats and the chat header (server mentor_face). The device's member companion
+                is only a fallback for a server that does not send it. */}
+            <View testID={`self-mentor-${face}`}>
+              <Companion animal={face} size={90} awake />
+            </View>
           </Animated.View>
         </View>
         <Entrance index={1}>
@@ -128,7 +137,7 @@ export function PresenceHeader({
 
       <Entrance index={2} style={styles.rows}>
         <PressKey
-          onPress={() => router.push('/mentor/line')}
+          onPress={onOpenLine}
           edge={colors.edgeSurface}
           travel={4}
           radius={radius.md}
@@ -141,9 +150,12 @@ export function PresenceHeader({
             <Text style={[type.caption, styles.bold, { color: colors.inkMuted }]}>{t('mentorHomePage.lineLabel')}</Text>
             <Text
               style={[type.bodySmall, styles.semi, { color: me.public_line ? colors.ink : colors.inkMuted }]}
-              numberOfLines={2}
+              // Three lines hold a whole 120-character line at 360 wide.
+              numberOfLines={3}
             >
-              {me.public_line || t('mentor.line.placeholder')}
+              {/* No line yet: an invitation, never a sample sentence that reads as if it
+                  were already theirs. */}
+              {me.public_line || t('mentorLineSheet.rowEmpty')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />

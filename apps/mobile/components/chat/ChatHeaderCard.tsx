@@ -29,7 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { MentorFace, type MentorLook } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
@@ -50,6 +50,9 @@ const GLOW_BLEED = 60;
 type Props = {
   /** The mentor's persona name as it should read in the header. */
   name: string;
+  /** The mentor's face (server `companion_animal` / `companion_colour`) — the same animal
+   * in the same wash as in My Chats, Browse and their profile. */
+  face?: MentorLook;
   /** The mentor's availability; `null` while unknown — never assumed. */
   status: 'online' | 'away' | 'offline' | null;
   /** The mentor snoozed this chat (board A10): the status reads "Mentor · replies within a
@@ -125,6 +128,7 @@ function HeaderGlow({ color }: { color: string }) {
 
 export function ChatHeaderCard({
   name,
+  face,
   status,
   replyWithinADay = false,
   community,
@@ -195,7 +199,7 @@ export function ChatHeaderCard({
               <View style={styles.avatarBox}>
                 {online ? <PresenceRing color={colors.accent} /> : null}
                 <View style={[styles.avatarFrame, { borderColor: colors.surface }]}>
-                  <PersonaAvatar name={name} size={AVATAR - 4} />
+                  <MentorFace animal={face?.animal} colour={face?.colour} size={AVATAR - 4} />
                 </View>
                 {online ? (
                   // Decorative: the status line below says the same thing in words.

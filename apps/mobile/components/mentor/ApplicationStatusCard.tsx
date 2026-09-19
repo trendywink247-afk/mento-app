@@ -62,7 +62,9 @@ export function ApplicationStatusCard({
         <EdgeSurface edge={colors.edgeSurface} style={[styles.card, styles.plain, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-status">
           <Chip label={t('mentorApply.declinedChip')} bg={colors.surfaceAlt} fg={colors.ink} icon="leaf-outline" />
           <Text style={[type.cardTitle, { color: colors.ink }]}>{t('profile.declinedTitle')}</Text>
-          <Text style={[type.note, { color: colors.inkMuted }]}>{t('profile.declinedBody')}</Text>
+          {/* The thanks only — the cooldown is said ONCE, with its date, right under the card
+              (MentorPathFlow). */}
+          <Text style={[type.note, { color: colors.inkMuted }]}>{t('mentorApplyCopy.declinedBody')}</Text>
         </EdgeSurface>
       </Entrance>
     );

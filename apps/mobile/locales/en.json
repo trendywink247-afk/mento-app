@@ -1304,5 +1304,14 @@
   },
   "chatsEmpty": {
     "companionA11y": "Your companion, here with you"
+  },
+  "mentorLineSheet": {
+    "placeholder": "For example: I sat the exam three times. I mostly just listen.",
+    "rowEmpty": "Add one sentence members will see",
+    "counterA11y": "%{count} of %{max} characters"
+  },
+  "mentorApplyCopy": {
+    "eyebrowReview": "Reviewed by the Mento team",
+    "declinedBody": "Not this time, and truly, thank you."
   }
 }

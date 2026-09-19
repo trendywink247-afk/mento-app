@@ -103,7 +103,13 @@ export function ConversationRow({
           containerStyle={styles.grow}
           style={[styles.inner, { backgroundColor: colors.surfaceAlt }]}
         >
-          <MemberDisc name={name} size={40} />
+          <MemberDisc
+            name={name}
+            size={40}
+            animal={conversation.user_companion_animal}
+            colour={conversation.user_companion_colour}
+            still
+          />
           <View style={styles.text}>
             <Text style={[type.cardTitle, { color: colors.ink }]} numberOfLines={1}>
               {name}
@@ -161,7 +167,13 @@ export function ConversationRow({
         { backgroundColor: active ? colors.surface : colors.surfaceAlt, borderColor: colors.border },
       ]}
     >
-      <MemberDisc name={conversation.user_persona_name} size={40} />
+      <MemberDisc
+        name={conversation.user_persona_name}
+        size={40}
+        animal={conversation.user_companion_animal}
+        colour={conversation.user_companion_colour}
+        still
+      />
       <View style={styles.text}>
         <Text style={[type.cardTitle, { color: colors.ink }]} numberOfLines={1}>
           {conversation.user_persona_name}

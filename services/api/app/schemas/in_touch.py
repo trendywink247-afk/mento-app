@@ -55,6 +55,10 @@ class InTouchItem(BaseModel):
     conversation_id: str | None
     conversation_status: str | None
     stream_channel_id: str | None
+    # One mentor, one face (services/mentor_face.py): the companion animal + wash colour
+    # every screen draws for this mentor. Stable — never rotates with the name (§L.6 l).
+    companion_animal: str = "Owl"
+    companion_colour: str = "sage"
 
 
 class InTouchListOut(BaseModel):

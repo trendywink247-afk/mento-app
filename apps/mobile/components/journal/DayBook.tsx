@@ -11,7 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { MentorAvatar } from '@/components/art/MentorAvatar';
+import { MentorFace, type MentorLook } from '@/components/art/MentorFace';
 import { eyebrowStyle } from '@/components/journal/JournalPageHeader';
 import { LinedPaper } from '@/components/journal/LinedPaper';
 import { PressKey } from '@/components/motion/PressKey';
@@ -31,8 +31,8 @@ export type KeptGroup = {
   /** The chat this came from, when it can still be opened; null = no link. */
   conversationId: string | null;
   name: string;
-  /** The mentor's stable avatar seed, when this build can know it; null = a plain mark. */
-  avatarSeed: string | null;
+  /** The mentor's face (server mentor_face), when this build can know it; null = a plain mark. */
+  face: MentorLook | null;
   lines: { id: string; body: string }[];
 };
 
@@ -124,8 +124,8 @@ export function DayBook({
                       <View pointerEvents="none" style={[styles.keptEdge, { backgroundColor: colors.accentTintEdge }]} />
                       <View style={[styles.keptFace, { backgroundColor: colors.accentTint }]}>
                         <View style={styles.keptWho}>
-                          {g.avatarSeed ? (
-                            <MentorAvatar seed={g.avatarSeed} size={36} />
+                          {g.face ? (
+                            <MentorFace animal={g.face.animal} colour={g.face.colour} size={36} />
                           ) : (
                             <View style={[styles.keptMark, { backgroundColor: colors.surface }]}>
                               <Ionicons name="bookmark-outline" size={18} color={colors.accent} />

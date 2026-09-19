@@ -274,15 +274,24 @@ export function MentorPathFlow({ surface }: { surface: 'public' | 'member' }) {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={styles.content}
           >
-            <MentorPageHeader eyebrow={t('mentorApply.eyebrow')} title={t('mentorApply.title')} onBack={() => goBack('form')} />
+            {/* Not approved yet: the eyebrow says only what is true — it will be reviewed. */}
+            <MentorPageHeader
+              eyebrow={t('mentorApplyCopy.eyebrowReview')}
+              title={t('mentorApply.title')}
+              onBack={() => goBack('form')}
+            />
             <ApplicationForm onSuccess={onSubmitted} />
           </ScrollView>
         );
       case 'status':
         return (
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+            {/* "Reviewed and approved" only once it is true (the approved card); in review and
+                declined it was, or will be, reviewed — nothing more. */}
             <MentorPageHeader
-              eyebrow={t('mentorApply.eyebrow')}
+              eyebrow={
+                known && stateOf(known) === 'approved' ? t('mentorApply.eyebrow') : t('mentorApplyCopy.eyebrowReview')
+              }
               title={t('mentorApply.title')}
               onBack={() => goBack('status')}
             />

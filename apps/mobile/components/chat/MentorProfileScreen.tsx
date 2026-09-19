@@ -10,7 +10,7 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { InTouchBadge, LinkedRings } from '@/components/InTouchBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
-import { MentorAvatar, MentorFigure } from '@/components/art/MentorAvatar';
+import { MentorFace, MentorFaceFigure } from '@/components/art/MentorFace';
 import { DeepArrival } from '@/components/motion/DeepArrival';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
@@ -158,7 +158,7 @@ export default function MentorProfileScreen() {
       ? t('inTouch.placesAsked', { waiting: slots.waiting, inTouch: slots.in_touch })
       : t('inTouch.placesFree', { free: slots.free, limit: slots.limit })
     : null;
-  const seed = profile?.persona_avatar ?? '';
+  const face = { animal: profile?.companion_animal, colour: profile?.companion_colour };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
@@ -172,7 +172,7 @@ export default function MentorProfileScreen() {
             <View style={styles.figures} pointerEvents="none">
               {profile ? (
                 <Animated.View style={[styles.mentorFigure, mentorBreath]}>
-                  <MentorFigure seed={seed} width={96} height={110} />
+                  <MentorFaceFigure animal={face.animal} width={96} height={110} />
                 </Animated.View>
               ) : null}
               {animal ? (
@@ -259,7 +259,7 @@ export default function MentorProfileScreen() {
                   ) : null}
                 </View>
                 <View style={styles.previewRow}>
-                  <MentorAvatar seed={seed} size={44} />
+                  <MentorFace animal={face.animal} colour={face.colour} size={44} />
                   <View style={styles.previewText}>
                     <Text style={[type.keyDense, styles.explainTitle, { color: colors.ink }]} numberOfLines={1}>
                       {firstMetAs ? displayName : t('inTouch.previewName')}

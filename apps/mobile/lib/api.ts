@@ -46,6 +46,9 @@ export type MatchResult = {
   stream_channel_id: string | null;
   listener_persona_name: string;
   listener_persona_avatar: string;
+  /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
+  listener_companion_animal?: string | null;
+  listener_companion_colour?: string | null;
 };
 
 export type ScanResult = {
@@ -68,6 +71,10 @@ export type Listener = {
   in_touch?: boolean;
   /** The name this mentor carried when the member first met them, once it has changed. */
   first_met_as?: string | null;
+  /** One mentor, one face (server `services/mentor_face.py`): the companion animal + wash
+   * colour every screen draws for this mentor. Stable across name rotation. */
+  companion_animal?: string;
+  companion_colour?: string;
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -88,6 +95,10 @@ export type ListenerProfile = {
   is_favourite: boolean;
   in_touch?: boolean;
   first_met_as?: string | null;
+  /** One mentor, one face (server `services/mentor_face.py`): the companion animal + wash
+   * colour every screen draws for this mentor. Stable across name rotation. */
+  companion_animal?: string;
+  companion_colour?: string;
 };
 
 export type PersonalRequest = {
@@ -97,6 +108,9 @@ export type PersonalRequest = {
   intro_message: string | null;
   conversation_id: string | null;
   created_at: string;
+  /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
+  listener_companion_animal?: string | null;
+  listener_companion_colour?: string | null;
 };
 
 /** `GET /conversations/{id}/mentor`: the mentor's profile plus THIS conversation's topic. */
@@ -144,6 +158,10 @@ export type InTouchItem = {
   conversation_id: string | null;
   conversation_status: 'active' | 'ended' | 'wiped' | null;
   stream_channel_id: string | null;
+  /** One mentor, one face (server `services/mentor_face.py`): the companion animal + wash
+   * colour every screen draws for this mentor. Stable across name rotation. */
+  companion_animal?: string;
+  companion_colour?: string;
 };
 export type InTouchList = { slots: InTouchSlots; items: InTouchItem[]; waiting: InTouchItem[] };
 
@@ -167,6 +185,9 @@ export type ConversationListItem = {
   first_met_as?: string | null;
   /** See ConversationMentor.reply_within_a_day. */
   reply_within_a_day?: boolean;
+  /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
+  listener_companion_animal?: string | null;
+  listener_companion_colour?: string | null;
 };
 
 export type ConversationState = {

@@ -1,9 +1,9 @@
 /**
  * ConnectOrbs — the connecting scene (board A19 + T03): the member's companion in an orb on
  * the left, an empty breathing orb on the right, five dots lighting in turn between them.
- * On a match the right orb FILLS with the mentor's persona avatar (mentors are landscapes,
- * never an animal), the two orbs drift together and a soft halo opens behind them. The
- * orbs are shared elements — they never leave, they only move closer.
+ * On a match the right orb FILLS with the mentor's face — their companion animal in their
+ * wash (`MentorFace`, the same on every screen), the two orbs drift together and a soft
+ * halo opens behind them. The orbs are shared elements — they never leave, they only move closer.
  *
  * Transform and opacity only. Reduced motion: no drift, no pulse — the found state is
  * simply drawn. An error leaves everything still (T&S #11).
@@ -23,14 +23,14 @@ import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import { Companion, type CompanionTrigger } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { MentorFace, mentorWash } from '@/components/art/MentorFace';
 import { SeekDots } from '@/components/motion/SeekDots';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useI18n } from '@/lib/i18n';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing, stagger } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, type, wash, washEdge } from '@/theme/tokens';
+import { font, radius, type, washEdge } from '@/theme/tokens';
 
 /** Board metrics at a 342-wide column. */
 const ORB_MAX = 120;
@@ -48,11 +48,13 @@ type Props = {
   memberName: string | null;
   /** Set on a match — fills the right orb and brings the two together. */
   mentorName: string | null;
+  /** The found mentor's face (from the match result); the board's owl on sage when absent. */
+  mentorFace?: { animal: string; colour: string } | null;
   /** Error: every loop stops where it is. */
   still?: boolean;
 };
 
-export function ConnectOrbs({ width, animal, memberName, mentorName, still = false }: Props) {
+export function ConnectOrbs({ width, animal, memberName, mentorName, mentorFace = null, still = false }: Props) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const reduced = useReducedMotion();
@@ -153,8 +155,10 @@ export function ConnectOrbs({ width, animal, memberName, mentorName, still = fal
           </Animated.View>
           <Animated.View style={[StyleSheet.absoluteFill, fillStyle]}>
             <View style={[edge, { backgroundColor: washEdge.green }]} />
-            <View style={[round, styles.orbFace, { backgroundColor: wash.green, borderColor: colors.bg }]}>
-              {mentorName ? <PersonaAvatar name={mentorName} size={orb - 6} /> : null}
+            <View style={[round, styles.orbFace, { backgroundColor: mentorWash(mentorFace?.colour), borderColor: colors.bg }]}>
+              {mentorName ? (
+                <MentorFace animal={mentorFace?.animal} colour={mentorFace?.colour} size={orb - 6} />
+              ) : null}
             </View>
             <View style={[styles.online, { backgroundColor: colors.success, borderColor: colors.bg }]} />
           </Animated.View>

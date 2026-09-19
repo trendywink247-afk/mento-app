@@ -13,7 +13,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 
 import { InTouchBadge } from '@/components/InTouchBadge';
-import { MentorAvatar } from '@/components/art/MentorAvatar';
+import { MentorFace, type MentorLook } from '@/components/art/MentorFace';
 import { PressKey } from '@/components/motion/PressKey';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
@@ -72,7 +72,7 @@ export function StateChip({ state, label }: { state: ChatRowState; label: string
 
 export function ChatRow({
   testID,
-  avatarSeed,
+  face,
   name,
   state,
   stateLabel,
@@ -90,7 +90,8 @@ export function ChatRow({
   onPress,
 }: {
   testID: string;
-  avatarSeed: string;
+  /** The mentor's face from the server (`companion_animal` / `companion_colour`). */
+  face: MentorLook;
   name: string;
   state: ChatRowState;
   stateLabel: string;
@@ -129,7 +130,7 @@ export function ChatRow({
       ]}
     >
       <View>
-        <MentorAvatar seed={avatarSeed} size={52} />
+        <MentorFace animal={face.animal} colour={face.colour} size={52} />
         {unread ? <NewDot label={unreadLabel} /> : null}
       </View>
       <View style={styles.body}>

@@ -97,7 +97,9 @@ export default function JournalDayScreen() {
           // A wiped chat has nothing left to open; an unknown one cannot be opened from here.
           conversationId: convo && convo.status !== 'wiped' ? conversationId : null,
           name,
-          avatarSeed: convo?.listener_persona_avatar ?? null,
+          face: convo
+            ? { animal: convo.listener_companion_animal, colour: convo.listener_companion_colour }
+            : null,
           lines: [],
         };
         groups.push(g);

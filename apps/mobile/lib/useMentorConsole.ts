@@ -15,6 +15,7 @@ import {
   type ListenerMe,
   type ListenerRequest,
 } from '@/lib/listenerApi';
+import { mentorFaces } from '@/lib/mentorFaces';
 import { ensureListenerConnected } from '@/lib/listenerStreamClient';
 
 const REQUEST_POLL_MS = 30_000;
@@ -105,6 +106,7 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
       ]);
       if (!live()) return;
       setMe(meData);
+      mentorFaces.setSelf(meData.companion_animal, meData.companion_colour);
       setRequests(reqs);
       setConversations(convos);
       setError(null);

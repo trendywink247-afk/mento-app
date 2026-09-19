@@ -17,21 +17,20 @@ import { ComposerField } from '@/components/chat/ComposerField';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { EdgeSurface } from '@/components/EdgeSurface';
-import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { HelplinesSheet } from '@/components/mentor/HelplinesSheet';
 import { MemberDisc } from '@/components/mentor/MemberDisc';
 import { MentorChatHeader } from '@/components/mentor/MentorChatHeader';
 import { MentorComposerHint } from '@/components/mentor/MentorComposerHint';
+import { MentorPeek, mentorPeekRoom } from '@/components/mentor/MentorPeek';
 import { MentorOptionsMenu } from '@/components/mentor/MentorOptionsMenu';
 import { SageSky } from '@/components/motion/SageSky';
-import { useBreathing } from '@/components/motion/useBreathing';
-import Animated from 'react-native-reanimated';
 import { useI18n } from '@/lib/i18n';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
-import { getCompanionAnimal, getSessionToken } from '@/lib/session';
+import { mentorFaces } from '@/lib/mentorFaces';
+import { getSessionToken } from '@/lib/session';
 import { leaveToMentorHome } from '@/lib/leaveToChats';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
@@ -99,8 +98,10 @@ export default function MentorChatScreenWeb() {
   // The member as the brief carries them (companion in their colour, path lens) — best-effort.
   const [brief, setBrief] = useState<MemberBrief | null>(null);
   const [here, setHere] = useState(false);
-  const [mine, setMine] = useState<CompanionAnimal | null>(null);
-  const breathing = useBreathing();
+  // The mentor's OWN face — the same animal members see for them (server mentor_face).
+  const [mine, setMine] = useState<CompanionAnimal | null>(
+    () => (mentorFaces.self()?.animal as CompanionAnimal | undefined) ?? null,
+  );
   useEffect(() => {
     let live = true;
     if (id) {
@@ -111,11 +112,6 @@ export default function MentorChatScreenWeb() {
         })
         .catch(() => {});
     }
-    void getCompanionAnimal()
-      .then((a) => {
-        if (live) setMine(a as CompanionAnimal | null);
-      })
-      .catch(() => {});
     return () => {
       live = false;
     };
@@ -166,6 +162,8 @@ export default function MentorChatScreenWeb() {
         // /listener/me returns a fresh Stream token for this listener identity.
         const me = await listenerApi.me();
         setOnline(me.status === 'online');
+        mentorFaces.setSelf(me.companion_animal, me.companion_colour);
+        setMine((me.companion_animal as CompanionAnimal | undefined) ?? 'Owl');
         const client = await ensureListenerConnected(
           { id: me.id, name: me.persona_name },
           me.stream_token,
@@ -324,7 +322,7 @@ export default function MentorChatScreenWeb() {
           <FlatList
             data={messages}
             keyExtractor={(m) => m.id}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingBottom: mentorPeekRoom(mine) }]}
             ListEmptyComponent={
               <View style={styles.emptyChat}>
                 <Ionicons name="chatbubble-ellipses-outline" size={32} color={colors.inkMuted} />
@@ -392,22 +390,8 @@ export default function MentorChatScreenWeb() {
             </View>
           ) : null}
 
-          {/* Your companion peeks over the message field (board A35) — it stands behind the
-            * footer, so only its top shows above the field. Decorative. */}
-          <View style={styles.peekZone} pointerEvents="none">
-            {/* Your companion peeks over the message field (board A35) — decorative. */}
-            <View
-              style={styles.peek}
-              pointerEvents="none"
-              accessible
-              accessibilityRole="image"
-              accessibilityLabel={t('mentorChatPage.companionA11y')}
-            >
-              <Animated.View style={[styles.originBottom, breathing]}>
-                <Companion animal={mine ?? 'Owl'} size={90} pose="peek" awake />
-              </Animated.View>
-            </View>
-          </View>
+          {/* Your companion over the message field (board A35), seated on the footer's edge. */}
+          <MentorPeek animal={mine} label={t('mentorChatPage.companionA11y')} />
           <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
             <MentorComposerHint />
             {sendError ? (
@@ -499,9 +483,6 @@ const styles = StyleSheet.create({
   footer: { paddingTop: space.sm, paddingBottom: space.md, gap: space.sm, borderTopWidth: 1 },
   // A zero-height band on the footer's top edge; the companion hangs 30px into the footer
   // (drawn after it, so hidden there) and shows 60px above it.
-  peekZone: { height: 0, zIndex: 0 },
-  peek: { position: 'absolute', right: 22, bottom: -30, height: 90, alignItems: 'center', justifyContent: 'flex-end' },
-  originBottom: { transformOrigin: 'bottom' },
   sendErrorLine: { paddingBottom: space.xs, paddingHorizontal: space.md },
   helpLayer: { zIndex: 6 },
   helpScrim: { opacity: 0.35 },

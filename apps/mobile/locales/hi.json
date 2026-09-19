@@ -1304,5 +1304,14 @@
   },
   "chatsEmpty": {
     "companionA11y": "आपका साथी, आपके साथ यहाँ"
+  },
+  "mentorLineSheet": {
+    "placeholder": "उदाहरण: यह परीक्षा तीन बार दी है। ज़्यादातर बस सुनना अच्छा लगता है।",
+    "rowEmpty": "एक वाक्य जोड़ें, जो सदस्य देखेंगे",
+    "counterA11y": "%{max} में से %{count} अक्षर"
+  },
+  "mentorApplyCopy": {
+    "eyebrowReview": "Mento टीम देखती है",
+    "declinedBody": "इस बार नहीं, और सच में, धन्यवाद।"
   }
 }
