@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
+from app import observability
 from app.config import get_settings
 from app.db import init_db
 from app.routers import (
@@ -27,28 +28,9 @@ from app.routers import (
     stream_hooks,
 )
 
-logging.basicConfig(level=logging.INFO)
+observability.configure_logging()
 settings = get_settings()
-
-if settings.sentry_dsn:
-    import sentry_sdk
-
-    def _strip_request_body(event: dict, _hint: dict) -> dict:
-        """Message content must never reach Sentry (T&S #10) — drop request
-        bodies/data wholesale; URL + method + status are enough to debug."""
-        request = event.get("request")
-        if isinstance(request, dict):
-            request.pop("data", None)
-            request.pop("body", None)
-        return event
-
-    sentry_sdk.init(
-        dsn=settings.sentry_dsn,
-        environment=settings.env,
-        send_default_pii=False,
-        traces_sample_rate=0.0,  # errors only — no performance tracing
-        before_send=_strip_request_body,
-    )
+observability.init_sentry(settings)
 
 
 def _enforce_prod_invariants() -> None:

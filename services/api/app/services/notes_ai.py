@@ -70,9 +70,11 @@ def organize(entry_bodies: list[str]) -> OrganizeResult:
         "generationConfig": {"temperature": 0.4, "responseMimeType": "application/json"},
     }
     url = _ENDPOINT.format(model=settings.gemini_model)
+    # The key goes in a header, never the query string: httpx logs request URLs and
+    # error reporters keep them as breadcrumbs.
     resp = httpx.post(
         url,
-        params={"key": settings.gemini_api_key},
+        headers={"x-goog-api-key": settings.gemini_api_key},
         json=body,
         timeout=20.0,
     )
