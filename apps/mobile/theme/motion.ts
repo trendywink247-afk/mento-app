@@ -164,3 +164,7 @@ export const character = {
 
 export const motion = { duration, easing, spring, stagger, breathe, character, stage, dots };
 export type Motion = typeof motion;
+
+/** Mentor hand-off (board A34 "auto / continue"): once the session exists the screen holds
+ * long enough to be read, then goes to Mentor Home by itself; the key goes at once. */
+export const handoff = { hold: 3200 } as const;
