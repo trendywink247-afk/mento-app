@@ -43,10 +43,22 @@ def test_crisis_card_survives_a_database_outage(client, monkeypatch):
     assert r.json()["message"]["text"] == "I want to die"
 
 
-def test_ordinary_message_never_touches_the_database(client, monkeypatch):
-    """The hottest path in the product: a clean message is a regex pass, nothing more."""
+def test_ordinary_message_is_delivered_with_the_database_down(client, monkeypatch):
+    """The hottest path in the product. The SCAN of a clean message is a regex pass and
+    needs no database; the message allowance that follows it does (DECISIONS §L.2) and
+    fails open — so with Postgres unreachable the message still goes out, unchanged."""
     monkeypatch.setattr(stream_hooks, "SessionLocal", _db_down)
     r = client.post(BEFORE, json={"message": {"id": "res-2", "text": "thanks, that helped"}})
+    assert r.status_code == 200
+    assert r.json() == {}
+    r = client.post(
+        BEFORE,
+        json={
+            "message": {"id": "res-2b", "text": "thanks, that helped"},
+            "user": {"id": "u-1"},
+            "channel": {"id": "some-channel"},
+        },
+    )
     assert r.status_code == 200
     assert r.json() == {}
 

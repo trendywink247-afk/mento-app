@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from app.schemas.in_touch import StayInTouchOut
+
 
 class ListenerOut(BaseModel):
     """Anonymous persona card — no real names/photos/star ratings in v1 (T&S #7)."""
@@ -15,7 +17,13 @@ class ListenerOut(BaseModel):
     categories: list[str]
     status: str
     available: bool
+    # DEPRECATED (DECISIONS §L.6): the one-sided favourite is replaced by the consented
+    # "stay in touch". Still served so shipped builds keep working.
     is_favourite: bool
+    # Stay in touch: this member has an ACCEPTED link with this mentor. Browse puts
+    # these first. `first_met_as` is set once the mentor's name has changed since.
+    in_touch: bool = False
+    first_met_as: str | None = None
 
 
 class ListenerProfileOut(BaseModel):
@@ -35,7 +43,9 @@ class ListenerProfileOut(BaseModel):
     availability_note: str | None
     listening_since: str  # ISO date of ListenerProfile.created_at
     conversations_held: int
-    is_favourite: bool
+    is_favourite: bool  # DEPRECATED — see ListenerOut
+    in_touch: bool = False
+    first_met_as: str | None = None
 
 
 class ConversationMentorOut(ListenerProfileOut):
@@ -46,6 +56,9 @@ class ConversationMentorOut(ListenerProfileOut):
 
     issue_category: str | None = None
     issue_category_label: str | None = None
+    # The member's stay-in-touch standing with this mentor (same payload as
+    # GET /conversations/{id}/stay-in-touch) — one call draws the whole profile.
+    stay_in_touch: StayInTouchOut | None = None
 
 
 class PersonalRequestIn(BaseModel):

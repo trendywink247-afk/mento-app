@@ -52,6 +52,19 @@ def _rate_limits_off():
 
 
 @pytest.fixture(autouse=True)
+def _name_rotation_off():
+    """Mentor names rotate at 04:00 IST (services/mentor_names.py). Off by default so a
+    suite asserting on seeded names can never meet the boundary; the rotation tests
+    flip the module switch back on."""
+    from app.services import mentor_names
+
+    previous = mentor_names.ENABLED
+    mentor_names.ENABLED = False
+    yield
+    mentor_names.ENABLED = previous
+
+
+@pytest.fixture(autouse=True)
 def _push_off():
     """Push is off by default in tests (no network); tests/test_push.py flips it on
     per test and records sends."""
@@ -77,6 +90,8 @@ def sealed_channels(monkeypatch):
         return True
 
     monkeypatch.setattr(stream, "freeze_channel", _record)
+    # Same for the rename a name rotation pushes to Stream (tests that care replace it).
+    monkeypatch.setattr(stream, "rename_user", lambda user_id, persona_name: True)
     return calls
 
 
@@ -100,7 +115,8 @@ def db_session():
                 text(
                     "TRUNCATE conversations, listener_profiles, users, safety_flags, "
                     "moderation_events, journal_entries, conversation_reflections, "
-                    "conversation_requests, push_tokens "
+                    "conversation_requests, push_tokens, message_allowance_days, mentor_links, "
+                    "listener_name_history, product_feedback "
                     "RESTART IDENTITY CASCADE"
                 )
             )

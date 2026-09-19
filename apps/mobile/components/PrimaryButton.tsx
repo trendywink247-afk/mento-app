@@ -11,8 +11,13 @@ type Props = {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  /** primary = filled key. ghost = warm alt-surface key with accent text. link = plain accent text. */
-  variant?: 'primary' | 'ghost' | 'link';
+  /** primary = filled key. ghost = warm alt-surface key with accent text. surface = white
+   * key with ink text (the board's quiet twin beside a primary). link = plain accent text. */
+  variant?: 'primary' | 'ghost' | 'surface' | 'link';
+  /** pill = the app's round key. key = the board's 58px, 14-radius pillow key (first run). */
+  shape?: 'pill' | 'key';
+  /** A key that shares a row with a wider one (board A03 "Surprise Me"): 16px label, tighter sides. */
+  dense?: boolean;
   /** accent = companion colour. ink = charcoal key (onboarding CTAs). */
   tone?: 'accent' | 'ink';
   icon?: keyof typeof Ionicons.glyphMap;
@@ -29,6 +34,8 @@ export function PrimaryButton({
   disabled,
   variant = 'primary',
   tone = 'accent',
+  shape = 'pill',
+  dense = false,
   icon,
   trailing,
   accessibilityLabel,
@@ -38,18 +45,29 @@ export function PrimaryButton({
   const { colors } = useTheme();
   const filled = variant === 'primary';
   const inactive = !!(disabled || loading);
-  const bg = filled ? (tone === 'ink' ? colors.ink : colors.accent) : colors.surfaceAlt;
-  const edge = filled ? (tone === 'ink' ? colors.edgeInk : colors.accentEdge) : colors.edgeAlt;
-  const fg = filled ? colors.onAccent : colors.accent;
+  const surface = variant === 'surface';
+  const bg = filled ? (tone === 'ink' ? colors.ink : colors.accent) : surface ? colors.surface : colors.surfaceAlt;
+  const edge = filled
+    ? tone === 'ink'
+      ? colors.edgeInk
+      : colors.accentEdge
+    : surface
+      ? colors.edgeSurface
+      : colors.edgeAlt;
+  const fg = filled ? colors.onAccent : surface ? colors.ink : colors.accent;
+  const key = shape === 'key';
+  const iconSize = key && !dense ? 22 : 18;
 
   const content = loading ? (
     <ActivityIndicator color={fg} />
   ) : (
     <View style={styles.row}>
-      {icon ? <Ionicons name={icon} size={18} color={fg} /> : null}
-      <Text style={[type.bodySemi, styles.label, { color: fg }]}>{label}</Text>
-      {trailing === 'arrow' ? <Ionicons name="arrow-forward" size={18} color={fg} /> : null}
-      {trailing === 'chevron' ? <Ionicons name="chevron-forward" size={18} color={fg} /> : null}
+      {icon ? <Ionicons name={icon} size={iconSize} color={fg} /> : null}
+      <Text style={[key && !dense ? type.key : key ? type.keyDense : type.bodySemi, !key && styles.label, styles.shrink, { color: fg }]}>
+        {label}
+      </Text>
+      {trailing === 'arrow' ? <Ionicons name="arrow-forward" size={iconSize} color={fg} /> : null}
+      {trailing === 'chevron' ? <Ionicons name="chevron-forward" size={iconSize} color={fg} /> : null}
     </View>
   );
 
@@ -80,13 +98,19 @@ export function PrimaryButton({
       edge={edge}
       travel={4}
       intent={filled ? 'commit' : 'navigate'}
-      radius={radius.pill}
+      radius={key ? radius.md : radius.pill}
       disabled={inactive}
       accessibilityLabel={accessibilityLabel ?? label}
       accessibilityHint={accessibilityHint}
       accessibilityState={{ busy: !!loading }}
       testID={testID}
-      style={[styles.base, { backgroundColor: bg }]}
+      style={[
+        styles.base,
+        key && styles.key,
+        dense && styles.dense,
+        { backgroundColor: bg },
+        surface && { borderWidth: 1, borderColor: colors.border },
+      ]}
     >
       {content}
     </PressKey>
@@ -101,8 +125,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.lg,
     paddingVertical: space.sm,
   },
+  key: { minHeight: 58, paddingHorizontal: space.md },
+  dense: { paddingHorizontal: space.sm },
   link: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   disabled: { opacity: 0.5 },
   label: { fontSize: 16 },
+  shrink: { flexShrink: 1, textAlign: 'center' },
 });

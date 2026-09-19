@@ -28,7 +28,7 @@
  * enforcement LOGIC is proven server-side by pytest; this spec proves the chat loop.
  */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const LISTENER_ID = process.env.LISTENER_ID;
 const MEMBER_MSG = 'hello, are you there?';
 const LISTENER_MSG = 'yes, I am right here with you';

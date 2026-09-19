@@ -28,7 +28,7 @@ from app.models.request import ConversationRequest
 from app.routers.admin_console import current_admin
 from app.schemas import ListenerOut, ListenerProfileOut, OkResult, PersonalRequestIn, RequestOut
 from app.security import current_user_id
-from app.services import audit, listener_profiles, locks, push_tasks
+from app.services import audit, in_touch, listener_profiles, locks, mentor_names, push_tasks
 from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
@@ -52,15 +52,16 @@ def _request_out(r: ConversationRequest) -> RequestOut:
     )
 
 
-@router.get("", response_model=list[ListenerOut])
+@router.get("", response_model=list[ListenerOut], dependencies=[Depends(mentor_names.fresh_names)])
 def list_listeners(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> list[ListenerOut]:
     """Approved listeners (minus anyone this user blocked — and minus the user's
-    own listener profile, if their application was approved). Ordered favourites
-    first, then available first, then rank (spec 2026-09-06 §3.4) — each a stable
-    sort over the previous so rank order survives within every group."""
+    own listener profile, if their application was approved). Ordered IN TOUCH first
+    (DECISIONS §L.7 — the consented link that replaces the favourite), then the
+    deprecated favourites, then available, then rank (spec 2026-09-06 §3.4) — each a
+    stable sort over the previous so rank order survives within every group."""
     excluded = blocked_listener_ids(db, user_id) | own_listener_ids(db, user_id)
     listeners = db.scalars(
         select(ListenerProfile)
@@ -72,13 +73,15 @@ def list_listeners(
             select(FavouriteListener.listener_id).where(FavouriteListener.user_id == user_id)
         ).all()
     )
+    links = in_touch.in_touch_listener_ids(db, user_id)
     out = [
-        listener_profiles.card(li, is_favourite=li.id in favourite_ids)
+        listener_profiles.card(li, is_favourite=li.id in favourite_ids, link=links.get(li.id))
         for li in listeners
         if li.id not in excluded
     ]
     out = sorted(out, key=lambda x: not x.available)
-    return sorted(out, key=lambda x: not x.is_favourite)
+    out = sorted(out, key=lambda x: not x.is_favourite)
+    return sorted(out, key=lambda x: not x.in_touch)
 
 
 def _visible_approved_listener(db: Session, listener_id: str, user_id: str) -> ListenerProfile:
@@ -92,7 +95,11 @@ def _visible_approved_listener(db: Session, listener_id: str, user_id: str) -> L
     return li
 
 
-@router.get("/{listener_id}", response_model=ListenerProfileOut)
+@router.get(
+    "/{listener_id}",
+    response_model=ListenerProfileOut,
+    dependencies=[Depends(mentor_names.fresh_names)],
+)
 def get_listener_profile(
     listener_id: str,
     user_id: str = Depends(current_user_id),
@@ -103,13 +110,16 @@ def get_listener_profile(
     return listener_profiles.profile(db, li, user_id)
 
 
-@router.post("/{listener_id}/favourite", response_model=OkResult)
+@router.post("/{listener_id}/favourite", response_model=OkResult, deprecated=True)
 def favourite_listener(
     listener_id: str,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> OkResult:
-    """Idempotent: a second POST is a no-op, not a second row (spec §3.4).
+    """DEPRECATED (DECISIONS §L.6): replaced by the consented stay-in-touch ask
+    (`POST /conversations/{id}/stay-in-touch`). Kept so shipped builds keep working.
+
+    Idempotent: a second POST is a no-op, not a second row (spec §3.4).
 
     Check-then-insert has a TOCTOU gap under concurrency (two racing POSTs can
     both pass the `is None` check); the primary key makes the loser's insert an
@@ -126,13 +136,15 @@ def favourite_listener(
     return OkResult(status="favourited")
 
 
-@router.delete("/{listener_id}/favourite", response_model=OkResult)
+@router.delete("/{listener_id}/favourite", response_model=OkResult, deprecated=True)
 def unfavourite_listener(
     listener_id: str,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> OkResult:
-    """Idempotent: unfavouriting something never favourited is still a 200.
+    """DEPRECATED with the favourite (DECISIONS §L.6).
+
+    Idempotent: unfavouriting something never favourited is still a 200.
 
     Deliberately NOT gated by `_visible_approved_listener` — a member who
     favourited a mentor and later blocked them must still be able to remove the

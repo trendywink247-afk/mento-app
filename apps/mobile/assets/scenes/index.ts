@@ -15,6 +15,16 @@ export const SCENES = {
   journalsAi: require('./journals-ai.webp') as ImageSourcePropType,
   /** Journal channel first-visit — a fresh page and growth. */
   journalEmpty: require('./journal-empty.webp') as ImageSourcePropType,
+  /** Landing: frame 0 of assets/lottie/study-discussion.json on a transparent 1200² canvas
+   * (same geometry as the animation) — the reduced-motion / route-exit still. Re-render
+   * it if the Lottie is re-themed. */
+  landingStill: require('./landing-scene-still.webp') as ImageSourcePropType,
+  /** Role fork: the companions at play. The still is the poster + the reduced-motion
+   * picture; the film itself is ./playground-loop.mp4 (780×586, H.264, 30 fps, 19.1 s,
+   * NO audio stream, an eased forward-then-back loop so plain looping is seamless; ground
+   * pinned to the oat colour). Source: Higgsfield still → seedance_2_0_mini (session 35).
+   * Played by components/art/PlaygroundLoop(.web). */
+  playgroundStill: require('./playground-still.webp') as ImageSourcePropType,
 };
 
 export type SceneName = keyof typeof SCENES;

@@ -2,10 +2,11 @@
  * Also guards the WS-1b polish: the "found your listener" beat must read as one
  * deliberate moment (>= MIN_FOUND_DWELL_MS on screen), never a sub-second flash. */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 /** The found-persona card must hold at least this long before we navigate to chat.
- * ConnectingStep FOUND_CRESCENDO (1100) + OnboardingJourney FOUND_BEAT (1000) ≈ 2.1s;
+ * ConnectingStep FOUND_CRESCENDO (1400) + OnboardingJourney FOUND_BEAT (1000) ≈ 2.4s, minus the
+ * 200ms the wait cards take to leave before the found block mounts;
  * we assert a conservative floor so a future regression back to a flash trips this. */
 const MIN_FOUND_DWELL_MS = 1500;
 
@@ -34,10 +35,10 @@ async function runFull(browser) {
 
   await driveToReady(page, tid);
 
-  // The story: searching headline + a rotating line + the warm-up card carousel.
-  await page.waitForSelector('text=Connecting you to an', { timeout: 30000 });
+  // The story: the finding headline + the two quiet wait cards under the orbs.
+  await page.waitForSelector('text=Finding a mentor', { timeout: 30000 });
   await page.waitForSelector('text=While you wait', { timeout: 15000 });
-  console.log('OK searching story visible (headline + carousel)');
+  console.log('OK finding story visible (headline + wait cards)');
 
   // The crescendo: the persona card lands before navigation — and must DWELL.
   await page.waitForSelector('[data-testid="found-card"]', { timeout: 30000 });

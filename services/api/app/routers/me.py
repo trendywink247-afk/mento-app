@@ -12,8 +12,9 @@ from sqlalchemy.orm import Session
 from app import ratelimit
 from app.db import get_db
 from app.models.user import User
-from app.schemas import CompanionUpdateIn, MeOut
+from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut
 from app.security import current_user_id
+from app.services import allowance
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -43,6 +44,14 @@ def _out(user: User) -> MeOut:
 @router.get("", response_model=MeOut)
 def me(user: User = Depends(current_user)) -> MeOut:
     return _out(user)
+
+
+@router.get("/allowance", response_model=AllowanceOut)
+def my_allowance(user: User = Depends(current_user), db: Session = Depends(get_db)) -> AllowanceOut:
+    """The daily half of the message allowance (DECISIONS §L.2), for screens that have
+    no conversation yet — the first-question builder's "1 of your 10" meter.
+    `in_a_row` is always 0 here; ask `GET /conversations/{id}/allowance` inside a chat."""
+    return allowance.to_out(allowance.state_for(db, user.id, None))
 
 
 @router.put("/companion", response_model=MeOut)

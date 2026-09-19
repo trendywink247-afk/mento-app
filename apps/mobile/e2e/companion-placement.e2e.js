@@ -17,7 +17,7 @@
  *  - Profile's recolour reaches the account (PUT /me/companion, read back with GET /me).
  */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 const TABS = ['chats', 'path', 'journals', 'profile'];
 const CLING = ['dangle', 'hang', 'peek'];

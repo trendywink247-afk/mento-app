@@ -75,6 +75,62 @@ export const drift = {
 } as const;
 
 /**
+ * The round Stage (board A01 / A18): ambient, low-contrast, very slow. None of these
+ * are attention-movers — a ring turn takes over a minute — so they sit under the
+ * ≤3-movers budget the way the sky does. Ripples share the breathing period.
+ */
+export const stage = {
+  ringSpin: 70000,
+  ringSpinBack: 95000,
+  sheen: 9000,
+  motes: 9000,
+  /** The two floating chat cards bob on unrelated periods so they never sync. */
+  floatA: 6500,
+  floatB: 7500,
+  /** The hand-drawn underline draws once, after the headline has landed. */
+  underlineDraw: 1100,
+  underlineDelay: 1000,
+} as const;
+
+/** Step hand-over inside a flow (board T02): the old step is gone by `fast` (200), then a
+ * breath — the new step's pieces start arriving at `arrive`, one every stagger unit, having
+ * travelled `travel` px (from below going forward, from above going back). */
+export const stepHandover = { arrive: 320, travel: 20 } as const;
+
+/** Landing → role fork (board T01). The landing leaves fast and upward (the scene shrinks
+ * away, the key dips); on the fork the two doors rise OUT of the Start key's place, 80ms
+ * apart, then the art settles, then the headline, the sub, and the footer line — last. */
+export const forkArrival = {
+  backKey: 200,
+  doors: 200,
+  art: 400,
+  head: 520,
+  sub: 600,
+  foot: 720,
+  /** How far below its seat each door waits (the Start key sits about there). */
+  doorRise: [170, 42],
+  doorScale: 0.92,
+  artScale: 1.04,
+  artRise: 14,
+  textRise: 18,
+  footRise: 10,
+  /** The landing's exit: the scene lifts and shrinks, the CTA dips. */
+  sceneLift: 150,
+  sceneScale: 0.55,
+  ctaScale: 0.94,
+  cardLift: 12,
+  cardScale: 0.92,
+  textLift: 16,
+} as const;
+
+/** Small dot rhythms: the typing dots in a chat card, and the five seeking dots that
+ * light in turn between the two orbs while a mentor is being found. */
+export const dots = {
+  typing: { period: 1400, stagger: 180, rise: 4 },
+  seek: { period: 2400, stagger: 300 },
+} as const;
+
+/**
  * Character-state timing for the reactive companions (DECISIONS §I.4 amended —
  * in-house rig). Calm register: squash/stretch stays subtle (≤8%), anticipation
  * before any hop, everything settles without overshoot.
@@ -106,5 +162,5 @@ export const character = {
   squashK: 0.6,
 } as const;
 
-export const motion = { duration, easing, spring, stagger, breathe, character };
+export const motion = { duration, easing, spring, stagger, breathe, character, stage, dots };
 export type Motion = typeof motion;

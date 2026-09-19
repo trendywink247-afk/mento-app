@@ -32,6 +32,7 @@ import { SvgXml } from 'react-native-svg';
 
 import { COMPANION_FLUENT } from '@/assets/companions/fluent';
 import { COMPANION_GENERATED, type CompanionPose } from '@/assets/companions/generated';
+import { COMPANION_LIVING } from '@/assets/companions/living';
 import { COMPANION_LOTTIE } from '@/assets/companions/registry';
 import { type CompanionAnimal } from '@/components/art/Companions';
 import { ReactiveCompanion, isSleepyHour, type CompanionTrigger } from '@/components/art/ReactiveCompanion';
@@ -74,6 +75,7 @@ export function Companion({
   trigger = null,
   pose,
   awake = false,
+  living = false,
   interactive = false,
   onPress,
 }: {
@@ -88,6 +90,10 @@ export function Companion({
   pose?: CompanionPose;
   /** Skip the sleepy-hour resting pose (onboarding: a first meeting is never asleep). */
   awake?: boolean;
+  /** Use the animal's LIVING idle loop where one exists on this platform (web only today,
+   * Cat only — assets/companions/living). Only ever replaces the resting idle pose: a
+   * triggered or pinned pose still shows its painting, and reduced motion gets the still. */
+  living?: boolean;
   /** Tap-react acknowledgement (wraps in a Pressable). */
   interactive?: boolean;
   onPress?: () => void;
@@ -131,8 +137,9 @@ export function Companion({
 
   const wanted = pose ?? triggerPose ?? (awake ? 'idle' : restingPose());
   const effective: CompanionPose = set.poses[wanted] ? wanted : 'idle';
-  const artSource = set.poses[effective] ?? set.poses.idle;
-  const artKey = `${resolved}/${effective}`;
+  const loop = living && !reduced && effective === 'idle' && !pose && !triggerPose ? COMPANION_LIVING[resolved] : undefined;
+  const artSource = loop ?? set.poses[effective] ?? set.poses.idle;
+  const artKey = `${resolved}/${loop ? 'living' : effective}`;
 
   // Crossfade between resolved art — opacity only, manual shared value (never
   // entering=/exiting=). Keyed on animal+pose together so switching the companion

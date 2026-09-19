@@ -1,105 +1,48 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-
-import { IconBadge } from '@/components/IconBadge';
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { PromiseRow } from '@/components/PromiseRow';
+import type { CompanionAnimal } from '@/components/art/Companions';
 import { Entrance } from '@/components/motion/Entrance';
-import {
-  ConnectionConstellation,
-  type ConstellationState,
-} from '@/components/motion/ConnectionConstellation';
+import { SwapFade } from '@/components/motion/SwapFade';
+import { ConnectOrbs } from '@/components/onboarding/ConnectOrbs';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { capture, waitBucket } from '@/lib/analytics';
 import { ApiError, api } from '@/lib/api';
-import { useI18n, type TKey } from '@/lib/i18n';
+import { useI18n } from '@/lib/i18n';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
-import { getSessionToken, saveCompanionAnimal, saveSession } from '@/lib/session';
+import { getCompanionAnimal, getPersona, getSessionToken, saveCompanionAnimal, saveSession } from '@/lib/session';
+import { useFrameSize } from '@/lib/useFrameSize';
 import { useReducedMotion } from '@/lib/useReducedMotion';
-import { breathe, duration, easing } from '@/theme/motion';
+import { COMPANION_COLORS } from '@/theme/companion';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type } from '@/theme/tokens';
+import { font, radius, space, type, wash } from '@/theme/tokens';
 
 // --- choreography cadences (intervals, not animation durations — those come from
 // motion tokens). Tuned to the calm register; every fade below uses the tokens. ---
 /** The story never cuts before one graceful beat, even when the API is instant. */
 const MIN_STORY_BEAT_MS = 2200;
-/** Searching copy rotates at a read-comfortable pace. */
-const COPY_ROTATE_MS = 3400;
-/** Cards auto-advance slower than copy — they're the deeper read. */
-const CARD_ADVANCE_MS = 4200;
-/** Breathe-with-me fades in only when the wait is real. */
-const BREATHE_AFTER_MS = 6000;
 /** Busy retry cadence + attempts: ~24s of honest patience before asking for help. */
 const RETRY_DELAY_MS = 8000;
 const MAX_RETRIES = 3;
-/** The found crescendo plays before the journey's own celebrate beat. Held long
- * enough (with the journey's FOUND_BEAT ≈ 2.1s total) that "we found your listener"
- * reads as one deliberate moment — never a sub-second flash into chat. */
-const FOUND_CRESCENDO_MS = 1100;
-
-const SEARCH_LINES: TKey[] = ['connecting.line1', 'connecting.line2', 'connecting.line3'];
-
-type Card = { icon: keyof typeof Ionicons.glyphMap; title: TKey; body: TKey };
-
-/** Safety guidelines (mockup #5) interleaved with conversation warm-ups — the
- * founder's ruling: "they won't know how to ask — give them sample questions."
- * Copy lives in the locale files; these are the keys. */
-const CARDS: Card[] = [
-  { icon: 'shield-checkmark-outline', title: 'connecting.card1Title', body: 'connecting.card1Body' },
-  { icon: 'chatbubble-outline', title: 'connecting.card2Title', body: 'connecting.card2Body' },
-  { icon: 'lock-closed-outline', title: 'connecting.card3Title', body: 'connecting.card3Body' },
-  { icon: 'compass-outline', title: 'connecting.card4Title', body: 'connecting.card4Body' },
-  { icon: 'person-outline', title: 'connecting.card5Title', body: 'connecting.card5Body' },
-  { icon: 'happy-outline', title: 'connecting.card6Title', body: 'connecting.card6Body' },
-  { icon: 'heart-outline', title: 'connecting.card7Title', body: 'connecting.card7Body' },
-  { icon: 'people-outline', title: 'connecting.card8Title', body: 'connecting.card8Body' },
-];
+/** The found crescendo plays before the journey's own celebrate beat (FOUND_BEAT, 1000):
+ * the wait cards leave first (200) and only then does the found block arrive, so the hold
+ * is 1400 to keep "<Persona> is here with you" fully on screen for well over 1.5s — one
+ * deliberate moment, never a flash. "Open the chat" is there for anyone who is ready sooner. */
+const FOUND_CRESCENDO_MS = 1400;
 
 export type MatchParams = { id: string; listener: string; channel: string };
 
 type Phase = 'searching' | 'busy' | 'found' | 'error';
 
-/** Crossfading single line — manual shared values (never `entering=`), reduced = hard swap. */
-function CrossfadeLine({ text, style }: { text: string; style: object }) {
-  const reduced = useReducedMotion();
-  const opacity = useSharedValue(1);
-  const [shown, setShown] = useState(text);
-  const pending = useRef(text);
-
-  useEffect(() => {
-    if (text === pending.current && shown === text) return;
-    pending.current = text;
-    if (reduced) {
-      setShown(text);
-      return;
-    }
-    opacity.value = withTiming(0, { duration: duration.fast, easing: easing.exit });
-    const t = setTimeout(() => {
-      setShown(pending.current);
-      opacity.value = withTiming(1, { duration: duration.base, easing: easing.enter });
-    }, duration.fast);
-    return () => clearTimeout(t);
-    // reason: `shown` is the crossfade's own state, not a trigger
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text, reduced]);
-
-  const anim = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return (
-    <Animated.View style={anim}>
-      <Text style={style}>{shown}</Text>
-    </Animated.View>
-  );
-}
-
-/** Matching step — the wait is a story: a searching constellation, staged copy,
- * warm-up cards, breathe-with-me on real waits, honest busy retries, and a found
- * crescendo. The onboarding + match API flow is unchanged; it fires when the step
+/** Matching step — board A19 + T03: the member's companion in an orb on the left, an empty
+ * breathing orb on the right, five dots lighting in turn, "Finding a mentor who is free to
+ * talk" and two quiet cards for the wait. On a match the right orb fills with the mentor's
+ * persona avatar, the orbs drift together and "<Persona> is here with you" arrives — then
+ * the journey's own hand-off carries us into the chat. Honest busy retries and the error
+ * exits are unchanged. The onboarding + match API flow is unchanged; it fires when the step
  * becomes ACTIVE. Navigation belongs to the journey (the matched-moment beat). */
 export function ConnectingStep({
   active,
@@ -114,17 +57,25 @@ export function ConnectingStep({
    * mentors and send a Personal request instead of a dead-end retry. */
   onBrowseMentors: () => void;
 }) {
-  const { colors, elevation } = useTheme();
+  const { colors } = useTheme();
   const { t } = useI18n();
+  const { width } = useFrameSize();
   const reduced = useReducedMotion();
   const [phase, setPhase] = useState<Phase>('searching');
   const [hasSession, setHasSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [foundName, setFoundName] = useState<string | null>(null);
-  const [line, setLine] = useState(0);
-  const [card, setCard] = useState(0);
-  const [breathing, setBreathing] = useState(false);
-  const [breathIn, setBreathIn] = useState(true);
+  // The member's own persona + companion, for the left orb (known once the account exists).
+  const [memberName, setMemberName] = useState<string | null>(null);
+  const [animal, setAnimal] = useState<CompanionAnimal | null>(
+    () => (getDraft().companionAnimal as CompanionAnimal | null) ?? null
+  );
+  // The mentor's public line, if they wrote one — best-effort, only ever adds to the beat.
+  const [mentorLine, setMentorLine] = useState<string | null>(null);
+  // "Open the chat" and the timed hand-off share one latch: whichever comes first wins.
+  const handOffRef = useRef<(() => void) | null>(null);
+  // The member left for Browse mentors while a retry was pending — ignore what follows.
+  const leftRef = useRef(false);
   const startedRef = useRef(false);
   const activeAtRef = useRef(0);
   const retriesRef = useRef(0);
@@ -141,6 +92,26 @@ export function ConnectingStep({
     return t;
   }, []);
   useEffect(() => () => timersRef.current.forEach(clearTimeout), []);
+
+  // A returning account (mentor → talk) already has a persona and maybe a companion.
+  useEffect(() => {
+    let alive = true;
+    void getPersona().then((p) => {
+      if (alive && p) setMemberName((n) => n ?? p.persona_name);
+    });
+    void getCompanionAnimal().then((a) => {
+      if (alive && a) setAnimal((cur) => cur ?? (a as CompanionAnimal));
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const leaveToBrowse = useCallback(() => {
+    leftRef.current = true;
+    timersRef.current.forEach(clearTimeout);
+    onBrowseMentors();
+  }, [onBrowseMentors]);
 
   const connect = useCallback(async () => {
     setError(null);
@@ -167,6 +138,7 @@ export function ConnectingStep({
           companion_colour: draft.companionColour ?? null,
         });
         await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
+        setMemberName(onboarding.user.persona_name);
         if (draft.companionAnimal) await saveCompanionAnimal(draft.companionAnimal);
         capture('onboarding_completed');
       } else if (draft.sessionBacked && draft.companionAnimal) {
@@ -186,6 +158,10 @@ export function ConnectingStep({
       }
       onboardedRef.current = true;
       setHasSession(true);
+      if (leftRef.current) return;
+      void getPersona().then((p) => {
+        if (p) setMemberName((n) => n ?? p.persona_name);
+      });
 
       if (!matchRequestedRef.current) {
         matchRequestedRef.current = true;
@@ -195,20 +171,32 @@ export function ConnectingStep({
       // The user's real wait (since the step went active), bucketed — never raw ms.
       capture('match_found', { wait_bucket: waitBucket(Date.now() - activeAtRef.current) });
       clearDraft();
+      if (!reduced) {
+        // The mentor's own line, if there is one and it arrives inside the beat.
+        void api
+          .mentorProfile(match.conversation_id)
+          .then((m) => setMentorLine(m.public_line?.trim() || null))
+          .catch(() => {
+            /* reason: decorative — the found beat is complete without it */
+          });
+      }
       const finish = () => {
         setFoundName(match.listener_persona_name);
         setPhase('found');
-        // Crescendo: orbs meet + persona card lands, THEN the journey's celebrate
-        // beat (haptic, companion hop, sky lift) carries us into the chat.
-        later(
-          () =>
-            onMatched({
-              id: match.conversation_id,
-              listener: match.listener_persona_name,
-              channel: match.stream_channel_id ?? '',
-            }),
-          reduced ? 0 : FOUND_CRESCENDO_MS
-        );
+        let handed = false;
+        const handOff = () => {
+          if (handed) return;
+          handed = true;
+          onMatched({
+            id: match.conversation_id,
+            listener: match.listener_persona_name,
+            channel: match.stream_channel_id ?? '',
+          });
+        };
+        handOffRef.current = handOff;
+        // Crescendo: the orbs meet + the persona arrives, THEN the journey's celebrate
+        // beat (haptic, sky lift) carries us into the chat.
+        later(handOff, reduced ? 0 : FOUND_CRESCENDO_MS);
       };
       // Never cut the story mid-breath — pad to one graceful beat (skipped when
       // the user asked for reduced motion: their time wins over our theatre).
@@ -242,47 +230,29 @@ export function ConnectingStep({
     }
   }, [active, connect]);
 
-  // Searching copy rotation.
-  useEffect(() => {
-    if (phase !== 'searching') return;
-    const t = setInterval(() => setLine((n) => (n + 1) % SEARCH_LINES.length), COPY_ROTATE_MS);
-    return () => clearInterval(t);
-  }, [phase]);
+  const found = phase === 'found' && foundName !== null;
+  const waiting = phase === 'searching' || phase === 'busy';
+  const me = memberName ?? '';
 
-  // Card carousel (reduced motion renders the full static list instead).
-  useEffect(() => {
-    if (reduced || (phase !== 'searching' && phase !== 'busy')) return;
-    const t = setInterval(() => setCard((n) => (n + 1) % CARDS.length), CARD_ADVANCE_MS);
-    return () => clearInterval(t);
-  }, [phase, reduced]);
-
-  // Breathe-with-me: only when the wait is real; text flips at the breathing tempo,
-  // the ring in the constellation shares the same token so they stay in sync.
-  useEffect(() => {
-    if (phase !== 'searching' && phase !== 'busy') {
-      setBreathing(false);
-      return;
-    }
-    const start = later(() => setBreathing(true), BREATHE_AFTER_MS);
-    return () => clearTimeout(start);
-  }, [phase, later]);
-  useEffect(() => {
-    if (!breathing) return;
-    const t = setInterval(() => setBreathIn((b) => !b), breathe.period / 2);
-    return () => clearInterval(t);
-  }, [breathing]);
-
-  const constellation: ConstellationState =
-    phase === 'found' ? 'found' : phase === 'error' ? 'still' : 'searching';
-
+  // Headline: a quiet sentence with one word in the accent (board A19).
   const headline =
-    phase === 'found'
-      ? t('connecting.headlineFound')
-      : phase === 'error'
-        ? t('connecting.headlineError')
-        : phase === 'busy'
-          ? t('connecting.headlineBusy')
-          : t('connecting.headlineSearching');
+    phase === 'found' && foundName ? (
+      <>
+        {t('connecting.foundA', { name: foundName })}
+        <Text style={{ color: colors.accent }}>{t('connecting.foundAccent')}</Text>
+        {t('connecting.foundB')}
+      </>
+    ) : phase === 'error' ? (
+      t('connecting.headlineError')
+    ) : phase === 'busy' ? (
+      t('connecting.headlineBusy')
+    ) : (
+      <>
+        {t('connecting.findingA')}
+        <Text style={{ color: colors.accent }}>{t('connecting.findingAccent')}</Text>
+        {t('connecting.findingB')}
+      </>
+    );
 
   const subline =
     phase === 'found'
@@ -291,17 +261,18 @@ export function ConnectingStep({
         ? (error ?? '')
         : phase === 'busy'
           ? t('connecting.subBusy')
-          : t(SEARCH_LINES[line]);
-
-  const activeCard = CARDS[card];
+          : t('connecting.subFinding');
 
   return (
     <StepScaffold
+      // An error's keys are simply there, still (T&S #11); the other footers arrive last.
+      footerIndex={phase === 'error' ? undefined : 4}
       footer={
         phase === 'error' ? (
           <View style={styles.footerStack}>
             <PrimaryButton
               label={t('connecting.tryAgain')}
+              shape="key"
               onPress={() => {
                 retriesRef.current = 0;
                 void connect();
@@ -310,169 +281,146 @@ export function ConnectingStep({
             />
             {hasSession ? (
               <PrimaryButton
-                variant="ghost"
+                variant="surface"
+                shape="key"
                 label={t('connecting.browseMentors')}
                 onPress={onBrowseMentors}
                 testID="browse-mentors"
               />
             ) : null}
           </View>
+        ) : found ? (
+          <PrimaryButton
+            label={t('connecting.openChat')}
+            shape="key"
+            trailing="arrow"
+            onPress={() => handOffRef.current?.()}
+            testID="open-chat"
+          />
+        ) : phase === 'busy' && hasSession ? (
+          // Nobody free right now: the account exists, so the question can go to a chosen
+          // mentor instead. Offered only between retries — never while a match is in flight.
+          <Pressable
+            onPress={leaveToBrowse}
+            accessibilityRole="link"
+            accessibilityLabel={`${t('connecting.nobodyFree')} ${t('connecting.sendInstead')}`}
+            testID="send-question"
+            style={styles.exitLink}
+          >
+            <Text style={[type.note, { color: colors.inkMuted }]}>{t('connecting.nobodyFree')}</Text>
+            <Text style={[type.label, styles.underline, { color: colors.ink }]}>{t('connecting.sendInstead')}</Text>
+          </Pressable>
         ) : undefined
       }
     >
       <Entrance index={0}>
-        <View style={styles.head}>
-          <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+        <SwapFade swapKey={phase === 'found' ? `found:${foundName}` : phase} style={styles.head}>
+          <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
             {headline}
           </Text>
-          <CrossfadeLine text={subline} style={[type.body, styles.center, { color: colors.inkMuted }]} />
-        </View>
+          <Text style={[type.body, { color: colors.inkMuted }]}>{subline}</Text>
+        </SwapFade>
       </Entrance>
 
-      <Entrance index={1}>
-        <View style={styles.scene}>
-          <ConnectionConstellation state={constellation} breatheActive={breathing} />
-          {breathing && (phase === 'searching' || phase === 'busy') ? (
-            <CrossfadeLine
-              text={breathIn ? t('connecting.breatheIn') : t('connecting.breatheOut')}
-              style={[type.caption, styles.center, { color: colors.accentSoft }]}
-            />
-          ) : null}
-        </View>
-      </Entrance>
+      {/* The orbs have no arrival and never leave — they only move closer. */}
+      <ConnectOrbs
+        width={width - space.lg * 2}
+        animal={animal}
+        memberName={memberName}
+        mentorName={found ? foundName : null}
+        still={phase === 'error'}
+      />
 
-      {phase === 'found' && foundName ? (
-        <Entrance index={2} from="up">
-          <View style={[styles.foundCard, elevation.sm, { backgroundColor: colors.surface }]} testID="found-card">
-            <Ionicons name="heart-circle" size={28} color={colors.accent} />
-            <Text style={[styles.foundName, { color: colors.ink }]}>
-              {t('connecting.isHere', { name: foundName })}
-            </Text>
-          </View>
-        </Entrance>
-      ) : null}
-
-      {phase === 'searching' || phase === 'busy' ? (
-        <>
-          <Entrance index={2}>
-            <Text style={[styles.waitTitle, { color: colors.ink }]}>
-              {t('connecting.waitTitle')}
-            </Text>
-          </Entrance>
-
-          {reduced ? (
-            // Reduced motion: no carousel — the full list, still and readable.
-            <View>
-              {CARDS.map((g, i) => (
-                <View key={g.title}>
-                  {i > 0 ? <View style={[styles.divider, { backgroundColor: colors.border }]} /> : null}
-                  <View style={styles.row}>
-                    <IconBadge icon={g.icon} size={48} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.rowTitle, { color: colors.ink }]}>{t(g.title)}</Text>
-                      <Text style={[type.caption, { color: colors.inkMuted }]}>{t(g.body)}</Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Entrance index={3}>
-              <View style={[styles.card, elevation.sm, { backgroundColor: colors.surface }]}>
-                <IconBadge icon={activeCard.icon} size={48} />
-                <View style={{ flex: 1 }}>
-                  <CrossfadeLine text={t(activeCard.title)} style={[styles.rowTitle, { color: colors.ink }]} />
-                  <CrossfadeLine text={t(activeCard.body)} style={[type.caption, { color: colors.inkMuted }]} />
-                </View>
-              </View>
-              <View style={styles.dots}>
-                {CARDS.map((c, i) => (
-                  <Pressable key={c.title} onPress={() => setCard(i)} hitSlop={6}>
-                    <View
-                      style={[
-                        styles.dot,
-                        { backgroundColor: i === card ? colors.accent : colors.border },
-                      ]}
-                    />
-                  </Pressable>
-                ))}
-              </View>
-            </Entrance>
-          )}
-
-          <Entrance index={4}>
-            <View style={[styles.footerCard, { backgroundColor: colors.accentTint }]}>
-              <Ionicons name="sparkles-outline" size={18} color={colors.accentSoft} />
-              <Text style={[styles.footerTitle, { color: colors.ink }]}>
-                {t('connecting.footerTitle')}
-                <Text style={{ color: colors.accent }}>{t('connecting.footerAccent')}</Text>
-              </Text>
-              <Text style={[type.body, { color: colors.accent }]}>🧡</Text>
-            </View>
-          </Entrance>
-        </>
-      ) : null}
-
-      {phase === 'error' ? (
+      {phase === 'error' ? null : (
         <Entrance index={2}>
-          <View style={styles.errorArt}>
-            <Ionicons name="cloud-offline-outline" size={40} color={colors.inkMuted} />
-          </View>
+          <SwapFade swapKey={found ? 'found' : 'waiting'}>
+            {found ? (
+              <View style={styles.foundBlock} testID="found-card">
+                <View style={[styles.connected, { backgroundColor: wash.green }]}>
+                  <Ionicons name="checkmark" size={16} color={COMPANION_COLORS.sage.accentEdge} />
+                  <Text style={[type.caption, styles.connectedText, { color: COMPANION_COLORS.sage.accentEdge }]}>
+                    {t('connecting.connectedPill')}
+                  </Text>
+                </View>
+                {/* The mentor's own line, when they have written one (board A19). */}
+                {mentorLine ? (
+                  <EdgeSurface
+                    edge={colors.edgeSurface}
+                    travel={3}
+                    radius={radius.lg}
+                    containerStyle={styles.lineCardBox}
+                    style={[styles.lineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  >
+                    <Text style={[styles.lineCaption, { color: colors.inkMuted }]}>
+                      {t('connecting.lineTitle', { name: foundName ?? '' })}
+                    </Text>
+                    <Text style={[type.body, { color: colors.ink }]}>{`“${mentorLine}”`}</Text>
+                  </EdgeSurface>
+                ) : null}
+              </View>
+            ) : waiting ? (
+              <View style={styles.waitBlock}>
+                <Text style={[type.label, { color: colors.inkMuted }]}>{t('connecting.waitTitle')}</Text>
+                <EdgeSurface
+                  edge={colors.edgeSurface}
+                  travel={3}
+                  radius={radius.lg}
+                  style={[styles.waitCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <PromiseRow
+                    icon="chatbubble-outline"
+                    tone="orange"
+                    title={t('connecting.card2Title')}
+                    body={t('connecting.card2Body')}
+                  />
+                </EdgeSurface>
+                <EdgeSurface
+                  edge={colors.edgeSurface}
+                  travel={3}
+                  radius={radius.lg}
+                  style={[styles.waitCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <PromiseRow
+                    icon="lock-closed-outline"
+                    tone="indigo"
+                    title={t('connecting.cardPrivateTitle')}
+                    body={me ? t('connecting.cardPrivateBody', { name: me }) : t('connecting.cardPrivateBodyNoName')}
+                  />
+                </EdgeSurface>
+              </View>
+            ) : null}
+          </SwapFade>
         </Entrance>
-      ) : null}
+      )}
     </StepScaffold>
   );
 }
 
 const styles = StyleSheet.create({
   footerStack: { gap: space.sm },
-  head: { alignItems: 'center', gap: space.sm, marginTop: space.md, marginBottom: space.sm },
-  headline: { ...type.displayHeadline, textAlign: 'center' },
-  center: { textAlign: 'center' },
-  scene: { alignItems: 'center', gap: space.xs, marginBottom: space.md },
-  foundCard: {
+  // Tall enough for the longest headline + sub, so the orbs never jump between phases.
+  head: { gap: space.sm, minHeight: 136 },
+  waitBlock: { gap: 12, marginTop: space.sm },
+  waitCard: { paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1 },
+  foundBlock: { alignItems: 'center', gap: 14, marginTop: space.sm },
+  connected: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: space.sm,
-    borderRadius: radius.lg,
-    padding: space.md,
-    marginTop: space.sm,
+    minHeight: 36,
+    paddingHorizontal: 14,
+    borderRadius: radius.pill,
   },
-  foundName: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24 },
-  waitTitle: {
+  connectedText: { fontFamily: font.sansBold },
+  lineCardBox: { alignSelf: 'stretch' },
+  lineCard: { paddingVertical: 14, paddingHorizontal: space.md, gap: space.xs, borderWidth: 1 },
+  lineCaption: {
     fontFamily: font.sansBold,
-    fontSize: 18,
-    lineHeight: 26,
-    textAlign: 'center',
-    marginBottom: space.md,
+    fontSize: 13,
+    lineHeight: 18,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    borderRadius: radius.lg,
-    padding: space.md,
-    minHeight: 92,
-  },
-  dots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: space.sm,
-    marginBottom: space.xs,
-  },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
-  rowTitle: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 23 },
-  divider: { height: 1, marginLeft: 48 + space.md },
-  footerCard: {
-    alignItems: 'center',
-    gap: space.xs,
-    borderRadius: radius.lg,
-    padding: space.md,
-    marginTop: space.md,
-  },
-  footerTitle: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 25, textAlign: 'center' },
-  errorArt: { alignItems: 'center', marginTop: space.lg },
+  exitLink: { minHeight: 44, alignItems: 'center', justifyContent: 'center', paddingVertical: space.xs },
+  underline: { textDecorationLine: 'underline' },
 });

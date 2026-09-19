@@ -182,3 +182,39 @@ Source: the developer relayed these after the recovered 2026-09-06 walkthrough c
 
 **8. Design picks (2026-09-19, direction A board).** Request sent = "a letter on its way"; Chat = "alive" + the "In this chat" strip (topic · saved count · in-touch state) inside a composed header card; My Chats = richer rows + the In touch view; Path = the stage-centred home with the first-question builder and the "life rather than exams" finder; Journal = "today first, then the shelf" — one unified journal where anything saved from a chat lands beside the member's own notes. Direction A ("Pillow") is the working direction by use; B and C are parked, not rejected. These are board decisions — none is built in the app yet.
 
+### L — pending founder veto (implementation choices made where §L is silent)
+
+Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code already follows; strike or amend any of them. Client wiring: `docs/superpowers/specs/2026-09-19-board-port-api.md`.
+
+**L.2 message allowance**
+- **a. "10 per day" is per member across all their conversations; "3 in a row" is per conversation.** Any mentor message in that conversation resets the run.
+- **b. The day is the IST calendar day** (00:00 Asia/Kolkata, fixed UTC+05:30). A member abroad resets at India's midnight.
+- **c. "(or conversation)" is read kindly: for 24 hours after the scan flags anything in a conversation, that whole conversation is exempt** — follow-ups to something frightening are not rationed. They are tallied as crisis-exempt sends. (A member could lift their own limit by typing a crisis phrase; that also puts them in the human-review queue, which is the right outcome.)
+- **d. Both limits reached → the note names the daily one** (the longer wait is the honest one).
+- **e. A held message is not counted, and the server never echoes the member's text back.**
+- **f. Holding ships switched OFF (`ALLOWANCE_ENFORCED=false`); counting is on.** The shipped app has no A22 note yet — an old build would show Stream's raw error bubble. Flip it when the client lands. Limits are env values (A13: "values live in server config").
+- **g. Fail-open has a time budget (800 ms):** a slow database delivers the message uncounted, so the hook always answers Stream in time to keep the helpline card and the redaction.
+- **h. The ledger keeps one row per member per day (counts only — no text, no message or conversation ids) for 35 days.**
+- **i. Admin numbers are audited reads** (`allowance.viewed`), like the safety conversation view.
+
+**L.6 rotating names**
+- **j. Names change at 04:00 IST, not midnight** — midnight is peak chat time for aspirants; 04:00 is the quietest hour for a header to change. (The allowance still resets at 00:00 IST.)
+- **k. An active chat follows the mentor's new name and says "first talked as <old name>"; an ended or wiped chat with a mentor the member is NOT in touch with keeps the name it ended under.** Otherwise My Chats would hand every member tomorrow's name for every mentor they ever met, and the consented link would mean nothing.
+- **l. The mentor's avatar does not rotate** ("same owl, new name", A14) — so, with the public line, a mentor stays recognisable in Browse to someone who remembers them. Rotation is a presentation rule, not unlinkability: the listener id is stable in Browse and in Stream. Rotating the avatar too, or per-conversation Stream aliases, would be the stronger version.
+- **m. Rotation is lazy (first read after 04:00), one mentor per transaction, never waits on the matcher; a new mentor keeps their first name until the next 04:00.** A newly issued name is never one a mentor carries now or one a pending / accepted link holds as "first met as" (§L.7); names from the last 30 days are avoided while the 576-name space allows.
+- **n. The Stream user's display name is renamed with the mentor** (best-effort, retried) so header and bubbles agree.
+
+**L.6–7 stay in touch**
+- **o. A waiting ask holds one of the two places.** So a mentor's "yes" can never be refused for room the member gave away meanwhile. With one mentor in touch and one ask waiting, a further ask is refused (`in_touch_waiting`) until the ask is answered or taken back.
+- **p. After "not now" the same member cannot ask that mentor again for 7 days** ("never nags"). The member sees a quiet `not_now` state; no reason is stored anywhere. Taking an ask back, or either side ending a link, carries no pause.
+- **q. No push notification for an ask** (A14: "will see it next time they are here").
+- **r. The mentor has no list and no count of who stays in touch with them** — only waiting asks, and an `in_touch` flag on each of their own conversations (where "end it" lives).
+- **s. A report from EITHER side ends the link, as does a block or an admin suspension.** A mentor report does not end the chat (unchanged), but it does end the link.
+- **t. Writing to an in-touch mentor uses what exists:** the still-active conversation, or a Personal request to that mentor. No new "open a chat without the mentor's accept" path was added; the one-open-question rule is not built server-side.
+- **u. Favourites are deprecated, not removed, and are not converted into links** (a link needs the mentor's yes). Browse order: in touch → favourites → available → rank.
+
+**Feedback (board A11; recovered-call item 13)**
+- **v. A feedback row has no author** — role (member / mentor), category, words, screen route and app version only, because A11 promises "Nothing else". The author's id is used once, as a rate-limit key in Redis that expires within the hour (5 notes an hour). Cost: the team cannot reply to a note or bar one person from the box; contact details typed into it are redacted like chat.
+- **w. No screenshot yet.** A11 draws one; the API has no file storage, and a screenshot of a chat would attach what the sheet says is never attached. If it is wanted: refuse it on chat screens, or blur message bodies on the device first.
+- **x. Crisis words typed into the feedback box get the helplines back, are NOT kept as feedback, and raise a signal-only safety flag** (which does carry the member's id, like every other safety flag — it is a safety record, not feedback). The helplines answer is never rate-limited.
+- **y. Reading the feedback list is an audited admin read** (`feedback.viewed`).

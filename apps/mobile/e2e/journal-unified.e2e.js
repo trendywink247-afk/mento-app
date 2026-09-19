@@ -9,7 +9,7 @@
  * (must stay static AND complete), 0 page errors.
  */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 const KEPT = "Freezing doesn't erase three years of work.";
 const WROTE = 'Amma packed lunch without being asked.';

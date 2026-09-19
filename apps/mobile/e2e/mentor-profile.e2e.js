@@ -15,13 +15,13 @@
  */
 const { execSync } = require('child_process');
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 function resetEnv() {
   try {
-    execSync('docker exec mento-redis redis-cli FLUSHDB', { stdio: 'pipe' });
+    execSync(`docker exec mento-redis redis-cli -n ${process.env.MENTO_REDIS_DB || '0'} FLUSHDB`, { stdio: 'pipe' });
     execSync(
-      'docker exec mento-postgres psql -U mento -d mento -c "UPDATE listener_profiles SET active_conversations = 0;"',
+      `docker exec mento-postgres psql -U mento -d ${process.env.MENTO_DB || 'mento'} -c "UPDATE listener_profiles SET active_conversations = 0;"`,
       { stdio: 'pipe' },
     );
   } catch (e) {

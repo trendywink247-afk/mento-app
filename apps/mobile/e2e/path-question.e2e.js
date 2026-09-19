@@ -13,7 +13,7 @@
  * (The sentence assembly itself is unit-tested: npm run test:question.)
  */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 const P0 = 'I keep recalculating my marks.';
 const P1 = "My friends think they cleared. I don't.";

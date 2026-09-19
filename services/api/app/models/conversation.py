@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String
+from sqlalchemy import Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -38,6 +38,11 @@ class Conversation(UUIDMixin, TimestampMixin, Base):
     pin_hash: Mapped[str | None] = mapped_column(String(128), nullable=True)
     is_paused: Mapped[bool] = mapped_column(Boolean, default=False)
     status_mask: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+    # Message allowance (DECISIONS §L.2): member messages sent in a row since the
+    # mentor last wrote. Bumped / reset ONLY by the Stream before-send hook
+    # (services/allowance.py). A number, never content.
+    member_streak: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

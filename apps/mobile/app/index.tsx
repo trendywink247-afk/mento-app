@@ -1,26 +1,20 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  cancelAnimation,
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Image, Platform, StyleSheet, Text, View } from 'react-native';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import LottieView from 'lottie-react-native';
 
+import { SCENES } from '@/assets/scenes';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { LogoLockup } from '@/components/art/Logo';
-import { MountainsScene, TalkingAtTableScene } from '@/components/art/Scenes';
+import { HandUnderline } from '@/components/art/HandUnderline';
+import { LogoWordmark } from '@/components/art/Logo';
+import { FloatingChatCard } from '@/components/landing/FloatingChatCard';
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
-import { SkyMotes } from '@/components/motion/SkyMotes';
 import { Entrance } from '@/components/motion/Entrance';
-import { Tilt3D } from '@/components/motion/Tilt3D';
-import { useBreathing } from '@/components/motion/useBreathing';
+import { GroundGlow } from '@/components/motion/GroundGlow';
+import { Stage } from '@/components/motion/Stage';
 import { capture } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
 import { hasPendingTap } from '@/lib/notifications';
@@ -28,21 +22,47 @@ import { useFrameSize } from '@/lib/useFrameSize';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getRole, getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
-import { duration, easing } from '@/theme/motion';
-import { font, radius, space, type } from '@/theme/tokens';
+import { duration, easing, forkArrival } from '@/theme/motion';
+import { space, type } from '@/theme/tokens';
 
-/** Landing per mockup #2, cinematic: the sky is the same ambient aurora the journey
- * lives on (one continuous shot), the logo breathes, the headline lines rise in a
- * stagger, the mountains drift almost imperceptibly, and the CTA exit is a designed
- * fade into the journey's route crossfade. Returning-user redirect unchanged. */
+/** Board A01 metrics (390×844). */
+const TOP_PAD = 44;
+const BOTTOM_PAD = 28;
+const WORDMARK_H = 40;
+const STAGE_GAP = 26;
+const STAGE_MAX = 360;
+const STAGE_MIN = 200;
+const STAGE_SIDE = 15;
+const STAGE_AIR = 34;
+const TEXT_BLOCK_ESTIMATE = 308;
+const CARD_SIDE = 14;
+const CARD_LAP_MAX = 12;
+/** Where the drawing sits inside the square 1200² Lottie canvas (measured on frame 0): it
+ * spans this share of the width, and its ground line is this far down the side. */
+const LOTTIE_BAND = { width: 0.775, ground: 0.869 };
+
+/** Landing — board A01. The conversation scene (the live Lottie) stands on a round lit
+ * STAGE: accent-tint disc, two very slow counter-rotating dotted rings, three breathing
+ * ripples, a slow sheen, a few motes, and two chat cards hovering over it. Below, the
+ * left-aligned hero headline rises line by line, the last word underlined by hand, then
+ * the sub, the CTA and the not-therapists line. No animals here (founder ruling): the
+ * companions arrive on the inner screens. The sky is the same ambient aurora the journey
+ * lives on, and the CTA exit is a designed fade into the journey's route crossfade.
+ * Returning-user redirect unchanged. */
 export default function Landing() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
   // The frame, not the window: on a wide browser the app draws into a 480 column.
-  const { width } = useFrameSize();
+  const { width, height } = useFrameSize();
+  const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
-  const breathing = useBreathing();
+  // The text block is measured so the stage takes exactly the room that is left —
+  // Hindi wraps differently and short phones have less of it.
+  const [textH, setTextH] = useState(TEXT_BLOCK_ESTIMATE);
+  const [wordW, setWordW] = useState(0);
+  const [memberCard, setMemberCard] = useState({ w: 0, h: 0 });
+  const [mentorCard, setMentorCard] = useState({ w: 0, h: 0 });
   // Returning users (existing anonymous session) skip onboarding and land on My Chats;
   // render nothing while the secure store resolves so the landing never flashes first.
   const [checked, setChecked] = useState(false);
@@ -74,27 +94,32 @@ export default function Landing() {
     if (checked) capture('landing_viewed');
   }, [checked]);
 
-  // Mountains drift ±8px over ~40s. Drawn 24px wider than the screen so the drift
-  // never exposes an edge.
-  const drift = useSharedValue(0);
-  useEffect(() => {
-    if (!checked || reduced) {
-      cancelAnimation(drift);
-      drift.value = 0;
-      return;
-    }
-    drift.value = withRepeat(withTiming(8, { duration: 20000, easing: easing.breathe }), -1, true);
-    return () => cancelAnimation(drift);
-  }, [checked, reduced, drift]);
-  const driftStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: drift.value - 4 }],
-  }));
-
-  // Designed exit: the hero fades down briefly, then the route crossfade takes over.
+  // Designed exit (board T01): the landing leaves fast and upward — the words lift away,
+  // the key dips, the cards tuck in — while the scene lifts and shrinks on a longer move
+  // that carries on under the fork's own arrival. Then the route crossfade takes over.
   const exit = useSharedValue(0);
-  const exitStyle = useAnimatedStyle(() => ({
+  const lift = useSharedValue(0);
+  const textExit = useAnimatedStyle(() => ({
     opacity: 1 - exit.value,
-    transform: [{ translateY: exit.value * -10 }],
+    transform: [{ translateY: -forkArrival.textLift * exit.value }],
+  }));
+  const ctaExit = useAnimatedStyle(() => ({
+    opacity: 1 - exit.value,
+    transform: [{ scale: 1 - (1 - forkArrival.ctaScale) * exit.value }],
+  }));
+  const cardExit = useAnimatedStyle(() => ({
+    opacity: 1 - exit.value,
+    transform: [
+      { translateY: -forkArrival.cardLift * exit.value },
+      { scale: 1 - (1 - forkArrival.cardScale) * exit.value },
+    ],
+  }));
+  const sceneExit = useAnimatedStyle(() => ({
+    opacity: 1 - exit.value,
+    transform: [
+      { translateY: -forkArrival.sceneLift * lift.value },
+      { scale: 1 - (1 - forkArrival.sceneScale) * lift.value },
+    ],
   }));
   // The exit fade + `leaving` swap outlive the push (the landing stays mounted
   // under the onboarding route), so restore both whenever focus returns —
@@ -104,6 +129,7 @@ export default function Landing() {
   useFocusEffect(
     useCallback(() => {
       exit.value = 0;
+      lift.value = 0;
       setLeaving(false);
       let active = true;
       void getSessionToken().then(async (token) => {
@@ -115,7 +141,7 @@ export default function Landing() {
       return () => {
         active = false;
       };
-    }, [exit, router]),
+    }, [exit, lift, router]),
   );
 
   const begin = () => {
@@ -127,6 +153,7 @@ export default function Landing() {
       go();
       return;
     }
+    lift.value = withTiming(1, { duration: duration.gentle, easing: easing.exit });
     exit.value = withTiming(1, { duration: duration.fast + 50, easing: easing.exit }, (done) => {
       if (done) runOnJS(go)();
     });
@@ -139,163 +166,192 @@ export default function Landing() {
 
   if (!checked) return null;
 
+  // Board geometry at 390×844: 44 top, wordmark 40, the 360 stage at y=110 (26 under the
+  // wordmark), the text block pinned to the bottom with at least 34 of air above it.
+  const topPad = Math.max(insets.top + space.sm, TOP_PAD);
+  const bottomPad = Math.max(insets.bottom + space.sm, BOTTOM_PAD);
+  const stageTop = topPad + WORDMARK_H + STAGE_GAP;
+  const room = height - stageTop - textH - bottomPad - STAGE_AIR;
+  const stageSize = Math.round(Math.max(STAGE_MIN, Math.min(STAGE_MAX, width - STAGE_SIDE * 2, room)));
+  const k = stageSize / STAGE_MAX;
+  const stageLeft = (width - stageSize) / 2;
+  // The scene box on the board: 350×208 at (5, 112) inside the 360 stage.
+  const sceneW = 350 * k;
+  const sceneH = 208 * k;
+  const lottieSide = sceneW / LOTTIE_BAND.width;
+  // The cards may share a corner (on the board the reply card laps 34px over the first
+  // card's padding). On a narrower phone or in a longer language they would cover each
+  // other's words — then the first card steps down until it clears the reply card.
+  const mentorTop = stageTop - 14;
+  const cardMax = (width - CARD_SIDE * 2) * 0.66;
+  const lap = memberCard.w + mentorCard.w - (width - CARD_SIDE * 2);
+  const memberTop =
+    lap > CARD_LAP_MAX ? Math.max(stageTop + 22 * k, mentorTop + mentorCard.h + space.xs) : stageTop + 22 * k;
+
   return (
     <View style={styles.root}>
       <AmbientBackground />
-      <SkyMotes />
-      {/* Depth stack, back to front: mountains sink AGAINST the pointer (background
-        * plane), ambient orbs float at mid depths, content planes ride closest.
-        * Every layer is transform-only; reduced motion collapses all of it flat. */}
-      <View style={styles.mountains} pointerEvents="none">
-        <Tilt3D depth={-0.5} maxTilt={0} drift={false}>
-          <Animated.View style={driftStyle}>
-            <MountainsScene width={width + 24} height={190} />
-          </Animated.View>
-        </Tilt3D>
-      </View>
 
-      {/* Floating ambient orbs — volume between the sky and the content. */}
-      <View style={styles.orbs} pointerEvents="none">
-        <Tilt3D depth={-0.25} maxTilt={0} drift={false}>
-          <View style={[styles.orb, styles.orbA, { backgroundColor: colors.accentTint }]} />
-        </Tilt3D>
-        <Tilt3D depth={0.35} maxTilt={0} drift={false}>
-          <View style={[styles.orb, styles.orbB, { backgroundColor: colors.accentTint }]} />
-        </Tilt3D>
-        <Tilt3D depth={0.7} maxTilt={0} drift={false}>
-          <View style={[styles.orb, styles.orbC, { backgroundColor: colors.accentTint }]} />
-        </Tilt3D>
-      </View>
-
-      <Animated.View style={[styles.fill, exitStyle]}>
-        <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-          <View style={styles.logoZone}>
-            <Entrance index={0} from="none">
-              {/* Closest plane — the logo rides the pointer the most. */}
-              <Tilt3D maxTilt={5} depth={0.9}>
-                <Animated.View style={breathing}>
-                  <LogoLockup markSize={56} />
-                </Animated.View>
-              </Tilt3D>
-            </Entrance>
-          </View>
-
-          <View style={styles.sceneZone}>
-            <Entrance index={1} from="none">
-              <Tilt3D maxTilt={4} depth={0.55}>
-                {reduced || leaving ? (
-                  // Reduced motion (no looping art) or exiting (see `leaving`).
-                  <TalkingAtTableScene width={300} height={200} />
-                ) : (
-                  // Theme-remapped free Lottie (assets/lottie/README.md) — two people
-                  // in conversation, alive, in Mento's own palette.
-                  <View style={styles.lottieScene}>
-                    <LottieView
-                      source={require('@/assets/lottie/study-discussion.json')}
-                      autoPlay
-                      loop
-                      style={styles.lottieFill}
-                      // reason: on web LottieView ignores `style` and sizes from
-                      // webStyle (DotLottieReact) — both are needed for one layout.
-                      webStyle={{ width: '100%', height: '100%' }}
-                    />
-                  </View>
-                )}
-                {/* Grounding shadow — the scene stands ON something, it isn't a decal. */}
-                <View style={[styles.groundShadow, { backgroundColor: colors.ink }]} />
-              </Tilt3D>
-            </Entrance>
-          </View>
-
-          <View style={styles.hero}>
-            <View
-              accessible
-              accessibilityRole="header"
-              accessibilityLabel={`${t('landing.headline1')} ${t('landing.headline2')} ${t('landing.headline3')}`}
-              style={styles.headlineBlock}
-            >
-              <Entrance index={1}>
-                <Text style={[styles.headline, { color: colors.ink }]}>{t('landing.headline1')}</Text>
-              </Entrance>
-              <Entrance index={2}>
-                <Text style={[styles.headline, { color: colors.ink }]}>{t('landing.headline2')}</Text>
-              </Entrance>
-              <Entrance index={3}>
-                <Text style={[styles.headline, { color: colors.accentSoft }]}>{t('landing.headline3')}</Text>
-              </Entrance>
+      <View style={styles.fill}>
+        {/* The stage has no arrival — it is simply already there, which reads as continuity. */}
+        <Animated.View style={[styles.stage, { top: stageTop, left: stageLeft }, sceneExit]} pointerEvents="none">
+          <Stage size={stageSize} rings={2} ripples sheen motes />
+          <View
+            style={[styles.scene, { left: 5 * k, top: 112 * k, width: sceneW, height: sceneH }]}
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={t('landing.sceneA11y')}
+          >
+            <View style={[styles.glow, { left: 30 * k, bottom: -12 * k }]}>
+              <GroundGlow width={sceneW - 60 * k} height={26 * k} />
             </View>
-            <Entrance index={5}>
-              <Tilt3D maxTilt={0} depth={0.2} drift={false}>
-                <Text style={[type.body, styles.sub, { color: colors.inkMuted }]}>
-                  {t('landing.sub')}
-                </Text>
-              </Tilt3D>
-            </Entrance>
+            {/* The file is a 1200² canvas whose drawing is a band in its lower middle, so the
+              * box is oversized and lifted until the DRAWING fills the board's scene box
+              * and stands on its bottom edge. The still uses the very same box. */}
+            <View
+              style={[
+                styles.lottie,
+                {
+                  width: lottieSide,
+                  height: lottieSide,
+                  left: (sceneW - lottieSide) / 2,
+                  top: sceneH - lottieSide * LOTTIE_BAND.ground,
+                },
+              ]}
+            >
+              {reduced || leaving ? (
+                // Reduced motion (no looping art) or exiting (see `leaving`): frame 0 of the
+                // same animation, so the swap cannot be seen.
+                <Image source={SCENES.landingStill} style={styles.lottieFill} resizeMode="contain" />
+              ) : (
+                // Theme-remapped free Lottie (assets/lottie/README.md) — two people in
+                // conversation, alive, in Mento's own palette.
+                <LottieView
+                  source={require('@/assets/lottie/study-discussion.json')}
+                  autoPlay
+                  loop
+                  style={styles.lottieFill}
+                  // reason: on web LottieView ignores `style` and sizes from
+                  // webStyle (DotLottieReact) — both are needed for one layout.
+                  webStyle={{ width: '100%', height: '100%' }}
+                />
+              )}
+            </View>
           </View>
+        </Animated.View>
 
-          <View style={styles.ctaWrap}>
-            <Entrance index={6}>
-              <Tilt3D maxTilt={2} depth={0.45} drift={false}>
-                <View style={[styles.ctaGlow, { shadowColor: colors.accent }]}>
+        {/* The two chat cards hover over the stage's top corners (board: 14 from each edge). */}
+        <View
+          style={[styles.cardMember, { top: memberTop, maxWidth: cardMax }]}
+          pointerEvents="none"
+          onLayout={(e) => setMemberCard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+        >
+          <Entrance index={3}>
+            <Animated.View style={[styles.cardOriginMember, cardExit]}>
+              <FloatingChatCard side="member" text={t('landing.cardMember')} />
+            </Animated.View>
+          </Entrance>
+        </View>
+        <View
+          style={[styles.cardMentor, { top: mentorTop, maxWidth: cardMax }]}
+          pointerEvents="none"
+          onLayout={(e) => setMentorCard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+        >
+          <Entrance index={6}>
+            <Animated.View style={[styles.cardOriginMentor, cardExit]}>
+              <FloatingChatCard side="mentor" text={t('landing.cardMentor')} />
+            </Animated.View>
+          </Entrance>
+        </View>
+
+        <View style={[styles.column, { paddingTop: topPad, paddingBottom: bottomPad }]}>
+          <Entrance index={0}>
+            <Animated.View style={textExit}>
+              <LogoWordmark />
+            </Animated.View>
+          </Entrance>
+
+          <View style={styles.grow} />
+
+          <View onLayout={(e) => setTextH(e.nativeEvent.layout.height)} style={styles.textBlock}>
+            <Animated.View style={[styles.copy, textExit]}>
+              <View
+                accessible
+                accessibilityRole="header"
+                accessibilityLabel={`${t('landing.headline1')} ${t('landing.headline2')} ${t('landing.headline3')}`}
+              >
+                <Entrance index={1}>
+                  <Text style={[type.displayHero, styles.headline, { color: colors.ink }]}>
+                    {t('landing.headline1')}
+                  </Text>
+                </Entrance>
+                <Entrance index={2}>
+                  <Text style={[type.displayHero, styles.headline, { color: colors.ink }]}>
+                    {t('landing.headline2')}
+                  </Text>
+                </Entrance>
+                <Entrance index={3} style={styles.lastWord}>
+                  <Text
+                    onLayout={(e) => setWordW(e.nativeEvent.layout.width)}
+                    style={[type.displayHero, styles.headline, { color: colors.accent }]}
+                  >
+                    {t('landing.headline3')}
+                  </Text>
+                  <View style={styles.underline}>
+                    <HandUnderline width={wordW} color={colors.accent} />
+                  </View>
+                </Entrance>
+              </View>
+              <Entrance index={4}>
+                <Text style={[type.body, { color: colors.inkMuted }]}>{t('landing.sub')}</Text>
+              </Entrance>
+            </Animated.View>
+
+            <Entrance index={5} style={styles.ctaBlock}>
+              {/* The CTA floats on a soft accent glow — a floating layer, so a shadow belongs. */}
+              <Animated.View style={[styles.ctaGlow, { shadowColor: colors.accent }, ctaExit]}>
                 <PrimaryButton
                   label={t('landing.cta')}
-                  tone="ink"
-                  icon="chatbubble-outline"
+                  shape="key"
+                  trailing="arrow"
                   onPress={begin}
-                  accessibilityHint="Begins onboarding"
+                  accessibilityHint={t('landing.ctaHint')}
                   testID="start"
                 />
-                </View>
-              </Tilt3D>
+              </Animated.View>
+              <Animated.Text style={[type.caption, styles.footer, { color: colors.inkMuted }, textExit]}>
+                {t('landing.footer')}
+              </Animated.Text>
             </Entrance>
           </View>
-        </SafeAreaView>
-      </Animated.View>
+        </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  // Clipped: the ambient orbs deliberately hang off the edges (orbB sits at right: -30).
-  // Unclipped, the web page measured 30px wider than the viewport, and phone browsers
-  // let a too-wide page be dragged sideways even with body { overflow: hidden }.
+  // Clipped: the stage's shadow and the floating cards may reach past the edges, and a
+  // page wider than the viewport can be dragged sideways on phone browsers.
   root: { flex: 1, overflow: 'hidden' },
   fill: { flex: 1 },
-  safe: { flex: 1, paddingHorizontal: space.lg },
-  mountains: { position: 'absolute', left: 0, right: 0, bottom: 0, overflow: 'hidden' },
-  orbs: { ...StyleSheet.absoluteFillObject },
-  orb: { position: 'absolute', borderRadius: 999, opacity: 0.55 },
-  orbA: { width: 180, height: 180, top: '12%', left: -60 },
-  orbB: { width: 110, height: 110, top: '30%', right: -30 },
-  orbC: { width: 64, height: 64, top: '58%', left: 24, opacity: 0.4 },
-  lottieScene: { width: 270, height: 270, marginVertical: -24, alignSelf: 'center' },
+  stage: { position: 'absolute' },
+  scene: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
+  glow: { position: 'absolute' },
+  lottie: { position: 'absolute' },
   lottieFill: { width: '100%', height: '100%' },
-  groundShadow: {
-    alignSelf: 'center',
-    width: 190,
-    height: 14,
-    borderRadius: 999,
-    marginTop: -6,
-    opacity: 0.07,
-    transform: [{ scaleY: 0.5 }],
-  },
-  logoZone: { flex: 3, alignItems: 'center', justifyContent: 'flex-end' },
-  sceneZone: { flex: 5, alignItems: 'center', justifyContent: 'center' },
-  hero: { flex: 5, alignItems: 'center', justifyContent: 'center', gap: space.md },
-  headlineBlock: { alignItems: 'center' },
-  headline: {
-    fontFamily: font.serifBold,
-    fontSize: 34,
-    lineHeight: 44,
-    textAlign: 'center',
-  },
-  sub: { textAlign: 'center' },
-  ctaWrap: { flex: 4, justifyContent: 'flex-start', paddingTop: space.sm },
-  ctaGlow: {
-    borderRadius: radius.pill,
-    shadowOpacity: 0.35,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 10,
-  },
+  cardOriginMember: { transformOrigin: 'left bottom' },
+  cardOriginMentor: { transformOrigin: 'right bottom' },
+  cardMember: { position: 'absolute', left: CARD_SIDE },
+  cardMentor: { position: 'absolute', right: CARD_SIDE },
+  column: { flex: 1, paddingHorizontal: space.lg },
+  grow: { flex: 1 },
+  textBlock: { gap: space.lg },
+  copy: { gap: 12 },
+  headline: { letterSpacing: -0.3 },
+  lastWord: { alignSelf: 'flex-start' },
+  underline: { position: 'absolute', left: 0, bottom: -4 },
+  ctaBlock: { gap: space.md },
+  ctaGlow: { shadowOpacity: 0.22, shadowRadius: 15, shadowOffset: { width: 0, height: 16 } },
+  footer: { textAlign: 'center' },
 });

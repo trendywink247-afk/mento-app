@@ -26,6 +26,11 @@ export const colors = {
   edgeAlt: '#D9D1C2', // under surfaceAlt faces
   edgeInk: '#141414', // under ink-toned pills
 
+  /** Decorative, never text (board port 2026-09-19): an unlit step dot, and the dashed
+   * rim of an orb that is still waiting for someone. */
+  dotIdle: '#CFC6B5',
+  dashIdle: '#B9AF9C',
+
   // Default accent (terracotta companion). Prefer useTheme().colors.accent in components.
   brand: '#A2533A',
   brandPress: '#984E33',
@@ -51,6 +56,11 @@ export const wash = {
   danger: '#F8DEDC',
 } as const;
 export type Wash = keyof typeof wash;
+
+/** Pillow undersides for wash faces (decorative, never text). Only the ones in use. */
+export const washEdge = {
+  green: '#C3D2C5',
+} as const;
 
 export const space = {
   xs: 4,
@@ -91,6 +101,8 @@ export const type = {
   display: { fontSize: 30, fontFamily: font.sansHeavy, lineHeight: 40 },
   /** Serif display — hub titles + celebratory headlines ("My Chats"). */
   displaySerif: { fontSize: 30, fontFamily: font.serifBold, lineHeight: 42 },
+  /** The landing's three-line hero headline (board A01). */
+  displayHero: { fontSize: 34, fontFamily: font.sansHeavy, lineHeight: 44 },
   /** Onboarding / Mentor Home headlines — replaces the per-step hand-rolled 28–30px styles. */
   displayHeadline: { fontSize: 28, fontFamily: font.sansHeavy, lineHeight: 40 },
   title: { fontSize: 22, fontFamily: font.sansBold, lineHeight: 28 },
@@ -98,6 +110,14 @@ export const type = {
   body: { fontSize: 16, fontFamily: font.sans, lineHeight: 24 },
   bodySemi: { fontSize: 16, fontFamily: font.sansSemi, lineHeight: 24 },
   label: { fontSize: 14, fontFamily: font.sansBold, lineHeight: 20 },
+  /** Pillow-key labels on the board's 56–58px keys. */
+  key: { fontSize: 18, fontFamily: font.sansBold, lineHeight: 24 },
+  keyDense: { fontSize: 16, fontFamily: font.sansBold, lineHeight: 24 },
+  /** Row / card titles (promise rows, wait cards) and their quiet second line. */
+  rowTitle: { fontSize: 15, fontFamily: font.sansBold, lineHeight: 20 },
+  /** A door's / card's second line (board 15/21). */
+  bodySmall: { fontSize: 15, fontFamily: font.sans, lineHeight: 21 },
+  note: { fontSize: 14, fontFamily: font.sans, lineHeight: 20 },
   caption: { fontSize: 13, fontFamily: font.sans, lineHeight: 18, color: colors.inkMuted },
   /** Section headings on the web-only console surfaces (listener console, admin cockpit). */
   titleSmSerif: { fontSize: 20, fontFamily: font.serifBold, lineHeight: 26 },

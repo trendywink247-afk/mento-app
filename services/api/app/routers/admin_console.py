@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import get_db
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.conversation import Conversation
@@ -22,6 +23,7 @@ from app.models.enums import (
     SafetySignal,
     VettingStatus,
 )
+from app.models.feedback import ProductFeedback
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
@@ -29,6 +31,9 @@ from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.schemas import (
     AdminAccountItem,
+    AdminAllowanceDay,
+    AdminAllowanceOut,
+    AdminAllowanceRule,
     AdminApplicationDeclineIn,
     AdminApplicationItem,
     AdminAuditItem,
@@ -36,6 +41,8 @@ from app.schemas import (
     AdminContributionItem,
     AdminCreatedOut,
     AdminCreateIn,
+    AdminFeedbackItem,
+    AdminFeedbackOut,
     AdminFlagItem,
     AdminFlagReviewIn,
     AdminHealthOut,
@@ -51,7 +58,7 @@ from app.schemas import (
     OkResult,
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
-from app.services import audit, conversations, stream
+from app.services import allowance, audit, conversations, in_touch, stream
 from app.services.categories import AVAILABILITY_NOTES
 from app.services.links import admin_link, mentor_console_link
 from app.services.matching import reconcile_listener_capacity
@@ -308,6 +315,8 @@ def suspend_listener(
     # members are free to be matched again, the slots are released) and seal every
     # channel on Stream once the transaction is committed.
     ended = conversations.end_all_for_listener(db, listener_id)
+    # Nobody stays in touch with a mentor the team has removed (DECISIONS §L.6).
+    in_touch.end_all_for_listener(db, listener_id)
     audit.record(
         db,
         admin,
@@ -625,6 +634,109 @@ def health_deep(
         stream_configured=stream.is_configured(),
         last_webhook_at=last_webhook,
         rate_limiter_ok=redis_ok,
+    )
+
+
+# --- Message allowance (DECISIONS §L.2, board A13) — numbers only ----------------
+
+
+@router.get("/allowance", response_model=AdminAllowanceOut)
+def allowance_counts(
+    days: int = Query(14, ge=1, le=30),
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminAllowanceOut:
+    """How the message allowance is landing, per IST day: messages sent, how many
+    members met the 3-in-a-row pause or the daily limit, and crisis-exempt sends.
+    Aggregates only — never text, names, or WHO (T&S #10). The read is audited."""
+    settings = get_settings()
+    rows = [
+        AdminAllowanceDay(
+            day=c.day.isoformat(),
+            messages_sent=c.messages_sent,
+            crisis_exempt_sends=c.crisis_exempt_sends,
+            in_a_row_pauses=c.in_a_row_pauses,
+            members_paused_in_a_row=c.members_paused_in_a_row,
+            daily_cap_holds=c.daily_cap_holds,
+            members_reached_daily_cap=c.members_reached_daily_cap,
+        )
+        for c in allowance.daily_counts(db, days)
+    ]
+    totals = AdminAllowanceDay(
+        day=f"{rows[0].day}/{rows[-1].day}",
+        messages_sent=sum(r.messages_sent for r in rows),
+        crisis_exempt_sends=sum(r.crisis_exempt_sends for r in rows),
+        in_a_row_pauses=sum(r.in_a_row_pauses for r in rows),
+        members_paused_in_a_row=sum(r.members_paused_in_a_row for r in rows),
+        daily_cap_holds=sum(r.daily_cap_holds for r in rows),
+        members_reached_daily_cap=sum(r.members_reached_daily_cap for r in rows),
+    )
+    audit.record(db, admin, "allowance.viewed", subject_type="allowance", meta={"days": days})
+    db.commit()
+    return AdminAllowanceOut(
+        rule=AdminAllowanceRule(
+            in_a_row=settings.allowance_in_a_row,
+            per_day=settings.allowance_per_day,
+            enforced=settings.allowance_enforced and settings.allowance_enabled,
+            crisis_exempt_hours=settings.allowance_crisis_exempt_hours,
+            timezone="Asia/Kolkata",
+        ),
+        days=rows,
+        totals=totals,
+    )
+
+
+# --- Product feedback (board A11) -----------------------------------------------
+
+
+@router.get("/feedback", response_model=AdminFeedbackOut)
+def admin_feedback(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    category: str | None = Query(None, pattern="^(broken|confusing|idea)$"),
+    role: str | None = Query(None, pattern="^(member|mentor)$"),
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminFeedbackOut:
+    """What people told the team, newest first. A row has no author — only which side
+    of the app it came from. People write freely in that box, so the read is audited."""
+    where = []
+    if category:
+        where.append(ProductFeedback.category == category)
+    if role:
+        where.append(ProductFeedback.role == role)
+    total = db.execute(select(func.count()).select_from(ProductFeedback).where(*where)).scalar_one()
+    rows = db.scalars(
+        select(ProductFeedback)
+        .where(*where)
+        .order_by(ProductFeedback.created_at.desc(), ProductFeedback.id)
+        .limit(limit)
+        .offset(offset)
+    ).all()
+    audit.record(
+        db,
+        admin,
+        "feedback.viewed",
+        subject_type="feedback",
+        meta={"limit": limit, "offset": offset, "category": category, "role": role},
+    )
+    db.commit()
+    return AdminFeedbackOut(
+        total=total,
+        limit=limit,
+        offset=offset,
+        items=[
+            AdminFeedbackItem(
+                id=f.id,
+                created_at=f.created_at.isoformat(),
+                role=f.role,
+                category=f.category,
+                text=f.text,
+                screen=f.screen,
+                app_version=f.app_version,
+            )
+            for f in rows
+        ],
     )
 
 

@@ -26,6 +26,12 @@ from app.schemas.admin import (
     AttentionItem,
     ModerationItem,
 )
+from app.schemas.allowance import (
+    AdminAllowanceDay,
+    AdminAllowanceOut,
+    AdminAllowanceRule,
+    AllowanceOut,
+)
 from app.schemas.applications import (
     ConsoleSessionOut,
     ListenerApplicationIn,
@@ -44,6 +50,19 @@ from app.schemas.conversations import (
     StatusMaskRequest,
     UnlockRequest,
     VerifyPinRequest,
+)
+from app.schemas.feedback import (
+    AdminFeedbackItem,
+    AdminFeedbackOut,
+    FeedbackIn,
+    FeedbackReceived,
+)
+from app.schemas.in_touch import (
+    InTouchItem,
+    InTouchListOut,
+    InTouchSlots,
+    StayInTouchAskItem,
+    StayInTouchOut,
 )
 from app.schemas.journals import (
     JournalEntryIn,
@@ -101,6 +120,9 @@ from app.schemas.safety import (
 
 __all__ = [
     "AdminAccountItem",
+    "AdminAllowanceDay",
+    "AdminAllowanceOut",
+    "AdminAllowanceRule",
     "AdminApplicationDeclineIn",
     "AdminApplicationItem",
     "AdminAuditItem",
@@ -108,6 +130,8 @@ __all__ = [
     "AdminContributionItem",
     "AdminCreateIn",
     "AdminCreatedOut",
+    "AdminFeedbackItem",
+    "AdminFeedbackOut",
     "AdminFlagItem",
     "AdminFlagReviewIn",
     "AdminHealthOut",
@@ -118,6 +142,7 @@ __all__ = [
     "AdminMessageItem",
     "AdminOverviewOut",
     "AdminReconcileOut",
+    "AllowanceOut",
     "AttentionItem",
     "CompanionUpdateIn",
     "ConsoleSessionOut",
@@ -126,6 +151,11 @@ __all__ = [
     "ConversationState",
     "DevListenerItem",
     "DevTokenOut",
+    "FeedbackIn",
+    "FeedbackReceived",
+    "InTouchItem",
+    "InTouchListOut",
+    "InTouchSlots",
     "JournalEntryIn",
     "JournalEntryOut",
     "ListenerApplicationIn",
@@ -168,6 +198,8 @@ __all__ = [
     "ScanRequest",
     "ScanResult",
     "StatusMaskRequest",
+    "StayInTouchAskItem",
+    "StayInTouchOut",
     "UnlockRequest",
     "VerifyPinRequest",
 ]

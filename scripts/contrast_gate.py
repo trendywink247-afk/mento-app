@@ -52,6 +52,10 @@ def main() -> int:
         pairs.append((f"{name}: accent on oat", vals["accent"], oat, 4.5))
         pairs.append((f"{name}: accent on ritual", vals["accent"], ritual, 4.5))
         pairs.append((f"{name}: ink on tint", ink, vals["accentTint"], 4.5))
+        # Board port (2026-09-19): the accent sits on its own tint as LARGE display text
+        # only (the date wheels' selected value); small labels on a tint face use the edge.
+        pairs.append((f"{name}: accent on tint (large only)", vals["accent"], vals["accentTint"], 3.0))
+        pairs.append((f"{name}: edge on tint", vals["accentEdge"], vals["accentTint"], 4.5))
     failed = 0
     for label, fg, bg, minimum in pairs:
         r = ratio(fg, bg)

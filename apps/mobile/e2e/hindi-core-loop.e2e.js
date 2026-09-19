@@ -4,7 +4,7 @@
  * (which must also complete; connecting flies by there, so only the chat
  * assertion holds on that pass). */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 async function walk(ctx, { assertConnecting }) {
   const errors = [];
@@ -37,7 +37,7 @@ async function walk(ctx, { assertConnecting }) {
   await tid('enter').click();
 
   if (assertConnecting) {
-    await page.waitForSelector('text=जोड़ रहे हैं', { timeout: 30000 }); // connecting headline
+    await page.waitForSelector('text=ढूँढ रहे हैं', { timeout: 30000 }); // connecting headline
     console.log('OK hi connecting story');
   }
 

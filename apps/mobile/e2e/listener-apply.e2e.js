@@ -1,8 +1,8 @@
 /** Become a listener: profile → apply → pending card (approval path is pytest-proven).
  * Optional: set MENTO_ADMIN_TOKEN to also drive approve → approved card + console link. */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
-const API = 'http://localhost:8000/api/v1';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
+const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 
 (async () => {
   const browser = await chromium.launch({ headless: true });

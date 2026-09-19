@@ -45,6 +45,23 @@ def upsert_user(user_id: str, persona_name: str, avatar: str) -> None:
     client.upsert_user({"id": user_id, "name": persona_name, "image": avatar, "role": "user"})
 
 
+def rename_user(user_id: str, persona_name: str) -> bool:
+    """Rotating mentor names (DECISIONS §L.6): the Stream user's display name follows
+    the rename, so the chat header and every bubble in the thread agree. A partial
+    update — image and role are left alone. Best-effort: False (logged, never raised)
+    when Stream is unreachable, and the next rotation pass retries. Stub mode has no
+    Stream user to rename, which counts as done."""
+    client = _client()
+    if client is None:
+        return True
+    try:
+        client.update_user_partial({"id": user_id, "set": {"name": persona_name}})
+    except Exception as exc:  # noqa: BLE001 — best-effort by design
+        logger.warning("rename_user failed (%s)", type(exc).__name__)
+        return False
+    return True
+
+
 def user_token(user_id: str) -> str:
     """Client token for the mobile Stream SDK."""
     client = _client()

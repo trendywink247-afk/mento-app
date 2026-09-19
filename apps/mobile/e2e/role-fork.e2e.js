@@ -3,7 +3,7 @@
  * Chats. Then a fresh page with the same stored session must land on Mentor Home
  * straight from `/`. Runs once normally and once under reducedMotion: 'reduce'. */
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
 
 /** What the SERVER holds for this session (GET /me) — read from Node, not the page. */
@@ -73,6 +73,31 @@ async function run(browser, reduced) {
     `${label}: OK role fork arrives as one sequence (first frame: headline ${arrival.headline.toFixed(2)}, footer ${arrival.footer.toFixed(2)}; footer settles at 1)`
   );
   await tid('role-listen').waitFor({ timeout: 60000 });
+
+  // The art band (board A02): the companions-at-play film really plays in the normal pass;
+  // under reduced motion there is no <video> at all, only the still.
+  await tid('playground-band').waitFor({ timeout: 30000 });
+  if (reduced) {
+    const videos = await page.locator('[data-testid="playground-band"] video').count();
+    if (videos !== 0) throw new Error('reduced motion: the playground band mounted a <video>');
+    await tid('playground-still').waitFor({ timeout: 15000 });
+    console.log(`${label}: OK playground band is the still only (no <video>)`);
+  } else {
+    await page.waitForFunction(() => {
+      const v = document.querySelector('[data-testid="playground-band"] video');
+      return Boolean(v && !v.paused && v.currentTime > 0.2 && v.muted && v.loop && v.playsInline && !v.controls);
+    }, null, { timeout: 30000 });
+    console.log(`${label}: OK playground film is playing inline (muted, looped, no controls)`);
+  }
+  // Leaving the ROUTE while the film plays must be clean (the DotLottie canvas crashed on
+  // exactly this): back to the landing, then in again. Page errors fail the run at the end.
+  await tid('back').click();
+  await tid('start').waitFor({ state: 'visible', timeout: 30000 });
+  await page.waitForTimeout(600);
+  await tid('start').click();
+  await tid('role-listen').waitFor({ timeout: 60000 });
+  console.log(`${label}: OK left the fork mid-film and came back, no teardown error so far`);
+
   await tid('role-listen').click();
   await page.waitForSelector('text=How old are you?', { timeout: 30000 });
   await tid('continue').click();

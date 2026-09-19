@@ -38,17 +38,23 @@ export type StageStep =
   | 'handoff';
 
 const BASE_SIZE = 64;
-/** Offset below the safe-area inset — level with the journey's back chevron. */
-const HOST_TOP = 6;
+/** Level with the journey header's key row (OnboardingJourney: 44 of air, or the inset +8;
+ * the 64 companion is centred on the 48 row, so it starts 8 above it). */
+const HEADER_TOP = 44;
+const HOST_LIFT = 8;
 
 /** Transform-only anchors from a fixed top-right base position. */
 const ANCHORS: Record<StageStep, { x: number; y: number; scale: number; opacity: number }> = {
-  role: { x: 0, y: 0, scale: 1, opacity: 1 },
-  age: { x: 0, y: 0, scale: 1, opacity: 1 },
-  email: { x: 0, y: 0, scale: 1, opacity: 1 },
-  companion: { x: -2, y: 4, scale: 1.12, opacity: 1 },
-  ready: { x: 0, y: 10, scale: 0.85, opacity: 0 }, // hands off to the in-arch companion
-  connecting: { x: 0, y: 2, scale: 1, opacity: 1 },
+  // Board port (2026-09-19): on these steps the companion has a perch INSIDE the step —
+  // peeking over the date tray, beside the email field, beside the headline, on the ready
+  // stage, in the connecting orb — and the fork shows the companions at play instead. The
+  // header companion steps aside there; it still guides the mentor's primer + hand-off.
+  role: { x: 0, y: 0, scale: 1, opacity: 0 },
+  age: { x: 0, y: 0, scale: 1, opacity: 0 },
+  email: { x: 0, y: 0, scale: 1, opacity: 0 },
+  companion: { x: 0, y: 0, scale: 1, opacity: 0 },
+  ready: { x: 0, y: 0, scale: 1, opacity: 0 },
+  connecting: { x: 0, y: 0, scale: 1, opacity: 0 },
   primer: { x: 0, y: 0, scale: 1, opacity: 1 },
   handoff: { x: 0, y: 2, scale: 1, opacity: 1 },
 };
@@ -180,7 +186,7 @@ export function PandaStage({
   }));
 
   return (
-    <View style={[styles.host, { top: insets.top + HOST_TOP }]} pointerEvents="none">
+    <View style={[styles.host, { top: Math.max(insets.top + 8, HEADER_TOP) - HOST_LIFT }]} pointerEvents="none">
       <Animated.View style={stageStyle}>
         {/* Dimensional presence: the companion is an object in space — it faces the
           * pointer on web and drifts on two desynced periods on native. */}

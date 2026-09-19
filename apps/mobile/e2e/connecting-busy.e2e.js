@@ -10,16 +10,16 @@
  */
 const { execSync } = require('child_process');
 const { chromium } = require('playwright');
-const WEB = 'http://localhost:8081';
+const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 /** ConnectingStep: MAX_RETRIES (3) × RETRY_DELAY_MS (8000) + request time. */
 const ERROR_STATE_TIMEOUT_MS = 60000;
 
 function sql(statement) {
-  execSync(`docker exec mento-postgres psql -U mento -d mento -c "${statement}"`, { stdio: 'pipe' });
+  execSync(`docker exec mento-postgres psql -U mento -d ${process.env.MENTO_DB || 'mento'} -c "${statement}"`, { stdio: 'pipe' });
 }
 function resetRateLimits() {
-  execSync('docker exec mento-redis redis-cli FLUSHDB', { stdio: 'pipe' });
+  execSync(`docker exec mento-redis redis-cli -n ${process.env.MENTO_REDIS_DB || '0'} FLUSHDB`, { stdio: 'pipe' });
 }
 
 async function driveToReady(page, tid) {
@@ -38,7 +38,7 @@ async function driveToReady(page, tid) {
   await tid('enter').click();
 }
 
-async function runBusy(browser, { reduced }) {
+async function runBusy(browser, { reduced, viaLink = false }) {
   resetRateLimits();
   const errors = [];
   const ctx = await browser.newContext({
@@ -51,9 +51,23 @@ async function runBusy(browser, { reduced }) {
   const label = reduced ? 'reduced-motion' : 'normal';
 
   await driveToReady(page, tid);
-  await page.waitForSelector('text=Connecting you to an', { timeout: 30000 });
+  await page.waitForSelector('text=Finding a mentor', { timeout: 30000 });
 
-  // Honest busy first (retries keep their place), then the error state.
+  // Honest busy first (retries keep their place): while it waits between retries the step
+  // offers the board's quiet way out — "Nobody free right now? Send your question instead".
+  await tid('send-question').waitFor({ state: 'visible', timeout: 20000 });
+  console.log(`OK [${label}] busy offers "Send your question instead"`);
+  if (viaLink) {
+    await tid('send-question').click();
+    await page.waitForURL('**/mentors**', { timeout: 30000 });
+    await tid('next-available').waitFor({ state: 'visible', timeout: 30000 });
+    console.log(`OK [${label}] the link lands on the Mentors screen inside the app (no retry fires after)`);
+    await page.waitForTimeout(9000); // one retry period: nothing may navigate or throw
+    if (!page.url().includes('mentors')) throw new Error(`left Mentors after the link: ${page.url()}`);
+    await ctx.close();
+    return errors;
+  }
+  // Then the error state.
   await page.waitForSelector("text=We couldn't connect just yet", { timeout: ERROR_STATE_TIMEOUT_MS });
   await tid('retry').waitFor({ state: 'visible', timeout: 10000 });
   await tid('browse-mentors').waitFor({ state: 'visible', timeout: 10000 });
@@ -73,7 +87,11 @@ async function runBusy(browser, { reduced }) {
   let failed = false;
   try {
     sql("UPDATE listener_profiles SET status = 'away';");
-    const errs = [...(await runBusy(browser, { reduced: false })), ...(await runBusy(browser, { reduced: true }))];
+    const errs = [
+      ...(await runBusy(browser, { reduced: false })),
+      ...(await runBusy(browser, { reduced: true })),
+      ...(await runBusy(browser, { reduced: false, viaLink: true })),
+    ];
     if (errs.length) {
       console.error('PAGE ERRORS:', errs);
       failed = true;
