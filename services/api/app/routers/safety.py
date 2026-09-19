@@ -11,6 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app import ratelimit
 from app.db import get_db
 from app.models.conversation import Conversation
 from app.schemas import ScanRequest, ScanResult
@@ -26,6 +27,13 @@ def scan_message(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> ScanResult:
+    # The authoritative scan is the Stream webhook (deduped by message id). This one
+    # has no dedupe key, so an unthrottled caller could bury the human-review queue
+    # under thousands of flags. The 429 carries no helplines — the client only calls
+    # this beside the real message path, which still scans.
+    ratelimit.enforce(
+        f"safety-scan:{user_id}", 30, 600, detail="Too many requests — please wait a moment."
+    )
     # A caller may only tag their OWN conversation — otherwise crisis flags could
     # be planted against arbitrary conversations, poisoning the review queue.
     if payload.conversation_id is not None:

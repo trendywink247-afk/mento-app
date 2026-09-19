@@ -14,6 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import ratelimit
 from app.db import get_db
 from app.models.admin import AdminAccount
 from app.models.conversation import Conversation
@@ -208,6 +209,14 @@ def create_personal_request(
     db: Session = Depends(get_db),
 ) -> RequestOut:
     """Directed request: intro message → the mentor's inbox (pending until accepted)."""
+    # Every new request pages a volunteer's phone — the same reasoning as the match
+    # limit: a loop here is a denial of service against actual people.
+    ratelimit.enforce(
+        f"personal-request:{user_id}",
+        10,
+        3600,
+        detail="You've sent several requests — please give mentors a little time to reply.",
+    )
     listener = db.get(ListenerProfile, listener_id)
     if listener is None or listener.vetting_status != VettingStatus.approved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")
