@@ -1,10 +1,12 @@
 /**
  * Member polish (lane u12, board A03 · A09 · A06):
  *
- *  1. Companion pick (A03): the sub-line is the board's words without "emotional"
- *     ("Your growth will be represented by an animal and a colour."), and once an animal +
+ *  1. Companion pick (A03): the sub-line is the professional one (founder review
+ *     2026-09-20 — never "emotional", never "represented by"), and once an animal +
  *     colour are picked and the name row arrives, the hero companion is never cut: its top
- *     stays below the journey header (the headline and hero stay put; the picks scroll).
+ *     stays below the journey header (the headline and hero stay put; the picks scroll),
+ *     and where the picks DO scroll they dissolve under the header instead of being
+ *     sliced (the step's header fade).
  *  2. Profile (A09): the row that opens Support reads "Support the team" — no "coffee"
  *     anywhere on the screen — and opens the Support page.
  *  3. My Chats with no conversation yet: the empty state shows the member's companion on
@@ -24,13 +26,13 @@ const SHOTS = process.env.SHOTS;
 
 const COPY = {
   en: {
-    sub: 'Your growth will be represented by an animal and a colour.',
+    sub: 'Your companion and colour travel with you across Mento.',
     support: 'Support the team',
     empty: 'No conversations yet',
     start: 'Start a conversation',
   },
   hi: {
-    sub: 'आपकी ग्रोथ को एक जानवर और एक रंग दर्शाएगा।',
+    sub: 'आपका साथी और रंग पूरे Mento में आपके साथ चलते हैं।',
     support: 'टीम का साथ दें',
     empty: 'अभी कोई बातचीत नहीं',
     start: 'बातचीत शुरू करें',
@@ -97,11 +99,25 @@ async function run(browser, { w, h, lang, reduced }) {
     if (clip.top < clip.headerBottom - 1 || clip.bottom > clip.height) {
       throw new Error(`[${label}] hero cut: top ${clip.top} under header ${clip.headerBottom}`);
     }
+    // Where the body scrolls under the fixed header it dissolves into the ground.
+    const scrolls = await page.evaluate(() => {
+      const el = [...document.querySelectorAll('div')].find((n) => n.scrollHeight > n.clientHeight + 1 && n.clientHeight > 200);
+      return Boolean(el);
+    });
+    // Scroll the picks under the header: they must dissolve into it, not be sliced.
+    if (scrolls) {
+      await page.mouse.move(w / 2, h / 2);
+      await page.mouse.wheel(0, 120);
+      await page.waitForTimeout(400);
+      if ((await tid('step-header-fade').count()) !== 1) {
+        throw new Error(`[${label}] the picks scroll under the header with no fade`);
+      }
+    }
     const name = await tid('companion-name-input').boundingBox();
     const cont = await tid('continue').boundingBox();
     if (!name || name.y + name.height > cont.y) throw new Error(`[${label}] the name row sits under the footer keys`);
     await shot(page, 'a03-named');
-    console.log(`[${label}] OK A03: the board's words, no "emotional"; hero whole (top ${Math.round(clip.top)} ≥ header ${Math.round(clip.headerBottom)}) with the name row in view`);
+    console.log(`[${label}] OK A03: professional words, no "emotional"; hero whole (top ${Math.round(clip.top)} ≥ header ${Math.round(clip.headerBottom)}); scroll edge ${scrolls ? 'faded' : 'not needed'}; name row in view`);
     await ctx.close();
   }
 
