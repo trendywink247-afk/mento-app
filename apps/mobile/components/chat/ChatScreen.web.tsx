@@ -28,6 +28,7 @@ import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ThreadRow, type ThreadMsg } from '@/components/chat/ThreadRow';
 import { TypingDots } from '@/components/chat/TypingDots';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
+import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
 import { SceneTile } from '@/components/art/SceneTile';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { capture } from '@/lib/analytics';
@@ -64,7 +65,7 @@ type CrisisCarrier = { id?: string; crisis?: CrisisPayload; created_at?: string 
  * while the crisis card, an error or a failed send is showing, or while the options sheet is
  * up (T&S #11). */
 const CHAT_PERCH: PlacementSlot[] = [{ id: 'composerTop', type: 'top', level: 'low', home: true }];
-const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={72} inset={space.lg} />;
+const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={COMPOSER_SEAT.size} inset={space.lg} />;
 
 /** How many of the rows on screen take a step in the opening arrival (FINAL_SPEC: six). */
 const ARRIVAL_STEPS = 6;
@@ -511,7 +512,12 @@ export default function ChatScreenWeb() {
             data={messages}
             keyExtractor={(m) => m.id}
             // The thread rests on the composer (board: the column is bottom-aligned).
-            contentContainerStyle={[styles.list, messages.length === 0 && styles.listEmpty]}
+            // The foot keeps the companion's room, so it never stands on the last bubble.
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: companionRoom(perch, note !== null) },
+              messages.length === 0 && styles.listEmpty,
+            ]}
             // …and stays there when a message lands or the footer grows (the note, its
             // helplines): a jump, not a scroll animation — nothing moves in a still state.
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
@@ -621,8 +627,8 @@ const styles = StyleSheet.create({
   // Under the sheet the chat is a card on a darker ground: rounded, clipped.
   backSettled: { borderRadius: radius.lg, overflow: 'hidden' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
-  // Board: 12 / 16 / 8, rows 10 apart, resting on the composer. The extra bottom room keeps
-  // the last bubble clear of the companion on the footer's edge.
+  // Board: 12 / 16 / 8, rows 10 apart, resting on the composer. The foot's padding is set
+  // per render from companionRoom(): the companion's height above the footer's edge.
   list: {
     flexGrow: 1,
     justifyContent: 'flex-end',

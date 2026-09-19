@@ -13,6 +13,7 @@ type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
 import { IconBadge } from '@/components/IconBadge';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
+import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
 import { AllowanceNote } from '@/components/chat/AllowanceNote';
 import { AllowanceRow } from '@/components/chat/AllowanceRow';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
@@ -65,7 +66,7 @@ type SentMessage = CrisisCarrier & { type?: string; text?: string; allowance?: H
  * that shows (components/chat/AllowanceNote.tsx carries that seat). Not drawn at all while
  * the crisis card or an error is showing, or while the options sheet is up (T&S #11). */
 const CHAT_PERCH: PlacementSlot[] = [{ id: 'composerTop', type: 'top', level: 'low', home: true }];
-const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={72} inset={space.lg} />;
+const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={COMPOSER_SEAT.size} inset={space.lg} />;
 
 /** Puts a held message's words back into the field: the kit clears its composer
  * optimistically, and a held message exists nowhere but on the device (API doc B1). */
@@ -378,6 +379,9 @@ export default function ChatScreen() {
     still: note !== null,
   });
 
+  const listFoot = companionRoom(perch, note !== null);
+  const listProps = useMemo(() => ({ contentContainerStyle: { paddingTop: listFoot } }), [listFoot]);
+
   const chrome = useMemo<ComposerChrome>(() => {
     if (!allowance) return {};
     if (note) {
@@ -474,7 +478,8 @@ export default function ChatScreen() {
             >
               <HeldDraft text={heldDraft} onRestored={clearHeldDraft} />
               <StarterSeed text={starter} />
-              <MessageList />
+              {/* Inverted list: `paddingTop` is the visual foot — the companion's room. */}
+              <MessageList additionalFlatListProps={listProps} />
               <MessageComposer />
             </Channel>
             </WithComponents>

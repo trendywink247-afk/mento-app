@@ -144,6 +144,15 @@ export function useCompanionPlacement(
   );
 }
 
+/** How far a companion on a `top` slot stands ABOVE the edge it sits on (px) — the room a
+ * list resting on that edge must keep free so its last row is never under the art (the
+ * chat's composer seat, A05 / A22). Mirrors Perched's `vertical` for a `top` slot. */
+export function perchRise(animal: CompanionAnimal | null, size: number, nudge = 0): number {
+  const set = COMPANION_GENERATED[resolveAnimal(animal)];
+  const box = Math.min(size, PERCH_MAX_SIZE);
+  return Math.max(0, (set.ground ?? COMPANION_GROUND) * box - SEAT_SINK - nudge);
+}
+
 const PerchContext = createContext<CompanionPlacement | null>(null);
 
 /** Hands a screen's placement to the slots inside it. */

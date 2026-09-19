@@ -32,6 +32,10 @@ type Props = {
   onJournal: () => void;
 };
 
+/** The companion's seat on the note's top edge (the thread keeps room for it —
+ * components/chat/companionRoom.ts). */
+export const NOTE_SEAT = { size: 64, nudge: 8 } as const;
+
 export function AllowanceNote({ allowance, reason, name, onJournal }: Props) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -48,7 +52,7 @@ export function AllowanceNote({ allowance, reason, name, onJournal }: Props) {
   return (
     <View style={styles.wrap}>
       <View>
-        <CompanionSlot id="composerTop" size={64} align="left" inset={6} nudge={8} />
+        <CompanionSlot id="composerTop" size={NOTE_SEAT.size} align="left" inset={6} nudge={NOTE_SEAT.nudge} />
         <EdgeSurface
           edge={colors.edgeAlt}
           travel={3}
