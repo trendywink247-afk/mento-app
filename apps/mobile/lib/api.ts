@@ -54,6 +54,10 @@ export type Listener = {
   status: 'online' | 'away' | 'offline';
   available: boolean;
   is_favourite: boolean;
+  /** Stay in touch (DECISIONS §L.6): an ACCEPTED link with this mentor; Browse sorts these first. */
+  in_touch?: boolean;
+  /** The name this mentor carried when the member first met them, once it has changed. */
+  first_met_as?: string | null;
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -72,6 +76,8 @@ export type ListenerProfile = {
   listening_since: string;
   conversations_held: number;
   is_favourite: boolean;
+  in_touch?: boolean;
+  first_met_as?: string | null;
 };
 
 export type PersonalRequest = {
@@ -87,7 +93,46 @@ export type PersonalRequest = {
 export type ConversationMentor = ListenerProfile & {
   issue_category: string | null;
   issue_category_label: string | null;
+  /** The member's stay-in-touch standing with this mentor (same payload as
+   * `GET /conversations/{id}/stay-in-touch`). */
+  stay_in_touch?: StayInTouch | null;
 };
+
+// --- Stay in touch (DECISIONS §L.6–7; docs/superpowers/specs/2026-09-19-board-port-api.md B2) ---
+export type InTouchSlots = { limit: number; in_touch: number; waiting: number; free: number };
+export type StayInTouchBlock = 'in_touch_full' | 'in_touch_waiting' | 'not_now_cooldown' | 'unavailable';
+export type StayInTouch = {
+  state: 'none' | 'asked' | 'in_touch' | 'not_now';
+  link_id: string | null;
+  can_ask: boolean;
+  blocked_reason: StayInTouchBlock | null;
+  can_ask_again_at: string | null;
+  slots: InTouchSlots;
+  mentor_name: string;
+  first_met_as: string | null;
+  first_met_at: string | null;
+  names_change_at: string;
+};
+export type InTouchItem = {
+  link_id: string;
+  state: 'in_touch' | 'asked';
+  listener_id: string;
+  persona_name: string;
+  persona_avatar: string;
+  first_met_as: string | null;
+  first_met_at: string;
+  since: string | null;
+  status: 'online' | 'away' | 'offline';
+  available: boolean;
+  categories: string[];
+  community_slug: string | null;
+  public_line: string | null;
+  availability_note: string | null;
+  conversation_id: string | null;
+  conversation_status: 'active' | 'ended' | 'wiped' | null;
+  stream_channel_id: string | null;
+};
+export type InTouchList = { slots: InTouchSlots; items: InTouchItem[]; waiting: InTouchItem[] };
 
 export type ConversationListItem = {
   id: string;
@@ -103,6 +148,10 @@ export type ConversationListItem = {
   issue_category: string | null;
   /** The server's member-facing words for `issue_category` ("Exam stress"). */
   issue_category_label: string | null;
+  /** Rotating names (DECISIONS §L.6): the member has an accepted stay-in-touch link with
+   * this chat's mentor; `first_met_as` is the earlier name, only once it differs. */
+  in_touch?: boolean;
+  first_met_as?: string | null;
 };
 
 export type ConversationState = {
@@ -132,6 +181,10 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** Machine code beside `detail` on refusals the UI must tell apart (`in_touch_full`…). */
+    public code: string | null = null,
+    /** The rest of a coded refusal's body (e.g. `can_ask_again_at`). */
+    public body: Record<string, unknown> | null = null,
   ) {
     super(message);
   }
@@ -178,12 +231,23 @@ export async function apiRequest<T>(
   }
   if (!res.ok) {
     let detail = res.statusText;
+    let code: string | null = null;
+    let body: Record<string, unknown> | null = null;
     try {
-      detail = (await res.json()).detail ?? detail;
+      body = (await res.json()) as Record<string, unknown>;
+      // FastAPI puts a dict `detail` through as-is: accept {detail, code} flat or nested.
+      const d = body.detail;
+      if (d && typeof d === 'object') {
+        const nested = d as Record<string, unknown>;
+        body = { ...body, ...nested };
+        if (typeof nested.detail === 'string') detail = nested.detail;
+        else if (typeof nested.message === 'string') detail = nested.message;
+      } else if (typeof d === 'string') detail = d;
+      if (typeof body.code === 'string') code = body.code;
     } catch {
       /* non-JSON error body */
     }
-    throw new ApiError(res.status, detail);
+    throw new ApiError(res.status, detail, code, body);
   }
   if (res.status === 204) return undefined as T; // bodyless success (e.g. leave path)
   return (await res.json()) as T;
@@ -314,6 +378,17 @@ export const api = {
       { method: on ? 'POST' : 'DELETE' },
       true,
     ),
+
+  // --- Stay in touch (DECISIONS §L.6–7) ---
+  stayInTouch: (convoId: string) =>
+    request<StayInTouch>(`/conversations/${convoId}/stay-in-touch`, {}, true),
+  askStayInTouch: (convoId: string) =>
+    request<StayInTouch>(`/conversations/${convoId}/stay-in-touch`, { method: 'POST' }, true),
+  takeBackStayInTouch: (convoId: string) =>
+    request<StayInTouch>(`/conversations/${convoId}/stay-in-touch`, { method: 'DELETE' }, true),
+  inTouch: () => request<InTouchList>('/in-touch', {}, true),
+  endInTouch: (linkId: string) =>
+    request<{ status: string }>(`/in-touch/${linkId}`, { method: 'DELETE' }, true),
 
   verifyPin: (id: string, pin: string) =>
     request<{ status: string }>(`/conversations/${id}/verify-pin`, { method: 'POST', body: JSON.stringify({ pin }) }, true),

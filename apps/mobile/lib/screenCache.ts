@@ -18,6 +18,7 @@
  */
 import type {
   ConversationListItem,
+  InTouchList,
   JournalEntry,
   Listener,
   ListenerApplication,
@@ -26,8 +27,25 @@ import type {
 
 export type ChatPreview = { text: string; at: Date | null; unread: number };
 
+/** An unanswered Personal request, joined with the mentor it went to (My Chats "Waiting"). */
+export type WaitingQuestion = {
+  id: string;
+  listenerId: string;
+  name: string;
+  avatar: string;
+  intro: string | null;
+  createdAt: string;
+};
+
 type Shape = {
-  chats: { rows: ConversationListItem[]; previews: Record<string, ChatPreview> };
+  chats: {
+    rows: ConversationListItem[];
+    previews: Record<string, ChatPreview>;
+    /** Best-effort extras for the richer rows — absent until their own reads land. */
+    waiting?: WaitingQuestion[];
+    saved?: Record<string, number>;
+  };
+  inTouch: InTouchList;
   path: PathState;
   journal: { entries: JournalEntry[]; hasFinance: boolean };
   mentors: Listener[];
@@ -41,6 +59,7 @@ function markWiped(chats: Shape['chats'], conversationId: string): Shape['chats'
   const previews = { ...chats.previews };
   if (gone?.stream_channel_id) delete previews[gone.stream_channel_id];
   return {
+    ...chats,
     rows: chats.rows.map((c) => (c.id === conversationId ? { ...c, status: 'wiped' as const } : c)),
     previews,
   };

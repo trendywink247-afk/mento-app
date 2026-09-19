@@ -27,76 +27,66 @@ const TABS: {
   idle: keyof typeof Ionicons.glyphMap;
 }[] = [
   { name: 'chats', label: 'tabs.chats', active: 'chatbubble-ellipses', idle: 'chatbubble-ellipses-outline' },
-  { name: 'path', label: 'tabs.path', active: 'trail-sign', idle: 'trail-sign-outline' },
+  { name: 'path', label: 'tabs.path', active: 'compass', idle: 'compass-outline' },
   { name: 'journals', label: 'tabs.journals', active: 'book', idle: 'book-outline' },
   { name: 'profile', label: 'tabs.profile', active: 'person', idle: 'person-outline' },
 ];
 
-/** Mockup bar: white surface, rounded top, soft shadow; the active tab's icon sits
- * in a lavender-tint pill with the label tinted accent below it. */
+/** Board bar (A06–A09): a white pill floating over the oat ground, 16 in from the sides.
+ * Each tab is a 48px cell — icon over label; the active cell is an accent-tint pillow
+ * (3px edge) with both in the accent. The bar keeps its own place in the layout (screens
+ * end at its top edge — that edge is the companion's floor on My Chats). */
 function TabBar({ state, navigation }: BottomTabBarProps) {
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
 
   return (
-    <View
-      style={[
-        styles.bar,
-        elevation.lg,
-        { backgroundColor: colors.surface, paddingBottom: Math.max(insets.bottom, space.sm) },
-      ]}
-    >
-      {TABS.map((tab) => {
-        // Name-based lookup: hidden routes (mentors) share this navigator, so the
-        // bar's order no longer mirrors the route array's indexes.
-        const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
-        const focused = state.index === routeIndex;
-        const route = state.routes[routeIndex];
-        if (!route) return null;
-        return (
-          <Pressable
-            key={tab.name}
-            style={styles.tab}
-            onPress={() => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
-              if (!focused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            }}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: focused }}
-            accessibilityLabel={t(tab.label)}
-            testID={`tab-${tab.name}`}
-          >
-            <EdgeSurface
-              edge={focused ? colors.accentEdge : 'transparent'}
-              travel={2}
-              radius={radius.md}
-              style={[styles.pill, focused && { backgroundColor: colors.accentTint }]}
+    <View style={[styles.dock, { backgroundColor: colors.bg, paddingBottom: Math.max(insets.bottom, 20) }]}>
+      <View style={[styles.bar, elevation.md, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {TABS.map((tab) => {
+          // Name-based lookup: hidden routes (mentors) share this navigator, so the
+          // bar's order no longer mirrors the route array's indexes.
+          const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
+          const focused = state.index === routeIndex;
+          const route = state.routes[routeIndex];
+          if (!route) return null;
+          const ink = focused ? colors.accent : colors.inkMuted;
+          return (
+            <Pressable
+              key={tab.name}
+              style={styles.tab}
+              onPress={() => {
+                const event = navigation.emit({
+                  type: 'tabPress',
+                  target: route.key,
+                  canPreventDefault: true,
+                });
+                if (!focused && !event.defaultPrevented) {
+                  navigation.navigate(route.name);
+                }
+              }}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: focused }}
+              accessibilityLabel={t(tab.label)}
+              testID={`tab-${tab.name}`}
             >
-              <Ionicons
-                name={focused ? tab.active : tab.idle}
-                size={22}
-                color={focused ? colors.accent : colors.inkMuted}
-              />
-            </EdgeSurface>
-            <Text
-              style={[
-                styles.label,
-                { color: focused ? colors.accent : colors.inkMuted },
-                focused && { fontFamily: font.sansBold },
-              ]}
-            >
-              {t(tab.label)}
-            </Text>
-          </Pressable>
-        );
-      })}
+              <EdgeSurface
+                edge={focused ? colors.accentTintEdge : 'transparent'}
+                travel={3}
+                radius={radius.pill}
+                containerStyle={styles.cellBox}
+                style={[styles.cell, focused && { backgroundColor: colors.accentTint }]}
+              >
+                <Ionicons name={tab.idle} size={22} color={ink} />
+                <Text style={[styles.label, { color: ink }]} numberOfLines={1}>
+                  {t(tab.label)}
+                </Text>
+              </EdgeSurface>
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -139,20 +129,18 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
+  dock: { paddingHorizontal: space.md },
   bar: {
+    height: 68,
     flexDirection: 'row',
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    paddingTop: space.sm,
-    paddingHorizontal: space.sm,
-  },
-  tab: { flex: 1, alignItems: 'center', gap: 2 },
-  pill: {
-    width: 56,
-    height: 40,
-    borderRadius: radius.md,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: space.xs,
+    padding: space.sm,
+    borderRadius: radius.pill,
+    borderWidth: 1,
   },
-  label: { fontSize: 12, fontFamily: font.sansSemi, lineHeight: 16 },
+  tab: { flex: 1 },
+  cellBox: { alignSelf: 'stretch' },
+  cell: { height: 48, alignItems: 'center', justifyContent: 'center', gap: 1 },
+  label: { fontSize: 12, fontFamily: font.sansBold, lineHeight: 14 },
 });

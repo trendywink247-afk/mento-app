@@ -131,5 +131,14 @@ export const character = {
   squashK: 0.6,
 } as const;
 
+/** Sheets and depth (board T06): a sheet rises over a screen that has settled back. */
+export const sheet = {
+  /** The screen underneath, while a sheet is up. */
+  settleScale: 0.96,
+  settleShift: 8,
+  /** How far a deeper page's content comes in from the side. */
+  deepShift: 48,
+} as const;
+
 export const motion = { duration, easing, spring, stagger, breathe, character, stage, dots };
 export type Motion = typeof motion;
