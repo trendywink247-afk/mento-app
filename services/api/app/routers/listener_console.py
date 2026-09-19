@@ -13,8 +13,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -236,14 +236,24 @@ def register_push_token(
 def my_conversations(
     listener: ListenerProfile = Depends(current_listener),
     db: Session = Depends(get_db),
+    limit: int = Query(200, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ) -> list[ListenerConversationItem]:
+    """Active first, newest within each group — ordered IN SQL, so the page limit can
+    never cut an old conversation that is still active (a Python sort after a
+    newest-first LIMIT would)."""
     rows = db.execute(
         select(Conversation, User)
         .join(User, User.id == Conversation.user_id)
         .where(Conversation.listener_id == listener.id)
-        .order_by(Conversation.created_at.desc())
+        .order_by(
+            case((Conversation.status == ConversationStatus.active, 0), else_=1),
+            Conversation.created_at.desc(),
+        )
+        .limit(limit)
+        .offset(offset)
     ).all()
-    items = [
+    return [
         ListenerConversationItem(
             id=convo.id,
             status=convo.status.value,
@@ -256,8 +266,6 @@ def my_conversations(
         )
         for convo, user in rows
     ]
-    # Active first, newest within each group.
-    return sorted(items, key=lambda i: i.status != ConversationStatus.active.value)
 
 
 @router.get("/me/requests", response_model=list[ListenerRequestItem])

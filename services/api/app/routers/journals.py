@@ -223,20 +223,45 @@ def organize_notes(
     )
 
 
+def _mentor_notes_where(user_id: str, conversation_id: str | None) -> list:
+    clauses = [
+        JournalEntry.user_id == user_id,
+        JournalEntry.channel == JournalChannel.mentor_notes,
+    ]
+    if conversation_id:
+        clauses.append(JournalEntry.meta["conversation_id"].as_string() == conversation_id)
+    return clauses
+
+
+@router.get("/mentor-notes/count", response_model=dict)
+def count_mentor_notes(
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+    conversation_id: str | None = Query(default=None, max_length=36),
+) -> dict:
+    """Exact count — the chat header's "Saved N" counted a page client-side, which is
+    wrong past the page size. Optionally for one conversation."""
+    count = db.scalar(
+        select(func.count())
+        .select_from(JournalEntry)
+        .where(*_mentor_notes_where(user_id, conversation_id))
+    )
+    return {"count": count or 0}
+
+
 @router.get("/mentor-notes", response_model=list[JournalEntryOut])
 def list_mentor_notes(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
     limit: int = Query(100, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    conversation_id: str | None = Query(default=None, max_length=36),
 ) -> list[JournalEntryOut]:
-    """Newest-first Mentor Notes for the journals surface."""
+    """Newest-first Mentor Notes for the journals surface; `conversation_id` narrows
+    to the notes kept from one chat."""
     entries = db.scalars(
         select(JournalEntry)
-        .where(
-            JournalEntry.user_id == user_id,
-            JournalEntry.channel == JournalChannel.mentor_notes,
-        )
+        .where(*_mentor_notes_where(user_id, conversation_id))
         .order_by(JournalEntry.created_at.desc())
         .limit(limit)
         .offset(offset)

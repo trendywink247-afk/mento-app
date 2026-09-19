@@ -9,7 +9,7 @@ real and testable today without a mentor app.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -257,11 +257,15 @@ def create_personal_request(
 def my_requests(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
 ) -> list[RequestOut]:
     reqs = db.scalars(
         select(ConversationRequest)
         .where(ConversationRequest.requester_id == user_id)
         .order_by(ConversationRequest.created_at.desc())
+        .limit(limit)
+        .offset(offset)
     ).all()
     return [_request_out(r) for r in reqs]
 

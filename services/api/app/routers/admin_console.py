@@ -162,28 +162,40 @@ def safety_flags(
         .scalars()
         .all()
     )
-    out = []
-    for f in rows:
-        member = listener = None
-        if f.conversation_id:
-            convo = db.get(Conversation, f.conversation_id)
-            if convo:
-                u = db.get(User, convo.user_id)
-                li = db.get(ListenerProfile, convo.listener_id)
-                member = u.persona_name if u else None
-                listener = li.persona_name if li else None
-        out.append(
-            AdminFlagItem(
-                id=f.id,
-                signal=f.signal.value,
-                conversation_id=f.conversation_id,
-                member_persona=member,
-                listener_persona=listener,
-                reviewed=f.reviewed,
-                created_at=f.created_at.isoformat(),
+    # Three batched lookups for the whole page — this was three queries PER flag.
+    convo_ids = {f.conversation_id for f in rows if f.conversation_id}
+    convos = {
+        c.id: c
+        for c in db.scalars(select(Conversation).where(Conversation.id.in_(convo_ids))).all()
+    }
+    member_names = dict(
+        db.execute(
+            select(User.id, User.persona_name).where(
+                User.id.in_({c.user_id for c in convos.values()})
             )
+        ).all()
+    )
+    listener_names = dict(
+        db.execute(
+            select(ListenerProfile.id, ListenerProfile.persona_name).where(
+                ListenerProfile.id.in_({c.listener_id for c in convos.values()})
+            )
+        ).all()
+    )
+
+    def _item(f: SafetyFlag) -> AdminFlagItem:
+        convo = convos.get(f.conversation_id) if f.conversation_id else None
+        return AdminFlagItem(
+            id=f.id,
+            signal=f.signal.value,
+            conversation_id=f.conversation_id,
+            member_persona=member_names.get(convo.user_id) if convo else None,
+            listener_persona=listener_names.get(convo.listener_id) if convo else None,
+            reviewed=f.reviewed,
+            created_at=f.created_at.isoformat(),
         )
-    return out
+
+    return [_item(f) for f in rows]
 
 
 @router.post("/safety/flags/{flag_id}/review", response_model=OkResult)
