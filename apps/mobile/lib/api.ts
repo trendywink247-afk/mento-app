@@ -2,6 +2,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
+import { screenCache } from './screenCache';
 import { clearSession, getSessionToken } from './session';
 
 const BASE_URL =
@@ -291,8 +292,12 @@ export const api = {
   endConversation: (id: string) =>
     request<{ status: string }>(`/conversations/${id}/end`, { method: 'POST' }, true),
 
-  wipeConversation: (id: string) =>
-    request<{ status: string }>(`/conversations/${id}/wipe`, { method: 'POST' }, true),
+  // A wipe drops the conversation from the tab screens' last-loaded data (lib/screenCache.ts)
+  // BEFORE the request goes out: My Chats must never repaint a wiped chat from memory.
+  wipeConversation: (id: string) => {
+    screenCache.forgetConversation(id);
+    return request<{ status: string }>(`/conversations/${id}/wipe`, { method: 'POST' }, true);
+  },
 
   // --- Conversation options sheet ---
   lockConversation: (id: string, pin: string) =>

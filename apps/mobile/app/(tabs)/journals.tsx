@@ -12,6 +12,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { api, type JournalEntry } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { screenCache } from '@/lib/screenCache';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -54,8 +55,10 @@ export default function JournalsTab() {
   const { colors } = useTheme();
   const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
-  const [entries, setEntries] = useState<JournalEntry[] | null>(null);
-  const [hasFinance, setHasFinance] = useState(false);
+  // Last-loaded shelf first, quiet refresh on focus (lib/screenCache.ts).
+  const cachedJournal = screenCache.get('journal');
+  const [entries, setEntries] = useState<JournalEntry[] | null>(cachedJournal?.entries ?? null);
+  const [hasFinance, setHasFinance] = useState(cachedJournal?.hasFinance ?? false);
   const [failed, setFailed] = useState(false);
   const [savingMood, setSavingMood] = useState(false);
 
@@ -68,6 +71,7 @@ export default function JournalsTab() {
       const all = lists.flat().sort((a, b) => b.created_at.localeCompare(a.created_at));
       setEntries(all);
       setHasFinance((summary.finance ?? 0) > 0);
+      screenCache.set('journal', { entries: all, hasFinance: (summary.finance ?? 0) > 0 });
       setFailed(false);
     } catch {
       // Still, not alarming: the hub keeps whatever it last showed.

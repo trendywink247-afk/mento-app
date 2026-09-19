@@ -10,6 +10,7 @@ import { Panda } from '@/components/art/Panda';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { leaveToChats } from '@/lib/leaveToChats';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -33,7 +34,7 @@ export default function ReflectionScreen() {
   const [energy, setEnergy] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const leave = () => router.replace('/chats');
+  const leave = () => leaveToChats(router);
 
   const finish = async () => {
     if (!energy || busy) return;

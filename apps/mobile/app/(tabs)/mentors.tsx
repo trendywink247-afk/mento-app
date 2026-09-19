@@ -16,6 +16,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api, type Listener } from '@/lib/api';
 import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
+import { screenCache } from '@/lib/screenCache';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -25,8 +26,11 @@ export default function MentorsTab() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const [loading, setLoading] = useState(true);
-  const [listeners, setListeners] = useState<Listener[]>([]);
+  // Last-loaded list first, quiet refresh on focus; spinner only with nothing to show yet
+  // (lib/screenCache.ts). Presence moves, so the refresh always runs.
+  const cachedMentors = screenCache.get('mentors');
+  const [loading, setLoading] = useState(!cachedMentors);
+  const [listeners, setListeners] = useState<Listener[]>(cachedMentors ?? []);
   const [category, setCategory] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [matching, setMatching] = useState(false);
@@ -37,6 +41,7 @@ export default function MentorsTab() {
       void api
         .listListeners()
         .then((l) => {
+          screenCache.set('mentors', l);
           if (active) setListeners(l);
         })
         .catch(() => {})

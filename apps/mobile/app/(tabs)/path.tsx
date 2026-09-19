@@ -12,6 +12,7 @@ import { TiltCard } from '@/components/motion/TiltCard';
 import { capture } from '@/lib/analytics';
 import { ApiError, api, type PathNode, type PathState, type PathTree } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { screenCache } from '@/lib/screenCache';
 import { getCompanionAnimal } from '@/lib/session';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import type { CompanionTrigger } from '@/components/art/Companion';
@@ -28,8 +29,15 @@ export default function PathTab() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const [loading, setLoading] = useState(true);
-  const [state, setState] = useState<PathState | null>(null);
+  // Start from what was last on screen and refresh quietly on focus (lib/screenCache.ts);
+  // the spinner is for the very first load only. A failed refresh keeps what is showing.
+  const cachedPath = screenCache.get('path');
+  const [loading, setLoading] = useState(!cachedPath);
+  const [state, setStateRaw] = useState<PathState | null>(cachedPath ?? null);
+  const setState = useCallback((s: PathState) => {
+    screenCache.set('path', s);
+    setStateRaw(s);
+  }, []);
   const [tree, setTree] = useState<PathTree | null>(null);
   const [nodeId, setNodeId] = useState<string | null>(null); // non-null = pathfinder running
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
@@ -52,7 +60,7 @@ export default function PathTab() {
       return () => {
         active = false;
       };
-    }, []),
+    }, [setState]),
   );
 
   useEffect(() => {
@@ -117,7 +125,7 @@ export default function PathTab() {
   if (loading) {
     return (
       <Screen>
-        <View style={styles.center}>
+        <View style={styles.center} testID="path-loading">
           <ActivityIndicator color={colors.accent} />
         </View>
       </Screen>

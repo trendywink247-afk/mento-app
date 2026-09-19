@@ -20,6 +20,7 @@ import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
+import { leaveToChats } from '@/lib/leaveToChats';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
@@ -254,7 +255,7 @@ export default function ChatScreen() {
         status={header.profile?.status ?? null}
         community={header.community}
         savedCount={header.savedCount}
-        onBack={() => router.replace('/chats')}
+        onBack={() => leaveToChats(router)}
         onOpenProfile={() =>
           router.push({
             pathname: '/mentor-profile/[id]',
@@ -320,7 +321,7 @@ export default function ChatScreen() {
           setOptionsOpen(false);
           setPendingInitial(undefined);
         }}
-        onLeft={() => router.replace('/chats')}
+        onLeft={() => leaveToChats(router)}
         listenerName={listenerName}
         initial={pendingInitial}
       />

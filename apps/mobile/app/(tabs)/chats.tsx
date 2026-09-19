@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -21,6 +21,7 @@ import { SceneTile } from '@/components/art/SceneTile';
 import { PinPad } from '@/components/chat/options/bits';
 import { ApiError, api, type ConversationListItem } from '@/lib/api';
 import { useI18n, type TFunc } from '@/lib/i18n';
+import { screenCache, type ChatPreview } from '@/lib/screenCache';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected } from '@/lib/streamClient';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -31,7 +32,7 @@ import { font, radius, space, type } from '@/theme/tokens';
  * re-onboarding). Archived is not a real state yet, so the chip set is honest:
  * All / Active / Completed. */
 
-type Preview = { text: string; at: Date | null; unread: number };
+type Preview = ChatPreview;
 type Filter = 'all' | 'active' | 'completed';
 
 function timeLabel(d: Date | null, t: TFunc): string {
@@ -49,9 +50,12 @@ export default function ChatsTab() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState<ConversationListItem[]>([]);
-  const [previews, setPreviews] = useState<Record<string, Preview>>({});
+  // Coming back from a chat remounts this tab (see lib/screenCache.ts): start from what was
+  // last on screen and refresh quietly. The spinner is for the very first load only.
+  const cached = screenCache.get('chats');
+  const [loading, setLoading] = useState(!cached);
+  const [rows, setRows] = useState<ConversationListItem[]>(cached?.rows ?? []);
+  const [previews, setPreviews] = useState<Record<string, Preview>>(cached?.previews ?? {});
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
   const [note, setNote] = useState<string | null>(null);
@@ -71,6 +75,7 @@ export default function ChatsTab() {
       const list = await api.listConversations();
       setRows(list);
       setLoadError(null);
+      screenCache.set('chats', { rows: list, previews: screenCache.get('chats')?.previews ?? {} });
 
       // Last message + unread per channel, straight from Stream client-side.
       // Previews are best-effort: their failure never blocks the list.
@@ -104,6 +109,7 @@ export default function ChatsTab() {
             }
           }
           setPreviews(map);
+          screenCache.set('chats', { rows: list, previews: map });
         }
       } catch {
         // Best-effort previews — the list stays usable from backend data alone.
@@ -123,6 +129,20 @@ export default function ChatsTab() {
     useCallback(() => {
       void load();
     }, [load]),
+  );
+
+  // Clean Wipe happens in a chat stacked over this (still mounted) list: the moment the wipe
+  // is asked for, the row becomes its "wiped" marker and its message preview is dropped — the
+  // last message is never on screen when the member lands back here.
+  useEffect(
+    () =>
+      screenCache.onConversationForgotten(() => {
+        const next = screenCache.get('chats');
+        if (!next) return;
+        setRows(next.rows);
+        setPreviews(next.previews);
+      }),
+    [],
   );
 
   const open = (c: ConversationListItem) => {
@@ -286,7 +306,8 @@ export default function ChatsTab() {
           <Pressable
             onPress={() => {
               setLoadError(null);
-              setLoading(true);
+              // Retry with a list on screen stays still; only an empty screen spins.
+              if (rows.length === 0) setLoading(true);
               void load();
             }}
             accessibilityRole="button"
@@ -300,7 +321,7 @@ export default function ChatsTab() {
       ) : null}
 
       {loading ? (
-        <View style={styles.center}>
+        <View style={styles.center} testID="chats-loading">
           <ActivityIndicator size="large" color={colors.accent} />
         </View>
       ) : rows.length === 0 ? (

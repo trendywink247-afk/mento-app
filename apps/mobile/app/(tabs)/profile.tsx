@@ -12,6 +12,7 @@ import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { PressKey } from '@/components/motion/PressKey';
 import { api, type ListenerApplication } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { screenCache } from '@/lib/screenCache';
 import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
 import { checkAndApplyUpdate, runningUpdate, type UpdateStatus } from '@/lib/updates';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -36,7 +37,10 @@ export default function ProfileTab() {
   const { t, locale, setLocale } = useI18n();
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
-  const [application, setApplication] = useState<ListenerApplication | null>(null);
+  // The status card starts from its last-loaded value so it does not pop in on every return.
+  const [application, setApplication] = useState<ListenerApplication | null>(
+    screenCache.get('application') ?? null,
+  );
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | 'idle'>('idle');
   const running = runningUpdate();
 
@@ -46,6 +50,7 @@ export default function ProfileTab() {
       void api
         .getListenerApplication()
         .then((a) => {
+          screenCache.set('application', a);
           if (active) setApplication(a);
         })
         .catch(() => {
