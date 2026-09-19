@@ -151,12 +151,17 @@ async function run(browser, reduced) {
     if (await page.locator(`[data-testid^="mine-"]`, { hasText: HELD }).count()) throw new Error(`[${label}] a held message was sent`);
     if (await tid('composer-send-error').count()) throw new Error(`[${label}] a limit must not read as an error`);
 
+    // The promise is on the card itself — never folded away behind a tap (T&S #1).
+    await tid('allowance-urgent').waitFor({ timeout: 5000 });
+    if ((await tid('allowance-urgent').innerText()).trim() !== 'Anything urgent is never held back or counted.') {
+      throw new Error(`[${label}] the "nothing urgent is held" promise is not on the note`);
+    }
     // The quiet Helplines toggle: exactly the two verified lines.
     await tid('allowance-helplines-toggle').click();
     await tid('allowance-call-14416').waitFor({ timeout: 5000 });
     await tid('allowance-call-18005990019').waitFor({ timeout: 5000 });
     await page.waitForSelector('text=Anything urgent is never held back or counted.', { timeout: 5000 });
-    console.log(`[${label}] OK A22 note at three in a row: still, names ${mentor}, send key disabled, field live, helplines 14416 + 1800-599-0019`);
+    console.log(`[${label}] OK A22 note at three in a row: still, names ${mentor}, send key disabled, field live, the urgent promise in plain sight, helplines 14416 + 1800-599-0019`);
 
     // Crisis-exempt (the API says so): never a note, the key is live again.
     const allowanceRoute = /\/conversations\/[^/]+\/allowance$/;
