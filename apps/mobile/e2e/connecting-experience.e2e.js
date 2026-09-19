@@ -5,7 +5,8 @@ const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
 /** The found-persona card must hold at least this long before we navigate to chat.
- * ConnectingStep FOUND_CRESCENDO (1100) + OnboardingJourney FOUND_BEAT (1000) ≈ 2.1s;
+ * ConnectingStep FOUND_CRESCENDO (1400) + OnboardingJourney FOUND_BEAT (1000) ≈ 2.4s, minus the
+ * 200ms the wait cards take to leave before the found block mounts;
  * we assert a conservative floor so a future regression back to a flash trips this. */
 const MIN_FOUND_DWELL_MS = 1500;
 

@@ -19,6 +19,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
+import { Entrance } from '@/components/motion/Entrance';
 import { ambientLift } from '@/components/motion/ambientLift';
 import { PandaStage } from '@/components/motion/PandaStage';
 import { JourneyHeader } from '@/components/onboarding/JourneyHeader';
@@ -35,12 +36,12 @@ import { haptic } from '@/lib/haptics';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { saveRole, type Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
-import { duration, easing } from '@/theme/motion';
+import { duration, easing, forkArrival } from '@/theme/motion';
 import { space } from '@/theme/tokens';
 
 /** The hard cap on the "found someone" beat — theatre never spends the <30s promise.
- * Paired with ConnectingStep's FOUND_CRESCENDO (~1.1s) so the celebrate + hand-off is
- * a clear, unhurried beat (~2.1s total), not a flicker. */
+ * Paired with ConnectingStep's FOUND_CRESCENDO (~1.4s) so the celebrate + hand-off is
+ * a clear, unhurried beat (~2.4s total), not a flicker. */
 const FOUND_BEAT_MS = 1000;
 
 type Step = 'role' | 'age' | 'email' | 'companion' | 'ready' | 'connecting' | 'primer' | 'handoff';
@@ -90,6 +91,15 @@ export function OnboardingJourney() {
     const pastAgeGate = Boolean(getDraft().dob) || Boolean(getDraft().sessionBacked);
     return pastAgeGate && requestedOrder.includes(requested) ? requested : 'role';
   });
+
+  // Which way the flow last moved — the hand-over plays in reverse going back (board T02).
+  const lastIndex = useRef(order.indexOf(step));
+  const direction = useRef<'forward' | 'back'>('forward');
+  const stepIndex = order.indexOf(step);
+  if (stepIndex !== lastIndex.current) {
+    direction.current = stepIndex < lastIndex.current ? 'back' : 'forward';
+    lastIndex.current = stepIndex;
+  }
 
   // Mirror the step into the URL — replace semantics, so no history spam / remounts.
   // Skipped on first render: navigating before the root layout mounts throws (the
@@ -244,13 +254,17 @@ export function OnboardingJourney() {
       <AmbientBackground />
       <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
         <View style={{ paddingTop: Math.max(insets.top + space.sm, HEADER_TOP) - insets.top }}>
-          <JourneyHeader
-            onBack={backable ? goBack : undefined}
-            progress={dotIndex >= 0 ? { index: dotIndex + 1, total: dots.length } : undefined}
-          />
+          {/* The header arrives once, with the fork (board T01: the back key eases up from
+            * 0.9 as the doors rise) — after that it is simply there from step to step. */}
+          <Entrance from="none" delay={forkArrival.backKey} scaleFrom={0.9} duration={duration.base}>
+            <JourneyHeader
+              onBack={backable ? goBack : undefined}
+              progress={dotIndex >= 0 ? { index: dotIndex + 1, total: dots.length } : undefined}
+            />
+          </Entrance>
         </View>
         <View style={styles.stage}>
-          <StepTransition activeKey={step} render={renderStep} />
+          <StepTransition activeKey={step} render={renderStep} direction={direction.current} />
         </View>
         {/* The guide mascot — mounted once, glides between per-step anchors. */}
         <PandaStage step={step} celebrate={celebrate} animal={companionAnimal} />

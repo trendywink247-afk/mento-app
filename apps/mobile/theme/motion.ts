@@ -92,6 +92,37 @@ export const stage = {
   underlineDelay: 1000,
 } as const;
 
+/** Step hand-over inside a flow (board T02): the old step is gone by `fast` (200), then a
+ * breath — the new step's pieces start arriving at `arrive`, one every stagger unit, having
+ * travelled `travel` px (from below going forward, from above going back). */
+export const stepHandover = { arrive: 320, travel: 20 } as const;
+
+/** Landing → role fork (board T01). The landing leaves fast and upward (the scene shrinks
+ * away, the key dips); on the fork the two doors rise OUT of the Start key's place, 80ms
+ * apart, then the art settles, then the headline, the sub, and the footer line — last. */
+export const forkArrival = {
+  backKey: 200,
+  doors: 200,
+  art: 400,
+  head: 520,
+  sub: 600,
+  foot: 720,
+  /** How far below its seat each door waits (the Start key sits about there). */
+  doorRise: [170, 42],
+  doorScale: 0.92,
+  artScale: 1.04,
+  artRise: 14,
+  textRise: 18,
+  footRise: 10,
+  /** The landing's exit: the scene lifts and shrinks, the CTA dips. */
+  sceneLift: 150,
+  sceneScale: 0.55,
+  ctaScale: 0.94,
+  cardLift: 12,
+  cardScale: 0.92,
+  textLift: 16,
+} as const;
+
 /** Small dot rhythms: the typing dots in a chat card, and the five seeking dots that
  * light in turn between the two orbs while a mentor is being found. */
 export const dots = {

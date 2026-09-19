@@ -22,9 +22,13 @@ type Props = {
    * should simply be there, still (T&S #11).
    */
   footerIndex?: number;
+  /** Explicit footer delay (a motion token) instead of footerIndex × stagger. */
+  footerDelay?: number;
+  /** How far the footer rises (px) — the board's footer lines travel less than a headline. */
+  footerDistance?: number;
 };
 
-export function StepScaffold({ children, footer, footerIndex }: Props) {
+export function StepScaffold({ children, footer, footerIndex, footerDelay, footerDistance }: Props) {
   // A step should never bounce/scroll when its content fits — that idle rubber-band
   // is the "annoying scroll" complaint. We keep the ScrollView (some steps genuinely
   // overflow: ReadyStep, CompanionStep, ConnectingStep's reduced-motion list, and
@@ -54,10 +58,10 @@ export function StepScaffold({ children, footer, footerIndex }: Props) {
         {children}
       </ScrollView>
       {footer ? (
-        footerIndex === undefined ? (
+        footerIndex === undefined && footerDelay === undefined ? (
           <View style={[styles.footer, footerBottom]}>{footer}</View>
         ) : (
-          <Entrance index={footerIndex} style={[styles.footer, footerBottom]}>
+          <Entrance index={footerIndex} delay={footerDelay} distance={footerDistance} style={[styles.footer, footerBottom]}>
             {footer}
           </Entrance>
         )

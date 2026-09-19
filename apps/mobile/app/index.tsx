@@ -22,7 +22,7 @@ import { useFrameSize } from '@/lib/useFrameSize';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getRole, getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
-import { duration, easing } from '@/theme/motion';
+import { duration, easing, forkArrival } from '@/theme/motion';
 import { space, type } from '@/theme/tokens';
 
 /** Board A01 metrics (390×844). */
@@ -94,11 +94,32 @@ export default function Landing() {
     if (checked) capture('landing_viewed');
   }, [checked]);
 
-  // Designed exit: the hero fades down briefly, then the route crossfade takes over.
+  // Designed exit (board T01): the landing leaves fast and upward — the words lift away,
+  // the key dips, the cards tuck in — while the scene lifts and shrinks on a longer move
+  // that carries on under the fork's own arrival. Then the route crossfade takes over.
   const exit = useSharedValue(0);
-  const exitStyle = useAnimatedStyle(() => ({
+  const lift = useSharedValue(0);
+  const textExit = useAnimatedStyle(() => ({
     opacity: 1 - exit.value,
-    transform: [{ translateY: exit.value * -10 }],
+    transform: [{ translateY: -forkArrival.textLift * exit.value }],
+  }));
+  const ctaExit = useAnimatedStyle(() => ({
+    opacity: 1 - exit.value,
+    transform: [{ scale: 1 - (1 - forkArrival.ctaScale) * exit.value }],
+  }));
+  const cardExit = useAnimatedStyle(() => ({
+    opacity: 1 - exit.value,
+    transform: [
+      { translateY: -forkArrival.cardLift * exit.value },
+      { scale: 1 - (1 - forkArrival.cardScale) * exit.value },
+    ],
+  }));
+  const sceneExit = useAnimatedStyle(() => ({
+    opacity: 1 - exit.value,
+    transform: [
+      { translateY: -forkArrival.sceneLift * lift.value },
+      { scale: 1 - (1 - forkArrival.sceneScale) * lift.value },
+    ],
   }));
   // The exit fade + `leaving` swap outlive the push (the landing stays mounted
   // under the onboarding route), so restore both whenever focus returns —
@@ -108,6 +129,7 @@ export default function Landing() {
   useFocusEffect(
     useCallback(() => {
       exit.value = 0;
+      lift.value = 0;
       setLeaving(false);
       let active = true;
       void getSessionToken().then(async (token) => {
@@ -119,7 +141,7 @@ export default function Landing() {
       return () => {
         active = false;
       };
-    }, [exit, router]),
+    }, [exit, lift, router]),
   );
 
   const begin = () => {
@@ -131,6 +153,7 @@ export default function Landing() {
       go();
       return;
     }
+    lift.value = withTiming(1, { duration: duration.gentle, easing: easing.exit });
     exit.value = withTiming(1, { duration: duration.fast + 50, easing: easing.exit }, (done) => {
       if (done) runOnJS(go)();
     });
@@ -169,9 +192,9 @@ export default function Landing() {
     <View style={styles.root}>
       <AmbientBackground />
 
-      <Animated.View style={[styles.fill, exitStyle]}>
+      <View style={styles.fill}>
         {/* The stage has no arrival — it is simply already there, which reads as continuity. */}
-        <View style={[styles.stage, { top: stageTop, left: stageLeft }]} pointerEvents="none">
+        <Animated.View style={[styles.stage, { top: stageTop, left: stageLeft }, sceneExit]} pointerEvents="none">
           <Stage size={stageSize} rings={2} ripples sheen motes />
           <View
             style={[styles.scene, { left: 5 * k, top: 112 * k, width: sceneW, height: sceneH }]}
@@ -215,7 +238,7 @@ export default function Landing() {
               )}
             </View>
           </View>
-        </View>
+        </Animated.View>
 
         {/* The two chat cards hover over the stage's top corners (board: 14 from each edge). */}
         <View
@@ -224,7 +247,9 @@ export default function Landing() {
           onLayout={(e) => setMemberCard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
         >
           <Entrance index={3}>
-            <FloatingChatCard side="member" text={t('landing.cardMember')} />
+            <Animated.View style={[styles.cardOriginMember, cardExit]}>
+              <FloatingChatCard side="member" text={t('landing.cardMember')} />
+            </Animated.View>
           </Entrance>
         </View>
         <View
@@ -233,19 +258,23 @@ export default function Landing() {
           onLayout={(e) => setMentorCard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
         >
           <Entrance index={6}>
-            <FloatingChatCard side="mentor" text={t('landing.cardMentor')} />
+            <Animated.View style={[styles.cardOriginMentor, cardExit]}>
+              <FloatingChatCard side="mentor" text={t('landing.cardMentor')} />
+            </Animated.View>
           </Entrance>
         </View>
 
         <View style={[styles.column, { paddingTop: topPad, paddingBottom: bottomPad }]}>
           <Entrance index={0}>
-            <LogoWordmark />
+            <Animated.View style={textExit}>
+              <LogoWordmark />
+            </Animated.View>
           </Entrance>
 
           <View style={styles.grow} />
 
           <View onLayout={(e) => setTextH(e.nativeEvent.layout.height)} style={styles.textBlock}>
-            <View style={styles.copy}>
+            <Animated.View style={[styles.copy, textExit]}>
               <View
                 accessible
                 accessibilityRole="header"
@@ -276,11 +305,11 @@ export default function Landing() {
               <Entrance index={4}>
                 <Text style={[type.body, { color: colors.inkMuted }]}>{t('landing.sub')}</Text>
               </Entrance>
-            </View>
+            </Animated.View>
 
             <Entrance index={5} style={styles.ctaBlock}>
               {/* The CTA floats on a soft accent glow — a floating layer, so a shadow belongs. */}
-              <View style={[styles.ctaGlow, { shadowColor: colors.accent }]}>
+              <Animated.View style={[styles.ctaGlow, { shadowColor: colors.accent }, ctaExit]}>
                 <PrimaryButton
                   label={t('landing.cta')}
                   shape="key"
@@ -289,12 +318,14 @@ export default function Landing() {
                   accessibilityHint={t('landing.ctaHint')}
                   testID="start"
                 />
-              </View>
-              <Text style={[type.caption, styles.footer, { color: colors.inkMuted }]}>{t('landing.footer')}</Text>
+              </Animated.View>
+              <Animated.Text style={[type.caption, styles.footer, { color: colors.inkMuted }, textExit]}>
+                {t('landing.footer')}
+              </Animated.Text>
             </Entrance>
           </View>
         </View>
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -309,6 +340,8 @@ const styles = StyleSheet.create({
   glow: { position: 'absolute' },
   lottie: { position: 'absolute' },
   lottieFill: { width: '100%', height: '100%' },
+  cardOriginMember: { transformOrigin: 'left bottom' },
+  cardOriginMentor: { transformOrigin: 'right bottom' },
   cardMember: { position: 'absolute', left: CARD_SIDE },
   cardMentor: { position: 'absolute', right: CARD_SIDE },
   column: { flex: 1, paddingHorizontal: space.lg },

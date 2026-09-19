@@ -24,19 +24,23 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { StepArrivalContext, type StepArrival } from '@/components/motion/stepArrival';
 import { useReducedMotion } from '@/lib/useReducedMotion';
-import { duration, easing, stagger } from '@/theme/motion';
+import { duration, easing, stepHandover } from '@/theme/motion';
 
 type Props<K extends string> = {
   activeKey: K;
   /** Renders the content for a step key. Called for the incoming and outgoing step. */
   render: (key: K) => ReactNode;
+  /** Which way the flow just moved — back is the exact reverse of forward (board T02). */
+  direction?: 'forward' | 'back';
 };
 
 function Layer({
   active,
   startVisible,
   reduced,
+  direction,
   onGone,
   children,
 }: {
@@ -44,12 +48,20 @@ function Layer({
   /** The step on screen at mount shows at once — it has nothing to hand over from. */
   startVisible: boolean;
   reduced: boolean;
+  direction: 'forward' | 'back';
   onGone: () => void;
   children: ReactNode;
 }) {
   const visible = useSharedValue(startVisible ? 1 : 0);
-  const leaving = useSharedValue(0); // picks the drift direction: rise in, drift up out
+  const leaving = useSharedValue(0); // 1 while this layer is on its way out
+  const drift = useSharedValue(-1); // which way it leaves: up going forward, down going back
   const skipFirstEnter = useRef(startVisible);
+  // How the pieces inside arrive — fixed when the layer mounts (a layer mounts to arrive).
+  const arrival = useRef<StepArrival>(
+    startVisible
+      ? { kind: 'enter', delay: 0 }
+      : { kind: direction, delay: reduced ? 0 : stepHandover.arrive, travel: stepHandover.travel }
+  ).current;
 
   useEffect(() => {
     if (active) {
@@ -59,12 +71,14 @@ function Layer({
         return;
       }
       leaving.value = 0;
+      // The layer itself only fades; its pieces do the travelling (StepArrivalContext).
       visible.value = reduced
         ? withTiming(1, { duration: 100 })
-        : withDelay(stagger.unit * 2, withTiming(1, { duration: duration.base, easing: easing.enter }));
+        : withDelay(stepHandover.arrive, withTiming(1, { duration: duration.base, easing: easing.enter }));
       return;
     }
     leaving.value = 1;
+    drift.value = direction === 'back' ? 1 : -1;
     visible.value = withTiming(
       0,
       reduced ? { duration: 100 } : { duration: duration.fast, easing: easing.exit },
@@ -79,18 +93,18 @@ function Layer({
   const style = useAnimatedStyle(() => ({
     opacity: visible.value,
     transform: [
-      { translateY: reduced ? 0 : (leaving.value ? -12 : 16) * (1 - visible.value) },
+      { translateY: reduced || !leaving.value ? 0 : drift.value * stepHandover.travel * (1 - visible.value) },
     ],
   }));
 
   return (
     <Animated.View pointerEvents={active ? 'auto' : 'none'} style={[StyleSheet.absoluteFill, style]}>
-      {children}
+      <StepArrivalContext.Provider value={arrival}>{children}</StepArrivalContext.Provider>
     </Animated.View>
   );
 }
 
-export function StepTransition<K extends string>({ activeKey, render }: Props<K>) {
+export function StepTransition<K extends string>({ activeKey, render, direction = 'forward' }: Props<K>) {
   const reduced = useReducedMotion();
   const firstKey = useRef(activeKey);
   const activeKeyRef = useRef(activeKey);
@@ -112,6 +126,7 @@ export function StepTransition<K extends string>({ activeKey, render }: Props<K>
           active={k === activeKey}
           startVisible={k === firstKey.current && mounted.length === 1 && k === activeKey}
           reduced={reduced}
+          direction={direction}
           // A step that became active again mid-fade (back, then forward) must not be dropped.
           onGone={() => {
             if (k !== activeKeyRef.current) drop(k);

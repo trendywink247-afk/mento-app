@@ -27,10 +27,11 @@ const MIN_STORY_BEAT_MS = 2200;
 /** Busy retry cadence + attempts: ~24s of honest patience before asking for help. */
 const RETRY_DELAY_MS = 8000;
 const MAX_RETRIES = 3;
-/** The found crescendo plays before the journey's own celebrate beat. Held long
- * enough (with the journey's FOUND_BEAT ≈ 2.1s total) that "we found your listener"
- * reads as one deliberate moment — never a sub-second flash into chat. */
-const FOUND_CRESCENDO_MS = 1100;
+/** The found crescendo plays before the journey's own celebrate beat (FOUND_BEAT, 1000):
+ * the wait cards leave first (200) and only then does the found block arrive, so the hold
+ * is 1400 to keep "<Persona> is here with you" fully on screen for well over 1.5s — one
+ * deliberate moment, never a flash. "Open the chat" is there for anyone who is ready sooner. */
+const FOUND_CRESCENDO_MS = 1400;
 
 export type MatchParams = { id: string; listener: string; channel: string };
 

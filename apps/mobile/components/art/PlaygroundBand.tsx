@@ -8,7 +8,7 @@
  * bottom 44px into the ground so it has no edges; the app's ground is the living sky,
  * so a soft oat wash also extends past the band and lets the sky give way to it.
  */
-import { useCallback, useId } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
@@ -41,13 +41,30 @@ function Fade({ width, height, from, id }: { width: number; height: number; from
   );
 }
 
-export function PlaygroundBand({ width, height }: { width: number; height: number }) {
+export function PlaygroundBand({
+  width,
+  height,
+  startAfter = 0,
+}: {
+  width: number;
+  height: number;
+  /** Mount the film only after this long (ms, from motion tokens): the band ARRIVES with a
+   * fade + settle, and a native video surface ignores its parent's opacity — it would show
+   * at full strength (or black) through the fade. Until then the still stands in. */
+  startAfter?: number;
+}) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const reduced = useReducedMotion();
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const poster = useSharedValue(1);
   const posterStyle = useAnimatedStyle(() => ({ opacity: poster.value }));
+  const [armed, setArmed] = useState(startAfter === 0);
+  useEffect(() => {
+    if (armed) return;
+    const t = setTimeout(() => setArmed(true), startAfter);
+    return () => clearTimeout(t);
+  }, [armed, startAfter]);
 
   const onPlaying = useCallback(() => {
     if (poster.value === 1) poster.value = withTiming(0, { duration: duration.base, easing: easing.enter });
@@ -71,7 +88,7 @@ export function PlaygroundBand({ width, height }: { width: number; height: numbe
       </View>
 
       <View style={[styles.band, { width, height, backgroundColor: colors.bg }]}>
-        {reduced ? null : <PlaygroundLoop onPlaying={onPlaying} />}
+        {reduced || !armed ? null : <PlaygroundLoop onPlaying={onPlaying} />}
         <Animated.View style={[StyleSheet.absoluteFill, reduced ? null : posterStyle]}>
           <Image source={SCENES.playgroundStill} style={styles.fill} resizeMode="cover" testID="playground-still" />
         </Animated.View>
