@@ -39,13 +39,23 @@ def _out(db: Session, a: ListenerApplication) -> ListenerApplicationOut:
         if listener is not None and listener.vetting_status == VettingStatus.approved:
             token = issue_listener_token(a.listener_id)
             console_url = mentor_console_link(token)
+    reapply_after = None
+    if a.status == ApplicationStatus.declined:
+        reapply_after = (_declined_at(a) + REAPPLY_COOLDOWN).isoformat()
     return ListenerApplicationOut(
         id=a.id,
         status=a.status.value,
         mentor_interest=a.mentor_interest,
         created_at=a.created_at.isoformat(),
         console_url=console_url,
+        reapply_after=reapply_after,
     )
+
+
+def _declined_at(a: ListenerApplication) -> datetime:
+    """The cooldown's anchor — the row's last write (see the note in `apply`)."""
+    at = a.updated_at
+    return at.replace(tzinfo=UTC) if at.tzinfo is None else at
 
 
 def _latest(db: Session, user_id: str) -> ListenerApplication | None:
@@ -91,10 +101,7 @@ def apply(
         # Cooldown anchors to updated_at, so any future write to a declined row
         # restarts the 30-day clock (acceptable for now; a dedicated decided_at
         # column is the precise fix if that ever matters).
-        declined_at = latest.updated_at
-        if declined_at.tzinfo is None:
-            declined_at = declined_at.replace(tzinfo=UTC)
-        if datetime.now(UTC) - declined_at < REAPPLY_COOLDOWN:
+        if datetime.now(UTC) - _declined_at(latest) < REAPPLY_COOLDOWN:
             raise HTTPException(
                 status.HTTP_409_CONFLICT,
                 "Please wait a little before applying again — we'd love to hear from you later.",

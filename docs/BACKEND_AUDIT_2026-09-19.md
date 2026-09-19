@@ -46,7 +46,7 @@ except additively (the schemas move is proven by a byte-identical OpenAPI docume
 | F21 | S4 | pytest TRUNCATEs the developer's database | **planned** (P5) |
 | F22 | S4 | Test-before-merge gaps | **fixed** for every finding above (54 new tests); dependency audit in CI **planned** |
 | F23 | S4 | `python-jose` unmaintained | **planned** |
-| F24 | — | Start fresh erases nothing server-side | **planned** (P3) — founder ruling |
+| F24 | — | Start fresh erases nothing server-side | **fixed** — `DELETE /me` (`services/erasure.py`, DECISIONS §L.11); FKs (F20) still planned |
 | F25 | — | Clean Wipe leaves Mentor-Note copies | **founder ruling needed** |
 | F26 | — | Full DOB stored | **founder ruling needed** |
 | F27 | — | Push token can be re-pointed by anyone who knows it | **won't fix** — unguessable, and it is what makes reinstall work |

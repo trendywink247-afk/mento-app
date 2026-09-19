@@ -27,13 +27,28 @@ type Props = {
   onBackToProfile?: () => void;
   /** Approved, member flow only. */
   onOpenHome?: () => void;
+  /** The way back's words (default "Back to Profile") — a new mentor from the role fork has
+   * no Profile behind them yet (lib/mentorPath `continueAsMember`). */
+  backLabel?: string;
+  /** No companion art (the public web page carries none — founder rule). */
+  bare?: boolean;
 };
 
 /** Board A37's two status states (and the declined note that sits over a fresh form):
  * the companion standing on the status card, a chip, the headline, where the application
  * is — and, once approved, today's name and the way into Mentor Home. Data only: the
  * state is the server's, never a switch. */
-export function ApplicationStatusCard({ state, application, animal, persona, onRead, onBackToProfile, onOpenHome }: Props) {
+export function ApplicationStatusCard({
+  state,
+  application,
+  animal,
+  persona,
+  onRead,
+  onBackToProfile,
+  onOpenHome,
+  backLabel,
+  bare = false,
+}: Props) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const breathing = useBreathing();
@@ -54,12 +69,13 @@ export function ApplicationStatusCard({ state, application, animal, persona, onR
   }
 
   const approved = state === 'approved';
-  const lift = approved ? 108 : 92;
+  const lift = bare ? 0 : approved ? 108 : 92;
   const art = approved ? 132 : 114;
 
   return (
     <View style={styles.root} testID={approved ? 'apply-approved' : 'apply-in-review'}>
       <View style={{ paddingTop: lift }}>
+        {bare ? null : (
         <View
           style={[styles.companion, { height: art, left: approved ? 18 : 20 }]}
           pointerEvents="none"
@@ -71,10 +87,11 @@ export function ApplicationStatusCard({ state, application, animal, persona, onR
             <Companion animal={who} size={art} pose={approved ? 'greet' : undefined} awake />
           </Animated.View>
         </View>
+        )}
         <Entrance index={0}>
           <EdgeSurface
             edge={colors.edgeSurface}
-            style={[styles.card, { paddingTop: approved ? 30 : 28, backgroundColor: colors.surface, borderColor: colors.border }]}
+            style={[styles.card, { paddingTop: bare ? 18 : approved ? 30 : 28, backgroundColor: colors.surface, borderColor: colors.border }]}
             testID="mentor-status"
           >
             {approved ? (
@@ -174,7 +191,7 @@ export function ApplicationStatusCard({ state, application, animal, persona, onR
             ) : null}
             {onBackToProfile ? (
               <PrimaryButton
-                label={t('mentorApply.backToProfile')}
+                label={backLabel ?? t('mentorApply.backToProfile')}
                 variant="link"
                 onPress={onBackToProfile}
                 testID="apply-back-profile"

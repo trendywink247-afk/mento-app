@@ -39,8 +39,10 @@ const PAWS = [
 ];
 
 /** Mentor branch terminal step — board A34: the companion has walked onto a sage round
- * stage, "Thank you for wanting to be here for someone.", what happens next, and "Go to
- * Mentor Home". Behind it the step mints the anonymous session (no companion, NO match);
+ * stage, "Thank you for wanting to be here for someone.", what happens next, and Continue
+ * into the ONE mentor path (its story, the primer, the application — lib/mentorPath.ts;
+ * "Go to Mentor Home" retired: Mentor Home opens only once approved, DECISIONS §L.12).
+ * Behind it the step mints the anonymous session (no companion, NO match);
  * it onboards at most once — a session left by an earlier attempt is reused. When the
  * session exists the screen holds a readable beat and goes on by itself (board: "auto /
  * continue"); the key goes at once. Error state goes still (no shake), Retry only. */
@@ -131,7 +133,7 @@ export function HandoffStep({
           {error ? (
             <PrimaryButton label={t('connecting.tryAgain')} shape="key" onPress={() => void run()} testID="retry" />
           ) : (
-            <PrimaryButton label={t('mentorHandoff.cta')} shape="key" trailing="arrow" onPress={onGo} testID="handoff-go" />
+            <PrimaryButton label={t('common.continue')} shape="key" trailing="arrow" onPress={onGo} testID="handoff-go" />
           )}
           <Text style={[type.caption, styles.footLine, { color: colors.inkMuted }]}>{t('mentorPrimer.footer')}</Text>
         </>
@@ -184,7 +186,7 @@ export function HandoffStep({
             </Text>
           </Entrance>
           <Entrance index={4}>
-            <Text style={[type.body, { color: colors.inkMuted }]}>{error ?? t('mentorHandoff.sub')}</Text>
+            <Text style={[type.body, { color: colors.inkMuted }]}>{error ?? t('mentorPath.handoffSub')}</Text>
           </Entrance>
         </View>
 

@@ -161,14 +161,17 @@ def test_declined_cooldown_then_reapply(client):
         client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code
         == 409
     )
+    # The status says when (the app's cooldown line), and only for a declined row.
+    me = client.get("/api/v1/listener-applications/me", headers=_auth(uid)).json()
+    after = datetime.fromisoformat(me["reapply_after"])
+    assert abs((after - fresh_decline) - timedelta(days=30)) < timedelta(seconds=5)
     # Age the decline past the cooldown → allowed again.
     with TestSession() as s:
         s.query(ListenerApplication).update({"updated_at": fresh_decline - timedelta(days=31)})
         s.commit()
-    assert (
-        client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid)).status_code
-        == 200
-    )
+    fresh = client.post("/api/v1/listener-applications", json=PAYLOAD, headers=_auth(uid))
+    assert fresh.status_code == 200
+    assert fresh.json()["reapply_after"] is None
 
 
 def test_decline_reason_never_in_member_payload(client):

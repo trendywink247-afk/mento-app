@@ -14,12 +14,13 @@ import { PressKey } from '@/components/motion/PressKey';
 import { api, type ListenerApplication } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
+import { canReapply, openMentorSide, reapplyAt, stateOf } from '@/lib/mentorPath';
 import { screenCache } from '@/lib/screenCache';
-import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
+import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
 import { checkAndApplyUpdate, runningUpdate, type UpdateStatus } from '@/lib/updates';
 import { useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLOR_LABELS, COMPANION_COLORS, type CompanionColor } from '@/theme/companion';
-import { font, radius, space, type, type Wash } from '@/theme/tokens';
+import { font, radius, space, type, wash, washEdge, type Wash } from '@/theme/tokens';
 
 const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
 
@@ -119,10 +120,10 @@ function Row({
  * start fresh. Mirror / UPSC panels are deferred modules. */
 export default function ProfileTab() {
   const router = useRouter();
-  const openMentorConsole = async () => {
-    await saveRole('mentor');
-    router.push('/mentor-home');
-  };
+  // Every mentor door goes through the one state machine (lib/mentorPath.ts): approved →
+  // Mentor Home on top of Profile; anything else → the mentor path (story / application /
+  // where it stands).
+  const openMentor = () => void openMentorSide(router, application);
   const { colors, companionColor, setCompanionColor } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const sheetOpen = useSheetOpen();
@@ -323,54 +324,7 @@ export default function ProfileTab() {
                 }
               />
 
-              {application === null ? (
-                <Row
-                  icon="bulb-outline"
-                  tone="green"
-                  title={t('profile.becomeTitle')}
-                  body={t('profile.becomeBody')}
-                  right={chevron}
-                  onPress={() => router.push('/listener-apply')}
-                  testID="profile-become-listener"
-                />
-              ) : application.status === 'declined' ? (
-                /* Declined members can reapply — the server enforces the cool-down (409
-                 * surfaces through the apply screen's error display). */
-                <Row
-                  icon="bulb-outline"
-                  tone="green"
-                  title={t('profile.declinedTitle')}
-                  body={t('profile.declinedBody')}
-                  right={chevron}
-                  onPress={() => router.push('/listener-apply')}
-                  testID="profile-listener-status"
-                />
-              ) : (
-                <Row
-                  icon={application.status === 'approved' ? 'checkmark-circle-outline' : 'bulb-outline'}
-                  tone="green"
-                  title={application.status === 'approved' ? t('profile.approvedTitle') : t('profile.receivedTitle')}
-                  body={application.status === 'approved' ? t('profile.approvedBody') : t('profile.receivedBody')}
-                  testID="profile-listener-status"
-                  extra={
-                    application.status === 'approved' ? (
-                      // The console lives IN the app now (DECISIONS §K.9): switch the
-                      // device's role and go to Mentor Home — never the browser link.
-                      <PressKey
-                        onPress={() => void openMentorConsole()}
-                        edge="transparent"
-                        travel={2}
-                        radius={radius.pill}
-                        testID="profile-open-console"
-                        containerStyle={styles.consoleBox}
-                        style={styles.console}
-                      >
-                        <Text style={[type.bodySemi, { color: colors.accent }]}>{t('profile.openConsole')}</Text>
-                      </PressKey>
-                    ) : null
-                  }
-                />
-              )}
+              <MentorRow application={application} onPress={openMentor} chevron={chevron} />
 
               <Row
                 icon="cafe-outline"
@@ -456,6 +410,87 @@ export default function ProfileTab() {
   );
 }
 
+/** The mentor door on Profile — its words follow the SERVER's application state (DECISIONS
+ * §L.12): not applied → "Become a mentor"; in review → "Mentor application · in review";
+ * declined → the calm note with when they may apply again; approved → "Open the mentor side"
+ * with a small "Mentor access" chip. One tap, one door (`openMentorSide`). */
+function MentorRow({
+  application,
+  onPress,
+  chevron,
+}: {
+  application: ListenerApplication | null;
+  onPress: () => void;
+  chevron: ReactNode;
+}) {
+  const { colors } = useTheme();
+  const { t, locale } = useI18n();
+  const state = stateOf(application);
+  if (state === 'approved') {
+    return (
+      <Row
+        icon="leaf-outline"
+        tone="green"
+        title={t('mentorPath.profileApprovedTitle')}
+        body={t('mentorPath.profileApprovedBody')}
+        extra={
+          <View style={[styles.accessChip, { backgroundColor: wash.green, borderColor: washEdge.green }]} testID="profile-mentor-access">
+            <Ionicons name="checkmark" size={12} color={COMPANION_COLORS.sage.accentEdge} />
+            <Text style={[styles.accessText, { color: COMPANION_COLORS.sage.accentEdge }]}>{t('mentorPath.accessChip')}</Text>
+          </View>
+        }
+        right={chevron}
+        onPress={onPress}
+        testID="profile-open-console"
+      />
+    );
+  }
+  if (state === 'review') {
+    return (
+      <Row
+        icon="time-outline"
+        tone="orange"
+        title={t('mentorPath.profileReviewTitle')}
+        body={t('mentorPath.profileReviewBody')}
+        right={chevron}
+        onPress={onPress}
+        testID="profile-listener-status"
+      />
+    );
+  }
+  if (state === 'declined') {
+    const at = reapplyAt(application);
+    const body =
+      canReapply(application) || !at
+        ? t('mentorPath.profileDeclinedNow')
+        : t('mentorPath.profileDeclinedLater', {
+            date: at.toLocaleDateString(locale === 'hi' ? 'hi-IN' : 'en-IN', { day: 'numeric', month: 'long' }),
+          });
+    return (
+      <Row
+        icon="bulb-outline"
+        tone="green"
+        title={t('profile.declinedTitle')}
+        body={body}
+        right={chevron}
+        onPress={onPress}
+        testID="profile-listener-status"
+      />
+    );
+  }
+  return (
+    <Row
+      icon="bulb-outline"
+      tone="green"
+      title={t('profile.becomeTitle')}
+      body={t('profile.becomeBody')}
+      right={chevron}
+      onPress={onPress}
+      testID="profile-become-listener"
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   scroll: { paddingHorizontal: space.md, paddingBottom: space.lg, gap: 14 },
@@ -516,7 +551,17 @@ const styles = StyleSheet.create({
   disc: { width: 36, height: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   lang: { flexDirection: 'row', gap: space.xs, padding: 3, borderRadius: radius.pill },
   langKey: { height: 44, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  consoleBox: { alignSelf: 'flex-start' },
-  console: { minHeight: 44, justifyContent: 'center' },
+  accessChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 24,
+    marginTop: 4,
+    paddingHorizontal: 10,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+  },
+  accessText: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 16 },
   version: { textAlign: 'center' },
 });

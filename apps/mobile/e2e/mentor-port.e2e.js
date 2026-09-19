@@ -112,6 +112,13 @@ async function pass(browser, reduced) {
     page.on('pageerror', (e) => errors.push(`${label} apply: ${String(e)}`));
     const tid = (id) => page.locator(`[data-testid="${id}"]`);
     await page.goto(`${WEB}/listener-apply`, { waitUntil: 'networkidle', timeout: 120000 });
+    // The one mentor path: the story, then the primer, then the form (lib/mentorPath.ts).
+    await tid('apply-start').waitFor({ timeout: 60000 });
+    await page.waitForTimeout(700);
+    await tid('apply-start').click();
+    await tid('primer-continue').waitFor({ timeout: 30000 });
+    await page.waitForTimeout(700);
+    await tid('primer-continue').click();
     await tid('apply-motivation').fill('I sat the exam three times and know how lonely the second attempt gets.');
     await tid('apply-community-upsc').click();
     await tid('apply-time-mornings').click();

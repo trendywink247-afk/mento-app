@@ -14,7 +14,9 @@ class SafetyFlag(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "safety_flags"
 
     conversation_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
-    user_id: Mapped[str] = mapped_column(String(36), index=True)
+    # NULL once the member has erased their account (DELETE /me): the signal stays for
+    # safety review, the person does not (DECISIONS §L.11).
+    user_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
     signal: Mapped[SafetySignal] = mapped_column(default=SafetySignal.none, index=True)
 
     # We store the matched signal, NOT the message body (minimize sensitive data).

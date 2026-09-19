@@ -58,6 +58,7 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
   };
 
   const suspend = async (event: AdminModerationItem) => {
+    if (!event.subject_id) return;
     if (confirmId !== event.id) {
       setConfirmId(event.id);
       return;
@@ -115,7 +116,7 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
             </Text>
             <Text style={[type.caption, styles.ids, { color: colors.inkMuted }]}>
               Reporter {event.reporter_id ? event.reporter_id.slice(0, 8) : '—'} · Subject{' '}
-              {event.subject_id.slice(0, 8)}
+              {event.subject_id ? event.subject_id.slice(0, 8) : 'erased member'}
             </Text>
 
             <View style={styles.actions}>
@@ -128,6 +129,7 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
               >
                 <Text style={[type.label, { color: colors.onAccent }]}>Resolve</Text>
               </ConsolePressable>
+              {event.subject_id ? (
               <ConsolePressable
                 onPress={() => void suspend(event)}
                 disabled={busy === event.id}
@@ -155,6 +157,7 @@ export default function ModerationPanel({ onResolved }: { onResolved: () => void
                   {confirmId === event.id ? 'Confirm suspend?' : 'Suspend listener'}
                 </Text>
               </ConsolePressable>
+              ) : null}
             </View>
           </View>
         ))

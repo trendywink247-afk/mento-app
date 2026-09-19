@@ -132,7 +132,8 @@ class ModerationItem(BaseModel):
     id: str
     reporter_id: str | None
     reporter_kind: str
-    subject_id: str
+    # NULL when the reported member has since erased their account (DELETE /me).
+    subject_id: str | None
     conversation_id: str | None
     level: int
     reason: str | None

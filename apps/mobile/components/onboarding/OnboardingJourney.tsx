@@ -35,7 +35,9 @@ import { ReadyStep } from '@/components/onboarding/steps/ReadyStep';
 import { RoleStep } from '@/components/onboarding/steps/RoleStep';
 import { haptic } from '@/lib/haptics';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
-import { saveRole, type Role } from '@/lib/session';
+import { api } from '@/lib/api';
+import { enterMentorPath } from '@/lib/mentorPath';
+import { saveCompanionAnimal, saveRole, type Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing, forkArrival } from '@/theme/motion';
 import { space } from '@/theme/tokens';
@@ -48,21 +50,28 @@ const FOUND_BEAT_MS = 1000;
 type Step = 'role' | 'age' | 'email' | 'companion' | 'ready' | 'connecting' | 'primer' | 'handoff';
 
 /** Two orders, one machine (DECISIONS §K.7). The role step is shared; the mentee
- * branch is byte-identical to the pre-fork journey. */
+ * branch is byte-identical to the pre-fork journey. The mentor branch mints the session
+ * (age + email, then the hand-off) and joins the ONE mentor path at its story
+ * (lib/mentorPath.ts, DECISIONS §L.12) — the primer now lives in that loop. */
 const MENTEE_ORDER: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'connecting'];
-const MENTOR_ORDER: Step[] = ['role', 'age', 'email', 'primer', 'handoff'];
+const MENTOR_ORDER: Step[] = ['role', 'age', 'email', 'handoff'];
+/** A session-backed member finishing sign-up from the mentor side ("I'd rather talk
+ * today"): only what the account is missing — the age gate and email were given at mentor
+ * sign-up, so the companion pick, then Ready → My Chats (founder ruling D, 2026-09-19). */
+const RESUME_ORDER: Step[] = ['companion', 'ready'];
 const ALL_STEPS: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'connecting', 'primer', 'handoff'];
 
 /** Steps that show the back key. connecting is forward-only; `ready` shows it (board A18)
  * and so does the mentor hand-off (board A34: back to the primer; the session it made is
  * simply reused next time). Hardware back already stepped through both. */
-const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'primer', 'handoff'];
+const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'handoff'];
 
 /** The step dots (board A16–A18, A33–A34). A member's four steps start after the fork;
  * the mentor board counts the fork too ("Step 4 of 5" on the primer). The fork itself and
  * the connecting step show no dots. */
 const MENTEE_DOTS: Step[] = ['age', 'email', 'companion', 'ready'];
-const MENTOR_DOTS: Step[] = ['role', 'age', 'email', 'primer', 'handoff'];
+const MENTOR_DOTS: Step[] = ['role', 'age', 'email', 'handoff'];
+const RESUME_DOTS: Step[] = ['companion', 'ready'];
 
 /** The board's 44 of air above the header doubles as the status-bar allowance. */
 const HEADER_TOP = 44;
@@ -79,7 +88,9 @@ export function OnboardingJourney() {
   );
 
   const [role, setRole] = useState<Role>(() => getDraft().role ?? 'mentee');
-  const order = role === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
+  // Fixed for the journey's life: a resume never turns into a new account's journey.
+  const [resume] = useState(() => Boolean(getDraft().sessionBacked));
+  const order = resume ? RESUME_ORDER : role === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
 
   const [step, setStep] = useState<Step>(() => {
     const requested = params.step as Step | undefined;
@@ -89,7 +100,11 @@ export function OnboardingJourney() {
     // link has none, so it snaps to the very first step. It also must belong to
     // the order for the draft's role — a mentee deep-linking into 'handoff' (or
     // vice versa) is not a valid resume point.
-    const requestedOrder = (getDraft().role ?? 'mentee') === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
+    const requestedOrder = getDraft().sessionBacked
+      ? RESUME_ORDER
+      : (getDraft().role ?? 'mentee') === 'mentor'
+        ? MENTOR_ORDER
+        : MENTEE_ORDER;
     const pastAgeGate = Boolean(getDraft().dob) || Boolean(getDraft().sessionBacked);
     return pastAgeGate && requestedOrder.includes(requested) ? requested : 'role';
   });
@@ -117,18 +132,45 @@ export function OnboardingJourney() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
+  // The end of a resume (mentor → member): the pick lands on the device AND the account,
+  // then My Chats. Same stack rebuild as the matched path — nothing pre-session beneath.
+  const finishResume = useCallback(async () => {
+    const draft = getDraft();
+    if (draft.companionAnimal) {
+      await saveCompanionAnimal(draft.companionAnimal);
+      void api
+        .saveCompanion({
+          companion_animal: draft.companionAnimal,
+          ...(draft.companionColour ? { companion_colour: draft.companionColour } : {}),
+        })
+        .catch(() => {
+          /* reason: best-effort sync; the next companion/colour change retries */
+        });
+    }
+    await saveRole('mentee');
+    clearDraft();
+    router.dismissAll();
+    router.replace('/chats');
+  }, [router]);
+
   // One press, one haptic: the key that calls this already fired its own on press-in
   // (PressKey intent) — a second one here made every Continue buzz twice.
   const goNext = useCallback(() => {
     // A mentor switching to talk becomes a mentee the moment they confirm a companion.
-    if (getDraft().sessionBacked && step === 'companion') void saveRole('mentee');
+    if (resume && step === 'companion') void saveRole('mentee');
+    // The resume ends at Ready: the member side opens on My Chats (no match is started —
+    // they came to look around, and a chat is one tap away there).
+    if (resume && step === 'ready') {
+      void finishResume();
+      return;
+    }
     setStep((s) => order[Math.min(order.indexOf(s) + 1, order.length - 1)]);
-  }, [order, step]);
+  }, [order, step, resume, finishResume]);
 
   const goBack = useCallback(() => {
     // Session-backed resume: there is no email/age step behind the pick — back means
     // "never mind", and they are still a mentor.
-    if (getDraft().sessionBacked && step === 'companion') {
+    if (resume && step === 'companion') {
       clearDraft();
       router.replace('/mentor-home');
       return;
@@ -144,12 +186,13 @@ export function OnboardingJourney() {
     setStep('age');
   }, []);
 
-  // Mentor hand-off: the session exists, no match was made — Mentor Home replaces
-  // the landing so hardware back never returns to a pre-session screen.
+  // Mentor hand-off: the session exists, no match was made — the one mentor path (story →
+  // primer → application, or where an earlier application stands; Mentor Home if already
+  // approved) replaces the landing so hardware back never returns to a pre-session screen.
   const onMentorReady = useCallback(() => {
-    router.dismissAll();
-    router.replace('/mentor-home');
+    void enterMentorPath(router);
   }, [router]);
+
 
   // No mentor free (503 after the honest retries): the session already exists, so
   // the member enters the app on Browse mentors and can send a Personal request.
@@ -247,7 +290,7 @@ export function OnboardingJourney() {
   );
 
   const backable = BACKABLE.includes(step);
-  const dots = role === 'mentor' ? MENTOR_DOTS : MENTEE_DOTS;
+  const dots = resume ? RESUME_DOTS : role === 'mentor' ? MENTOR_DOTS : MENTEE_DOTS;
   const dotIndex = step === 'role' ? -1 : dots.indexOf(step);
 
   return (

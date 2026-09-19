@@ -1,6 +1,7 @@
-/** Public listener-recruitment landing page (console.agentin.chat/apply, no app
- * install / member session needed): cold visit → underage DOB rejected → valid DOB
- * mints a throwaway anonymous member (onboarding/start) → application form → submit.
+/** Public listener-recruitment landing page (/apply, no app install / member session
+ * needed) — the same ONE mentor path as in the app: cold visit → the story → underage DOB
+ * rejected → valid DOB mints a throwaway anonymous member (onboarding/start) → the primer
+ * → application form → submit → In review; a return visit lands on In review.
  * Optional: set MENTO_ADMIN_TOKEN to also drive the admin queue leg. */
 const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
@@ -50,8 +51,13 @@ async function flow(browser, contextOpts, label) {
   // Correct to a valid adult DOB, continue — mints a throwaway anonymous member.
   while ((await year()) > thisYear - 25) await tid('dob-year-up').click();
   await tid('apply-dob-continue').click();
+  // The same loop as inside the app: after the gate, the primer (A33) — no animal on the web.
+  await tid('primer-continue').waitFor({ timeout: 30000 });
+  await page.waitForTimeout(700);
+  await noAnimals(page, `${label} primer`);
+  await tid('primer-continue').click();
   await tid('apply-motivation').waitFor({ timeout: 30000 });
-  console.log(`${label}: OK adult DOB accepted, application form mounted`);
+  console.log(`${label}: OK adult DOB accepted → the primer (no animal art) → application form`);
 
   await tid('apply-motivation').fill(
     "I've supported friends through burnout before and want to make that steadiness available to strangers too."
@@ -61,9 +67,37 @@ async function flow(browser, contextOpts, label) {
   if (!(await tid('apply-submit').isDisabled())) throw new Error(`${label}: Submit enabled before the pledge`);
   await tid('apply-pledge').click();
   await tid('apply-submit').click();
-  await tid('apply-success').waitFor({ timeout: 30000 });
+  await tid('apply-in-review').waitFor({ timeout: 30000 });
   await noAnimals(page, `${label} done`);
-  console.log(`${label}: OK pledge gated Submit; application submitted, success panel shown`);
+  console.log(`${label}: OK pledge gated Submit; application submitted → In review (A37), no animal art`);
+
+  // "Already applied": this browser keeps the session, so /apply again lands on In review —
+  // no story, no second age gate, no second anonymous member.
+  await page.goto(`${WEB}/apply`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await tid('apply-in-review').waitFor({ timeout: 60000 });
+  if ((await tid('apply-dob-continue').count()) !== 0) throw new Error(`${label}: a returning applicant met the age gate again`);
+  console.log(`${label}: OK returning to /apply lands on In review (already applied)`);
+
+  // Founder ruling D: a mentor who came in through this page (a throwaway session made by the
+  // age gate here) switching to talk gets ONLY the missing member steps — the companion pick,
+  // never the age again — on the same session.
+  if (process.env.MENTO_ADMIN_TOKEN) {
+    const auth = { Authorization: `Bearer ${process.env.MENTO_ADMIN_TOKEN}` };
+    const token = await page.evaluate(() => localStorage.getItem('mento.session_token'));
+    const mine = await (await fetch(`${API}/listener-applications/me`, { headers: { Authorization: `Bearer ${token}` } })).json();
+    const ok = await fetch(`${API}/admin/applications/${mine.id}/approve`, { method: 'POST', headers: auth });
+    if (!ok.ok) throw new Error(`${label}: approve failed ${ok.status}`);
+    await page.goto(`${WEB}/apply`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForURL((u) => u.pathname.endsWith('/mentor-home'), { timeout: 60000 });
+    await tid('mentor-switch-talk').waitFor({ timeout: 60000 });
+    console.log(`${label}: OK approved → /apply opens Mentor Home (no form, no primer)`);
+    await tid('mentor-switch-talk').click();
+    await page.waitForSelector('text=Your growth, your theme', { timeout: 30000 });
+    if ((await page.locator('text=How old are you?').count()) !== 0) throw new Error(`${label}: the switch asked the age again`);
+    const same = await page.evaluate(() => localStorage.getItem('mento.session_token'));
+    if (same !== token) throw new Error(`${label}: switching to talk changed the session`);
+    console.log(`${label}: OK a public-page mentor switching to talk gets only the companion pick, same session`);
+  }
 
   await ctx.close();
   return errors;
@@ -91,20 +125,8 @@ async function desktopSmoke(browser) {
     ...(await desktopSmoke(browser)),
   ];
 
-  if (process.env.MENTO_ADMIN_TOKEN) {
-    const auth = { Authorization: `Bearer ${process.env.MENTO_ADMIN_TOKEN}` };
-    const res = await fetch(`${API}/admin/applications?status=pending`, { headers: auth });
-    if (!res.ok) throw new Error(`admin list failed: ${res.status}`);
-    const apps = await res.json();
-    if (!apps.length) throw new Error('no pending applications found (expected the ones this run just created)');
-    const app = apps[apps.length - 1];
-    const approve = await fetch(`${API}/admin/applications/${app.id}/approve`, {
-      method: 'POST',
-      headers: auth,
-    });
-    if (!approve.ok) throw new Error(`approve failed: ${approve.status}`);
-    console.log('admin: OK pending application found + approved (proves the User/ListenerApplication join works for a throwaway anonymous user)');
-  }
+  // (With MENTO_ADMIN_TOKEN each pass approved its own throwaway applicant above — which
+  // also proves the admin queue's User/ListenerApplication join for an anonymous user.)
 
   await browser.close();
   if (errors.length) { console.error('PAGE ERRORS:', errors); process.exit(1); }

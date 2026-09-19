@@ -17,6 +17,12 @@ export type Persona = { id: string; persona_name: string; persona_avatar: string
 export type Me = Persona & {
   companion_animal: string | null;
   companion_colour: string | null;
+  /** The account passed the server-side age gate (always true today — a session only comes
+   * from onboarding/start). Optional: an older server omits it. */
+  has_dob?: boolean;
+  /** Everything the member side needs is on the account (age gate + companion), so a mentor
+   * switching to talk goes straight to My Chats. Optional: an older server omits it. */
+  member_setup_complete?: boolean;
 };
 
 /** `PUT /me/companion`: an omitted field is left as it is, `null` clears it. */
@@ -309,6 +315,8 @@ export type ListenerApplication = {
   mentor_interest: boolean;
   created_at: string;
   console_url: string | null;
+  /** Declined only: when the server's 30-day cooldown lets them apply again (ISO time). */
+  reapply_after?: string | null;
 };
 export type ListenerApplicationIn = {
   motivation: string;
@@ -510,4 +518,10 @@ export const api = {
   // --- Product feedback (board A11) ---
   sendFeedback: (body: { category: FeedbackCategory; text: string; screen?: string; app_version?: string }) =>
     request<FeedbackReceived>('/feedback', { method: 'POST', body: JSON.stringify(body) }, true),
+
+  // --- Start fresh (board A32; DECISIONS §L.11) ---
+  /** Erase this member on our servers and on Stream. 200 = gone (also when already gone).
+   * Refusals carry a `code`: 409 `mentor_active` (also a live mentor — nothing touched),
+   * 503 `erase_incomplete` (chats ended, the rest not yet — keep the session and retry). */
+  eraseMe: () => request<{ status: 'erased' }>('/me', { method: 'DELETE' }, true),
 };
