@@ -195,8 +195,16 @@ async function memberOnboard(page, tid) {
   await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
 
   // --- A: report, then end -----------------------------------------------------
-  // Board A35: Report lives in the options menu.
+  // Board A35: Report lives in the options menu — and ONLY Report and End conversation do
+  // (founder 2026-09-20: "just two options"; Helplines is its own labelled key in the strip).
   await atid('mentor-chat-menu').click();
+  await a.waitForSelector('[data-testid="mentor-chat-menu-sheet"]', { timeout: 15000 });
+  const menuItems = await a.$$eval('[data-testid="mentor-chat-menu-sheet"] [role="menuitem"]', (els) =>
+    els.map((e) => e.innerText.replace(/\s+/g, ' ').trim())
+  );
+  if (menuItems.length !== 2) throw new Error(`the mentor chat menu has ${menuItems.length} options: ${menuItems.join(' | ')}`);
+  if (!(await atid('mentor-helplines').isVisible())) throw new Error('the Helplines key left the chat header strip');
+  console.log(`OK the chat menu has exactly two options (${menuItems.join(', ')}), Helplines stays in the strip`);
   await atid('mentor-menu-report').click();
   await a.waitForSelector('[data-testid="mentor-report-sheet"]', { timeout: 15000 });
   await atid('report-reason-spam').click();
