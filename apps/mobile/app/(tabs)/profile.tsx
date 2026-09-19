@@ -11,6 +11,7 @@ import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/compon
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
+import { CompanionNameRow } from '@/components/profile/CompanionNameRow';
 import { api, type ListenerApplication } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
@@ -243,6 +244,7 @@ export default function ProfileTab() {
                   <Text style={[styles.rowTitle, styles.growthText, { color: colors.ink }]}>
                     {t('profile.companionTitle')}
                   </Text>
+                  <CompanionNameRow animal={animal} />
                   <View
                     style={styles.swatches}
                     onLayout={(e) => {
