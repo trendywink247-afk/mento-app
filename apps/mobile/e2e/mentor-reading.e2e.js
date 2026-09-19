@@ -40,11 +40,24 @@ const flushLimits = () => {
   if (REDIS_DB) execSync(`docker exec mento-redis redis-cli -n ${REDIS_DB} FLUSHDB`);
 };
 
+/** Minting a session calls Stream; a flaky network answers 503. Retry a couple of times
+ * rather than failing a UI proof on someone else's timeout. */
+const startSession = async () => {
+  for (let i = 0; ; i++) {
+    try {
+      return await j('/onboarding/start', { method: 'POST', body: { dob: '1994-01-01' } });
+    } catch (e) {
+      if (i >= 3) throw e;
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+  }
+};
+
 const PAGES = 10; // 8 reading pages + the commitment + the closing note
 const BANNED = [/review copy/i, /drafted/i, /required line/i, /listener/i, /\bclient\b/i, /\bpatient\b/i, /₹|rupee|\$|\bpaid\b|\bfee\b/i];
 
 async function mentor() {
-  const m = await j('/onboarding/start', { method: 'POST', body: { dob: '1994-01-01' } });
+  const m = await startSession();
   await j('/listener-applications', {
     token: m.session_token,
     method: 'POST',
