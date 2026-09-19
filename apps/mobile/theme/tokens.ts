@@ -71,7 +71,13 @@ export const washEdge = {
 export const washInk = {
   green: '#2C5C3C',
   orange: '#674711',
+  /** The deep clay red: text on the danger wash, the face of a destructive key (white
+   * text on it 8.6:1), and `dangerKeyEdge` beneath it. */
+  danger: '#8E2F2A',
 } as const;
+
+/** Pillow underside of a destructive key (board A32). Decorative. */
+export const dangerKeyEdge = '#6B2320';
 
 export const space = {
   xs: 4,
