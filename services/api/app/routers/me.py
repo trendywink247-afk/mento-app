@@ -39,6 +39,8 @@ def _out(user: User) -> MeOut:
         persona_avatar=user.persona_avatar,
         companion_animal=user.companion_animal,
         companion_colour=user.companion_colour,
+        has_dob=user.dob is not None,
+        member_setup_complete=user.dob is not None and user.companion_animal is not None,
     )
 
 

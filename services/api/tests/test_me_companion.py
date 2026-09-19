@@ -121,7 +121,23 @@ def test_me_returns_persona_and_companion_and_nothing_private(client, db_session
         "persona_avatar": "harbor",
         "companion_animal": "Cat",
         "companion_colour": "plum",
+        "has_dob": True,
+        "member_setup_complete": True,
     }
+
+
+@requires_postgres
+def test_member_setup_is_incomplete_until_a_companion_is_on_the_account(client, db_session):
+    """A mentor who never picked a companion: "I'd rather talk today" must ask for it (and
+    only it — the age gate was passed at sign-up). Never the DOB itself."""
+    with TestSession() as s:
+        uid = _user(s)
+        s.commit()
+    body = client.get(ME, headers=_auth(uid)).json()
+    assert body["has_dob"] is True and body["member_setup_complete"] is False
+    assert "dob" not in body and "age_at_signup" not in body
+    client.put(f"{ME}/companion", json={"companion_animal": "Owl"}, headers=_auth(uid))
+    assert client.get(ME, headers=_auth(uid)).json()["member_setup_complete"] is True
 
 
 @requires_postgres

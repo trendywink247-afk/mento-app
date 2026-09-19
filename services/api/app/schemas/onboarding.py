@@ -49,6 +49,11 @@ class MeOut(BaseModel):
     persona_avatar: str
     companion_animal: str | None
     companion_colour: str | None
+    # Computed, never the DOB itself (lane u6, founder ruling D 2026-09-19): whether the
+    # account passed the server-side age gate, and whether the member side has what it
+    # needs (age gate + companion) — so "I'd rather talk today" asks only what is missing.
+    has_dob: bool = True
+    member_setup_complete: bool = False
 
 
 class CompanionUpdateIn(BaseModel):
