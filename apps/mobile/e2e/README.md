@@ -53,3 +53,19 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   page errors.
 - question-builder.test.mjs — NOT a browser spec: a Node unit test of the pure sentence
   assembly + chip rules (`lib/questionBuilder.ts`). Run `npm run test:question`.
+- companion-placement.e2e.js — the companion finds a new place on every screen
+  (`lib/companionPlacement.ts` + `components/art/PerchedCompanion.tsx`): onboards as a FOX →
+  chat has ONE fixed slot (`composerTop`), not drawn under the options sheet → each of the
+  four tabs shows exactly one `companion-slot-*`, drawing decoded Fox art, never a cling
+  pose → back and forth lands on ≥2 slots per screen, never the same twice running → it
+  stays put between arrivals and breathes (breathing OFF under reduced motion, placement
+  kept) → Profile recolour reaches the account (GET /me) → a My Chats load error holds the
+  home slot in the sit pose → the same member as a CAT takes a cling slot (hang / peek /
+  dangle) within 14 arrivals. The slot id is the testID suffix; the animal + pose are on
+  the nested `companion-art-<Animal>-<pose>`. Dev builds can pin a slot to look at it:
+  `window.__MENTO_PERCH__ = { journal: 'todayHang' }` before load. One onboarding for both
+  passes (the reduced pass reuses the storage state). Normal + reduced-motion, 0 page errors.
+- companion-placement.test.mjs — NOT a browser spec: 2,000 simulated arrivals per animal,
+  day and night, over the pure picker (never the previous slot, never a slot the animal has
+  no art for, naps only at night, deterministic per seed, personality shows in the counts,
+  still states hold home). Run `npm run test:placement`.

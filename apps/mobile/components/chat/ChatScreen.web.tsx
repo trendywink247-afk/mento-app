@@ -19,14 +19,16 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PressKey } from '@/components/motion/PressKey';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
-import { ComposerField } from '@/components/chat/ComposerField';
+import { ComposerField, ComposerPerchContext } from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { TypingDots } from '@/components/chat/TypingDots';
+import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { SceneTile } from '@/components/art/SceneTile';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TFunc } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
@@ -52,6 +54,13 @@ import { font, radius, space, type } from '@/theme/tokens';
  */
 
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
+
+/** Inside a live conversation the companion does not roam: ONE fixed place, on the composer
+ * field's top edge. It is not drawn at all while the crisis card, an error or a failed send is
+ * showing, or while the options sheet is up (this screen never had a companion, so its still
+ * state is absence — T&S #11). */
+const CHAT_PERCH: PlacementSlot[] = [{ id: 'composerTop', type: 'top', level: 'low', home: true }];
+const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={44} inset={space.md} />;
 
 type Msg = { id: string; text: string; mine: boolean; at: string };
 
@@ -261,6 +270,8 @@ type ComposerProps = {
   onTyping: () => void;
   /** "Edit in chat" from the first-question builder: open with the field focused. */
   autoFocus?: boolean;
+  /** A failed send is showing (or has cleared) — the screen goes still around it. */
+  onSendFailed?: (failed: boolean) => void;
 };
 
 /** Pillow-key composer (spec §5.2 — same anatomy/tokens as the native
@@ -273,7 +284,7 @@ type ComposerProps = {
  * so Enter-to-send is wired through `onKeyPress` instead, reading the DOM
  * KeyboardEvent's `shiftKey` off `nativeEvent` (present at runtime; not in RN's
  * official TextInputKeyPressEventData type, hence the narrow cast below). */
-const Composer = memo(function Composer({ onSend, onTyping, initialDraft, autoFocus }: ComposerProps) {
+const Composer = memo(function Composer({ onSend, onTyping, initialDraft, autoFocus, onSendFailed }: ComposerProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const [draft, setDraft] = useState(initialDraft ?? '');
@@ -289,9 +300,11 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft, autoFo
       await onSend(body);
       setDraft('');
       setSendError(false);
+      onSendFailed?.(false);
     } catch {
       // Keep their words — the draft stays; one calm line invites a retry.
       setSendError(true);
+      onSendFailed?.(true);
     } finally {
       setSending(false);
     }
@@ -378,6 +391,7 @@ export default function ChatScreenWeb() {
   const [typing, setTyping] = useState<string | null>(null); // other side's persona name
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sendFailed, setSendFailed] = useState(false);
   const [privacyNote, setPrivacyNote] = useState(true);
   // Message-actions state (mentor messages): which row is open, helpful ♥s, saved ids.
   const [actionsFor, setActionsFor] = useState<string | null>(null);
@@ -556,8 +570,14 @@ export default function ChatScreenWeb() {
     freshIds.current.delete(id);
   }, []);
 
+  // One fixed place, and none at all in a still state (see CHAT_PERCH).
+  const perch = useCompanionPlacement('chat', CHAT_PERCH, {
+    hidden: crisis !== null || error !== null || sendFailed || optionsOpen,
+  });
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+      <CompanionPerches placement={perch}>
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the native chat. */}
       <ChatHeaderCard
         name={headerName}
@@ -645,7 +665,15 @@ export default function ChatScreenWeb() {
           {/* Presence-only typing bubble — Focus physics: three dots breathing. */}
           {typing ? <TypingDots testID="typing-indicator" /> : null}
 
-          <Composer onSend={send} onTyping={onTyping} initialDraft={starter} autoFocus={edit === '1'} />
+          <ComposerPerchContext.Provider value={COMPOSER_PERCH}>
+            <Composer
+              onSend={send}
+              onTyping={onTyping}
+              initialDraft={starter}
+              autoFocus={edit === '1'}
+              onSendFailed={setSendFailed}
+            />
+          </ComposerPerchContext.Provider>
         </View>
       )}
 
@@ -660,6 +688,7 @@ export default function ChatScreenWeb() {
         listenerName={listenerName}
         initial={pendingInitial}
       />
+      </CompanionPerches>
     </SafeAreaView>
   );
 }
@@ -678,7 +707,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.sm + 4,
   },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
-  list: { padding: space.md, gap: space.xs },
+  // Bottom room so the last bubble never rests behind the companion on the composer's edge.
+  list: { padding: space.md, paddingBottom: space.md + space.lg, gap: space.xs },
   listEmpty: { flexGrow: 1, justifyContent: 'center' },
   emptyWrap: { alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg },
   emptyTitle: { fontFamily: font.serifBold, fontSize: 24, lineHeight: 30, textAlign: 'center' },

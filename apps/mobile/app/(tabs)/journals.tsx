@@ -6,14 +6,14 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { Screen } from '@/components/Screen';
-import { Companion } from '@/components/art/Companion';
+import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { api, type JournalEntry } from '@/lib/api';
+import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { screenCache } from '@/lib/screenCache';
-import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -38,6 +38,20 @@ const MOOD_ICONS: Record<Mood, keyof typeof Ionicons.glyphMap> = {
 /** The channels that make up the one journal. Finance is off-path for now (DECISIONS
  * §L.8 / the 2026-09-06 call) — it is never merged in, only linked if it has history. */
 const MERGED = ['mentor_notes', 'gratitude', 'mood'] as const;
+
+/** Where the companion can be on this screen (lib/companionPlacement.ts). The Today card's
+ * top-right edge is where it always used to sit — now the home slot, one place among several.
+ * Every slot has clear ground above it: the 60px between the subtitle and the Today card, and
+ * the right-hand side of the "Write" heading row. */
+const PERCHES: PlacementSlot[] = [
+  { id: 'todayTopRight', type: 'top', level: 'mid', home: true },
+  { id: 'todayTopLeft', type: 'lean', level: 'mid' },
+  { id: 'writeTop', type: 'top', level: 'low' },
+  { id: 'todayNap', type: 'nap', level: 'mid' },
+  { id: 'todayDangle', type: 'dangle', level: 'mid' },
+  { id: 'todayPeek', type: 'peek', level: 'mid' },
+  { id: 'todayHang', type: 'hang', level: 'mid' },
+];
 const SHELF_DAYS = 6;
 const KEPT_PREVIEW = 3;
 
@@ -54,7 +68,6 @@ export default function JournalsTab() {
   const router = useRouter();
   const { colors } = useTheme();
   const { t, locale } = useI18n();
-  const animal = useCompanionAnimal();
   // Last-loaded shelf first, quiet refresh on focus (lib/screenCache.ts).
   const cachedJournal = screenCache.get('journal');
   const [entries, setEntries] = useState<JournalEntry[] | null>(cachedJournal?.entries ?? null);
@@ -128,6 +141,9 @@ export default function JournalsTab() {
     }
   };
 
+  // A failed load is a still state: the companion keeps its home place (T&S #11).
+  const perch = useCompanionPlacement('journal', PERCHES, { still: failed });
+
   const keptToday = today.filter((e) => e.channel === 'mentor_notes');
   // A bare mood check-in (body === its own mood value) is shown on the mood row, not as writing.
   const wroteToday = today.filter(
@@ -136,6 +152,7 @@ export default function JournalsTab() {
 
   return (
     <Screen>
+      <CompanionPerches placement={perch}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.xl }}>
         <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
           {t('journals.hubTitle')}
@@ -145,9 +162,14 @@ export default function JournalsTab() {
         {/* Today — one card that reads as a story: kept guidance, then the member's own words. */}
         <Entrance index={0}>
           <View style={styles.todayWrap}>
-            <View style={styles.companion} pointerEvents="none">
-              <Companion animal={animal ?? null} size={64} />
-            </View>
+            {/* The Today card is the furniture: its slots are its own absolute children. */}
+            <View style={styles.furniture}>
+            <CompanionSlot id="todayTopRight" size={64} inset={space.md} nudge={8} />
+            <CompanionSlot id="todayTopLeft" size={56} align="left" inset={space.md} />
+            <CompanionSlot id="todayNap" size={56} inset={96} />
+            <CompanionSlot id="todayDangle" size={68} inset={space.lg} />
+            <CompanionSlot id="todayPeek" size={46} align="center" />
+            <CompanionSlot id="todayHang" size={54} inset={space.lg} />
             <EdgeSurface edge={colors.edgeSurface} radius={radius.lg} style={[styles.card, { backgroundColor: colors.surface }]} testID="journal-today">
               <Text style={[styles.cardTitle, { color: colors.ink }]}>{t('journals.today')}</Text>
 
@@ -229,6 +251,7 @@ export default function JournalsTab() {
                 </View>
               </View>
             </EdgeSurface>
+            </View>
           </View>
         </Entrance>
 
@@ -240,6 +263,7 @@ export default function JournalsTab() {
         <Entrance index={1}>
           <Text style={[styles.section, { color: colors.ink }]}>{t('journals.writeTitle')}</Text>
           <View style={styles.writeRow}>
+            <CompanionSlot id="writeTop" size={52} inset={space.md} />
             <PressKey
               onPress={() => router.push({ pathname: '/journal/[channel]', params: { channel: 'gratitude' } })}
               edge={colors.edgeSurface}
@@ -390,14 +414,15 @@ export default function JournalsTab() {
           )}
         </Entrance>
       </ScrollView>
+      </CompanionPerches>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
   todayWrap: { paddingTop: 36 },
-  // The companion perches on the Today card's top edge (decor only — flow is untouched).
-  companion: { position: 'absolute', right: space.md, top: -14, zIndex: 2 },
+  // Room above the Today card for whoever is perched on its top edge (decor only).
+  furniture: { zIndex: 1 },
   card: { borderRadius: radius.lg, padding: space.md, gap: space.md },
   cardTitle: { fontFamily: font.sansHeavy, fontSize: 22, lineHeight: 28 },
   block: { gap: space.sm },
