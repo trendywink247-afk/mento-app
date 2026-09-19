@@ -51,8 +51,9 @@ const MENTEE_ORDER: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'con
 const MENTOR_ORDER: Step[] = ['role', 'age', 'email', 'primer', 'handoff'];
 const ALL_STEPS: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'connecting', 'primer', 'handoff'];
 
-/** Steps that show the back chevron. ready / connecting / handoff are forward-only. */
-const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'primer'];
+/** Steps that show the back key. connecting / handoff are forward-only; `ready` shows it
+ * (board A18) — hardware back already stepped from ready to the pick. */
+const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'primer'];
 
 /** The step dots (board A16–A18, A33–A34). A member's four steps start after the fork;
  * the mentor board counts the fork too ("Step 4 of 5" on the primer). The fork itself and

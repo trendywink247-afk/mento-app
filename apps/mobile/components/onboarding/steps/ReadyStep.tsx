@@ -1,41 +1,46 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Fragment } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { IconBadge } from '@/components/IconBadge';
+import { EdgeSurface } from '@/components/EdgeSurface';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { Entrance } from '@/components/motion/Entrance';
-import { useBreathing } from '@/components/motion/useBreathing';
-import { StepScaffold } from '@/components/onboarding/StepScaffold';
+import { PromiseRow } from '@/components/PromiseRow';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
-import { useI18n, type TKey } from '@/lib/i18n';
+import { Entrance } from '@/components/motion/Entrance';
+import { GroundGlow } from '@/components/motion/GroundGlow';
+import { Stage } from '@/components/motion/Stage';
+import { useBreathing } from '@/components/motion/useBreathing';
+import { StepScaffold } from '@/components/onboarding/StepScaffold';
+import { useI18n } from '@/lib/i18n';
 import { getDraft } from '@/lib/onboardingDraft';
+import { useFrameSize } from '@/lib/useFrameSize';
 import { useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLOR_LABELS } from '@/theme/companion';
 import type { CompanionColor } from '@/theme/companion';
 import { font, radius, space, type } from '@/theme/tokens';
 
-const AFFIRMATIONS: { icon: keyof typeof Ionicons.glyphMap; text: TKey }[] = [
-  { icon: 'trophy-outline', text: 'onboarding.ready.affirm1' },
-  { icon: 'book-outline', text: 'onboarding.ready.affirm2' },
-  { icon: 'swap-horizontal-outline', text: 'onboarding.ready.affirm3' },
-  { icon: 'flag-outline', text: 'onboarding.ready.affirm4' },
-];
+/** Board A18: a 216 stage; the companion is 168 tall and stands 28 above its bottom edge,
+ * on a glow that starts 52 in from each side and sits 22 up. */
+const STAGE = 216;
+const STAGE_MIN = 144;
+const COMPACT_BELOW = 780;
 
-/** "Mento space ready!" confirmation (mockup #59; body unchanged from the old route). */
+/** "Your Mento space is ready." — board A18: the chosen companion large on a round stage
+ * (accent-tint disc, one slow dotted ring, ground glow), its name on a pill, the three
+ * promises, and "Enter My Space". */
 export function ReadyStep({ onNext }: { onNext: () => void }) {
   const { colors, companionColor } = useTheme();
   const { t } = useI18n();
+  const { height } = useFrameSize();
   const draft = getDraft();
   // Companion is optional in the draft (Surprise Me edge / direct deep link): fall back
   // gracefully rather than blocking the path to a conversation.
   const animal = (draft.companionAnimal as CompanionAnimal | null) ?? 'Panda';
   const colourLabel =
     COMPANION_COLOR_LABELS[(draft.companionColour as CompanionColor | null) ?? companionColor];
-  // The chosen companion breathes in the arch; the panda choice gets the full rig.
   const breathing = useBreathing();
+  const stage = height < COMPACT_BELOW ? STAGE_MIN : STAGE;
+  const k = stage / STAGE;
 
   return (
     <StepScaffold
@@ -44,128 +49,112 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
         <>
           <PrimaryButton
             label={t('onboarding.ready.enter')}
-            trailing="chevron"
+            shape="key"
+            trailing="arrow"
             onPress={onNext}
             testID="enter"
           />
-          <View style={styles.lockRow}>
-            <Ionicons name="lock-closed-outline" size={14} color={colors.inkMuted} />
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('onboarding.ready.changeLater')}
-            </Text>
-          </View>
+          <Text style={[type.caption, styles.changeLater, { color: colors.inkMuted }]}>
+            {t('onboarding.ready.changeLater')}
+          </Text>
         </>
       }
     >
-      <Entrance index={0}>
-        <View style={styles.head}>
-          <IconBadge icon="checkmark" size={56} />
-          <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
+      <View style={styles.head}>
+        <Entrance index={0}>
+          <Text style={[type.displayHeadline, styles.center, { color: colors.ink }]} accessibilityRole="header">
             {t('onboarding.ready.headline')}
+            <Text style={{ color: colors.accent }}>{t('onboarding.ready.headlineAccent')}</Text>
           </Text>
-          <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-            {t('onboarding.ready.sub')}
-          </Text>
-        </View>
-      </Entrance>
+        </Entrance>
+        <Entrance index={1}>
+          <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>{t('onboarding.ready.sub')}</Text>
+        </Entrance>
+      </View>
 
-      <Entrance index={1}>
-      <View style={styles.companionZone}>
-        <View style={[styles.arch, { backgroundColor: colors.accentTint }]}>
-          <Animated.View style={breathing}>
-            {/* Tap your new companion — it acknowledges you. */}
-            <Companion animal={animal} size={120} interactive awake />
+      {/* The stage has no arrival: it is simply already there. */}
+      <View style={[styles.stage, { width: stage, height: stage }]}>
+        <Stage size={stage} rings={1} />
+        <View style={[styles.glow, { left: 52 * k, bottom: 22 * k }]}>
+          <GroundGlow width={stage - 104 * k} height={20 * k} />
+        </View>
+        <View style={[styles.companion, { bottom: 28 * k }]}>
+          <Animated.View style={[styles.originBottom, breathing]}>
+            {/* Tap your new companion — it acknowledges you. Where a living loop exists
+              * (web, Cat) it breathes, blinks and sways on its own. */}
+            <Companion animal={animal} size={168 * k} interactive awake living />
           </Animated.View>
         </View>
-        <Text style={[type.bodySemi, styles.center, { color: colors.ink }]}>{t('onboarding.ready.youChose')}</Text>
-        <Text style={[styles.companionName, { color: colors.ink }]}>
-          {colourLabel} {animal}
-        </Text>
-        <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-          {t('onboarding.ready.asCompanion')}
-        </Text>
-      </View>
-      </Entrance>
-
-      <Entrance index={2}>
-      <View style={styles.sparkleRow}>
-        <View style={[styles.hairline, { backgroundColor: colors.border }]} />
-        <Ionicons name="sparkles-outline" size={16} color={colors.accentSoft} />
-        <View style={[styles.hairline, { backgroundColor: colors.border }]} />
       </View>
 
-      <Text style={[styles.sectionTitle, { color: colors.ink }]}>
-        {t('onboarding.ready.gentleTitle')}
-      </Text>
-      <Text style={[type.body, styles.center, { color: colors.inkMuted }]}>
-        {t('onboarding.ready.gentleSub')}
-      </Text>
+      <Entrance index={2} style={styles.pillWrap}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          travel={3}
+          radius={radius.pill}
+          style={[styles.pill, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <View style={[styles.pillDot, { backgroundColor: colors.accent }]} />
+          <Text style={[type.caption, { color: colors.inkMuted }]}>
+            <Text style={{ fontFamily: font.sansBold, color: colors.ink }}>
+              {colourLabel} {animal}
+            </Text>
+            {t('onboarding.ready.asCompanion')}
+          </Text>
+        </EdgeSurface>
       </Entrance>
+
+      <View style={styles.grow} />
 
       <Entrance index={3}>
-      <View style={[styles.card, { backgroundColor: colors.surface }]}>
-        <View style={styles.cardHead}>
-          <Text style={[type.label, { color: colors.accent, flex: 1 }]}>
-            {t('onboarding.ready.affirmTitle')}
-          </Text>
-          <Ionicons name="heart-outline" size={18} color={colors.accent} />
-        </View>
-        {AFFIRMATIONS.map((a, i) => (
-          <Fragment key={a.icon}>
-            {i > 0 ? <View style={[styles.rowDivider, { backgroundColor: colors.border }]} /> : null}
-            <View style={styles.row}>
-              <IconBadge icon={a.icon} size={40} />
-              <Text style={[type.body, { color: colors.ink, flex: 1 }]}>{t(a.text)}</Text>
-            </View>
-          </Fragment>
-        ))}
-      </View>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          travel={3}
+          radius={radius.lg}
+          style={[styles.promises, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        >
+          <PromiseRow
+            icon="person-outline"
+            tone="green"
+            title={t('onboarding.ready.promise1')}
+            body={t('onboarding.ready.promise1Sub')}
+          />
+          <PromiseRow
+            icon="lock-closed-outline"
+            tone="indigo"
+            title={t('onboarding.ready.promise2')}
+            body={t('onboarding.ready.promise2Sub')}
+          />
+          <PromiseRow
+            icon="exit-outline"
+            tone="orange"
+            title={t('onboarding.ready.promise3')}
+            body={t('onboarding.ready.promise3Sub')}
+          />
+        </EdgeSurface>
       </Entrance>
     </StepScaffold>
   );
 }
 
 const styles = StyleSheet.create({
-  head: { alignItems: 'center', gap: space.sm, marginTop: space.sm, marginBottom: space.md },
-  headline: { ...type.displayHeadline, textAlign: 'center' },
+  head: { gap: space.xs },
   center: { textAlign: 'center' },
-  companionZone: { alignItems: 'center', gap: space.xs, marginBottom: space.md },
-  arch: {
-    width: 184,
-    height: 150,
-    borderTopLeftRadius: 100,
-    borderTopRightRadius: 100,
-    borderBottomLeftRadius: radius.md,
-    borderBottomRightRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: space.md,
-    marginBottom: space.xs,
-  },
-  companionName: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 34, textAlign: 'center' },
-  sparkleRow: {
+  stage: { alignSelf: 'center', marginTop: 12 },
+  glow: { position: 'absolute' },
+  companion: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  originBottom: { transformOrigin: 'bottom' },
+  pillWrap: { alignSelf: 'center', marginTop: 12 },
+  pill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.sm,
-    marginVertical: space.md,
+    minHeight: 32,
+    paddingHorizontal: 14,
+    borderWidth: 1,
   },
-  hairline: { flex: 1, height: 1 },
-  sectionTitle: {
-    fontFamily: font.serifBold,
-    fontSize: 24,
-    lineHeight: 32,
-    textAlign: 'center',
-    marginBottom: space.sm,
-  },
-  card: { borderRadius: radius.lg, padding: space.md, marginTop: space.md },
-  cardHead: { flexDirection: 'row', alignItems: 'center', marginBottom: space.sm },
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm },
-  rowDivider: { height: 1, marginLeft: 40 + space.md },
-  lockRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space.xs,
-    marginTop: space.xs,
-  },
+  pillDot: { width: 10, height: 10, borderRadius: radius.pill },
+  grow: { flexGrow: 1, minHeight: 12 },
+  promises: { paddingVertical: 12, paddingHorizontal: space.md, gap: 10, borderWidth: 1 },
+  changeLater: { textAlign: 'center', marginTop: space.sm },
 });

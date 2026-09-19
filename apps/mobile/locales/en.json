@@ -207,19 +207,18 @@
       "heroA11y": "Your %{animal} companion, waving hello"
     },
     "ready": {
-      "headline": "Your Mento space is ready.",
-      "sub": "Your space is all set. Your journey\nbegins now.",
-      "youChose": "You chose",
-      "asCompanion": "as your growth companion",
+      "headline": "Your Mento space\nis ",
+      "sub": "All set. Your journey begins now.",
+      "asCompanion": " · your growth companion",
       "enter": "Enter My Space",
-      "changeLater": "You can change your companion and theme later from Profile.",
-      "gentleTitle": "A gentle space for your growth",
-      "gentleSub": "Here, you can reflect, learn and grow with\nkindness towards yourself.",
-      "affirmTitle": "A few affirmations for your journey",
-      "affirm1": "This is not a place for competition.",
-      "affirm2": "Not a classroom session.",
-      "affirm3": "Not a material exchange platform.",
-      "affirm4": "Not a race against others."
+      "changeLater": "You can change your companion and colour later from Profile.",
+      "headlineAccent": "ready.",
+      "promise1": "A real person replies",
+      "promise1Sub": "A mentor who has walked your road.",
+      "promise2": "Private",
+      "promise2Sub": "Mentors only ever see your persona.",
+      "promise3": "Leave any time",
+      "promise3Sub": "Not a race. Nothing here is scored."
     },
     "role": {
       "headline": "What brings you\nhere ",
