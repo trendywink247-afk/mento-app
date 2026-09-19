@@ -18,6 +18,7 @@ import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { Composer } from '@/components/chat/Composer';
 import { ComposerChromeContext, ComposerPerchContext, type ComposerChrome } from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
+import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { KitMessageFooter, KitThreadContext, type KitThread } from '@/components/chat/KitMessageFooter';
 import { KitSavedHeader } from '@/components/chat/KitSavedHeader';
 import { KitTyping } from '@/components/chat/KitTyping';
@@ -52,12 +53,6 @@ const BUBBLE_EDGE = 3;
  * Re-skin pass: header/crisis migrated to the theme accent and the Stream kit's primary
  * accent is themed to the companion colour. Message/crisis logic is unchanged.
  */
-
-type CrisisPayload = {
-  support: string;
-  signal: string;
-  helplines: { name: string; number: string; hours: string }[];
-};
 
 /** Any Stream message shape can carry the server-injected `crisis` field. */
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload; created_at?: string | Date };
@@ -435,7 +430,7 @@ export default function ChatScreen() {
         onOpenOptions={() => setOptionsOpen(true)}
       />
 
-      {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} colors={colors} /> : null}
+      {crisis ? <CrisisCard crisis={crisis} mentorName={headerName} onDismiss={() => setCrisis(null)} /> : null}
 
       {error ? (
         <View style={styles.center}>
@@ -498,61 +493,7 @@ export default function ChatScreen() {
   );
 }
 
-function CrisisCard({
-  crisis,
-  onDismiss,
-  colors,
-}: {
-  crisis: CrisisPayload;
-  onDismiss: () => void;
-  colors: ReturnType<typeof useTheme>['colors'];
-}) {
-  const { t } = useI18n();
-  return (
-    <View style={[styles.crisis, { backgroundColor: colors.brandTint }]} testID="crisis-card">
-      <Text style={[styles.crisisTitle, { color: colors.ink }]}>{t('crisis.title')}</Text>
-      <Text style={[type.body, { color: colors.ink }]}>{crisis.support}</Text>
-      <View style={{ gap: space.sm }}>
-        {crisis.helplines.map((h) => (
-          <Pressable
-            key={h.number}
-            style={[styles.helpline, { backgroundColor: colors.surface }]}
-            onPress={() => void Linking.openURL(`tel:${h.number}`)}
-            accessibilityRole="button"
-            accessibilityLabel={t('crisis.callA11y', { name: h.name, number: h.number, hours: h.hours })}
-          >
-            <IconBadge icon="call-outline" size={36} tone="green" />
-            <View style={{ flex: 1 }}>
-              <Text style={[type.label, { color: colors.ink }]}>{h.name}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{h.number}</Text>
-            </View>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{h.hours}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <Pressable onPress={onDismiss} hitSlop={8} style={styles.crisisDismiss} accessibilityRole="button">
-        <Text style={[type.caption, { color: colors.accent }]}>{t('crisis.close')}</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
-  crisis: {
-    margin: space.md,
-    padding: space.md,
-    borderRadius: radius.lg,
-    gap: space.sm,
-  },
-  crisisTitle: { fontFamily: font.serifBold, fontSize: 18, lineHeight: 24 },
-  helpline: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.md,
-    padding: space.sm,
-  },
-  crisisDismiss: { alignSelf: 'flex-end' },
 });

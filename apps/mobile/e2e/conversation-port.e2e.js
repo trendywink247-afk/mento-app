@@ -214,11 +214,75 @@ async function run(browser, reduced) {
     psql(`UPDATE conversations SET member_streak=0 WHERE id='${conversationId}';`);
   }
 
-  // The kind key goes to the Journal — on the tabs that are already there.
-  await tid('allowance-journal').click();
-  await page.waitForURL('**/journals', { timeout: 30000 });
-  if ((await tid('tab-journals').count()) !== 1) throw new Error(`[${label}] Journal key stacked a second tab navigator`);
-  console.log(`[${label}] OK "Write it in your Journal meanwhile" → Journal, one tab navigator`);
+  // ---------------------------------------------------------------- A21: the crisis card
+  // The scan runs server-side in Stream's before-send webhook and hands the message back
+  // carrying `crisis`; a local stack has no tunnel, so that payload is added in flight.
+  await reopen(page);
+  try {
+    await page.route(sendRoute, async (route) => {
+      if (route.request().method() !== 'POST') return route.continue();
+      const res = await route.fetch();
+      const body = await res.json();
+      body.message.crisis = {
+        support: 'server support copy',
+        signal: 'self_harm',
+        helplines: [
+          { name: 'Tele-MANAS', number: '14416', hours: '24x7' },
+          { name: 'KIRAN', number: '1800-599-0019', hours: '24x7' },
+        ],
+      };
+      await route.fulfill({ response: res, json: body });
+    });
+    // At three in a row AND flagged: the crisis exemption wins — never the note.
+    psql(`UPDATE conversations SET member_streak=3 WHERE id='${conversationId}';`);
+    const HEAVY = 'i do not see the point of any of this';
+    await tid('composer-input').fill(HEAVY);
+    await tid('composer-send').click();
+    await tid('crisis-card').waitFor({ timeout: 30000 });
+    const card = (await tid('crisis-card').innerText()).replace(/\s+/g, ' ');
+    for (const words of [
+      'You deserve more support than a chat can give right now.',
+      'Tele-MANAS',
+      '14416',
+      'KIRAN',
+      '1800-599-0019',
+      `${mentor} is still here with you. Mentors are peers, not therapists.`,
+    ]) {
+      if (!card.includes(words)) throw new Error(`[${label}] crisis card is missing "${words}": ${card}`);
+    }
+    await tid('crisis-call-14416').waitFor({ timeout: 5000 });
+    await tid('crisis-call-18005990019').waitFor({ timeout: 5000 });
+    await assertStill(page, 'crisis-card', label);
+    await tid('crisis-why').click();
+    await tid('crisis-why-body').waitFor({ timeout: 5000 });
+    if ((await tid('crisis-why').innerText()).trim() !== 'Hide this note') throw new Error(`[${label}] the why toggle did not flip`);
+    await tid('crisis-why').click();
+    if (await tid('crisis-why-body').count()) throw new Error(`[${label}] the why note did not close`);
+    // Exempt: the note never shows although the run is at the limit; the composer is live.
+    await page.waitForTimeout(800);
+    if (await tid('allowance-note').count()) throw new Error(`[${label}] the allowance note showed beside a crisis card`);
+    if ((await tid('composer-send').getAttribute('aria-disabled')) === 'true') throw new Error(`[${label}] composer unusable beside the crisis card`);
+    if (!(await tid('allowance-text').innerText()).includes('not counted')) throw new Error(`[${label}] meter does not say "not counted"`);
+    // The companion is absent while the card shows.
+    if (await page.locator('[data-testid^="companion-slot-"]').count()) throw new Error(`[${label}] the companion is drawn beside the crisis card`);
+    console.log(`[${label}] OK A21 crisis card: still, both call keys, why toggle, no note at 3-in-a-row, composer live, no companion`);
+  } finally {
+    await page.unroute(sendRoute);
+    psql(`UPDATE conversations SET member_streak=0 WHERE id='${conversationId}';`);
+  }
+
+  // The kind key goes to the Journal — on the tabs that are already there. (The in-flight
+  // crisis payload is not in Stream's history, so a fresh load is an ordinary held chat.)
+  try {
+    psql(`UPDATE conversations SET member_streak=3 WHERE id='${conversationId}';`);
+    await reopen(page);
+    await tid('allowance-journal').click();
+    await page.waitForURL('**/journals', { timeout: 30000 });
+    if ((await tid('tab-journals').count()) !== 1) throw new Error(`[${label}] Journal key stacked a second tab navigator`);
+    console.log(`[${label}] OK "Write it in your Journal meanwhile" → Journal, one tab navigator`);
+  } finally {
+    psql(`UPDATE conversations SET member_streak=0 WHERE id='${conversationId}';`);
+  }
 
   await ctx.close();
   if (errors.length) throw new Error(`[${label}] ${errors.length} page error(s):\n${errors.join('\n')}`);

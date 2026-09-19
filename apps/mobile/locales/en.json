@@ -471,6 +471,18 @@
     "privateBody": "It's only for us and helps improve the support experience.",
     "finish": "Finish"
   },
+  "crisisCard": {
+    "sectionA11y": "Support lines you can call now",
+    "support": "You deserve more support than a chat can give right now.",
+    "free": "Free, any hour",
+    "callA11y": "Call %{name} on %{number}",
+    "stillHere": "%{name} is still here with you. Mentors are peers, not therapists.",
+    "why": "Why am I seeing this?",
+    "whyBody": "Something in your last message sounded heavy, so Mento shows these lines. Your message was delivered as usual. Nothing is blocked, and nothing is counted.",
+    "hide": "Hide this note",
+    "mentorLead": "The person you are talking with was shown these support lines.",
+    "mentorNote": "Stay with them and encourage the call. Mentors are peers, not therapists."
+  },
   "allowance": {
     "meterA11y": "Message allowance: %{left} of %{limit} left today",
     "left": "%{left} of %{limit} messages left today · up to %{row} in a row",

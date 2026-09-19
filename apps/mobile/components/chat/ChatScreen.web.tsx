@@ -222,7 +222,9 @@ export default function ChatScreenWeb() {
   const [ready, setReady] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [typing, setTyping] = useState<string | null>(null); // other side's persona name
-  const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
+  // The card belongs to the message that raised it (board A21): it sits in the thread right
+  // under that message and scrolls away with it — no dismiss, nothing to tap it shut.
+  const [crisis, setCrisis] = useState<{ payload: CrisisPayload; messageId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sendFailed, setSendFailed] = useState(false);
   // An older mentor bubble the member tapped: its save key is open too (the mentor's
@@ -249,7 +251,7 @@ export default function ChatScreenWeb() {
   const surfaceCrisis = useCallback((m: CrisisCarrier | undefined) => {
     if (m?.crisis && m.id && !shownRef.current.has(m.id)) {
       shownRef.current.add(m.id);
-      setCrisis(m.crisis);
+      setCrisis({ payload: m.crisis, messageId: m.id });
       const at = m.created_at ? new Date(m.created_at).getTime() : Date.now();
       setCrisisAt((prev) => Math.max(prev, at));
     }
@@ -527,6 +529,7 @@ export default function ChatScreenWeb() {
                     : t('allowance.delivered');
               }
               return (
+                <>
                 <ThreadRow
                   item={item}
                   dayText={showDay ? dayLabel(item.at, t) : null}
@@ -541,11 +544,24 @@ export default function ChatScreenWeb() {
                   onSave={saveToNotes}
                   onArrived={markRisen}
                 />
+                {crisis?.messageId === item.id ? (
+                  // Its "why" note opens in place: while the card is the newest thing in the
+                  // thread, keep the whole of it in view (a jump, never a scroll animation).
+                  <View
+                    style={styles.crisisSeat}
+                    onLayout={
+                      index === messages.length - 1
+                        ? () => listRef.current?.scrollToEnd({ animated: false })
+                        : undefined
+                    }
+                  >
+                    <CrisisCard crisis={crisis.payload} mentorName={headerName} inset={false} />
+                  </View>
+                ) : null}
+                </>
               );
             }}
           />
-          {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
-
           {/* Presence only: three dots rising in turn, and who it is. */}
           {typing ? <TypingDots testID="typing-indicator" label={t('chat.typing', { name: typing })} /> : null}
 
@@ -593,6 +609,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   listEmpty: { justifyContent: 'center' },
+  crisisSeat: { paddingTop: 10 },
   emptyWrap: { alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg },
   emptyTitle: { fontFamily: font.serifBold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
   sendErrorLine: { paddingHorizontal: space.md, paddingTop: space.xs },
