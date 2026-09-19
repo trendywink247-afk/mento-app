@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+
+import { COMPANION_GENERATED } from '@/assets/companions/generated';
 
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
@@ -39,6 +41,7 @@ export function MemberDisc({
   animal,
   colour,
   ring,
+  still = false,
 }: {
   name: string;
   size: number;
@@ -46,6 +49,9 @@ export function MemberDisc({
   colour?: string | null;
   /** A white 2px rim with a hairline outside it (board A35 header). */
   ring?: string;
+  /** A still painting instead of the living rig — for LISTS (Mentor Home rows): ten rigs
+   * would be ten idle movers (motion budget: three). */
+  still?: boolean;
 }) {
   const { colors } = useTheme();
   if (animal) {
@@ -60,7 +66,17 @@ export function MemberDisc({
         importantForAccessibility="no-hide-descendants"
         accessibilityElementsHidden
       >
-        <Companion animal={animal as CompanionAnimal} size={Math.round(size * 0.92)} awake />
+        {still ? (
+          <Image
+            source={(COMPANION_GENERATED[animal as CompanionAnimal] ?? COMPANION_GENERATED.Panda).poses.idle}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+            testID={`member-face-${animal}`}
+            style={{ width: Math.round(size * 0.92), height: Math.round(size * 0.92) }}
+          />
+        ) : (
+          <Companion animal={animal as CompanionAnimal} size={Math.round(size * 0.92)} awake />
+        )}
       </View>
     );
     // The hairline sits OUTSIDE the white rim, as the board draws it.

@@ -19,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type ConversationMentor, type PathTree } from '@/lib/api';
 import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
+import { mentorFaces, type Face } from '@/lib/mentorFaces';
 
 /** How often an open chat re-reads the mentor's presence. A polling interval, not a
  * motion duration — the mentor console's own heartbeat is 5 minutes. */
@@ -39,6 +40,9 @@ export type ChatHeaderData = {
   savedMessageIds: ReadonlySet<string>;
   /** Re-count after a save, so the chip follows the server rather than the tap. */
   refreshSaved: () => void;
+  /** The mentor's face: the profile's once it has loaded, else what the member side
+   * already knew (My Chats / the match) — null only when nothing has said yet. */
+  face: Face | null;
 };
 
 export function useChatHeader(conversationId: string | undefined): ChatHeaderData {
@@ -62,7 +66,14 @@ export function useChatHeader(conversationId: string | undefined): ChatHeaderDat
     void api
       .mentorProfile(conversationId)
       .then((p) => {
-        if (alive.current) setProfile(p);
+        if (!alive.current) return;
+        setProfile(p);
+        mentorFaces.remember({
+          listenerId: p.id,
+          conversationId,
+          animal: p.companion_animal,
+          colour: p.companion_colour,
+        });
       })
       .catch(() => {
         // Stays still: the header keeps whatever it last knew.
@@ -116,5 +127,9 @@ export function useChatHeader(conversationId: string | undefined): ChatHeaderDat
     savedCount,
     savedMessageIds,
     refreshSaved,
+    face:
+      profile?.companion_animal && profile.companion_colour
+        ? { animal: profile.companion_animal, colour: profile.companion_colour }
+        : mentorFaces.forConversation(conversationId),
   };
 }

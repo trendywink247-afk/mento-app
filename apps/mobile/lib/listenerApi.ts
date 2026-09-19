@@ -16,6 +16,9 @@ export type ListenerMe = {
   availability_note: string | null;
   /** The next 04:00 IST rename (ISO UTC); null when rotation is off. */
   name_changes_at?: string | null;
+  /** The mentor's own face — the SAME animal + wash members see (server mentor_face). */
+  companion_animal?: string;
+  companion_colour?: string;
 };
 
 /** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
@@ -52,6 +55,9 @@ export type ListenerConversation = {
   in_touch?: boolean;
   /** Snooze 24 h (board A10): when the snooze ends, while it is open; else null. */
   snoozed_until?: string | null;
+  /** The member's companion in their colour (board A10 rows). Never its name. */
+  user_companion_animal?: string | null;
+  user_companion_colour?: string | null;
 };
 
 /** A member's waiting "stay in touch" ask, as the mentor sees it (board A15): the
@@ -72,6 +78,10 @@ export type ListenerRequest = {
   issue_category: string | null;
   requester_persona_name: string;
   created_at: string;
+  /** The member's companion in their colour + the topic's human label ("Exam stress"). */
+  requester_companion_animal?: string | null;
+  requester_companion_colour?: string | null;
+  issue_category_label?: string | null;
 };
 
 /** Dev-only picker row (the /listener/dev/* endpoints 404 in production). */

@@ -480,6 +480,7 @@ export default function ChatScreenWeb() {
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the native chat. */}
       <ChatHeaderCard
         name={headerName}
+        face={header.face ?? undefined}
         status={header.profile?.status ?? null}
         replyWithinADay={Boolean(header.profile?.reply_within_a_day)}
         community={header.community}

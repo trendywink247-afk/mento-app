@@ -335,6 +335,23 @@ While a snooze is open:
 
 `GET /admin/applications` items gain `available_times: string[]` (`[]` for older rows). Approval seeds the new mentor's member-facing `availability_note` from the chips ("mornings and weekends" → "usually here mornings and weekends"), else from the commitment ("a few hours a week").
 
+## B6 — One mentor, one face (lane u11 · boards A04 A05 A06 A10 A14 A25 A35)
+
+Every mentor is drawn as ONE companion animal in ONE wash colour, on every screen. The server
+owns it: `listener_profiles.companion_animal` / `companion_colour` (migration
+`4b971bd4faaa`), dealt deterministically from the listener id on insert (and backfilled for
+older rows). It never rotates with the daily name (§L.6 l) and never derives from the
+mentor's own member companion. Draw it only with `components/art/MentorFace`
+(`accentTint` of the colour as the wash).
+
+| Payload | Fields (additive) |
+|---|---|
+| `GET /listeners` items, `GET /listeners/{id}`, `GET /conversations/{id}/mentor`, `GET /in-touch` items, `GET /listener/me` | `companion_animal`, `companion_colour` (never null) |
+| `GET /conversations` items, `POST /match` | `listener_companion_animal`, `listener_companion_colour` |
+| `POST /listeners/{id}/request`, `GET /listeners/requests/mine` | `listener_companion_animal`, `listener_companion_colour` (null when there is no target) |
+| `GET /listener/me/conversations` items | `user_companion_animal`, `user_companion_colour` — the MEMBER's companion (null if none); never its name |
+| `GET /listener/me/requests` items | `requester_companion_animal`, `requester_companion_colour`, `issue_category_label` ("Exam stress") |
+
 ---
 
 ## Deploy notes (all three units)

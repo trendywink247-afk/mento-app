@@ -43,7 +43,7 @@ import { FeedbackPill } from '@/components/FeedbackPill';
 import { GroundFade } from '@/components/GroundFade';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
-import { MentorAvatar } from '@/components/art/MentorAvatar';
+import { MentorFace } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { useHeroBreath } from '@/components/motion/useHeroBreath';
@@ -99,9 +99,18 @@ export default function RequestSentScreen() {
       }
       setMissing(false);
       setRequest(found);
-      if (found.target_listener_id && (!mentor || mentor.id !== found.target_listener_id)) {
+      if (
+        found.target_listener_id &&
+        (!mentor || mentor.id !== found.target_listener_id || !mentor.animal)
+      ) {
         const p = await api.listenerProfile(found.target_listener_id);
-        const m = { id: p.id, name: p.persona_name, avatar: p.persona_avatar };
+        const m = {
+          id: p.id,
+          name: p.persona_name,
+          avatar: p.persona_avatar,
+          animal: p.companion_animal ?? found.listener_companion_animal,
+          colour: p.companion_colour ?? found.listener_companion_colour,
+        };
         setMentor(m);
         requestLetter.put({ request: found, mentor: m });
       }
@@ -377,7 +386,7 @@ function Scene({
           accessible
           accessibilityLabel={t('requestSent.mentorA11y', { name })}
         >
-          <MentorAvatar seed={mentor.avatar} size={46} />
+          <MentorFace animal={mentor.animal} colour={mentor.colour} size={46} />
         </View>
       ) : null}
 

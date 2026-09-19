@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { IconBadge } from '@/components/IconBadge';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
+import { MentorFace } from '@/components/art/MentorFace';
 import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { ApiError } from '@/lib/api';
 import {
@@ -223,7 +224,7 @@ export default function ListenerConsoleWeb() {
         <ScrollView contentContainerStyle={styles.body} testID="console-ready">
           {/* Identity + availability */}
           <View style={[styles.header, { backgroundColor: colors.surface }, elevation.sm]}>
-            <PersonaAvatar name={me.persona_name} size={56} online={online} />
+            <MentorFace animal={me.companion_animal} colour={me.companion_colour} size={56} presence={online} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.name, { color: colors.ink }]}>{me.persona_name}</Text>
               <Text style={[type.caption, styles.tnum, { color: colors.inkMuted }]}>

@@ -7,7 +7,14 @@
  */
 import type { PersonalRequest } from '@/lib/api';
 
-export type LetterMentor = { id: string; name: string; avatar: string };
+export type LetterMentor = {
+  id: string;
+  name: string;
+  avatar: string;
+  /** The mentor's face (server mentor_face) — the same animal on every screen. */
+  animal?: string | null;
+  colour?: string | null;
+};
 export type Letter = { request: PersonalRequest; mentor: LetterMentor | null };
 
 const letters = new Map<string, Letter>();

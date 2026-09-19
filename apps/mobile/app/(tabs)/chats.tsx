@@ -21,6 +21,7 @@ import type { PlacementSlot } from '@/lib/companionPlacement';
 import { relativeTime } from '@/lib/format';
 import { requestLetter } from '@/lib/requestLetter';
 import { useI18n } from '@/lib/i18n';
+import { mentorFaces } from '@/lib/mentorFaces';
 import { screenCache, type ChatPreview, type WaitingQuestion } from '@/lib/screenCache';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected } from '@/lib/streamClient';
@@ -94,6 +95,14 @@ export default function ChatsTab() {
     try {
       const list = await api.listConversations();
       setRows(list);
+      // The chat header paints this mentor's face at once when a row is opened.
+      for (const c of list) {
+        mentorFaces.remember({
+          conversationId: c.id,
+          animal: c.listener_companion_animal,
+          colour: c.listener_companion_colour,
+        });
+      }
       setLoadError(null);
       screenCache.set('chats', { ...(screenCache.get('chats') ?? { previews: {} }), rows: list });
 
@@ -111,6 +120,8 @@ export default function ChatsTab() {
               listenerId: m.id,
               name: m.persona_name,
               avatar: m.persona_avatar,
+              animal: m.companion_animal ?? r.listener_companion_animal,
+              colour: m.companion_colour ?? r.listener_companion_colour,
               intro: r.intro_message,
               createdAt: r.created_at,
             });
@@ -244,7 +255,7 @@ export default function ChatsTab() {
         conversation_id: null,
         created_at: w.createdAt,
       },
-      mentor: { id: w.listenerId, name: w.name, avatar: w.avatar },
+      mentor: { id: w.listenerId, name: w.name, avatar: w.avatar, animal: w.animal, colour: w.colour },
     });
     router.push({ pathname: '/request-sent/[id]', params: { id: w.id } });
   };
@@ -323,7 +334,7 @@ export default function ChatsTab() {
       row = (
         <ChatRow
           testID={`waiting-${w.id}`}
-          avatarSeed={w.avatar}
+          face={{ animal: w.animal, colour: w.colour }}
           name={w.name}
           state="waiting"
           stateLabel={stateLabel('waiting')}
@@ -344,7 +355,7 @@ export default function ChatsTab() {
       row = (
         <ChatRow
           testID={`convo-${c.id}`}
-          avatarSeed={c.listener_persona_avatar}
+          face={{ animal: c.listener_companion_animal, colour: c.listener_companion_colour }}
           name={c.listener_persona_name}
           state={s}
           stateLabel={stateLabel(s)}
@@ -572,7 +583,7 @@ export default function ChatsTab() {
                   <Entrance index={index + 1}>
                     <ChatRow
                       testID={`in-touch-row-${item.link_id}`}
-                      avatarSeed={item.persona_avatar}
+                      face={{ animal: item.companion_animal, colour: item.companion_colour }}
                       name={item.persona_name}
                       state={s}
                       stateLabel={stateLabel(s)}

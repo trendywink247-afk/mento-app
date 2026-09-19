@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { DeepHeader } from '@/components/DeepHeader';
 import { GroundFade } from '@/components/GroundFade';
 import { InTouchBadge } from '@/components/InTouchBadge';
-import { MentorAvatar } from '@/components/art/MentorAvatar';
+import { MentorFace } from '@/components/art/MentorFace';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { DeepArrival } from '@/components/motion/DeepArrival';
 import { Entrance } from '@/components/motion/Entrance';
@@ -174,7 +174,7 @@ export default function BrowseMentors() {
         testID={`mentor-${l.id}`}
         style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
       >
-        <MentorAvatar seed={l.persona_avatar} size={52} presence={l.available} />
+        <MentorFace animal={l.companion_animal} colour={l.companion_colour} size={52} presence={l.available} />
         <View style={styles.cardBody}>
           <View style={styles.cardHead}>
             <Text style={[styles.cardName, { color: colors.ink }]} numberOfLines={1}>

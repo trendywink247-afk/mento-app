@@ -40,14 +40,23 @@ export function RequestCard({
       testID={`mentor-request-${request.id}`}
     >
       <View style={styles.head}>
-        <MemberDisc name={request.requester_persona_name} size={52} />
+        <MemberDisc
+          name={request.requester_persona_name}
+          size={52}
+          animal={request.requester_companion_animal}
+          colour={request.requester_companion_colour}
+          still
+        />
         <View style={styles.headText}>
           <Text style={[styles.name, { color: colors.ink }]}>{request.requester_persona_name}</Text>
           {request.issue_category ? (
             <View style={styles.chips}>
-              <View style={[styles.chip, { backgroundColor: wash.orange }]}>
+              <View style={[styles.chip, { backgroundColor: wash.orange }]} testID={`mentor-request-topic-${request.id}`}>
                 <Text style={[styles.chipText, { color: COMPANION_COLORS.mustard.accentEdge }]}>
-                  {t('mentorHomePage.pickedAtMatch', { topic: formatTopic(request.issue_category) })}
+                  {t('mentorHomePage.pickedAtMatch', {
+                    // The server's member-facing words ("Exam stress"), never the slug.
+                    topic: request.issue_category_label ?? formatTopic(request.issue_category),
+                  })}
                 </Text>
               </View>
             </View>

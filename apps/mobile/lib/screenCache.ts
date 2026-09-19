@@ -33,6 +33,9 @@ export type WaitingQuestion = {
   listenerId: string;
   name: string;
   avatar: string;
+  /** The mentor's face (server mentor_face) — the same animal on every screen. */
+  animal?: string | null;
+  colour?: string | null;
   intro: string | null;
   createdAt: string;
 };

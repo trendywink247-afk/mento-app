@@ -13,7 +13,7 @@ import {
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
+import { MentorFace } from '@/components/art/MentorFace';
 import { ApiError, api, type Listener } from '@/lib/api';
 import { formatTopic } from '@/lib/format';
 import { requestLetter } from '@/lib/requestLetter';
@@ -122,7 +122,7 @@ export default function MentorProfile() {
         }
       >
         <View style={styles.composeHead}>
-          <PersonaAvatar name={listener.persona_name} size={72} online={listener.available} />
+          <MentorFace animal={listener.companion_animal} colour={listener.companion_colour} size={72} presence={listener.available} />
           <Text style={[styles.name, { color: colors.ink }]}>{listener.persona_name}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>
             Tell them a little about what's on your mind.
@@ -194,7 +194,7 @@ export default function MentorProfile() {
       }
     >
       <View style={styles.composeHead}>
-        <PersonaAvatar name={listener.persona_name} size={96} online={listener.available} />
+        <MentorFace animal={listener.companion_animal} colour={listener.companion_colour} size={96} presence={listener.available} />
         <Text style={[styles.name, { color: colors.ink }]}>{listener.persona_name}</Text>
         <Text style={[type.caption, { color: listener.available ? colors.success : colors.inkMuted }]}>
           {listener.available ? '● Available now' : listener.status === 'online' ? 'At capacity' : 'Away'}

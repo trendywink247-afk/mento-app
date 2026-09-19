@@ -12,6 +12,7 @@ import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { capture, waitBucket } from '@/lib/analytics';
 import { ApiError, api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { mentorFaces, type Face } from '@/lib/mentorFaces';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { getCompanionAnimal, getPersona, getSessionToken, saveCompanionAnimal, saveSession } from '@/lib/session';
 import { useFrameSize } from '@/lib/useFrameSize';
@@ -65,6 +66,7 @@ export function ConnectingStep({
   const [hasSession, setHasSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [foundName, setFoundName] = useState<string | null>(null);
+  const [foundFace, setFoundFace] = useState<Face | null>(null);
   // The member's own persona + companion, for the left orb (known once the account exists).
   const [memberName, setMemberName] = useState<string | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(
@@ -184,6 +186,12 @@ export function ConnectingStep({
       }
       const finish = () => {
         setFoundName(match.listener_persona_name);
+        if (match.listener_companion_animal && match.listener_companion_colour) {
+          const face = { animal: match.listener_companion_animal, colour: match.listener_companion_colour };
+          setFoundFace(face);
+          // The chat header paints this same face the moment the chat opens.
+          mentorFaces.remember({ conversationId: match.conversation_id, ...face });
+        }
         setPhase('found');
         let handed = false;
         const handOff = () => {
@@ -330,6 +338,7 @@ export function ConnectingStep({
         animal={animal}
         memberName={memberName}
         mentorName={found ? foundName : null}
+        mentorFace={foundFace}
         still={phase === 'error'}
       />
 
