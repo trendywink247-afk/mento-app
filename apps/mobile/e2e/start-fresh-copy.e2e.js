@@ -104,12 +104,16 @@ async function run(browser, reduced, canErase) {
   if (!token) throw new Error(`[${label}] "Keep my space" lost the session`);
   console.log(`[${label}] OK "Keep my space" returns to Profile with the session intact`);
 
-  // And the real thing: the device is cleared and the landing shows.
+  // And the real thing: the device is cleared and the landing shows. A planted analytics id
+  // stands in for the funnel's (dark in e2e): it must not survive into the next identity.
+  await page.evaluate(() => globalThis.localStorage.setItem('mento.analytics_id', 'e2e-old-identity'));
   await tid('profile-start-fresh').click();
   await tid('start-fresh-confirm').click();
   await tid('start').waitFor({ timeout: 30000 });
   const after = await page.evaluate(() => globalThis.localStorage.getItem('mento.session_token'));
   if (after) throw new Error(`[${label}] Start fresh left the session token on the device`);
+  const analyticsId = await page.evaluate(() => globalThis.localStorage.getItem('mento.analytics_id'));
+  if (analyticsId) throw new Error(`[${label}] Start fresh kept the analytics id - the next identity would be linked to this one`);
   console.log(`[${label}] OK Start fresh clears the device and lands on the landing`);
 
   await ctx.close();

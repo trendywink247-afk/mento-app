@@ -6,6 +6,7 @@ import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { BoardSheet, type BoardSheetHandle } from '@/components/motion/BoardSheet';
 import { PressKey } from '@/components/motion/PressKey';
+import { forgetAnalyticsId } from '@/lib/analytics';
 import { forgetPlacements } from '@/lib/companionPlacement';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { clearListenerSession } from '@/lib/listenerSession';
@@ -63,6 +64,7 @@ export default function StartFreshSheet() {
     await unregisterPush();
     await clearSession();
     forgetPlacements(); // a new identity has no history of places
+    await forgetAnalyticsId(); // …and no analytics trail back to the old one
     await clearListenerSession();
     await disconnectListenerClient().catch(() => {});
     router.dismissAll();

@@ -98,3 +98,19 @@ export function capture<E extends keyof EventMap>(
     )
     .catch(() => {});
 }
+
+/** Start fresh: the next identity on this device gets a new analytics id, so the funnel can
+ * never join the old persona's events to the new one's (T&S #7 / #10). */
+export async function forgetAnalyticsId(): Promise<void> {
+  distinctId = null;
+  try {
+    if (Platform.OS === 'web') {
+      globalThis.localStorage?.removeItem(ID_KEY);
+      return;
+    }
+    const SecureStore = await import('expo-secure-store');
+    await SecureStore.deleteItemAsync(ID_KEY);
+  } catch {
+    /* best-effort: a stale id is dark-mode-harmless and never carries identity */
+  }
+}
