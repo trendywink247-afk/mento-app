@@ -16,6 +16,8 @@ type Props = {
   variant?: 'primary' | 'ghost' | 'surface' | 'link';
   /** pill = the app's round key. key = the board's 58px, 14-radius pillow key (first run). */
   shape?: 'pill' | 'key';
+  /** A key that shares a row with a wider one (board A03 "Surprise Me"): 16px label, tighter sides. */
+  dense?: boolean;
   /** accent = companion colour. ink = charcoal key (onboarding CTAs). */
   tone?: 'accent' | 'ink';
   icon?: keyof typeof Ionicons.glyphMap;
@@ -33,6 +35,7 @@ export function PrimaryButton({
   variant = 'primary',
   tone = 'accent',
   shape = 'pill',
+  dense = false,
   icon,
   trailing,
   accessibilityLabel,
@@ -53,14 +56,16 @@ export function PrimaryButton({
       : colors.edgeAlt;
   const fg = filled ? colors.onAccent : surface ? colors.ink : colors.accent;
   const key = shape === 'key';
-  const iconSize = key ? 22 : 18;
+  const iconSize = key && !dense ? 22 : 18;
 
   const content = loading ? (
     <ActivityIndicator color={fg} />
   ) : (
     <View style={styles.row}>
       {icon ? <Ionicons name={icon} size={iconSize} color={fg} /> : null}
-      <Text style={[key ? type.key : type.bodySemi, !key && styles.label, styles.shrink, { color: fg }]}>{label}</Text>
+      <Text style={[key && !dense ? type.key : key ? type.keyDense : type.bodySemi, !key && styles.label, styles.shrink, { color: fg }]}>
+        {label}
+      </Text>
       {trailing === 'arrow' ? <Ionicons name="arrow-forward" size={iconSize} color={fg} /> : null}
       {trailing === 'chevron' ? <Ionicons name="chevron-forward" size={iconSize} color={fg} /> : null}
     </View>
@@ -102,6 +107,7 @@ export function PrimaryButton({
       style={[
         styles.base,
         key && styles.key,
+        dense && styles.dense,
         { backgroundColor: bg },
         surface && { borderWidth: 1, borderColor: colors.border },
       ]}
@@ -120,6 +126,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
   },
   key: { minHeight: 58, paddingHorizontal: space.md },
+  dense: { paddingHorizontal: space.sm },
   link: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   disabled: { opacity: 0.5 },

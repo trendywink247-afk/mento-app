@@ -192,19 +192,19 @@
       "companionA11y": "Your companion, keeping you company beside the email field"
     },
     "companion": {
-      "headline": "Your growth, your theme",
-      "sub": "Your emotional growth will be represented\nby an animal and a colour.",
+      "headline": "Your growth,\nyour ",
+      "sub": "Your emotional growth will be represented by an animal and a colour.",
       "step1": "1. Choose an animal",
       "step1Sub": "This will be your growth companion",
       "step2": "2. Choose a colour",
       "step2Sub": "This will be your growth colour",
-      "decideTitle": "Can't decide?",
-      "decideSub": "Let us choose a random theme for you.",
       "surprise": "Surprise Me",
       "surpriseA11y": "Surprise me with a random theme",
       "changeLater": "You can change your theme later from Profile.",
       "animalA11y": "%{animal} companion",
-      "themeA11y": "%{label} theme"
+      "themeA11y": "%{label} theme",
+      "headlineAccent": "theme",
+      "heroA11y": "Your %{animal} companion, waving hello"
     },
     "ready": {
       "headline": "Your Mento space is ready.",

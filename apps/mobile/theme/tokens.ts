@@ -107,6 +107,7 @@ export const type = {
   label: { fontSize: 14, fontFamily: font.sansBold, lineHeight: 20 },
   /** Pillow-key labels on the board's 56–58px keys. */
   key: { fontSize: 18, fontFamily: font.sansBold, lineHeight: 24 },
+  keyDense: { fontSize: 16, fontFamily: font.sansBold, lineHeight: 24 },
   /** Row / card titles (promise rows, wait cards) and their quiet second line. */
   rowTitle: { fontSize: 15, fontFamily: font.sansBold, lineHeight: 20 },
   /** A door's / card's second line (board 15/21). */
