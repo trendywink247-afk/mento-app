@@ -1,8 +1,11 @@
-/** Connecting — the honest-busy dead end is no longer a dead end (2026-09-06).
+/** Connecting — the honest-busy dead end is no longer a dead end (2026-09-06; the exits
+ * re-pointed at the one ask loop 2026-09-20).
  * With every listener away the match 503s; after the quiet retries the step lands in
- * its error state and must offer BOTH "Try again" and "Browse mentors instead" — the
+ * its error state and must offer BOTH "Try again" and "Send your question instead" — the
  * session already exists, so the member can enter the app and send a Personal
- * request rather than be stranded. Proven once normally, once under reduced motion;
+ * request rather than be stranded. Both exits open the SAME door: the New chat sheet
+ * (A24) over My Chats, carrying the still busy card, whose "Pick a mentor" reaches
+ * Browse. Proven once normally, once under reduced motion;
  * listeners are restored to online afterwards whatever happens.
  *
  * Needs: API :8000 seeded + Expo web :8081, the mento-postgres / mento-redis
@@ -59,11 +62,16 @@ async function runBusy(browser, { reduced, viaLink = false }) {
   console.log(`OK [${label}] busy offers "Send your question instead"`);
   if (viaLink) {
     await tid('send-question').click();
+    await page.waitForURL('**/new-chat**', { timeout: 30000 });
+    await tid('new-chat-sheet').waitFor({ state: 'visible', timeout: 30000 });
+    await tid('new-chat-busy').waitFor({ state: 'visible', timeout: 15000 });
+    console.log(`OK [${label}] the link opens the New chat sheet over My Chats with the still busy card`);
+    await page.waitForTimeout(9000); // one retry period: nothing may navigate or throw
+    if (!page.url().includes('new-chat')) throw new Error(`left the sheet after the link: ${page.url()}`);
+    await tid('new-chat-pick').click();
     await page.waitForURL('**/mentors**', { timeout: 30000 });
     await tid('next-available').waitFor({ state: 'visible', timeout: 30000 });
-    console.log(`OK [${label}] the link lands on the Mentors screen inside the app (no retry fires after)`);
-    await page.waitForTimeout(9000); // one retry period: nothing may navigate or throw
-    if (!page.url().includes('mentors')) throw new Error(`left Mentors after the link: ${page.url()}`);
+    console.log(`OK [${label}] "Pick a mentor" carries on to Browse — the same loop`);
     await ctx.close();
     return errors;
   }
@@ -71,12 +79,12 @@ async function runBusy(browser, { reduced, viaLink = false }) {
   await page.waitForSelector("text=We couldn't connect just yet", { timeout: ERROR_STATE_TIMEOUT_MS });
   await tid('retry').waitFor({ state: 'visible', timeout: 10000 });
   await tid('browse-mentors').waitFor({ state: 'visible', timeout: 10000 });
-  console.log(`OK [${label}] error state offers Try again + Browse mentors`);
+  console.log(`OK [${label}] error state offers Try again + Send your question instead`);
 
   await tid('browse-mentors').click();
-  await page.waitForURL('**/mentors**', { timeout: 30000 });
-  await tid('next-available').waitFor({ state: 'visible', timeout: 30000 });
-  console.log(`OK [${label}] browse lands on the Mentors screen inside the app`);
+  await page.waitForURL('**/new-chat**', { timeout: 30000 });
+  await tid('new-chat-busy').waitFor({ state: 'visible', timeout: 30000 });
+  console.log(`OK [${label}] the error exit opens the same New chat sheet, busy card and all`);
 
   await ctx.close();
   return errors;

@@ -35,6 +35,7 @@ import { RoleStep } from '@/components/onboarding/steps/RoleStep';
 import { haptic } from '@/lib/haptics';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { api } from '@/lib/api';
+import { enterNewChat } from '@/lib/askLoop';
 import { enterMentorPath } from '@/lib/mentorPath';
 import { saveCompanionAnimal, saveRole, type Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -193,14 +194,13 @@ export function OnboardingJourney() {
   }, [router]);
 
 
-  // No mentor free (503 after the honest retries): the session already exists, so
-  // the member enters the app on Browse mentors and can send a Personal request.
-  // Same stack rebuild as the matched path — hardware back lands on My Chats.
+  // No mentor free (503 after the honest retries): the session already exists, so the
+  // member enters the app on the ask loop's one door — the New chat sheet over My Chats,
+  // with the still busy card on it (lib/askLoop.ts). From there: Pick a mentor → Browse →
+  // a mentor → the question → the letter. Hardware back lands on My Chats.
   const onBrowseMentors = useCallback(() => {
     clearDraft();
-    router.dismissAll();
-    router.replace('/chats');
-    router.push('/mentors');
+    enterNewChat(router, { busy: true });
   }, [router]);
 
   // The matched moment: success haptic, panda celebrates, the sky lifts toward the

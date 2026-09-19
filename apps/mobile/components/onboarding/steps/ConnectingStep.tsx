@@ -295,6 +295,7 @@ export function ConnectingStep({
               testID="retry"
             />
             {hasSession ? (
+              /* The same door as the busy link: the ask loop's New chat sheet (lib/askLoop). */
               <PrimaryButton
                 variant="surface"
                 shape="key"

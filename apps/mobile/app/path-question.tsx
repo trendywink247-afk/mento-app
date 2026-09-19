@@ -37,6 +37,7 @@ import { DeepArrival } from '@/components/motion/DeepArrival';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api, type PathState } from '@/lib/api';
+import { openNewChat } from '@/lib/askLoop';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import {
@@ -388,9 +389,10 @@ export default function PathQuestion() {
         ) : busyExit ? (
           <View style={styles.footNote}>
             <BusyExits
-              // The question travels with them: Browse → a mentor → the question step,
-              // pre-filled, never sent for them.
-              onSendInstead={() => router.push({ pathname: '/mentors', params: { question: assembled.text } })}
+              // The one ask loop (lib/askLoop.ts): the New chat sheet over My Chats →
+              // Pick a mentor → Browse → a mentor → the question step, pre-filled with
+              // what they wrote — never sent for them.
+              onSendInstead={() => openNewChat(router, { question: assembled.text, busy: true })}
               onRetry={() => void go('continue')}
               retrying={busy !== null}
               testID="pq-busy"
