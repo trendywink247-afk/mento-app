@@ -88,6 +88,8 @@ export type ListenerProfile = {
   is_favourite: boolean;
   in_touch?: boolean;
   first_met_as?: string | null;
+  /** The server's member-facing words for `categories`, same order (never a raw slug). */
+  category_labels?: string[];
 };
 
 export type PersonalRequest = {
@@ -410,6 +412,10 @@ export const api = {
     request<PersonalRequest>(`/listeners/${id}/request`, { method: 'POST', body: JSON.stringify({ intro_message, issue_category }) }, true),
 
   myRequests: () => request<PersonalRequest[]>('/listeners/requests/mine', {}, true),
+  /** Close the member's own open question (one open question at a time — a 409
+   * `question_open` names it). Idempotent; an answered request comes back unchanged. */
+  withdrawRequest: (requestId: string) =>
+    request<PersonalRequest>(`/listeners/requests/${requestId}`, { method: 'DELETE' }, true),
 
   // --- Mentor profile ("Two in the room") + favourites ---
   mentorProfile: (convoId: string) =>

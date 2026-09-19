@@ -29,13 +29,16 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BusyExits } from '@/components/BusyExits';
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { OpenQuestionNote } from '@/components/OpenQuestionNote';
 import { Companion } from '@/components/art/Companion';
 import { DeepArrival } from '@/components/motion/DeepArrival';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api, type PathState } from '@/lib/api';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import {
   EMPTY_CHOICE,
   QUESTION_MAX_CHARS,
@@ -117,6 +120,10 @@ export default function PathQuestion() {
   const [choice, setChoice] = useState<BuilderChoice>(EMPTY_CHOICE);
   const [busy, setBusy] = useState<'continue' | 'edit' | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // Nobody free (503) or one open question at a time (409 `question_open`): still states
+  // with honest ways on — never a dead end.
+  const [busyExit, setBusyExit] = useState(false);
+  const [openQ, setOpenQ] = useState<OpenQuestion | null>(null);
 
   // The route params paint the first frame; the member's path fills in the rest (the
   // other starters for "Another", and the lens when the screen was opened without it).
@@ -170,6 +177,8 @@ export default function PathQuestion() {
     if (busy || !assembled.text) return;
     setBusy(mode);
     setNote(null);
+    setBusyExit(false);
+    setOpenQ(null);
     try {
       const match = await api.match({ kind: 'general' });
       // replace: the builder has done its job — back from the chat should not return
@@ -186,7 +195,10 @@ export default function PathQuestion() {
       });
     } catch (e) {
       // Stays still: a calm line, the draft and the chips untouched.
-      setNote(e instanceof ApiError && e.status === 503 ? t('common.allBusy') : t('path.connectError'));
+      const open = openQuestionFrom(e);
+      if (open) setOpenQ(open);
+      else if (e instanceof ApiError && e.status === 503) setBusyExit(true);
+      else setNote(t('path.connectError'));
       setBusy(null);
     }
   };
@@ -362,6 +374,29 @@ export default function PathQuestion() {
       </DeepArrival>
 
       <View style={styles.footer}>
+        {openQ ? (
+          <View style={styles.footNote}>
+            <OpenQuestionNote
+              question={openQ}
+              onClosed={() => {
+                setOpenQ(null);
+                setNote(t('askFlow.openClosed'));
+              }}
+              testID="pq-open"
+            />
+          </View>
+        ) : busyExit ? (
+          <View style={styles.footNote}>
+            <BusyExits
+              // The question travels with them: Browse → a mentor → the question step,
+              // pre-filled, never sent for them.
+              onSendInstead={() => router.push({ pathname: '/mentors', params: { question: assembled.text } })}
+              onRetry={() => void go('continue')}
+              retrying={busy !== null}
+              testID="pq-busy"
+            />
+          </View>
+        ) : null}
         {note ? (
           <Text style={[type.caption, styles.note, { color: colors.inkMuted }]} testID="pq-note">
             {note}
@@ -466,6 +501,7 @@ const styles = StyleSheet.create({
   dropped: { fontFamily: font.sansBold, marginTop: space.xs },
   footer: { paddingHorizontal: GUTTER, paddingTop: space.sm, paddingBottom: space.md },
   note: { textAlign: 'center', marginBottom: space.sm },
+  footNote: { marginBottom: space.sm },
   actions: { flexDirection: 'row', gap: 12 },
   editBox: { flex: 1 },
   continueBox: { flex: 1.6 },

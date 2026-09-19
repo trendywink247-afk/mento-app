@@ -86,6 +86,10 @@ export default function RequestSentScreen() {
   const [missing, setMissing] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [channel, setChannel] = useState<string | null>(null);
+  // The member closed this question themselves (one open question at a time — "You can
+  // ask another once they reply or you close it"). Still, never red.
+  const [closedByMe, setClosedByMe] = useState(false);
+  const [closing, setClosing] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -145,11 +149,26 @@ export default function RequestSentScreen() {
     });
   };
 
+  const closeQuestion = () => {
+    if (!id || closing) return;
+    setClosing(true);
+    void api
+      .withdrawRequest(id)
+      .then((r) => {
+        setRequest(r);
+        if (r.status !== 'matched') setClosedByMe(true);
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setClosing(false));
+  };
+
   const line =
     phase === 'accepted'
       ? t('requestSent.accepted', { name })
       : phase === 'closed'
-        ? t('requestSent.closed', { name })
+        ? closedByMe
+          ? t('askFlow.closedByYou')
+          : t('requestSent.closed', { name })
         : t('requestSent.oneAtATime', { name });
 
   return (
@@ -250,13 +269,30 @@ export default function RequestSentScreen() {
             testID="request-sent-open-chat"
           />
         ) : (
-          <PrimaryButton
-            label={t('requestSent.goChats')}
-            shape="key"
-            trailing="arrow"
-            onPress={() => leaveToChats(router)}
-            testID="request-sent-go-chats"
-          />
+          <>
+            <PrimaryButton
+              label={t('requestSent.goChats')}
+              shape="key"
+              trailing="arrow"
+              onPress={() => leaveToChats(router)}
+              testID="request-sent-go-chats"
+            />
+            {phase === 'pending' && request && !missing ? (
+              <PressKey
+                onPress={closeQuestion}
+                edge="transparent"
+                travel={2}
+                haptic="none"
+                disabled={closing}
+                accessibilityLabel={t('askFlow.closeThis')}
+                testID="request-sent-close"
+                containerStyle={styles.closeBox}
+                style={styles.closeKey}
+              >
+                <Text style={[styles.closeText, { color: colors.inkMuted }]}>{t('askFlow.closeThis')}</Text>
+              </PressKey>
+            ) : null}
+          </>
         )}
       </Entrance>
     </SafeAreaView>
@@ -536,6 +572,9 @@ const styles = StyleSheet.create({
   body: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.md, gap: 12 },
   footer: { paddingHorizontal: space.lg, paddingTop: space.xs, paddingBottom: 28 },
+  closeBox: { alignSelf: 'center', marginTop: space.xs },
+  closeKey: { height: 44, paddingHorizontal: space.md, alignItems: 'center', justifyContent: 'center' },
+  closeText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20, textDecorationLine: 'underline' },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { lineHeight: 36 },
   scene: { paddingTop: NOTE_TOP },

@@ -3,12 +3,15 @@ import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { BusyExits } from '@/components/BusyExits';
+import { OpenQuestionNote, openLetter } from '@/components/OpenQuestionNote';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { BoardSheet, type BoardSheetHandle } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
+import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { TOPICS } from '@/lib/topics';
 import { useI18n } from '@/lib/i18n';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -30,6 +33,13 @@ import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
  */
 const PERCHES: PlacementSlot[] = [{ id: 'sheetEdge', type: 'top', level: 'mid', home: true }];
 
+/** What "Next available" came back with when it did not open a chat. All still. */
+type Note =
+  | { kind: 'busy' } // nobody free: the honest exits (board A19)
+  | { kind: 'open'; question: OpenQuestion } // one open question at a time (server 409)
+  | { kind: 'closed' } // the member just closed their open question
+  | { kind: 'error'; text: string };
+
 export default function NewChatSheet() {
   useSessionGuard();
   const router = useRouter();
@@ -38,7 +48,7 @@ export default function NewChatSheet() {
   const sheet = useRef<BoardSheetHandle | null>(null);
   const [topic, setTopic] = useState<string | null>(null);
   const [matching, setMatching] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  const [note, setNote] = useState<Note | null>(null);
   // "Everyone is busy" is a still state: the companion sits, nothing moves.
   const perch = useCompanionPlacement('newChat', PERCHES, { still: note !== null });
 
@@ -61,7 +71,14 @@ export default function NewChatSheet() {
         }),
       );
     } catch (e) {
-      setNote(e instanceof ApiError && e.status === 503 ? t('common.allBusy') : t('common.networkError'));
+      const open = openQuestionFrom(e);
+      setNote(
+        open
+          ? { kind: 'open', question: open }
+          : e instanceof ApiError && e.status === 503
+            ? { kind: 'busy' }
+            : { kind: 'error', text: t('common.networkError') },
+      );
       setMatching(false);
     }
   };
@@ -73,6 +90,13 @@ export default function NewChatSheet() {
       router.push({ pathname: '/mentors', params: topic ? { topic } : {} });
     });
   };
+
+  // The open question's letter (board A04): the sheet leaves first, like every door here.
+  const seeQuestion = (q: OpenQuestion) =>
+    sheet.current?.close(() => {
+      router.back();
+      openLetter(router, q);
+    });
 
   return (
     <CompanionPerches placement={perch}>
@@ -141,10 +165,28 @@ export default function NewChatSheet() {
           </Entrance>
         </View>
 
-        {note ? (
-          // Still on purpose (T&S #11): no arrival, no haptic.
+        {/* Every note is still on purpose (T&S #11): no arrival, no haptic. */}
+        {note?.kind === 'busy' ? (
+          <View testID="new-chat-note">
+            <BusyExits
+              onSendInstead={pickMentor}
+              onRetry={() => void nextAvailable()}
+              retrying={matching}
+              testID="new-chat-busy"
+            />
+          </View>
+        ) : note?.kind === 'open' ? (
+          <View testID="new-chat-note">
+            <OpenQuestionNote
+              question={note.question}
+              onClosed={() => setNote({ kind: 'closed' })}
+              onSee={() => seeQuestion(note.question)}
+              testID="new-chat-open"
+            />
+          </View>
+        ) : note ? (
           <Text style={[type.note, styles.note, { color: colors.ink, backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} testID="new-chat-note">
-            {note}
+            {note.kind === 'closed' ? t('askFlow.openClosed') : note.text}
           </Text>
         ) : null}
 

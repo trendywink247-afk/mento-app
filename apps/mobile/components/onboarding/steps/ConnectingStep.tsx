@@ -12,6 +12,7 @@ import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { capture, waitBucket } from '@/lib/analytics';
 import { ApiError, api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { openQuestionFrom } from '@/lib/openQuestion';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { getCompanionAnimal, getPersona, getSessionToken, saveCompanionAnimal, saveSession } from '@/lib/session';
 import { useFrameSize } from '@/lib/useFrameSize';
@@ -213,8 +214,12 @@ export function ConnectingStep({
         later(() => void connect(), RETRY_DELAY_MS);
         return;
       }
-      const msg =
-        e instanceof ApiError
+      // One open question at a time (server 409 `question_open`): name it in the member's
+      // language — "Browse mentors" and the letter on My Chats are the ways on.
+      const open = openQuestionFrom(e);
+      const msg = open
+        ? t('chatsList.newChatWaiting', { name: open.name })
+        : e instanceof ApiError
           ? e.status === 503
             ? t('connecting.errorBusy')
             : e.message
