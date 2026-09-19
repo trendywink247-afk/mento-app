@@ -66,12 +66,13 @@ export default function RootLayout() {
               <Stack.Screen name="chat/[id]" options={{ animation: 'fade' }} />
               {/* Mentor branch hand-off crossfades in like the chat does (DECISIONS §K.7). */}
               <Stack.Screen name="mentor-home" options={{ animation: 'fade' }} />
-              {/* Confirm dialog as a screens-backed transparent modal (see app/start-fresh.tsx). */}
+              {/* A board sheet as a screens-backed transparent modal (see app/start-fresh.tsx):
+                  the sheet animates itself, so the route does not. */}
               <Stack.Screen
                 name="start-fresh"
                 options={{
                   presentation: 'transparentModal',
-                  animation: 'fade',
+                  animation: 'none',
                   contentStyle: { backgroundColor: 'transparent' },
                 }}
               />
