@@ -44,3 +44,11 @@ Production SSH and deploys were approved by the founder on 2026-09-19 for this w
 2. Re-lay the board (https://claude.ai/artifact/SWQyjqF1e5nBwDuCWZcjyr) in the ACTUAL navigation order, one row per flow, each app screenshot beside its board artboard, with arrows/labels for how you get from one to the next (the real routes, incl. the unified mentor loop and "I'd rather talk today").
 3. A clear "Left to build or wire" row: board artboards with no app screen yet, screens that differ from the board (from each lane's "differs" list), dead ends or doors that lead nowhere, and open founder decisions — each as a card.
 Publish rules: read the live index first, change only our keys, batch the publish (see memory note `final-design-board`).
+
+## Round 3 (2026-09-19, founder: "go") — the "Left to build or wire" row, in three lanes off master `15dfa5d`
+| Lane | Web / API / DB / Redis | Owns |
+|---|---|---|
+| u10 | 8091 / 8010 / `mento_u10` / 11 | New chat busy exits, one-open-question rule (server + app), composer grows (no clipped starter), the pre-ask mentor page + compose step to the board, empty-thread art, "Save to Journal" copy. No migration. |
+| u11 | 8092 / 8011 / `mento_u11` / 12 | One face per mentor everywhere (`listener_profiles.companion_animal`, the ONLY migration, off `3a56447b2ab6`), member companions on Mentor Home rows, topic label, "Your line" sheet, the mentor chat Owl, application copy. |
+| u12 | 8093 / 8012 / `mento_u12` / 13 | Companion pick copy + clipping, Profile "Support the team" row, My Chats empty state, admin A13 allowance panel + admin feedback list. No migration. |
+Parked by the founder: companion glide (T02), row→chat / sheet shared elements (T05/T06), living art (credits). Gotcha learned: stopping a background gate with TaskStop does NOT kill `e2e_gate.sh` on Windows — two gates then reset the same DB under each other. Kill with `Get-CimInstance Win32_Process | ? CommandLine -match 'e2e_gate\.sh|\.e2e\.js' | % { Stop-Process $_.ProcessId -Force }` before starting another.
