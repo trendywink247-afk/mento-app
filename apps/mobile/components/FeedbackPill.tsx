@@ -3,8 +3,8 @@
  *
  * reason: the feedback sheet (board A11) belongs to another lane and this branch has no
  * `/feedback` route yet, so the pill is drawn and leads nowhere until that route lands —
- * then FEEDBACK_ROUTE becomes '/feedback' and nothing else changes. (My Chats draws the same
- * pill inline; the two fold into one at merge.)
+ * then FEEDBACK_ROUTE becomes '/feedback' and nothing else changes. One component for every
+ * tab header that carries the pill (My Chats, Path).
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';

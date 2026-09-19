@@ -8,7 +8,7 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
-import { FeedbackPill } from '@/components/path/FeedbackPill';
+import { FeedbackPill } from '@/components/FeedbackPill';
 import { StageSheen } from '@/components/path/ambient';
 import { api, type PathState } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';

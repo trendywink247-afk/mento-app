@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { FeedbackPill } from '@/components/FeedbackPill';
 import { GroundFade } from '@/components/GroundFade';
 import { LinkedRings } from '@/components/InTouchBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -41,10 +42,6 @@ const CARD_PERCHES: PlacementSlot[] = [
 ];
 /** Rows that fit above the New chat card on the smallest supported phone (360×740). */
 const SHORT_LIST = 2;
-
-// reason: the feedback sheet (board A11) belongs to another lane; this branch has no
-// `/feedback` route yet, so the pill is drawn and leads nowhere until that route lands.
-const FEEDBACK_ROUTE: Href | null = null;
 
 type Filter = 'all' | 'active' | 'completed';
 type View2 = 'all' | 'touch';
@@ -373,20 +370,7 @@ export default function ChatsTab() {
               <Text style={[type.display, { color: colors.ink }]} accessibilityRole="header">
                 {t('chatsList.titleLead')} <Text style={{ color: colors.accent }}>{t('chatsList.titleAccent')}</Text>
               </Text>
-              <PressKey
-                onPress={() => {
-                  if (FEEDBACK_ROUTE) router.push(FEEDBACK_ROUTE);
-                }}
-                edge={colors.edgeSurface}
-                travel={3}
-                radius={radius.pill}
-                accessibilityLabel={t('chatsList.feedbackA11y')}
-                testID="chats-feedback"
-                style={[styles.feedback, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              >
-                <Ionicons name="chatbox-outline" size={16} color={colors.inkMuted} />
-                <Text style={[styles.feedbackText, { color: colors.inkMuted }]}>{t('chatsList.feedback')}</Text>
-              </PressKey>
+              <FeedbackPill testID="chats-feedback" />
             </View>
             <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{t('chats.sub')}</Text>
           </Entrance>
@@ -709,15 +693,6 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   head: { paddingTop: space.xs, paddingHorizontal: space.lg, paddingBottom: 10 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  feedback: {
-    height: 44,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderWidth: 1,
-  },
-  feedbackText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
   tools: { zIndex: 3, paddingHorizontal: space.md, paddingBottom: 10, gap: 10, borderBottomWidth: 1 },
   toolsEdge: { position: 'absolute', left: 0, right: 0, bottom: -4, height: 3 },
   toolsFloor: { position: 'absolute', left: 0, right: 0, bottom: -1, height: 0 },
