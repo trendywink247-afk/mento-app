@@ -25,6 +25,7 @@ import { KitMessageFooter, KitThreadContext, type KitThread } from '@/components
 import { KitSavedHeader } from '@/components/chat/KitSavedHeader';
 import { KitTyping } from '@/components/chat/KitTyping';
 import { MessageText, OwnBubbleToneContext } from '@/components/chat/MessageText';
+import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
@@ -179,7 +180,7 @@ export default function ChatScreen() {
   );
 
   // The core talk→action loop (SCOPE §7): the save key under the mentor's latest message
-  // (board A05), and long-press any mentor message → message menu → "Save to Mentor Notes".
+  // (board A05), and long-press any mentor message → message menu → "Save to Journal" (the Mentor Notes channel).
   const customMessageActions = useCallback(
     ({
       copyMessage,
@@ -464,6 +465,8 @@ export default function ChatScreen() {
             <WithComponents
               overrides={{
                 MessageText,
+                // The empty thread in the board's language (no kit bubble icon / "No chats").
+                EmptyStateIndicator: ThreadEmpty,
                 Input: Composer,
                 MessageFooter: KitMessageFooter,
                 MessageHeader: KitSavedHeader,

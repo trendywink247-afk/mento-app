@@ -26,10 +26,10 @@ import {
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ThreadRow, type ThreadMsg } from '@/components/chat/ThreadRow';
+import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
 import { TypingDots } from '@/components/chat/TypingDots';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
-import { SceneTile } from '@/components/art/SceneTile';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
@@ -516,21 +516,12 @@ export default function ChatScreenWeb() {
             contentContainerStyle={[
               styles.list,
               { paddingBottom: companionRoom(perch, note !== null) },
-              messages.length === 0 && styles.listEmpty,
             ]}
             // …and stays there when a message lands or the footer grows (the note, its
             // helplines): a jump, not a scroll animation — nothing moves in a still state.
             onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
             onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
-            ListEmptyComponent={
-              <View style={styles.emptyWrap}>
-                <SceneTile name="chatConnected" size={140} />
-                <Text style={[styles.emptyTitle, { color: colors.ink }]}>{t('chat.emptyTitle')}</Text>
-                <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-                  {t('chat.emptyBody')}
-                </Text>
-              </View>
-            }
+            ListEmptyComponent={<ThreadEmpty />}
             renderItem={({ item, index }) => {
               const prev = index > 0 ? messages[index - 1] : null;
               const showDay = !prev || dayLabel(prev.at, t) !== dayLabel(item.at, t);
@@ -637,9 +628,6 @@ const styles = StyleSheet.create({
     paddingBottom: space.sm,
     gap: 10,
   },
-  listEmpty: { justifyContent: 'center' },
   crisisSeat: { paddingTop: 10 },
-  emptyWrap: { alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg },
-  emptyTitle: { fontFamily: font.serifBold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
   sendErrorLine: { paddingHorizontal: space.md, paddingTop: space.xs },
 });
