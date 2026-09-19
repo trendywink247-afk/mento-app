@@ -6,7 +6,7 @@ import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -207,6 +207,8 @@ def release_listener_slot(db: Session, convo: Conversation) -> None:
 
 
 PRESENCE_STALE_AFTER = timedelta(minutes=15)
+# An active conversation with no Stream channel after this long is a crashed match.
+ORPHAN_GRACE = timedelta(minutes=2)
 
 
 def sweep_stale_presence(db: Session, *, now: datetime | None = None) -> int:
@@ -238,14 +240,15 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
         # Self-heal before giving up. Prod finding (2026-09-06): every slot was held
         # by abandoned chats older than conversation_max_age_hours, and the sweep
         # only ran when an admin pressed Reconcile — so a member was told "all our
-        # mentors are with someone" for a day. Retry once only if the sweep
-        # actually freed something; a genuinely full pool still 503s.
-        healed = reconcile_listener_capacity(db)
+        # mentors are with someone" for a day.
+        reconcile_listener_capacity(db)
         db.commit()
-        if any(healed.values()):
-            listener = _pick_available_listener(
-                db, category, blocked_ids, community=user.community_slug
-            )
+        # Retry once, whatever the sweep reported: while ANOTHER member's heal held
+        # the listener rows, our SKIP LOCKED pick saw nobody — and their sweep, not
+        # ours, is the one that freed the slot. A genuinely full pool still 503s.
+        listener = _pick_available_listener(
+            db, category, blocked_ids, community=user.community_slug
+        )
     if listener is None:
         raise NoListenerAvailable()
     return open_conversation(db, user.id, listener, issue_category=category)
@@ -340,8 +343,9 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
     admin audit record can land in the same transaction.
 
     1. Sweep stale conversations: anything active longer than
-       `conversation_max_age_hours` (abandoned chats, crashes between
-       open_conversation's phases) is marked ended.
+       `conversation_max_age_hours` (abandoned chats), and any active conversation
+       that still has no Stream channel after ORPHAN_GRACE (a crash between
+       open_conversation's phases), is marked ended.
     2. Recompute every listener's `active_conversations` from the actual count of
        active Conversation rows — one atomic UPDATE with a correlated subquery, so
        a hand-drifted counter can't survive.
@@ -352,17 +356,54 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
     Returns counts for the admin console: {"stale_ended": n, "listeners_corrected": n,
     "presence_swept": n}.
     """
-    max_age = timedelta(hours=get_settings().conversation_max_age_hours)
-    cutoff = datetime.now(UTC) - max_age
+    # Take the listener rows we can get WITHOUT waiting (id order, SKIP LOCKED) and
+    # heal only those. Why lock at all: the recount below is
+    # `SET active = (SELECT count…)`; under READ COMMITTED an UPDATE that has to wait
+    # on a matcher's row lock re-checks the row but keeps the sub-select's ORIGINAL
+    # snapshot, so the conversation that matcher just committed was not counted and
+    # the counter landed one low (over-assignment). Holding the row first means the
+    # recount's snapshot is taken when no reservation on it can be in flight.
+    # Why SKIP LOCKED: this runs inline from match_general, and the matcher never
+    # blocks on another transaction. A row a matcher holds right now is being kept
+    # correct by that matcher; it is healed on the next pass.
+    held = list(
+        db.execute(
+            select(ListenerProfile.id)
+            .order_by(ListenerProfile.id)
+            .with_for_update(skip_locked=True)
+        ).scalars()
+    )
+    listener_exists = (
+        select(ListenerProfile.id)
+        .where(ListenerProfile.id == Conversation.listener_id)
+        .correlate(Conversation)
+        .exists()
+    )
+
+    now = datetime.now(UTC)
+    cutoff = now - timedelta(hours=get_settings().conversation_max_age_hours)
     stale = db.execute(
         update(Conversation)
         .where(
             Conversation.status == ConversationStatus.active,
-            Conversation.created_at < cutoff,
+            # Only chats whose listener we hold (sweep + recount stay one unit per
+            # listener) — or whose listener row no longer exists at all.
+            or_(Conversation.listener_id.in_(held), ~listener_exists),
+            or_(
+                Conversation.created_at < cutoff,
+                # A crash between open_conversation's phases: the reservation was
+                # committed but the Stream channel never arrived. Nobody can talk in
+                # it; don't let it hold a slot for a day. The grace period keeps a
+                # match that is mid-flight right now (Stream budget: seconds) safe.
+                and_(
+                    Conversation.stream_channel_id.is_(None),
+                    Conversation.created_at < now - ORPHAN_GRACE,
+                ),
+            ),
         )
         .values(
             status=ConversationStatus.ended,
-            ended_at=datetime.now(UTC),
+            ended_at=now,
             ended_by=ConversationEndedBy.system,
         )
     )
@@ -381,7 +422,10 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
     )
     corrected = db.execute(
         update(ListenerProfile)
-        .where(ListenerProfile.active_conversations != active_count)
+        .where(
+            ListenerProfile.id.in_(held),
+            ListenerProfile.active_conversations != active_count,
+        )
         .values(active_conversations=active_count)
     )
     swept = sweep_stale_presence(db)
