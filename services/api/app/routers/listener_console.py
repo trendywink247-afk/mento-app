@@ -321,6 +321,17 @@ def my_pending_requests(
         )
         .order_by(ConversationRequest.created_at.asc())
     ).all()
+    # The member's letter lights "Seen" from here and nowhere else (board A04): the
+    # question is in front of the mentor who was asked. Stamped once, on this mentor's own
+    # pending requests, and never moved afterwards.
+    now = datetime.now(UTC)
+    stamped = False
+    for req, _user in rows:
+        if req.seen_at is None:
+            req.seen_at = now
+            stamped = True
+    if stamped:
+        db.commit()
     return [
         ListenerRequestItem(
             id=req.id,
@@ -358,6 +369,9 @@ def accept(
         intro_message=req.intro_message,
         conversation_id=req.conversation_id,
         created_at=req.created_at.isoformat(),
+        # The member's letter reads its strip off these (board A04).
+        seen_at=req.seen_at.isoformat() if req.seen_at else None,
+        replying=req.status == RequestStatus.matched,
     )
 
 

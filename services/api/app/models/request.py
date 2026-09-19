@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from sqlalchemy import String, Text
+from datetime import datetime
+
+from sqlalchemy import DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -22,3 +24,8 @@ class ConversationRequest(UUIDMixin, TimestampMixin, Base):
     intro_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     conversation_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    # When this question first appeared in the target mentor's console inbox — the only
+    # honest "Seen" the member's letter (board A04) can light. Never set for a request
+    # nobody has been shown.
+    seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -60,6 +60,8 @@ def _request_out(r: ConversationRequest, db: Session) -> RequestOut:
         intro_message=r.intro_message,
         conversation_id=r.conversation_id,
         created_at=r.created_at.isoformat(),
+        seen_at=r.seen_at.isoformat() if r.seen_at else None,
+        replying=r.status == RequestStatus.matched,
         listener_companion_animal=animal,
         listener_companion_colour=colour,
     )

@@ -1300,7 +1300,8 @@
     "mentorA11y": "%{name}'s companion",
     "postmarkA11y": "Sent through Mento",
     "notFound": "We could not find this question. It may have been closed.",
-    "loadError": "We could not load your question just now. It is still on its way."
+    "loadError": "We could not load your question just now. It is still on its way.",
+    "stripA11yReplying": "All three are done. Sent, seen, and your mentor is replying."
   },
   "chatsEmpty": {
     "companionA11y": "Your companion, here with you"

@@ -4,11 +4,13 @@
  *  1. the member (onboarded into a chat with mentor A) opens mentor B from Browse's route,
  *     writes an intro and sends it → the letter: the REAL question text quoted, "Sent just
  *     now · private", the Sent step done and Seen / Replying still in the quiet not-yet state
- *     (the API has no seen / replying signal for a pending question — nothing is faked);
+ *     (nothing is faked: the strip is the server's `seen_at` and `replying`);
+ *  1b. mentor B opens their console inbox → the question is in front of them → the open
+ *     letter lights Seen on its own quiet re-read, with Replying still not yet;
  *  2. Go to My Chats → the dashed waiting row for B;
  *  3. tapping the row reopens the letter with the same question;
  *  4. mentor B accepts through the LISTENER endpoint (their console-link credential) → the
- *     open letter notices on its own quiet re-read: Seen lights, "Open the chat" → the chat.
+ *     open letter notices on its own quiet re-read: Replying lights, "Open the chat" → the chat.
  *
  * Plain Node (Playwright is not a project dependency), 390×844, normal + reduced motion,
  * 0 page errors. Needs the lane's API + web, the mento-postgres / mento-redis containers and
@@ -119,6 +121,20 @@ async function run(browser, reduced) {
   if (overflow) throw new Error('the letter scrolls sideways');
   console.log(`[${label}] OK the letter: real question, "${when}", Sent done, Seen + Replying not yet`);
 
+  // --- 1b. the mentor's inbox shows them the question → Seen is real ------------------------
+  const inboxToken = await listenerToken(mentorB.id);
+  const inbox = await call('/listener/me/requests', inboxToken);
+  if (inbox.status !== 200 || !inbox.body.some((r) => r.id === req.id)) {
+    throw new Error(`the mentor's inbox does not hold the question: ${JSON.stringify(inbox.body)}`);
+  }
+  await visible('step-seen-done').waitFor({ timeout: 40000 });
+  if ((await page.locator('[data-testid="step-replying-idle"]:visible').count()) !== 1) {
+    throw new Error('Replying lit before the mentor said yes');
+  }
+  const seenAt = (await call('/listeners/requests/mine', member)).body.find((r) => r.id === req.id)?.seen_at;
+  if (!seenAt) throw new Error('the server did not stamp seen_at when the inbox was read');
+  console.log(`[${label}] OK the mentor's inbox read lit Seen for real (seen_at ${seenAt}); Replying still not yet`);
+
   // --- 2. Go to My Chats → the waiting row ---------------------------------------------------
   await visible('request-sent-go-chats').click();
   await page.waitForURL((u) => u.pathname.endsWith('/chats'), { timeout: 30000 });
@@ -135,20 +151,20 @@ async function run(browser, reduced) {
   console.log(`[${label}] OK the waiting row reopens the letter`);
 
   // --- 4. the mentor says yes → the letter notices → the chat --------------------------------
-  const lt = await listenerToken(mentorB.id);
-  const acc = await call(`/listener/me/requests/${req.id}/accept`, lt, 'POST');
+  const acc = await call(`/listener/me/requests/${req.id}/accept`, inboxToken, 'POST');
   if (acc.status !== 200) throw new Error(`accept failed: ${acc.status} ${JSON.stringify(acc.body)}`);
   await visible('request-sent-open-chat').waitFor({ timeout: 40000 });
   await visible('step-seen-done').waitFor({ timeout: 5000 });
-  if (await page.locator('[data-testid="step-replying-idle"]:visible').count() !== 1) {
-    throw new Error('Replying lit without a signal');
+  await visible('step-replying-done').waitFor({ timeout: 20000 });
+  if (acc.body.replying !== true || !acc.body.seen_at) {
+    throw new Error(`the accepted request does not carry the strip: ${JSON.stringify(acc.body)}`);
   }
   await visible('request-sent-open-chat').click();
   await page.waitForURL((u) => u.pathname.includes('/chat/') && !u.pathname.includes(convo1), { timeout: 30000 });
   await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
   const convo2 = new URL(page.url()).pathname.split('/chat/')[1].split('/')[0];
   if (convo2 !== acc.body.conversation_id) throw new Error(`landed in ${convo2}, accepted ${acc.body.conversation_id}`);
-  console.log(`[${label}] OK ${mentorB.persona_name} accepted → Seen lit → the member is in the chat`);
+  console.log(`[${label}] OK ${mentorB.persona_name} accepted → Replying lit → the member is in the chat`);
 
   for (const id of [convo1, convo2]) await call(`/conversations/${id}/end`, member, 'POST');
   await ctx.close();

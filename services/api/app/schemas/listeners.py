@@ -86,6 +86,11 @@ class RequestOut(BaseModel):
     intro_message: str | None
     conversation_id: str | None
     created_at: str
+    # The letter's strip, from the server and nowhere else (board A04): `seen_at` is when
+    # the question first appeared in the mentor's console inbox; `replying` is their yes
+    # (the chat is open). A pending, unseen question lights "Sent" only.
+    seen_at: str | None = None
+    replying: bool = False
     # The mentor this request went to, as every screen draws them (a Personal request's
     # target; null for anything else). Lets the A04 letter paint the right face.
     listener_companion_animal: str | None = None

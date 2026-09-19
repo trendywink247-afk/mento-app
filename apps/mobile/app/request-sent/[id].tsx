@@ -7,10 +7,11 @@
  * tilted with the question quoted and "Sent just now · private"; the Sent · Seen · Replying
  * strip; the one-question line; the Meanwhile pair; Go to My Chats.
  *
- * The strip is REAL state, never staged progress: `GET /listeners/requests/mine` can say
- * pending (Sent), matched (the mentor said yes — so they saw it: Seen), or declined / expired.
- * The API has no "seen" or "replying" signal for a pending question, so a pending question
- * shows Sent and leaves the other two in the quiet not-yet state. "Replying" is never lit.
+ * The strip is REAL state, never staged progress, and every light comes from the server:
+ * **Sent** is the request; **Seen** is `seen_at` — the moment the question appeared in that
+ * mentor's own console inbox (stamped there, migration c13a0seen001); **Replying** is their
+ * yes, `replying` (status matched: the chat with them is open). A question nobody has opened
+ * yet shows Sent alone, and the other two stay in the quiet not-yet state.
  * While the screen is focused it re-reads quietly; when the mentor accepts, the key becomes
  * "Open the chat" (a push also takes the member there — lib/notificationRoute `accepted`).
  *
@@ -226,7 +227,7 @@ export default function RequestSentScreen() {
                   radius={radius.lg}
                   style={[styles.strip, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
                 >
-                  <Steps seen={phase === 'accepted'} />
+                  <Steps seen={Boolean(request?.seen_at) || phase === 'accepted'} replying={phase === 'accepted'} />
                   <Text style={[type.note, { color: colors.inkMuted }]} testID="request-sent-line">
                     {name ? line : ' '}
                   </Text>
@@ -491,7 +492,7 @@ function Ripple({ still, delay }: { still: boolean; delay: number }) {
 }
 
 /** Sent · Seen · Replying. Lit only for what the server has actually said. */
-function Steps({ seen }: { seen: boolean }) {
+function Steps({ seen, replying }: { seen: boolean; replying: boolean }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const done = (testID: string) => (
@@ -522,21 +523,27 @@ function Steps({ seen }: { seen: boolean }) {
     <View
       accessible
       accessibilityRole="image"
-      accessibilityLabel={seen ? t('requestSent.stripA11ySeen') : t('requestSent.stripA11ySent')}
+      accessibilityLabel={
+        replying
+          ? t('requestSent.stripA11yReplying')
+          : seen
+            ? t('requestSent.stripA11ySeen')
+            : t('requestSent.stripA11ySent')
+      }
       style={styles.steps}
-      testID={seen ? 'request-sent-steps-seen' : 'request-sent-steps-sent'}
+      testID={replying ? 'request-sent-steps-replying' : seen ? 'request-sent-steps-seen' : 'request-sent-steps-sent'}
     >
       <View style={styles.track}>
         {done('step-sent-done')}
         {dash}
         {seen ? done('step-seen-done') : idle('step-seen-idle')}
         {dash}
-        {idle('step-replying-idle')}
+        {replying ? done('step-replying-done') : idle('step-replying-idle')}
       </View>
       <View style={styles.labels}>
         {label(t('requestSent.stepSent'), true, 'left')}
         {label(t('requestSent.stepSeen'), seen, 'center')}
-        {label(t('requestSent.stepReplying'), false, 'right')}
+        {label(t('requestSent.stepReplying'), replying, 'right')}
       </View>
     </View>
   );
