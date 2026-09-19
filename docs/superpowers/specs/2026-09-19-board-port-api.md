@@ -251,3 +251,71 @@ next time" with the stay-in-touch ask; (2) replace the Browse "favourites" affor
 the In touch chip driven by `in_touch`; (3) stop calling the favourite endpoints. Existing
 favourites are **not** converted into links — a link needs the mentor's yes. Once no shipped
 build calls them the endpoints and the table can go (a later migration).
+
+---
+
+## B3 — Product feedback (board A11)
+
+### `POST /feedback` — member token **or** mentor (listener) token
+
+```jsonc
+// request
+{
+  "category": "broken",            // "broken" | "confusing" | "idea"  (A11's three chips)
+  "text": "I could not tell whether my note was saved.",   // 1–1000 chars, trimmed
+  "screen": "(tabs)/journals",     // optional, ≤ 64, the ROUTE TEMPLATE the sheet was opened from
+  "app_version": "0.1.0 (35)"      // optional, ≤ 32
+}
+// 200
+{ "status": "received", "crisis": null }
+```
+
+- `screen` must match `^[A-Za-z0-9_\-/\[\]().+]+$` — send the expo-router template
+  (`chat/[id]`), **never** a path with a real id in it and never free text. 422 otherwise.
+- The role (`member` / `mentor`) comes from the token. **No user id, listener id,
+  conversation id, device or IP is stored** — A11 promises "We also note the screen name and
+  app version. Nothing else." and "Your chats are never attached."
+- Phone numbers / emails typed into the box are redacted before saving (same redactor as
+  chat), so the team cannot reply to a note. Don't invite people to leave contact details.
+- **Crisis words in the box:** the response is `200 {"status": "support", "crisis": {support,
+  signal, helplines}}` — the same `crisis` payload a chat message carries. The sheet **must**
+  show the helplines (reuse `CrisisCard`) instead of a thank-you. Those words are not kept
+  as feedback; a signal-only safety flag goes to human review. This answer is never
+  rate-limited.
+- Errors: `401` no / unknown session (admin tokens are refused too) · `403` a mentor who is
+  not approved · `422` bounds · `429` more than 5 an hour per author — `detail`: "Thank you —
+  we have your notes. You can send more in a little while."
+- **Not built: the screenshot** A11 draws ("This screen" thumbnail). There is no file
+  storage in the API, and a screenshot of a chat would attach exactly what the sheet says is
+  never attached. Leave the thumbnail out until that is ruled on.
+
+### `GET /admin/feedback?limit=50&offset=0&category=&role=` — admin token
+
+`limit` 1–100, `category` ∈ broken | confusing | idea, `role` ∈ member | mentor. Newest
+first. Each read writes a `feedback.viewed` audit row.
+
+```jsonc
+{
+  "total": 8, "limit": 50, "offset": 0,
+  "items": [{
+    "id": "…", "created_at": "2026-09-19T12:01:44+00:00",
+    "role": "member", "category": "confusing",
+    "text": "…", "screen": "(tabs)/journals", "app_version": "0.1.0 (35)"
+  }]
+}
+```
+
+---
+
+## Deploy notes (all three units)
+
+- Migrations, in order: `8c6073da268d` (message allowance) → `cf89dba30416` (stay in touch +
+  rotating names) → `034abb526d75` (product feedback). All additive and safe under a running
+  app. **Take a database backup first** (`deploy/backup-postgres.sh`), then `deploy.sh`.
+- New env (all optional, defaults in `services/api/.env.example`): `ALLOWANCE_ENABLED`,
+  `ALLOWANCE_ENFORCED` (**false** until the app renders A22), `ALLOWANCE_IN_A_ROW`,
+  `ALLOWANCE_PER_DAY`, `ALLOWANCE_CRISIS_EXEMPT_HOURS`, `MENTOR_NAME_ROTATION_ENABLED`,
+  `IN_TOUCH_LIMIT`, `IN_TOUCH_REASK_DAYS`.
+- After the deploy, names are stamped on the first Browse read and **first change at the
+  next 04:00 IST**. Tell the mentors before that morning.
+- The dev uvicorn on :8000 runs without `--reload` — restart it to serve any of this.

@@ -212,3 +212,9 @@ Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code al
 - **s. A report from EITHER side ends the link, as does a block or an admin suspension.** A mentor report does not end the chat (unchanged), but it does end the link.
 - **t. Writing to an in-touch mentor uses what exists:** the still-active conversation, or a Personal request to that mentor. No new "open a chat without the mentor's accept" path was added; the one-open-question rule is not built server-side.
 - **u. Favourites are deprecated, not removed, and are not converted into links** (a link needs the mentor's yes). Browse order: in touch → favourites → available → rank.
+
+**Feedback (board A11; recovered-call item 13)**
+- **v. A feedback row has no author** — role (member / mentor), category, words, screen route and app version only, because A11 promises "Nothing else". The author's id is used once, as a rate-limit key in Redis that expires within the hour (5 notes an hour). Cost: the team cannot reply to a note or bar one person from the box; contact details typed into it are redacted like chat.
+- **w. No screenshot yet.** A11 draws one; the API has no file storage, and a screenshot of a chat would attach what the sheet says is never attached. If it is wanted: refuse it on chat screens, or blur message bodies on the device first.
+- **x. Crisis words typed into the feedback box get the helplines back, are NOT kept as feedback, and raise a signal-only safety flag** (which does carry the member's id, like every other safety flag — it is a safety record, not feedback). The helplines answer is never rate-limited.
+- **y. Reading the feedback list is an audited admin read** (`feedback.viewed`).

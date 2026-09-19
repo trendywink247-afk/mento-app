@@ -23,6 +23,7 @@ from app.models.enums import (
     SafetySignal,
     VettingStatus,
 )
+from app.models.feedback import ProductFeedback
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
@@ -40,6 +41,8 @@ from app.schemas import (
     AdminContributionItem,
     AdminCreatedOut,
     AdminCreateIn,
+    AdminFeedbackItem,
+    AdminFeedbackOut,
     AdminFlagItem,
     AdminFlagReviewIn,
     AdminHealthOut,
@@ -680,6 +683,60 @@ def allowance_counts(
         ),
         days=rows,
         totals=totals,
+    )
+
+
+# --- Product feedback (board A11) -----------------------------------------------
+
+
+@router.get("/feedback", response_model=AdminFeedbackOut)
+def admin_feedback(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    category: str | None = Query(None, pattern="^(broken|confusing|idea)$"),
+    role: str | None = Query(None, pattern="^(member|mentor)$"),
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminFeedbackOut:
+    """What people told the team, newest first. A row has no author — only which side
+    of the app it came from. People write freely in that box, so the read is audited."""
+    where = []
+    if category:
+        where.append(ProductFeedback.category == category)
+    if role:
+        where.append(ProductFeedback.role == role)
+    total = db.execute(select(func.count()).select_from(ProductFeedback).where(*where)).scalar_one()
+    rows = db.scalars(
+        select(ProductFeedback)
+        .where(*where)
+        .order_by(ProductFeedback.created_at.desc(), ProductFeedback.id)
+        .limit(limit)
+        .offset(offset)
+    ).all()
+    audit.record(
+        db,
+        admin,
+        "feedback.viewed",
+        subject_type="feedback",
+        meta={"limit": limit, "offset": offset, "category": category, "role": role},
+    )
+    db.commit()
+    return AdminFeedbackOut(
+        total=total,
+        limit=limit,
+        offset=offset,
+        items=[
+            AdminFeedbackItem(
+                id=f.id,
+                created_at=f.created_at.isoformat(),
+                role=f.role,
+                category=f.category,
+                text=f.text,
+                screen=f.screen,
+                app_version=f.app_version,
+            )
+            for f in rows
+        ],
     )
 
 

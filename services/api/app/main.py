@@ -15,6 +15,7 @@ from app.db import init_db
 from app.routers import (
     admin_console,
     conversation,
+    feedback,
     health,
     in_touch,
     journals,
@@ -139,5 +140,6 @@ app.include_router(listener_applications.router, prefix=API)
 app.include_router(listeners.router, prefix=API)
 app.include_router(listener_console.router, prefix=API)
 app.include_router(in_touch.router, prefix=API)
+app.include_router(feedback.router, prefix=API)
 app.include_router(admin_console.router, prefix=API)
 app.include_router(notifications.router, prefix=API)

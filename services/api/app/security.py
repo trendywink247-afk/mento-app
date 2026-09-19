@@ -114,6 +114,24 @@ def current_listener_id(
     return listener_id
 
 
+def current_member_or_listener(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> tuple[str, str]:
+    """For the few endpoints BOTH sides of the app may call (product feedback):
+    ("member" | "mentor", id). Admin tokens are refused — they sign with their own
+    secret and carry their own role."""
+    payload = _decode(creds, "user")
+    subject = payload.get("sub")
+    if not subject:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "malformed session")
+    role = payload.get("role")
+    if role in ("user", None):
+        return "member", subject
+    if role == "listener":
+        return "mentor", subject
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "not a member or mentor session")
+
+
 def current_admin_id(
     creds: HTTPAuthorizationCredentials = Depends(_bearer),
 ) -> str:

@@ -451,10 +451,10 @@ def test_allowance_is_scoped_to_the_member(client, db_session):
 
 
 def _admin(s, role=AdminRole.helper) -> dict:
-    a = AdminAccount(name="Helper", role=role)
+    a = AdminAccount(name=f"Helper {uuid.uuid4().hex[:8]}", role=role)
     s.add(a)
     s.commit()
-    return {"Authorization": f"Bearer {issue_admin_token(a.id)}"}
+    return {"Authorization": f"Bearer {issue_admin_token(a.id)}", "X-Test-Admin": a.name}
 
 
 @requires_postgres
@@ -508,8 +508,12 @@ def test_admin_counts_are_numbers_only_and_audited(client, db_session, enforced)
         assert secret not in raw
 
     with TestSession() as s:
+        # The audit table outlives a test run — look at THIS admin's row only.
         log = s.execute(
-            select(AdminAuditLog).where(AdminAuditLog.action == "allowance.viewed")
+            select(AdminAuditLog).where(
+                AdminAuditLog.action == "allowance.viewed",
+                AdminAuditLog.admin_name == admin["X-Test-Admin"],
+            )
         ).scalar_one()
     assert log.meta == {"days": 14}
 

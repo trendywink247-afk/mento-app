@@ -5,6 +5,7 @@ from app.models.allowance import MessageAllowanceDay
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation
 from app.models.favourite import FavouriteListener
+from app.models.feedback import ProductFeedback
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
@@ -31,6 +32,7 @@ __all__ = [
     "MentorLink",
     "MessageAllowanceDay",
     "ModerationEvent",
+    "ProductFeedback",
     "PushToken",
     "SafetyFlag",
     "User",

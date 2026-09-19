@@ -51,6 +51,12 @@ from app.schemas.conversations import (
     UnlockRequest,
     VerifyPinRequest,
 )
+from app.schemas.feedback import (
+    AdminFeedbackItem,
+    AdminFeedbackOut,
+    FeedbackIn,
+    FeedbackReceived,
+)
 from app.schemas.in_touch import (
     InTouchItem,
     InTouchListOut,
@@ -124,6 +130,8 @@ __all__ = [
     "AdminContributionItem",
     "AdminCreateIn",
     "AdminCreatedOut",
+    "AdminFeedbackItem",
+    "AdminFeedbackOut",
     "AdminFlagItem",
     "AdminFlagReviewIn",
     "AdminHealthOut",
@@ -143,6 +151,8 @@ __all__ = [
     "ConversationState",
     "DevListenerItem",
     "DevTokenOut",
+    "FeedbackIn",
+    "FeedbackReceived",
     "InTouchItem",
     "InTouchListOut",
     "InTouchSlots",
