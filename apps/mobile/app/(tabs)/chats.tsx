@@ -467,7 +467,16 @@ export default function ChatsTab() {
                   );
                 })}
               </View>
-            ) : null}
+            ) : view === 'touch' ? (
+              // Where the filters were: one quiet line, so the block keeps its height and the
+              // companion on its edge never stands in front of the switch.
+              <View style={styles.touchLine}>
+                <Text style={[type.caption, styles.touchLineText, { color: colors.inkMuted }]}>{t('inTouch.viewLine')}</Text>
+              </View>
+            ) : (
+              // Nothing to filter yet: the same room is kept for the companion.
+              <View style={styles.touchLine} />
+            )}
             <View style={[styles.toolsEdge, { backgroundColor: colors.edgeSurface }]} pointerEvents="none" />
             <View style={styles.toolsFloor} pointerEvents="none">
               <CompanionSlot id="titleCorner" size={54} inset={26} attach="floor" />
@@ -718,6 +727,8 @@ const styles = StyleSheet.create({
   switchFace: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   switchText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20 },
   chips: { flexDirection: 'row', gap: space.sm },
+  touchLine: { minHeight: 48, justifyContent: 'center', paddingLeft: space.sm, paddingRight: 96 },
+  touchLineText: {},
   chip: { height: 44, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   note: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.sm },
   noteBox: { marginHorizontal: space.md, marginTop: space.sm },
