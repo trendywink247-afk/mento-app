@@ -16,17 +16,28 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { ComposerField } from '@/components/chat/ComposerField';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
-import { MentorRail } from '@/components/mentor/MentorRail';
-import { PressKey } from '@/components/motion/PressKey';
+import { EdgeSurface } from '@/components/EdgeSurface';
+import { Companion } from '@/components/art/Companion';
+import type { CompanionAnimal } from '@/components/art/Companions';
+import { HelplinesSheet } from '@/components/mentor/HelplinesSheet';
+import { MemberDisc } from '@/components/mentor/MemberDisc';
+import { MentorChatHeader } from '@/components/mentor/MentorChatHeader';
+import { MentorComposerHint } from '@/components/mentor/MentorComposerHint';
+import { MentorOptionsMenu } from '@/components/mentor/MentorOptionsMenu';
+import { SageSky } from '@/components/motion/SageSky';
+import { useBreathing } from '@/components/motion/useBreathing';
+import Animated from 'react-native-reanimated';
 import { useI18n } from '@/lib/i18n';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
-import { listenerApi } from '@/lib/listenerApi';
+import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
-import { getSessionToken } from '@/lib/session';
+import { getCompanionAnimal, getSessionToken } from '@/lib/session';
 import { leaveToMentorHome } from '@/lib/leaveToChats';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
+
+/** Where the options card sits: under the header card's first row (board: top 104). */
+const MENU_TOP = 96;
 
 /**
  * Mentor-side chat, web console (in-app web at /mentor/chat/[id] AND the token-link
@@ -84,6 +95,31 @@ export default function MentorChatScreenWeb() {
   const [readTick, setReadTick] = useState(0);
   const [menu, setMenu] = useState<MenuState>('closed');
   const [ending, setEnding] = useState(false);
+  const [helplines, setHelplines] = useState(false);
+  // The member as the brief carries them (companion in their colour, path lens) — best-effort.
+  const [brief, setBrief] = useState<MemberBrief | null>(null);
+  const [here, setHere] = useState(false);
+  const [mine, setMine] = useState<CompanionAnimal | null>(null);
+  const breathing = useBreathing();
+  useEffect(() => {
+    let live = true;
+    if (id) {
+      void listenerApi
+        .brief(id)
+        .then((b) => {
+          if (live) setBrief(b);
+        })
+        .catch(() => {});
+    }
+    void getCompanionAnimal()
+      .then((a) => {
+        if (live) setMine(a as CompanionAnimal | null);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [id]);
   const channelRef = useRef<ChannelType | null>(null);
   const shownRef = useRef<Set<string>>(new Set());
 
@@ -150,6 +186,11 @@ export default function MentorChatScreenWeb() {
           }
         });
         ch.on('message.read', () => setReadTick((t) => t + 1));
+        // "here now" = the member is watching this channel (presence only, never content).
+        const others = () => Object.values(ch.state.watchers ?? {}).some((u) => u?.id && u.id !== client.userID);
+        setHere(others());
+        ch.on('user.watching.start', () => setHere(others()));
+        ch.on('user.watching.stop', () => setHere(others()));
         ch.on('typing.start', (e: Event) => {
           if (e.user && e.user.id !== client.userID) setTyping(e.user.name ?? memberName);
         });
@@ -241,116 +282,18 @@ export default function MentorChatScreenWeb() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      {/* Member header — persona only, anonymity holds both ways. */}
-      <View style={[styles.header, { backgroundColor: colors.surface }, elevation.sm]}>
-        <ConsolePressable
-          onPress={() => leaveToMentorHome(router, home)}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={t('mentor.chat.back')}
-          testID="mentor-chat-back"
-        >
-          <Ionicons name="chevron-back" size={26} color={colors.ink} />
-        </ConsolePressable>
-        <PressKey
-          onPress={() =>
-            router.push({ pathname: '/mentor/member/[id]', params: { id, member: memberName, masked } })
-          }
-          edge={colors.edgeSurface}
-          travel={2}
-          radius={radius.md}
-          accessibilityLabel={t('mentor.brief.headerA11y', { name: memberName })}
-          containerStyle={styles.headerPressContainer}
-          style={styles.headerPressFace}
-          testID="member-header"
-        >
-          <PersonaAvatar name={memberName} size={52} online={masked !== '1'} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.personaName, { color: colors.ink }]} numberOfLines={1}>
-              {memberName}
-            </Text>
-            {masked === '1' ? (
-              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
-                {t('mentor.masked')}
-              </Text>
-            ) : null}
-          </View>
-        </PressKey>
-        <ConsolePressable
-          onPress={() => setMenu((m) => (m === 'closed' ? 'open' : 'closed'))}
-          hitSlop={12}
-          accessibilityRole="button"
-          accessibilityLabel={t('mentor.chat.menu')}
-          testID="mentor-chat-menu"
-        >
-          <Ionicons name="ellipsis-vertical" size={20} color={colors.inkMuted} />
-        </ConsolePressable>
-      </View>
-
-      {menu !== 'closed' ? (
-        <View style={[styles.menuSheet, { backgroundColor: colors.surfaceAlt }]} testID="mentor-chat-menu-sheet">
-          {menu === 'open' ? (
-            <>
-              <PressKey
-                onPress={() => {
-                  setMenu('closed');
-                  router.push({ pathname: '/mentor/report', params: { id } });
-                }}
-                edge={colors.edgeSurface}
-                radius={radius.md}
-                style={[styles.menuItem, { backgroundColor: colors.surface }]}
-                testID="mentor-menu-report"
-              >
-                <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.report')}</Text>
-              </PressKey>
-              <PressKey
-                onPress={() => setMenu('confirmEnd')}
-                edge={colors.edgeSurface}
-                radius={radius.md}
-                style={[styles.menuItem, { backgroundColor: colors.surface }]}
-                testID="mentor-menu-end"
-              >
-                <Text style={[type.label, { color: colors.danger }]}>{t('mentor.chat.end')}</Text>
-              </PressKey>
-            </>
-          ) : (
-            <>
-              <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.endTitle')}</Text>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.chat.endBody')}</Text>
-              <View style={styles.menuRow}>
-                <PressKey
-                  onPress={() => void endNow()}
-                  edge={colors.accentEdge}
-                  radius={radius.md}
-                  disabled={ending}
-                  style={[styles.menuItem, { backgroundColor: colors.accent }]}
-                  containerStyle={{ flex: 1 }}
-                  testID="mentor-end-confirm"
-                >
-                  <Text style={[type.label, { color: colors.onAccent }]}>{t('mentor.chat.endConfirm')}</Text>
-                </PressKey>
-                <PressKey
-                  onPress={() => setMenu('closed')}
-                  edge={colors.edgeSurface}
-                  radius={radius.md}
-                  disabled={ending}
-                  style={[styles.menuItem, { backgroundColor: colors.surface }]}
-                  containerStyle={{ flex: 1 }}
-                  testID="mentor-end-cancel"
-                >
-                  <Text style={[type.label, { color: colors.ink }]}>{t('mentor.chat.keep')}</Text>
-                </PressKey>
-              </View>
-            </>
-          )}
-        </View>
-      ) : null}
-
-      <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
-        <Ionicons name="heart" size={13} color={colors.accent} />
-        <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
-          {t('mentor.chat.privacy')}
-        </Text>
+      <SageSky shape="top" />
+      <View style={styles.headerWrap}>
+        <MentorChatHeader
+          memberName={memberName}
+          brief={brief}
+          here={here}
+          masked={masked === '1' || !!brief?.member_masked}
+          onBack={() => leaveToMentorHome(router, home)}
+          onOpenBrief={() => router.push({ pathname: '/mentor/member/[id]', params: { id, member: memberName, masked } })}
+          onOptions={() => setMenu((m) => (m === 'closed' ? 'open' : 'closed'))}
+          onHelplines={() => setHelplines(true)}
+        />
       </View>
 
       {error ? (
@@ -397,54 +340,38 @@ export default function MentorChatScreenWeb() {
                 <View>
                   {showDay ? (
                     <View style={styles.dayRow}>
-                      <View style={[styles.hairline, { backgroundColor: colors.border }]} />
-                      <View style={[styles.dayPill, { backgroundColor: colors.surfaceAlt }]}>
-                        <Text style={[type.caption, { color: colors.inkMuted }]}>
-                          {dayLabel(item.at)}
-                        </Text>
-                      </View>
-                      <View style={[styles.hairline, { backgroundColor: colors.border }]} />
+                      <Text style={[type.caption, styles.dayText, { color: colors.inkMuted }]}>{dayLabel(item.at)}</Text>
                     </View>
                   ) : null}
 
                   {item.mine ? (
                     <View style={styles.mineWrap}>
-                      <View
-                        style={[styles.bubble, styles.mine, { backgroundColor: colors.accentTint }]}
+                      <EdgeSurface
+                        edge={colors.accentEdge}
+                        travel={3}
+                        faceRadiusStyle={styles.mineCorners}
+                        style={[styles.bubble, { backgroundColor: colors.accent }]}
+                        containerStyle={styles.bubbleBox}
                       >
-                        <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
-                      </View>
+                        <Text style={[type.body, { color: colors.onAccent }]}>{item.text}</Text>
+                      </EdgeSurface>
                       <View style={styles.metaRow}>
                         <Text style={[type.caption, styles.tnum, { color: colors.inkMuted }]}>
-                          {timeLabel(item.at)}
+                          {isRead(item) ? t('mentorChatPage.read') : timeLabel(item.at)}
                         </Text>
-                        <Ionicons
-                          name="checkmark-done"
-                          size={15}
-                          color={isRead(item) ? colors.accent : colors.inkMuted}
-                        />
                       </View>
                     </View>
                   ) : (
                     <View style={styles.theirsWrap}>
-                      <View style={styles.theirsRow}>
-                        <PersonaAvatar name={memberName} size={34} />
-                        <View
-                          style={[
-                            styles.bubble,
-                            styles.theirs,
-                            { backgroundColor: colors.surface },
-                            elevation.sm,
-                          ]}
-                        >
-                          <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
-                        </View>
-                      </View>
-                      <Text
-                        style={[type.caption, styles.theirsTime, styles.tnum, { color: colors.inkMuted }]}
+                      <EdgeSurface
+                        edge={colors.edgeSurface}
+                        travel={3}
+                        faceRadiusStyle={styles.theirsCorners}
+                        style={[styles.bubble, styles.theirsFace, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                        containerStyle={styles.bubbleBox}
                       >
-                        {timeLabel(item.at)}
-                      </Text>
+                        <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
+                      </EdgeSurface>
                     </View>
                   )}
                 </View>
@@ -455,20 +382,34 @@ export default function MentorChatScreenWeb() {
 
           {/* Presence-only typing line — calm register, no animation needed. */}
           {typing ? (
-            <Text
-              style={[type.caption, styles.typingLine, { color: colors.inkMuted }]}
-              testID="listener-typing-indicator"
-            >
-              {t('chat.typing', { name: typing })}
-            </Text>
+            <View style={styles.typingRow} testID="listener-typing-indicator">
+              <View style={[styles.typingPill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                {[1, 0.6, 0.35].map((o) => (
+                  <View key={o} style={[styles.typingDot, { backgroundColor: colors.inkMuted, opacity: o }]} />
+                ))}
+              </View>
+              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorChatPage.typing', { name: typing })}</Text>
+            </View>
           ) : null}
 
-          <MentorRail
-            onHelplines={() => router.push('/mentor/helplines')}
-            onReport={() => router.push({ pathname: '/mentor/report', params: { id } })}
-          />
-
-          <View>
+          {/* Your companion peeks over the message field (board A35) — it stands behind the
+            * footer, so only its top shows above the field. Decorative. */}
+          <View style={styles.peekZone} pointerEvents="none">
+            {/* Your companion peeks over the message field (board A35) — decorative. */}
+            <View
+              style={styles.peek}
+              pointerEvents="none"
+              accessible
+              accessibilityRole="image"
+              accessibilityLabel={t('mentorChatPage.companionA11y')}
+            >
+              <Animated.View style={[styles.originBottom, breathing]}>
+                <Companion animal={mine ?? 'Owl'} size={90} pose="peek" awake />
+              </Animated.View>
+            </View>
+          </View>
+          <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
+            <MentorComposerHint />
             {sendError ? (
               <Text
                 style={[type.caption, styles.sendErrorLine, { color: colors.danger }]}
@@ -487,46 +428,52 @@ export default function MentorChatScreenWeb() {
               onKeyPress={handleComposerKeyPress}
               disabled={!draft.trim() || sending}
               sending={sending}
-              placeholder={t('mentor.chat.reply')}
+              placeholder={t('mentorChatPage.placeholder', { name: memberName })}
               testIDPrefix="listener-composer"
             />
           </View>
         </View>
         </View>
       )}
+
+      {menu !== 'closed' ? (
+        <MentorOptionsMenu
+          state={menu === 'open' ? 'open' : 'confirmEnd'}
+          top={MENU_TOP}
+          ending={ending}
+          onReport={() => {
+            setMenu('closed');
+            router.push({ pathname: '/mentor/report', params: { id } });
+          }}
+          onAskEnd={() => setMenu('confirmEnd')}
+          onConfirmEnd={() => void endNow()}
+          onClose={() => setMenu('closed')}
+        />
+      ) : null}
+
+      {/* The still helplines panel over a 0.35 scrim — nothing in it moves (T&S #11). */}
+      {helplines ? (
+        <View style={[StyleSheet.absoluteFill, styles.helpLayer]}>
+          <ConsolePressable
+            onPress={() => setHelplines(false)}
+            accessibilityRole="button"
+            accessibilityLabel={t('mentorChatPage.close')}
+            style={[StyleSheet.absoluteFill, styles.helpScrim, { backgroundColor: colors.ink }]}
+            testID="mentor-helplines-backdrop"
+          />
+          <View style={[styles.helpCard, elevation.md]}>
+            <HelplinesSheet onClose={() => setHelplines(false)} />
+          </View>
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm,
-    borderBottomLeftRadius: radius.lg,
-    borderBottomRightRadius: radius.lg,
-  },
-  personaName: { ...type.titleSmSerif },
-  headerPressContainer: { flex: 1 },
-  headerPressFace: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    backgroundColor: 'transparent',
-  },
+  headerWrap: { paddingHorizontal: 12, paddingTop: space.sm, zIndex: 3 },
   tnum: { fontVariant: ['tabular-nums'] },
-  menuSheet: {
-    margin: space.md,
-    padding: space.sm,
-    borderRadius: radius.lg,
-    gap: space.sm,
-  },
-  menuItem: { padding: space.sm, alignItems: 'center' },
-  menuRow: { flexDirection: 'row', gap: space.sm },
   retryBtn: {
     minHeight: 44,
     alignItems: 'center',
@@ -534,31 +481,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
   },
   emptyChat: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm, padding: space.xl },
-  privacy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.md,
-  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
-  list: { padding: space.md, gap: space.xs },
-  dayRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginVertical: space.md },
-  hairline: { flex: 1, height: 1 },
-  dayPill: { borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: space.md },
-  bubble: {
-    maxWidth: '80%',
-    borderRadius: radius.lg,
-    paddingHorizontal: space.md,
-    paddingVertical: space.sm + 2,
-  },
-  mineWrap: { alignItems: 'flex-end', marginVertical: space.xs },
-  mine: { borderBottomRightRadius: radius.sm },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: 3 },
-  theirsWrap: { marginVertical: space.xs },
-  theirsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },
-  theirs: { borderBottomLeftRadius: radius.sm },
-  theirsTime: { marginLeft: 34 + space.sm + space.xs, marginTop: 3 },
-  typingLine: { paddingHorizontal: space.md, paddingTop: space.xs },
-  sendErrorLine: { paddingBottom: space.xs },
+  list: { paddingHorizontal: space.md, paddingTop: 12, paddingBottom: 64, gap: 10, flexGrow: 1, justifyContent: 'flex-end' },
+  dayRow: { alignItems: 'center', marginVertical: space.sm },
+  dayText: { fontFamily: type.label.fontFamily },
+  bubbleBox: { maxWidth: 288 },
+  bubble: { paddingHorizontal: 14, paddingVertical: 10 },
+  mineCorners: { borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.sm },
+  theirsCorners: { borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, borderBottomRightRadius: radius.lg, borderBottomLeftRadius: radius.sm },
+  theirsFace: { borderWidth: 1 },
+  mineWrap: { alignItems: 'flex-end', marginVertical: 5, gap: space.xs },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, paddingRight: 6 },
+  theirsWrap: { alignItems: 'flex-start', marginVertical: 5 },
+  typingRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingHorizontal: space.md, paddingBottom: space.sm },
+  typingPill: { height: 28, flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, borderWidth: 1, borderRadius: radius.pill },
+  typingDot: { width: 6, height: 6, borderRadius: radius.pill },
+  footer: { paddingTop: space.sm, paddingBottom: space.md, gap: space.sm, borderTopWidth: 1 },
+  // A zero-height band on the footer's top edge; the companion hangs 30px into the footer
+  // (drawn after it, so hidden there) and shows 60px above it.
+  peekZone: { height: 0, zIndex: 0 },
+  peek: { position: 'absolute', right: 22, bottom: -30, height: 90, alignItems: 'center', justifyContent: 'flex-end' },
+  originBottom: { transformOrigin: 'bottom' },
+  sendErrorLine: { paddingBottom: space.xs, paddingHorizontal: space.md },
+  helpLayer: { zIndex: 6 },
+  helpScrim: { opacity: 0.35 },
+  helpCard: { position: 'absolute', left: 12, right: 12, top: 186, alignItems: 'center' },
 });

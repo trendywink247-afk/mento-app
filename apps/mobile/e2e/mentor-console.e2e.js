@@ -5,7 +5,7 @@
  *  A (mentor): landing → listen door → age → email → primer → Mentor Home → applies;
  *              admin approves via API; reload → Mentor Home IS the console; toggles online.
  *  B (member): onboards, browses mentors, sends a Personal request to A's persona.
- *  A: accepts → conversation row → opens the chat → mentor rail visible → replies.
+ *  A: accepts → conversation row → opens the chat → mentor helplines key visible → replies.
  *  B: opens the chat from My Chats and sees the reply.
  *  A: Report sheet files; header menu → End → back on the console with the row Ended.
  *  R (reduced motion): the console still opens for A's session, static.
@@ -130,11 +130,12 @@ async function memberOnboard(page, tid) {
   await a.waitForSelector('[data-testid^="mentor-convo-"]', { timeout: 30000 });
   await a.locator('[data-testid^="mentor-convo-"]').first().click();
   await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 60000 });
-  await a.waitForSelector('[data-testid="mentor-rail"]', { timeout: 15000 });
+  // Board A35: the rail is gone — Helplines is a labelled key in the header's path strip.
+  await a.waitForSelector('[data-testid="mentor-helplines"]', { timeout: 15000 });
   await atid('listener-composer-input').fill(MENTOR_MSG);
   await atid('listener-composer-send').click();
   await a.waitForSelector(`text=${MENTOR_MSG}`, { timeout: 20000 });
-  console.log('OK request accepted, chat open, rail visible, reply sent');
+  console.log('OK request accepted, chat open, helplines key visible, reply sent');
 
   // --- B: the reply arrives ----------------------------------------------------
   await b.goto(`${WEB}/chats`, { waitUntil: 'networkidle', timeout: 120000 });
@@ -186,7 +187,9 @@ async function memberOnboard(page, tid) {
   await a.waitForSelector('[data-testid="mentor-chat-ready"]', { timeout: 30000 });
 
   // --- A: report, then end -----------------------------------------------------
-  await atid('mentor-report').click();
+  // Board A35: Report lives in the options menu.
+  await atid('mentor-chat-menu').click();
+  await atid('mentor-menu-report').click();
   await a.waitForSelector('[data-testid="mentor-report-sheet"]', { timeout: 15000 });
   await atid('report-reason-spam').click();
   await atid('report-submit').click();
