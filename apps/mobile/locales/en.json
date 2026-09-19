@@ -1352,6 +1352,7 @@
       "life": "Life in general",
       "feeling_stuck": "Feeling stuck",
       "motivation": "Motivation"
-    }
+    },
+    "threadPrivacy": "Keep personal details out of the chat — no names, numbers or addresses."
   }
 }
