@@ -51,7 +51,18 @@ export function LogoLockup({ markSize = 44 }: { markSize?: number }) {
   );
 }
 
+/** The bare lowercase wordmark — the board's landing header (A01): no mark, heavy, tight. */
+export function LogoWordmark() {
+  const { colors } = useTheme();
+  return (
+    <Text accessibilityRole="text" style={[styles.bare, { color: colors.ink }]}>
+      mento
+    </Text>
+  );
+}
+
 const styles = StyleSheet.create({
+  bare: { fontFamily: font.sansHeavy, fontSize: 30, lineHeight: 40, letterSpacing: -0.5 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   wordmark: { fontFamily: font.serifBold, letterSpacing: 0.25 },
 });

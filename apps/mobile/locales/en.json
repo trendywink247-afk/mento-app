@@ -3,8 +3,13 @@
     "headline1": "A place to talk",
     "headline2": "with a mentor who",
     "headline3": "understands.",
-    "sub": "Private. Judgment-free.\nReal conversations. When you need it most.",
-    "cta": "Start a Conversation"
+    "sub": "Mentors who have walked your road.\nPrivate. Judgment-free.",
+    "cta": "Start a Conversation",
+    "footer": "Mentors are real people, not therapists.",
+    "cardMember": "Not sure what to do next.",
+    "cardMentor": "I've been there. Let's talk.",
+    "sceneA11y": "Two people sit across a small table, deep in conversation",
+    "ctaHint": "Begins onboarding"
   },
   "notFound": {
     "title": "This road doesn't go anywhere",

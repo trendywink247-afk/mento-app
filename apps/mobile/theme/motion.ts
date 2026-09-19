@@ -75,6 +75,31 @@ export const drift = {
 } as const;
 
 /**
+ * The round Stage (board A01 / A18): ambient, low-contrast, very slow. None of these
+ * are attention-movers — a ring turn takes over a minute — so they sit under the
+ * ≤3-movers budget the way the sky does. Ripples share the breathing period.
+ */
+export const stage = {
+  ringSpin: 70000,
+  ringSpinBack: 95000,
+  sheen: 9000,
+  motes: 9000,
+  /** The two floating chat cards bob on unrelated periods so they never sync. */
+  floatA: 6500,
+  floatB: 7500,
+  /** The hand-drawn underline draws once, after the headline has landed. */
+  underlineDraw: 1100,
+  underlineDelay: 1000,
+} as const;
+
+/** Small dot rhythms: the typing dots in a chat card, and the five seeking dots that
+ * light in turn between the two orbs while a mentor is being found. */
+export const dots = {
+  typing: { period: 1400, stagger: 180, rise: 4 },
+  seek: { period: 2400, stagger: 300 },
+} as const;
+
+/**
  * Character-state timing for the reactive companions (DECISIONS §I.4 amended —
  * in-house rig). Calm register: squash/stretch stays subtle (≤8%), anticipation
  * before any hop, everything settles without overshoot.
@@ -106,5 +131,5 @@ export const character = {
   squashK: 0.6,
 } as const;
 
-export const motion = { duration, easing, spring, stagger, breathe, character };
+export const motion = { duration, easing, spring, stagger, breathe, character, stage, dots };
 export type Motion = typeof motion;

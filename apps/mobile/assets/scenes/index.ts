@@ -15,6 +15,10 @@ export const SCENES = {
   journalsAi: require('./journals-ai.webp') as ImageSourcePropType,
   /** Journal channel first-visit — a fresh page and growth. */
   journalEmpty: require('./journal-empty.webp') as ImageSourcePropType,
+  /** Landing: frame 0 of assets/lottie/study-discussion.json on a transparent 1200² canvas
+   * (same geometry as the animation) — the reduced-motion / route-exit still. Re-render
+   * it if the Lottie is re-themed. */
+  landingStill: require('./landing-scene-still.webp') as ImageSourcePropType,
 };
 
 export type SceneName = keyof typeof SCENES;
