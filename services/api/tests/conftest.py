@@ -19,7 +19,33 @@ from app.config import get_settings
 
 API_DIR = Path(__file__).resolve().parents[1]  # services/api
 
-DB_URL = get_settings().database_url
+def _worker_db_url(url: str) -> str:
+    """Each pytest-xdist worker gets its OWN database, created on the fly.
+
+    The suite truncates shared tables between tests, so workers on one database would
+    wipe each other's rows. `gw0`, `gw1`, … each get `<db>_gw0`, `<db>_gw1`; a plain
+    (non-parallel) run is untouched. Test databases only — never prod.
+    """
+    import os
+
+    worker = os.environ.get("PYTEST_XDIST_WORKER")
+    if not worker or not url.startswith("postgresql"):
+        return url
+    base, _, name = url.rpartition("/")
+    name = name.split("?")[0]
+    target = f"{name}_{worker}"
+    admin = create_engine(f"{base}/postgres", isolation_level="AUTOCOMMIT", future=True)
+    with admin.connect() as conn:
+        exists = conn.execute(
+            text("SELECT 1 FROM pg_database WHERE datname = :n"), {"n": target}
+        ).scalar()
+        if not exists:
+            conn.execute(text(f'CREATE DATABASE "{target}"'))
+    admin.dispose()
+    return f"{base}/{target}"
+
+
+DB_URL = _worker_db_url(get_settings().database_url)
 IS_POSTGRES = DB_URL.startswith("postgresql")
 
 # Marker for tests that are meaningless without real row-level locking.
@@ -36,6 +62,17 @@ test_engine = create_engine(
     DB_URL, pool_size=TEST_POOL_SIZE, max_overflow=0, pool_pre_ping=True, future=True
 )
 TestSession = sessionmaker(bind=test_engine, autoflush=False, autocommit=False, future=True)
+
+if DB_URL != get_settings().database_url:  # a parallel worker: point the app at its own DB too
+    import os
+
+    os.environ["DATABASE_URL"] = DB_URL
+    get_settings.cache_clear()
+    from app import db as _app_db
+
+    _app_db.engine.dispose()
+    _app_db.engine = create_engine(DB_URL, pool_pre_ping=True, future=True)
+    _app_db.SessionLocal.configure(bind=_app_db.engine)
 
 
 @pytest.fixture(autouse=True)
