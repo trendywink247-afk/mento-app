@@ -129,13 +129,13 @@
   },
   "onboarding": {
     "age": {
-      "headline": "Your age helps us\nkeep Mento safe,\nand your identity\n",
-      "headlineAccent": "private.",
-      "reassure": "We use your age to create appropriate conversations and maintain a safe space for everyone.",
-      "neverShown": "Your age is never shown to other users.",
-      "question": "How old are you?",
+      "headline": "How old are ",
+      "headlineAccent": "you?",
       "underAge": "Mento is available to people %{age} and older.",
-      "future": "That date is in the future."
+      "future": "That date is in the future.",
+      "sub": "Your age helps us keep Mento safe, and your identity private.",
+      "privacy": "Mento is for adults, 18 and over. Your age is worked out on our side, not on this phone, and it is never shown to mentors or other members.",
+      "companionA11y": "Your companion, peeking over the date wheels"
     },
     "dob": {
       "day": "Day",
@@ -155,7 +155,27 @@
       "month9": "September",
       "month10": "October",
       "month11": "November",
-      "month12": "December"
+      "month12": "December",
+      "caption": "Date of birth",
+      "readout": "%{day} %{month} %{year}",
+      "dayUp": "Previous day",
+      "dayDown": "Next day",
+      "monthUp": "Previous month",
+      "monthDown": "Next month",
+      "yearUp": "Earlier year",
+      "yearDown": "Later year",
+      "short1": "Jan",
+      "short2": "Feb",
+      "short3": "Mar",
+      "short4": "Apr",
+      "short5": "May",
+      "short6": "Jun",
+      "short7": "Jul",
+      "short8": "Aug",
+      "short9": "Sep",
+      "short10": "Oct",
+      "short11": "Nov",
+      "short12": "Dec"
     },
     "email": {
       "headline": "Optional, but helpful.",
