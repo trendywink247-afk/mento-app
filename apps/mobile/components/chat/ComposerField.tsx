@@ -1,6 +1,7 @@
 /**
- * Presentational pillow-key composer row (spec §5.1/§5.2): an EdgeSurface pill
- * field beside a PressKey send circle. Shared by the native kit override
+ * Presentational pillow-key composer (board A05 footer): a hairline-topped oat footer
+ * holding whatever the screen puts above the row (the allowance meter, or the
+ * three-in-a-row note), then a 52px pillow field beside a 52px accent send key. Shared by the native kit override
  * (components/chat/Composer.tsx, which supplies the kit's own composer state) and
  * both hand-rolled web composers (components/chat/ChatScreen.web.tsx,
  * components/mentor/MentorChatScreen.web.tsx, which supply local `useState`
@@ -24,9 +25,10 @@ import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type as typeTokens } from '@/theme/tokens';
 
-const FIELD_RADIUS = radius.lg; // 22
-const SEND_SIZE = 44;
-const INPUT_VERTICAL_PADDING = space.sm; // 8 top + 8 bottom inside the field
+const FIELD_RADIUS = radius.md; // 14
+const FIELD_HEIGHT = 52;
+const SEND_SIZE = 52;
+const INPUT_VERTICAL_PADDING = 14; // (52 − one 24px line) / 2
 const MAX_LINES = 4;
 const MAX_INPUT_HEIGHT = MAX_LINES * typeTokens.body.lineHeight + INPUT_VERTICAL_PADDING * 2;
 
@@ -36,13 +38,23 @@ const MAX_INPUT_HEIGHT = MAX_LINES * typeTokens.body.lineHeight + INPUT_VERTICAL
  * rather than a prop because on native the kit mounts the composer itself. */
 export const ComposerPerchContext = createContext<ReactNode>(null);
 
+/** What the member chat adds to the footer (boards A05 / A22). A context, like the perch,
+ * because on native the kit mounts the composer itself.
+ *  - `above`: the allowance meter row, or the three-in-a-row note + the Journal key;
+ *  - `held`: the allowance asks for a pause — the send key goes quiet (never red, no
+ *    haptic, no travel) while the FIELD STAYS LIVE so the draft is never lost;
+ *  - `heldA11y`: what the quiet key says to a screen reader. */
+export type ComposerChrome = { above?: ReactNode; held?: boolean; heldA11y?: string };
+export const ComposerChromeContext = createContext<ComposerChrome>({});
+
 type Props = {
   value: string;
   onChangeText: (text: string) => void;
   /** Fires on a send-button press AND (when the caller wires `onKeyPress`) on
    * Enter — the caller's own function owns trimming/guards/async/error handling. */
   onSubmit: () => void;
-  /** Send button not pressable + dimmed (empty text, or a send already in flight). */
+  /** Nothing to send (empty text, or a send already in flight): the key stays drawn live
+   * (board A05) but presses silently; `sending` is what actually locks it. */
   disabled: boolean;
   /** Swaps the send icon for a calm spinner; does not by itself disable the field. */
   sending: boolean;
@@ -74,6 +86,8 @@ export function ComposerField({
   const { t } = useI18n();
   const caretPlaced = useRef(false);
   const perch = useContext(ComposerPerchContext);
+  const chrome = useContext(ComposerChromeContext);
+  const held = chrome.held === true;
 
   // A browser focuses a pre-filled textarea with the caret at the START; typing would
   // then land in front of the draft. Native already puts it at the end. Once only, so
@@ -88,67 +102,95 @@ export function ComposerField({
   };
 
   return (
-    <View style={styles.row}>
-      {/* The field is the furniture: a perch is its absolutely-positioned child. */}
-      <View style={styles.fieldContainer}>
+    // The footer is the furniture: the companion's perch is its absolutely-positioned child.
+    <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
       {perch}
-      <EdgeSurface
-        edge={colors.edgeSurface}
-        radius={FIELD_RADIUS}
-        style={[styles.field, { backgroundColor: colors.surface }]}
-      >
-        <TextInput
-          value={value}
-          onChangeText={onChangeText}
-          onKeyPress={onKeyPress}
-          autoFocus={autoFocus}
-          onFocus={autoFocus ? placeCaretAtEnd : undefined}
-          placeholder={placeholder}
-          placeholderTextColor={colors.inkMuted}
-          multiline
-          maxFontSizeMultiplier={1.3}
-          style={[typeTokens.body, styles.input, { color: colors.ink, maxHeight: MAX_INPUT_HEIGHT }]}
-          testID={`${testIDPrefix}-input`}
-          accessibilityLabel={placeholder}
-        />
-      </EdgeSurface>
-      </View>
-      <PressKey
-        onPress={onSubmit}
-        edge={colors.accentEdge}
-        disabled={disabled}
-        radius={SEND_SIZE / 2}
-        style={[styles.send, { backgroundColor: colors.accent }]}
-        accessibilityLabel={t('chat.send')}
-        testID={`${testIDPrefix}-send`}
-      >
-        {sending ? (
-          <ActivityIndicator size="small" color={colors.onAccent} />
+      {chrome.above}
+      <View style={styles.row}>
+        <EdgeSurface
+          edge={colors.edgeSurface}
+          travel={4}
+          radius={FIELD_RADIUS}
+          style={[styles.field, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          containerStyle={styles.fieldContainer}
+        >
+          <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            onKeyPress={onKeyPress}
+            autoFocus={autoFocus}
+            onFocus={autoFocus ? placeCaretAtEnd : undefined}
+            placeholder={placeholder}
+            placeholderTextColor={colors.inkMuted}
+            multiline
+            // Web only: react-native-web's textarea opens two rows high and the field
+            // outgrows the board's 52 (`numberOfLines` is its `rows`). Native sizes itself;
+            // on Android the same prop would pin the field to one line for good.
+            {...(Platform.OS === 'web' ? { numberOfLines: 1 } : null)}
+            maxFontSizeMultiplier={1.3}
+            style={[typeTokens.body, styles.input, { color: colors.ink, maxHeight: MAX_INPUT_HEIGHT }]}
+            testID={`${testIDPrefix}-input`}
+            accessibilityLabel={placeholder}
+          />
+        </EdgeSurface>
+        {held ? (
+          // Quietly unavailable: no edge, no travel, no haptic — and never red (T&S #11).
+          <View
+            accessibilityRole="button"
+            accessibilityState={{ disabled: true }}
+            accessibilityLabel={chrome.heldA11y ?? t('chat.send')}
+            aria-disabled
+            testID={`${testIDPrefix}-send`}
+            style={[styles.send, styles.sendHeld, { backgroundColor: colors.heldFace, borderColor: colors.borderStrong }]}
+          >
+            <Ionicons name="paper-plane-outline" size={22} color={colors.heldInk} />
+          </View>
         ) : (
-          <Ionicons name="arrow-up" size={20} color={colors.onAccent} />
+          <PressKey
+            onPress={onSubmit}
+            edge={colors.accentEdge}
+            intent="commit"
+            // Drawn live even over an empty field (board A05); an empty press is a no-op in
+            // every caller, so it stays silent too.
+            haptic={disabled ? 'none' : 'impact'}
+            disabled={sending}
+            radius={SEND_SIZE / 2}
+            style={[styles.send, { backgroundColor: colors.accent }]}
+            accessibilityLabel={t('chat.send')}
+            testID={`${testIDPrefix}-send`}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color={colors.onAccent} />
+            ) : (
+              <Ionicons name="paper-plane-outline" size={22} color={colors.onAccent} />
+            )}
+          </PressKey>
         )}
-      </PressKey>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: space.sm,
-    paddingHorizontal: 10,
+  // Board: padding 8 / 16 / 28 under a hairline. On native the kit (or the screen's
+  // SafeAreaView) already adds the bottom inset, so only the web frame carries the 28.
+  footer: {
+    borderTopWidth: 1,
+    paddingHorizontal: space.md,
     paddingTop: space.sm,
-    paddingBottom: 12,
+    paddingBottom: Platform.OS === 'web' ? 28 : 12,
+    gap: space.sm,
   },
+  row: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
   fieldContainer: { flex: 1 },
   field: {
-    minHeight: 44,
-    paddingHorizontal: 14,
+    minHeight: FIELD_HEIGHT,
+    paddingHorizontal: space.md,
     justifyContent: 'center',
+    borderWidth: 1,
   },
   input: {
-    paddingVertical: INPUT_VERTICAL_PADDING,
+    paddingVertical: INPUT_VERTICAL_PADDING - 1, // the field's 1px border
     margin: 0,
   },
   send: {
@@ -157,4 +199,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // No edge beneath it: lifted by the field's travel so the two tops stay level.
+  sendHeld: { borderRadius: SEND_SIZE / 2, borderWidth: 1, marginBottom: 4 },
 });

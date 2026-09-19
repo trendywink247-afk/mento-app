@@ -171,5 +171,26 @@ export const sheet = {
   deepShift: 48,
 } as const;
 
-export const motion = { duration, easing, spring, stagger, breathe, character, stage, dots };
+/**
+ * Inside a conversation (boards A05 / A20). `glow` is the soft ring that swells and fades
+ * once around a mentor's message as it arrives; `settle` is how far the save key and the
+ * "Saved" chip travel as they land; `sheetBack` is how far the screen under a sheet settles
+ * back (FINAL_SPEC: 0.96, 8px down) — one shared value drives it together with the scrim.
+ */
+export const chat = {
+  glow: 3200,
+  /** The ring is brightest this far through its life, then fades for the rest. */
+  glowPeakAt: 0.22,
+  settle: { from: 0.92, rise: 6 },
+  sheetBack: { scale: 0.96, shift: 8 },
+} as const;
+
+/**
+ * The board's companion breath on a still screen (A23 reflection, A39 not found): an
+ * alternating inhale of 3.5% with a one-degree lean, each half one `breathe.period` long.
+ * Reduced motion: none — the companion simply sits.
+ */
+export const heroBreath = { scale: 0.035, lean: { from: -1, to: 0.8 }, half: 5200 } as const;
+
+export const motion = { duration, easing, spring, stagger, breathe, character, stage, dots, chat };
 export type Motion = typeof motion;

@@ -1,31 +1,35 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   View,
   type NativeSyntheticEvent,
   type TextInputKeyPressEventData,
 } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Channel as ChannelType, Event } from 'stream-chat';
 
-import { EdgeSurface } from '@/components/EdgeSurface';
-import { IconBadge } from '@/components/IconBadge';
-import { PressKey } from '@/components/motion/PressKey';
+import { AllowanceNote } from '@/components/chat/AllowanceNote';
+import { AllowanceRow } from '@/components/chat/AllowanceRow';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
-import { ComposerField, ComposerPerchContext } from '@/components/chat/ComposerField';
+import {
+  ComposerChromeContext,
+  ComposerField,
+  ComposerPerchContext,
+  type ComposerChrome,
+} from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
+import { ThreadRow, type ThreadMsg } from '@/components/chat/ThreadRow';
 import { TypingDots } from '@/components/chat/TypingDots';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
-import { PersonaAvatar } from '@/components/art/PersonaAvatar';
 import { SceneTile } from '@/components/art/SceneTile';
+import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { capture } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
@@ -35,10 +39,9 @@ import { leaveToChats } from '@/lib/leaveToChats';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
+import { CRISIS_EXEMPT_MS, noteFor, useAllowance, type HeldAllowance } from '@/lib/useAllowance';
 import { useChatHeader } from '@/lib/useChatHeader';
-import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useSessionGuard } from '@/lib/useSessionGuard';
-import { duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
@@ -53,23 +56,33 @@ import { font, radius, space, type } from '@/theme/tokens';
  * connect/watch/send/crisis logic is unchanged.
  */
 
-type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
+type CrisisCarrier = { id?: string; crisis?: CrisisPayload; created_at?: string | Date };
 
 /** Inside a live conversation the companion does not roam: ONE fixed place, on the composer
- * field's top edge. It is not drawn at all while the crisis card, an error or a failed send is
- * showing, or while the options sheet is up (this screen never had a companion, so its still
- * state is absence — T&S #11). */
+ * footer's top edge (board A05) — or, while the three-in-a-row note shows, on the note's
+ * (board A22; components/chat/AllowanceNote.tsx carries that seat). It is not drawn at all
+ * while the crisis card, an error or a failed send is showing, or while the options sheet is
+ * up (T&S #11). */
 const CHAT_PERCH: PlacementSlot[] = [{ id: 'composerTop', type: 'top', level: 'low', home: true }];
-const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={44} inset={space.md} />;
+const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={72} inset={space.lg} />;
 
-type Msg = { id: string; text: string; mine: boolean; at: string };
+/** How many of the rows on screen take a step in the opening arrival (FINAL_SPEC: six). */
+const ARRIVAL_STEPS = 6;
 
-type RawMsg = { id?: string; text?: string; user?: { id?: string }; created_at?: string | Date };
+type Msg = ThreadMsg;
 
-function timeLabel(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
+type RawMsg = {
+  id?: string;
+  text?: string;
+  type?: string;
+  user?: { id?: string };
+  created_at?: string | Date;
+  allowance?: HeldAllowance;
+};
+
+/** A send the allowance is holding: the words stay in the field and nothing reads as an
+ * error — the note above the field is the whole answer. */
+class HeldSend extends Error {}
 
 function dayLabel(iso: string, t: TFunc): string {
   const d = new Date(iso);
@@ -80,187 +93,6 @@ function dayLabel(iso: string, t: TFunc): string {
   if (d.toDateString() === yesterday.toDateString()) return t('chat.yesterday');
   return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 }
-
-type MessageRowProps = {
-  item: Msg;
-  /** Day-pill text when this row starts a new day, else null. */
-  dayText: string | null;
-  read: boolean;
-  /** True only for messages that arrived after the initial history load — these
-   * rise in; history renders still. */
-  fresh: boolean;
-  actionsOpen: boolean;
-  isHelpful: boolean;
-  isSaved: boolean;
-  listenerName: string;
-  onToggleActions: (id: string) => void;
-  onToggleHelpful: (id: string) => void;
-  onSave: (m: Msg) => void;
-  onCopy: (text: string) => void;
-  onRisen: (id: string) => void;
-};
-
-/** One transcript row, memoized so composer keystrokes and typing events never
- * re-render the whole message list. Display state arrives as primitives so
- * React.memo's shallow compare stays cheap and correct. */
-const MessageRow = memo(function MessageRow({
-  item,
-  dayText,
-  read,
-  fresh,
-  actionsOpen,
-  isHelpful,
-  isSaved,
-  listenerName,
-  onToggleActions,
-  onToggleHelpful,
-  onSave,
-  onCopy,
-  onRisen,
-}: MessageRowProps) {
-  const { colors } = useTheme();
-  const { t } = useI18n();
-  const reduced = useReducedMotion();
-  // Rise-in for messages that arrive live; history renders still.
-  const rise = useSharedValue(fresh && !reduced ? 1 : 0);
-  useEffect(() => {
-    if (rise.value === 1) {
-      rise.value = withTiming(0, { duration: duration.gentle, easing: easing.settle });
-      onRisen(item.id);
-    }
-  }, [rise, onRisen, item.id]);
-  const riseStyle = useAnimatedStyle(() => ({
-    opacity: 1 - rise.value,
-    transform: [{ translateY: 10 * rise.value }],
-  }));
-  return (
-    <Animated.View style={riseStyle}>
-      {dayText ? (
-        <View style={styles.dayRow}>
-          <View style={[styles.hairline, { backgroundColor: colors.border }]} />
-          <View style={[styles.dayPill, { backgroundColor: colors.surfaceAlt }]}>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{dayText}</Text>
-          </View>
-          <View style={[styles.hairline, { backgroundColor: colors.border }]} />
-        </View>
-      ) : null}
-
-      {item.mine ? (
-        <View style={styles.mineWrap}>
-          <EdgeSurface
-            edge={colors.accentEdge}
-            travel={3}
-            radius={radius.lg}
-            faceRadiusStyle={{ borderBottomRightRadius: radius.sm }}
-            style={[styles.bubble, { backgroundColor: colors.accentTint }]}
-            containerStyle={styles.bubbleWrap}
-          >
-            <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
-          </EdgeSurface>
-          <View style={styles.metaRow}>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{timeLabel(item.at)}</Text>
-            <Ionicons
-              name="checkmark-done"
-              size={15}
-              color={read ? colors.accent : colors.inkMuted}
-            />
-          </View>
-        </View>
-      ) : (
-        <View style={styles.theirsWrap}>
-          <View style={styles.theirsRow}>
-            <PersonaAvatar name={listenerName} size={34} />
-            <PressKey
-              onPress={() => onToggleActions(item.id)}
-              edge={colors.edgeSurface}
-              travel={3}
-              radius={radius.lg}
-              haptic="none"
-              faceRadiusStyle={{ borderBottomLeftRadius: radius.sm }}
-              accessibilityHint={t('chat.actionsHintA11y')}
-              testID={`msg-${item.id}`}
-              style={[styles.bubble, { backgroundColor: colors.surface }]}
-              containerStyle={styles.bubbleWrap}
-            >
-              <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
-            </PressKey>
-          </View>
-          <Text style={[type.caption, styles.theirsTime, { color: colors.inkMuted }]}>
-            {timeLabel(item.at)}
-          </Text>
-
-          {actionsOpen ? (
-            <View style={styles.actionsZone}>
-              <EdgeSurface
-                edge={colors.edgeSurface}
-                travel={2}
-                radius={radius.md}
-                style={[styles.actionsRow, { backgroundColor: colors.surface }]}
-              >
-                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('chat.wasHelpful')}</Text>
-                <Pressable
-                  onPress={() => onToggleHelpful(item.id)}
-                  hitSlop={6}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('chat.helpfulA11y')}
-                  style={[styles.heartWrap, { backgroundColor: colors.brandTint }]}
-                >
-                  <Ionicons
-                    name={isHelpful ? 'heart' : 'heart-outline'}
-                    size={16}
-                    color={colors.accent}
-                  />
-                </Pressable>
-                <Pressable
-                  onPress={() => onSave(item)}
-                  hitSlop={6}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('chat.saveToNotes')}
-                  testID={`save-${item.id}`}
-                >
-                  <Ionicons
-                    name={isSaved ? 'bookmark' : 'bookmark-outline'}
-                    size={18}
-                    color={isSaved ? colors.accent : colors.inkMuted}
-                  />
-                </Pressable>
-                <Pressable
-                  onPress={() => onCopy(item.text)}
-                  hitSlop={6}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('chat.copyA11y')}
-                >
-                  <Ionicons name="copy-outline" size={17} color={colors.inkMuted} />
-                </Pressable>
-              </EdgeSurface>
-
-              <Pressable
-                onPress={() => onSave(item)}
-                accessibilityRole="button"
-                accessibilityLabel={isSaved ? t('chat.savedA11y') : t('chat.saveToNotes')}
-                testID={`save-card-${item.id}`}
-                style={[styles.saveCard, { backgroundColor: colors.surfaceAlt }]}
-              >
-                <IconBadge icon="book-outline" size={40} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[type.label, { color: colors.ink }]}>
-                    {isSaved ? t('chat.savedToNotes') : t('chat.saveToNotes')}
-                  </Text>
-                  <Text style={[type.caption, { color: colors.inkMuted }]}>
-                    {isSaved
-                      ? t('chat.savedHint')
-                      : t('chat.saveHint')}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-              </Pressable>
-            </View>
-          ) : null}
-        </View>
-      )}
-    </Animated.View>
-  );
-});
 
 type ComposerProps = {
   /** Path warm-up prompt — lands in the input ready to edit/send, never auto-sent. */
@@ -287,6 +119,7 @@ type ComposerProps = {
 const Composer = memo(function Composer({ onSend, onTyping, initialDraft, autoFocus, onSendFailed }: ComposerProps) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const { held } = useContext(ComposerChromeContext);
   const [draft, setDraft] = useState(initialDraft ?? '');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
@@ -294,17 +127,19 @@ const Composer = memo(function Composer({ onSend, onTyping, initialDraft, autoFo
 
   const submit = async () => {
     const body = draft.trim();
-    if (!body || sending) return;
+    // The allowance's pause rests the send key AND Enter — the field itself stays live.
+    if (!body || sending || held) return;
     setSending(true);
     try {
       await onSend(body);
       setDraft('');
       setSendError(false);
       onSendFailed?.(false);
-    } catch {
-      // Keep their words — the draft stays; one calm line invites a retry.
-      setSendError(true);
-      onSendFailed?.(true);
+    } catch (e) {
+      // Keep their words either way. A held send is not an error: the note says it all.
+      const failed = !(e instanceof HeldSend);
+      setSendError(failed);
+      onSendFailed?.(failed);
     } finally {
       setSending(false);
     }
@@ -368,9 +203,11 @@ export default function ChatScreenWeb() {
   // Presence, community and the saved count for the header card. The header may know
   // the mentor's name even when the route did not carry it (a notification tap).
   const header = useChatHeader(conversationId);
-  const { refreshSaved } = header;
+  const { refreshSaved, savedMessageIds } = header;
   const headerName = listener ?? header.profile?.persona_name ?? listenerName;
   const [optionsOpen, setOptionsOpen] = useState(false);
+  // The options sheet rises over a chat that settles back (board A20) — one shared value.
+  const depth = useSheetDepth(optionsOpen);
   // Set right before pendingOption.take() opens the sheet with the Report flow
   // pre-selected (the mentor-profile screen's "Report or block" hand-off) — cleared
   // on close so a later, ordinary open of the sheet starts fresh.
@@ -389,14 +226,20 @@ export default function ChatScreenWeb() {
   const [ready, setReady] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [typing, setTyping] = useState<string | null>(null); // other side's persona name
-  const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
+  // The card belongs to the message that raised it (board A21): it sits in the thread right
+  // under that message and scrolls away with it — no dismiss, nothing to tap it shut.
+  const [crisis, setCrisis] = useState<{ payload: CrisisPayload; messageId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sendFailed, setSendFailed] = useState(false);
-  const [privacyNote, setPrivacyNote] = useState(true);
-  // Message-actions state (mentor messages): which row is open, helpful ♥s, saved ids.
+  // An older mentor bubble the member tapped: its save key is open too (the mentor's
+  // latest message always carries one). `saved` = kept during this visit (the chip settles
+  // in); what was kept before comes from the header's notes read.
   const [actionsFor, setActionsFor] = useState<string | null>(null);
-  const [helpful, setHelpful] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState<Set<string>>(new Set());
+  // When the crisis scan last flagged something in this thread — the allowance's exempt
+  // window is read off the same payload the card renders (lib/useAllowance.ts).
+  const [crisisAt, setCrisisAt] = useState(0);
+  const listRef = useRef<FlatList<Msg>>(null);
   const [readTick, setReadTick] = useState(0); // bumps on message.read to refresh ✓✓
   const channelRef = useRef<ChannelType | null>(null);
   const shownRef = useRef<Set<string>>(new Set());
@@ -412,9 +255,20 @@ export default function ChatScreenWeb() {
   const surfaceCrisis = useCallback((m: CrisisCarrier | undefined) => {
     if (m?.crisis && m.id && !shownRef.current.has(m.id)) {
       shownRef.current.add(m.id);
-      setCrisis(m.crisis);
+      setCrisis({ payload: m.crisis, messageId: m.id });
+      const at = m.created_at ? new Date(m.created_at).getTime() : Date.now();
+      setCrisisAt((prev) => Math.max(prev, at));
     }
   }, []);
+
+  const crisisRecent = crisisAt > 0 && Date.now() - crisisAt < CRISIS_EXEMPT_MS;
+  const { allowance, note, exempt, refresh: refreshAllowance, applyHeld } = useAllowance(
+    conversationId,
+    crisisRecent,
+  );
+  // Read inside `send` without making it a dependency (the composer is memoized on it).
+  const exemptRef = useRef(exempt);
+  exemptRef.current = exempt;
 
   const toMsg = useCallback((m: RawMsg): Msg => {
     const client = getStreamClient();
@@ -463,7 +317,10 @@ export default function ChatScreenWeb() {
             appendMessage(e.message as RawMsg);
             surfaceCrisis(e.message as CrisisCarrier);
           }
-          if (e.user && e.user.id !== client.userID) haptic.nudge();
+          if (e.user && e.user.id !== client.userID) {
+            haptic.nudge();
+            void refreshAllowance(); // the mentor wrote: the member's run starts over
+          }
         });
         ch.on('message.read', () => setReadTick((t) => t + 1));
         ch.on('typing.start', (e: Event) => {
@@ -484,7 +341,7 @@ export default function ChatScreenWeb() {
     };
     // reason: `t` is intentionally not a trigger — a locale flip must not re-run channel setup
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelId, appendMessage, surfaceCrisis, listenerName]);
+  }, [channelId, appendMessage, surfaceCrisis, listenerName, refreshAllowance]);
 
   const send = useCallback(
     async (body: string) => {
@@ -492,14 +349,24 @@ export default function ChatScreenWeb() {
       // Server scans this in the before-send webhook and augments crisis messages; the
       // augmented message comes back on the response (no message.new fires for our own).
       const resp = await channelRef.current.sendMessage({ text: body });
+      const sent = resp.message as RawMsg;
+      if (sent.type === 'error') {
+        // Stream did not keep it (board-port API §B1): ANY error reply means "re-read the
+        // allowance". Held → the still note, the words stay in the field; anything else is
+        // an ordinary failed send.
+        const fresh = await applyHeld(sent.allowance);
+        if (sent.allowance?.held || noteFor(fresh, exemptRef.current)) throw new HeldSend();
+        throw new Error('send refused');
+      }
       if (!firstSentRef.current) {
         firstSentRef.current = true;
         capture('chat_first_message_sent'); // funnel tail — no content, ever
       }
       appendMessage(resp.message as RawMsg);
       surfaceCrisis(resp.message as CrisisCarrier);
+      void refreshAllowance(); // counted server-side, in the before-send hook
     },
-    [appendMessage, surfaceCrisis],
+    [appendMessage, surfaceCrisis, applyHeld, refreshAllowance],
   );
 
   const onTyping = useCallback(() => {
@@ -551,33 +418,64 @@ export default function ChatScreenWeb() {
     [],
   );
 
-  const toggleHelpful = useCallback(
-    (id: string) =>
-      setHelpful((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        return next;
-      }),
-    [],
-  );
-
-  const copyText = useCallback((text: string) => {
-    void globalThis.navigator?.clipboard?.writeText(text);
-  }, []);
-
   const markRisen = useCallback((id: string) => {
     freshIds.current.delete(id);
+    openingIds.current?.delete(id);
   }, []);
 
   // One fixed place, and none at all in a still state (see CHAT_PERCH).
   const perch = useCompanionPlacement('chat', CHAT_PERCH, {
     hidden: crisis !== null || error !== null || sendFailed || optionsOpen,
+    still: note !== null,
   });
 
+  // Row facts that depend on the whole thread, computed once per change.
+  const lastMineId = useMemo(() => [...messages].reverse().find((m) => m.mine)?.id ?? null, [messages]);
+  // The save key rests under the mentor's message only while it is the newest thing in the
+  // thread (board A05); once the member has written back it is gone (board A22).
+  const lastTheirsId = useMemo(() => {
+    const last = messages[messages.length - 1];
+    return last && !last.mine ? last.id : null;
+  }, [messages]);
+  const openingFrom = Math.max(0, messages.length - ARRIVAL_STEPS);
+  // The opening arrival belongs to the rows that were there when the chat opened.
+  const openingIds = useRef<Set<string> | null>(null);
+  if (ready && openingIds.current === null) {
+    openingIds.current = new Set(messages.slice(openingFrom).map((m) => m.id));
+  }
+
+  const leadName = headerName;
+  const chrome = useMemo<ComposerChrome>(() => {
+    if (!allowance) return {};
+    if (note) {
+      return {
+        held: true,
+        heldA11y:
+          note === 'daily'
+            ? t('allowance.sendHeldDailyA11y')
+            : t('allowance.sendHeldRowA11y', { name: leadName }),
+        above: (
+          <AllowanceNote
+            allowance={allowance}
+            reason={note}
+            name={leadName}
+            onJournal={() => router.dismissTo('/journals')}
+          />
+        ),
+      };
+    }
+    return { above: <AllowanceRow allowance={allowance} exempt={exempt} /> };
+  }, [allowance, note, exempt, leadName, router, t]);
+
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: depth.shown ? colors.dotIdle : colors.bg }]}
+      edges={['top', 'bottom']}
+    >
       <CompanionPerches placement={perch}>
+      <Animated.View
+        style={[styles.back, { backgroundColor: colors.bg }, depth.shown && styles.backSettled, depth.backStyle]}
+      >
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the native chat. */}
       <ChatHeaderCard
         name={headerName}
@@ -595,24 +493,6 @@ export default function ChatScreenWeb() {
         onOpenOptions={() => setOptionsOpen(true)}
       />
 
-      {/* Dismissible first-run privacy line (mockup #20 shows it collapsed) */}
-      {privacyNote ? (
-        <View style={[styles.privacy, { backgroundColor: colors.brandTint }]}>
-          <Ionicons name="lock-closed" size={13} color={colors.accent} />
-          <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
-            {t('chat.privacy')}
-          </Text>
-          <Pressable
-            onPress={() => setPrivacyNote(false)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={t('chat.privacyDismissA11y')}
-          >
-            <Ionicons name="close" size={16} color={colors.inkMuted} />
-          </Pressable>
-        </View>
-      ) : null}
-
       {error ? (
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={36} color={colors.inkMuted} />
@@ -626,9 +506,15 @@ export default function ChatScreenWeb() {
       ) : (
         <View style={{ flex: 1 }} testID="chat-ready">
           <FlatList
+            ref={listRef}
             data={messages}
             keyExtractor={(m) => m.id}
+            // The thread rests on the composer (board: the column is bottom-aligned).
             contentContainerStyle={[styles.list, messages.length === 0 && styles.listEmpty]}
+            // …and stays there when a message lands or the footer grows (the note, its
+            // helplines): a jump, not a scroll animation — nothing moves in a still state.
+            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            onLayout={() => listRef.current?.scrollToEnd({ animated: false })}
             ListEmptyComponent={
               <View style={styles.emptyWrap}>
                 <SceneTile name="chatConnected" size={140} />
@@ -641,45 +527,80 @@ export default function ChatScreenWeb() {
             renderItem={({ item, index }) => {
               const prev = index > 0 ? messages[index - 1] : null;
               const showDay = !prev || dayLabel(prev.at, t) !== dayLabel(item.at, t);
+              const isLive = freshIds.current.has(item.id);
+              const isOpening = openingIds.current?.has(item.id) ?? false;
+              const isSaved = saved.has(item.id) || savedMessageIds.has(item.id);
+              let statusText: string | null = null;
+              if (item.id === lastMineId) {
+                statusText = isRead(item)
+                  ? t('allowance.read')
+                  : note === 'in_a_row' && allowance
+                    ? t('allowance.deliveredRow', { count: allowance.in_a_row })
+                    : t('allowance.delivered');
+              }
               return (
-                <MessageRow
+                <>
+                <ThreadRow
                   item={item}
                   dayText={showDay ? dayLabel(item.at, t) : null}
-                  read={item.mine ? isRead(item) : false}
-                  fresh={freshIds.current.has(item.id)}
-                  actionsOpen={actionsFor === item.id}
-                  isHelpful={helpful.has(item.id)}
-                  isSaved={saved.has(item.id)}
-                  listenerName={listenerName}
-                  onToggleActions={toggleActions}
-                  onToggleHelpful={toggleHelpful}
+                  statusText={statusText}
+                  arrival={isLive ? 'live' : isOpening ? 'history' : null}
+                  arrivalStep={Math.max(0, index - openingFrom)}
+                  saveOpen={!item.mine && (item.id === lastTheirsId || actionsFor === item.id)}
+                  nudge={item.id === lastTheirsId}
+                  isSaved={isSaved}
+                  savedNow={saved.has(item.id)}
+                  onToggleSave={toggleActions}
                   onSave={saveToNotes}
-                  onCopy={copyText}
-                  onRisen={markRisen}
+                  onArrived={markRisen}
                 />
+                {crisis?.messageId === item.id ? (
+                  // Its "why" note opens in place: while the card is the newest thing in the
+                  // thread, keep the whole of it in view (a jump, never a scroll animation).
+                  <View
+                    style={styles.crisisSeat}
+                    onLayout={
+                      index === messages.length - 1
+                        ? () => listRef.current?.scrollToEnd({ animated: false })
+                        : undefined
+                    }
+                  >
+                    <CrisisCard crisis={crisis.payload} mentorName={headerName} inset={false} />
+                  </View>
+                ) : null}
+                </>
               );
             }}
           />
-          {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
+          {/* Presence only: three dots rising in turn, and who it is. */}
+          {typing ? <TypingDots testID="typing-indicator" label={t('chat.typing', { name: typing })} /> : null}
 
-          {/* Presence-only typing bubble — Focus physics: three dots breathing. */}
-          {typing ? <TypingDots testID="typing-indicator" /> : null}
-
-          <ComposerPerchContext.Provider value={COMPOSER_PERCH}>
-            <Composer
-              onSend={send}
-              onTyping={onTyping}
-              initialDraft={starter}
-              autoFocus={edit === '1'}
-              onSendFailed={setSendFailed}
-            />
+          <ComposerPerchContext.Provider value={note ? null : COMPOSER_PERCH}>
+            <ComposerChromeContext.Provider value={chrome}>
+              <Composer
+                onSend={send}
+                onTyping={onTyping}
+                initialDraft={starter}
+                autoFocus={edit === '1'}
+                onSendFailed={setSendFailed}
+              />
+            </ComposerChromeContext.Provider>
           </ComposerPerchContext.Provider>
         </View>
       )}
 
+      </Animated.View>
       <ConversationOptions
         conversationId={conversationId}
         visible={optionsOpen}
+        depth={depth}
+        onSaveToJournal={() => {
+          // Open the save key on the mentor's most recent message that is not kept yet.
+          const target = [...messages]
+            .reverse()
+            .find((m) => !m.mine && !saved.has(m.id) && !savedMessageIds.has(m.id));
+          if (target) setActionsFor(target.id);
+        }}
         onClose={() => {
           setOptionsOpen(false);
           setPendingInitial(undefined);
@@ -695,61 +616,23 @@ export default function ChatScreenWeb() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  // Inset + rounded to sit under the floating header card (same 12px gutter).
-  privacy: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    marginHorizontal: space.sm + 4,
-    marginTop: space.xs,
-    borderRadius: radius.md,
-    paddingVertical: space.xs + 2,
-    paddingHorizontal: space.sm + 4,
-  },
+  back: { flex: 1 },
+  // Under the sheet the chat is a card on a darker ground: rounded, clipped.
+  backSettled: { borderRadius: radius.lg, overflow: 'hidden' },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.lg },
-  // Bottom room so the last bubble never rests behind the companion on the composer's edge.
-  list: { padding: space.md, paddingBottom: space.md + space.lg, gap: space.xs },
-  listEmpty: { flexGrow: 1, justifyContent: 'center' },
+  // Board: 12 / 16 / 8, rows 10 apart, resting on the composer. The extra bottom room keeps
+  // the last bubble clear of the companion on the footer's edge.
+  list: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
+    paddingTop: 12,
+    paddingHorizontal: space.md,
+    paddingBottom: space.sm,
+    gap: 10,
+  },
+  listEmpty: { justifyContent: 'center' },
+  crisisSeat: { paddingTop: 10 },
   emptyWrap: { alignItems: 'center', gap: space.sm, paddingHorizontal: space.lg },
   emptyTitle: { fontFamily: font.serifBold, fontSize: 24, lineHeight: 30, textAlign: 'center' },
-  dayRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    marginVertical: space.md,
-  },
-  hairline: { flex: 1, height: 1 },
-  dayPill: { borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: space.md },
-  bubble: { borderRadius: radius.lg, paddingHorizontal: space.md, paddingVertical: space.sm + 2 },
-  bubbleWrap: { maxWidth: '80%', flexShrink: 1 },
-  mineWrap: { alignItems: 'flex-end', marginVertical: space.xs },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: 3 },
-  theirsWrap: { marginVertical: space.xs },
-  theirsRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },
-  theirsTime: { marginLeft: 34 + space.sm + space.xs, marginTop: 3 },
-  actionsZone: { marginLeft: 34 + space.sm, marginTop: space.sm, gap: space.sm, maxWidth: '85%' },
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.md,
-    alignSelf: 'flex-start',
-    borderRadius: radius.md,
-    paddingVertical: space.sm,
-    paddingHorizontal: space.md,
-  },
-  heartWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.md,
-    padding: space.sm,
-  },
   sendErrorLine: { paddingHorizontal: space.md, paddingTop: space.xs },
 });

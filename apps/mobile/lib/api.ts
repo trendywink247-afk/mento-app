@@ -253,6 +253,31 @@ export async function apiRequest<T>(
   return (await res.json()) as T;
 }
 
+// --- Message allowance (DECISIONS §L.2, boards A05 / A22) ---
+export type Allowance = {
+  in_a_row: number;
+  in_a_row_limit: number;
+  sent_today: number;
+  daily_limit: number;
+  left_today: number;
+  resets_at: string;
+  can_send: boolean;
+  held_reason: 'in_a_row' | 'daily' | null;
+  enforced: boolean;
+  /** The conversation is inside its crisis-exempt window: nothing is held or counted, and
+   * the client never shows the three-in-a-row note. Optional — an older server omits it. */
+  exempt?: boolean;
+};
+
+// --- Product feedback (board A11) ---
+export type FeedbackCategory = 'broken' | 'confusing' | 'idea';
+export type FeedbackCrisis = {
+  support: string;
+  signal: string;
+  helplines: { name: string; number: string; hours: string }[];
+};
+export type FeedbackReceived = { status: 'received' | 'support'; crisis: FeedbackCrisis | null };
+
 // --- Paths (Communities) ---
 export type PathOption = {
   label: string;
@@ -470,4 +495,11 @@ export const api = {
       { method: 'DELETE', body: JSON.stringify({ expo_push_token }) },
       true,
     ),
+
+  // --- Message allowance (boards A05 / A22) ---
+  conversationAllowance: (id: string) => request<Allowance>(`/conversations/${id}/allowance`, {}, true),
+
+  // --- Product feedback (board A11) ---
+  sendFeedback: (body: { category: FeedbackCategory; text: string; screen?: string; app_version?: string }) =>
+    request<FeedbackReceived>('/feedback', { method: 'POST', body: JSON.stringify(body) }, true),
 };

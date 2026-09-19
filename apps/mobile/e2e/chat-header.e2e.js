@@ -184,7 +184,7 @@ async function run(browser, reduced) {
 
   // The options key still opens the sheet.
   await tid('open-options').click();
-  await page.waitForSelector('text=Conversation Options', { timeout: 15000 });
+  await tid('options-sheet').waitFor({ timeout: 15000 }); // board A20: "Conversation options"
   console.log(`[${label}] OK options key opens Conversation Options`);
 
   await ctx.close();

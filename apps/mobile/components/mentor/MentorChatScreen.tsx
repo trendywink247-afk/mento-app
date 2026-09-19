@@ -219,7 +219,7 @@ export default function MentorChatScreen() {
           </View>
         ) : null}
 
-        {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
+        {crisis ? <CrisisCard crisis={crisis} audience="mentor" onDismiss={() => setCrisis(null)} /> : null}
 
         {error ? (
           <View style={styles.center}>

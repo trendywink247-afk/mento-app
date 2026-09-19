@@ -451,7 +451,7 @@ export default function MentorChatScreenWeb() {
               );
             }}
           />
-          {crisis ? <CrisisCard crisis={crisis} onDismiss={() => setCrisis(null)} /> : null}
+          {crisis ? <CrisisCard crisis={crisis} audience="mentor" onDismiss={() => setCrisis(null)} /> : null}
 
           {/* Presence-only typing line — calm register, no animation needed. */}
           {typing ? (

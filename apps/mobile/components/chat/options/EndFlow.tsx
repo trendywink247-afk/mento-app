@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -12,9 +12,10 @@ import { font, radius, space, type } from '@/theme/tokens';
 
 import { FlowScreen, InfoRow } from './bits';
 
-/** End vs Panda Wipe per mockup #26 — two-step, with HONEST wipe copy (DECISIONS
- * §H.2: messages are deleted from your device AND our servers; we never claim
- * device-only storage). End → the reflection screen; Wipe → "All clean!". */
+/** End and wipe (board A20's second End key) — the confirmation and its "All clean"
+ * closure, with HONEST wipe copy (DECISIONS §H.2: messages are deleted from your device AND
+ * our servers; we never claim device-only storage). Plain End no longer passes through
+ * here: it is a key on the options sheet that goes straight to the reflection. */
 export function EndFlow({
   conversationId,
   onBack,
@@ -22,11 +23,11 @@ export function EndFlow({
 }: {
   conversationId: string;
   onBack: () => void;
-  onEnded: (how: 'end' | 'wipe') => void;
+  onEnded: () => void;
 }) {
   const { colors } = useTheme();
   const { t } = useI18n();
-  const [step, setStep] = useState<'choose' | 'wipe-confirm' | 'all-clean'>('choose');
+  const [step, setStep] = useState<'wipe-confirm' | 'all-clean'>('wipe-confirm');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,12 +44,6 @@ export function EndFlow({
     }
   };
 
-  const doEnd = () =>
-    run(async () => {
-      await api.endConversation(conversationId);
-      onEnded('end');
-    });
-
   const doWipe = () =>
     run(async () => {
       await api.wipeConversation(conversationId);
@@ -59,8 +54,8 @@ export function EndFlow({
     return (
       <FlowScreen
         title={t('options.end.wipeScreenTitle')}
-        onBack={() => onEnded('wipe')}
-        footer={<PrimaryButton label={t('options.end.gotItBang')} onPress={() => onEnded('wipe')} testID="opt-confirm" />}
+        onBack={onEnded}
+        footer={<PrimaryButton label={t('options.end.gotItBang')} onPress={onEnded} testID="opt-confirm" />}
       >
         <View style={styles.hero}>
           <Panda pose="excited" size={130} />
@@ -78,18 +73,17 @@ export function EndFlow({
     );
   }
 
-  if (step === 'wipe-confirm') {
-    return (
+  return (
       <FlowScreen
         title={t('options.end.wipeTitle')}
-        onBack={() => setStep('choose')}
+        onBack={onBack}
         footer={
           <>
             {error ? (
               <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
             ) : null}
             <PrimaryButton label={t('options.end.wipeCta')} onPress={() => void doWipe()} loading={busy} testID="opt-confirm" />
-            <PrimaryButton label={t('common.cancel')} variant="link" onPress={() => setStep('choose')} testID="opt-cancel" />
+            <PrimaryButton label={t('common.cancel')} variant="link" onPress={onBack} testID="opt-cancel" />
           </>
         }
       >
@@ -109,76 +103,6 @@ export function EndFlow({
           />
         </View>
       </FlowScreen>
-    );
-  }
-
-  return (
-    <FlowScreen
-      title={t('options.end.title')}
-      onBack={onBack}
-      footer={
-        <>
-          {error ? (
-            <Text style={[type.caption, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
-          ) : null}
-          <PrimaryButton label={t('common.cancel')} variant="ghost" onPress={onBack} testID="opt-cancel" />
-        </>
-      }
-    >
-      <View style={styles.hero}>
-        <Panda pose="wave" size={130} />
-        <Text style={[styles.heroTitle, { color: colors.ink }]}>{t('options.end.endQ')}</Text>
-        <Text style={[type.body, { color: colors.inkMuted, textAlign: 'center' }]}>
-          {t('options.end.endBody')}
-        </Text>
-      </View>
-
-      <View style={[styles.choiceCard, { backgroundColor: colors.surface }]}>
-        <Pressable
-          onPress={() => void doEnd()}
-          accessibilityRole="button"
-          accessibilityLabel={t('options.end.endA11y')}
-          testID="end-only"
-          style={styles.choiceRow}
-        >
-          <IconBadge icon="chatbubble-ellipses-outline" size={44} />
-          <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>{t('options.end.title')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('options.end.endRowBody')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-        </Pressable>
-        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-        <Pressable
-          onPress={() => setStep('wipe-confirm')}
-          accessibilityRole="button"
-          accessibilityLabel={t('options.end.wipeA11y')}
-          testID="wipe-choice"
-          style={styles.choiceRow}
-        >
-          <IconBadge icon="trash-outline" tone="danger" size={44} />
-          <View style={{ flex: 1 }}>
-            <Text style={[type.label, { color: colors.ink }]}>{t('options.end.wipeTitle')}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {t('options.end.wipeRowBody')}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
-        </Pressable>
-      </View>
-
-      <View style={[styles.privacyCard, { backgroundColor: colors.surfaceAlt }]}>
-        <IconBadge icon="shield-checkmark-outline" size={36} />
-        <View style={{ flex: 1 }}>
-          <Text style={[type.label, { color: colors.ink }]}>{t('options.end.privacyTitle')}</Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>
-            {t('options.end.privacyBody')}
-          </Text>
-        </View>
-      </View>
-    </FlowScreen>
   );
 }
 
@@ -195,16 +119,6 @@ function InfoRowPlain({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; te
 const styles = StyleSheet.create({
   hero: { alignItems: 'center', gap: space.xs, marginBottom: space.sm },
   heroTitle: { fontFamily: font.serifBold, fontSize: 27, lineHeight: 34, marginTop: space.xs },
-  choiceCard: { borderRadius: radius.lg, padding: space.xs },
-  choiceRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.sm },
-  divider: { height: 1, marginHorizontal: space.sm },
-  privacyCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.sm,
-    borderRadius: radius.md,
-    padding: space.sm,
-  },
   infoCard: { borderRadius: radius.lg, padding: space.sm, gap: space.sm },
   plainRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
 });

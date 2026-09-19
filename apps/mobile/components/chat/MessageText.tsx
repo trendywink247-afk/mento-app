@@ -14,7 +14,9 @@
  * long-press stay on the kit's message container (that is where "Save to Mentor
  * Notes" lives), so this component renders text and nothing else.
  */
+import { createContext, useContext } from 'react';
 import { StyleSheet, Text } from 'react-native';
+import { useMessageContext } from 'stream-chat-expo';
 
 import { useTheme } from '@/theme/ThemeProvider';
 import { type as typeTokens } from '@/theme/tokens';
@@ -24,12 +26,21 @@ type Props = {
   onlyEmojis?: boolean;
 };
 
+/** How the sender's OWN bubbles are painted on this screen. 'tint' (default — the mentor
+ * console): a pale bubble, ink text. 'accent' (the member chat, board A05): the accent
+ * bubble, so the sender's own words are drawn in `onAccent`. A context because the kit
+ * mounts this component itself — no prop of ours reaches it. */
+export const OwnBubbleToneContext = createContext<'tint' | 'accent'>('tint');
+
 export function MessageText({ message, onlyEmojis }: Props) {
   const { colors } = useTheme();
+  const tone = useContext(OwnBubbleToneContext);
+  const { isMyMessage } = useMessageContext();
   if (!message?.text) return null;
+  const color = tone === 'accent' && isMyMessage ? colors.onAccent : colors.ink;
   return (
     <Text
-      style={[styles.text, { color: colors.ink }, onlyEmojis ? styles.emoji : null]}
+      style={[styles.text, { color }, onlyEmojis ? styles.emoji : null]}
       maxFontSizeMultiplier={1.3}
       testID="message-text"
     >

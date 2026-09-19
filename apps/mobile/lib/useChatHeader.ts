@@ -34,6 +34,9 @@ export type ChatHeaderData = {
   community: string | null;
   /** Mentor notes this member has saved from this conversation. */
   savedCount: number;
+  /** Stream message ids of those notes — the bubbles that carry the settled "Saved" chip,
+   * so the chip is still there after leaving and coming back (board A05). */
+  savedMessageIds: ReadonlySet<string>;
   /** Re-count after a save, so the chip follows the server rather than the tap. */
   refreshSaved: () => void;
 };
@@ -44,6 +47,7 @@ export function useChatHeader(conversationId: string | undefined): ChatHeaderDat
   // slug to the real name); null = the tree could not be read (slug fallback).
   const [tree, setTree] = useState<PathTree | null | undefined>(undefined);
   const [savedCount, setSavedCount] = useState(0);
+  const [savedMessageIds, setSavedMessageIds] = useState<ReadonlySet<string>>(() => new Set());
   const alive = useRef(true);
 
   useEffect(() => {
@@ -71,7 +75,11 @@ export function useChatHeader(conversationId: string | undefined): ChatHeaderDat
       .listMentorNotes()
       .then((notes) => {
         if (!alive.current) return;
-        setSavedCount(notes.filter((n) => n.meta.conversation_id === conversationId).length);
+        const mine = notes.filter((n) => n.meta.conversation_id === conversationId);
+        setSavedCount(mine.length);
+        setSavedMessageIds(
+          new Set(mine.map((n) => n.meta.stream_message_id).filter((id): id is string => !!id)),
+        );
       })
       .catch(() => {
         // Same: a failed count never clears a chip that was true a moment ago.
@@ -106,6 +114,7 @@ export function useChatHeader(conversationId: string | undefined): ChatHeaderDat
     topic: profile?.issue_category_label ?? null,
     community: slug && tree !== undefined ? communityLabel(tree, slug) : null,
     savedCount,
+    savedMessageIds,
     refreshSaved,
   };
 }

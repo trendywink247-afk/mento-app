@@ -254,8 +254,7 @@ async function run(browser, reduced) {
     await page.locator(`[data-testid="${rowId}"]`).click();
     await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
     await tid('open-options').click();
-    await tid('opt-end').click();
-    await tid('wipe-choice').click();
+    await tid('opt-end-wipe').click(); // board A20: End and wipe is its own key on the sheet
     await tid('opt-confirm').click(); // "wipe it"
     await page.waitForSelector('text=All clean', { timeout: 30000 });
     await page.evaluate(
