@@ -29,9 +29,13 @@ type Props = {
   /** The step's scroll view, for a step that reveals its last part once the required
    * choices are made (the companion pick's optional name). */
   scrollRef?: RefObject<ScrollView>;
+  /** A part of the step that stays put above the scrolling body (the companion pick's
+   * headline and hero): when the body has to scroll, it slides under this, so a companion
+   * standing in the header is never cut by the scroll edge. */
+  header?: ReactNode;
 };
 
-export function StepScaffold({ children, footer, footerIndex, footerDelay, footerDistance, scrollRef }: Props) {
+export function StepScaffold({ children, footer, footerIndex, footerDelay, footerDistance, scrollRef, header }: Props) {
   // A step should never bounce/scroll when its content fits — that idle rubber-band
   // is the "annoying scroll" complaint. We keep the ScrollView (some steps genuinely
   // overflow: ReadyStep, CompanionStep, ConnectingStep's reduced-motion list, and
@@ -47,9 +51,10 @@ export function StepScaffold({ children, footer, footerIndex, footerDelay, foote
 
   return (
     <View style={styles.root}>
+      {header ? <View style={styles.header}>{header}</View> : null}
       <ScrollView
         ref={scrollRef}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, header ? styles.scrollUnderHeader : null]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         scrollEnabled={scrollable}
@@ -81,6 +86,10 @@ const styles = StyleSheet.create({
   // flexGrow: a step may hold a flexible zone (the board pins its keys to the bottom with a
   // growing spacer); content taller than the viewport still scrolls.
   scrollContent: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.md },
+  // The header takes the step's top padding; the body starts right under it.
+  // A little air under the header, so a pick scrolling under it is cut clear of the words.
+  header: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm, zIndex: 1 },
+  scrollUnderHeader: { paddingTop: 0 },
   footer: {
     paddingHorizontal: space.lg,
     paddingTop: space.xs,
