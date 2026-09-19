@@ -341,6 +341,100 @@ async function run(browser, reduced) {
     psql(`UPDATE conversations SET member_streak=0 WHERE id='${conversationId}';`);
   }
 
+  // ---------------------------------------------------------------- A23: reflection (after End)
+  await page.goto(chatUrl, { waitUntil: 'networkidle', timeout: 60000 });
+  await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
+  await tid('open-options').click();
+  await tid('opt-end').click();
+  await tid('reflection').waitFor({ timeout: 30000 });
+  const reflectionText = (await tid('reflection').innerText()).replace(/\s+/g, ' ');
+  for (const words of ['Conversation ended', 'How do you feel now?', 'Only you see this. It is not shared with your mentor.', 'One thing I am taking with me', 'Tell us how this felt']) {
+    if (!reflectionText.includes(words)) throw new Error(`[${label}] reflection is missing "${words}"`);
+  }
+  if (/point|xp|streak|thank|₹|coffee|contribut/i.test(reflectionText)) throw new Error(`[${label}] reflection carries points / thanks / money: ${reflectionText}`);
+  const word = async () => (await tid('reflection-word').innerText()).trim();
+  if ((await word()) !== 'Steady') throw new Error(`[${label}] reflection starts on "${await word()}", not Steady`);
+  // The slider itself: a tap near its left end → Drained, near its right end → Clear.
+  const box = await tid('energy-slider').boundingBox();
+  await page.mouse.click(box.x + 8, box.y + box.height / 2);
+  await page.waitForFunction(() => document.querySelector('[data-testid="reflection-word"]')?.textContent === 'Drained', null, { timeout: 5000 });
+  await page.mouse.click(box.x + box.width - 8, box.y + box.height / 2);
+  await page.waitForFunction(() => document.querySelector('[data-testid="reflection-word"]')?.textContent === 'Clear', null, { timeout: 5000 });
+  // The word keys are the keyboard path: focus + Enter.
+  await tid('energy-4').focus();
+  await page.keyboard.press('Enter');
+  await page.waitForFunction(() => document.querySelector('[data-testid="reflection-word"]')?.textContent === 'Lighter', null, { timeout: 5000 });
+  if ((await tid('energy-4').getAttribute('aria-checked')) !== 'true') throw new Error(`[${label}] the Lighter key is not checked`);
+  console.log(`[${label}] OK A23 reflection: word follows the slider (Drained → Clear) and the keys (Lighter); no points, no money`);
+
+  // ---------------------------------------------------------------- A11: feedback from Reflection
+  await tid('reflection-feedback').click();
+  await tid('feedback-sheet').waitFor({ timeout: 15000 });
+  const fbText = (await tid('feedback-sheet').innerText()).replace(/\s+/g, ' ');
+  for (const words of ['Tell us what happened', "Something's broken", 'This is confusing', 'I have an idea', 'We also note the screen name and app version. Nothing else.', 'Not now', 'Send']) {
+    if (!fbText.includes(words)) throw new Error(`[${label}] feedback sheet is missing "${words}"`);
+  }
+  await tid('feedback-cat-idea').click();
+  await tid('feedback-text').fill('The energy slider could show a word for each stop.');
+  const [fbRes] = await Promise.all([
+    page.waitForResponse((r) => r.url().endsWith('/feedback') && r.request().method() === 'POST', { timeout: 20000 }),
+    tid('feedback-send').click(),
+  ]);
+  const fbBody = await fbRes.json();
+  const fbReq = JSON.parse(fbRes.request().postData() || '{}');
+  if (fbRes.status() !== 200 || fbBody.status !== 'received') throw new Error(`[${label}] feedback answered ${fbRes.status()} ${JSON.stringify(fbBody)}`);
+  if (fbReq.category !== 'idea' || fbReq.screen !== 'reflection' || /[0-9a-f]{8}-/.test(JSON.stringify(fbReq))) throw new Error(`[${label}] feedback sent ${JSON.stringify(fbReq)}`);
+  await tid('feedback-sent').waitFor({ timeout: 15000 });
+  await tid('feedback-close').click();
+  await page.waitForSelector('[data-testid="feedback-sheet"]', { state: 'detached', timeout: 15000 });
+  // Crisis words: the helplines, calmly — not a thank-you.
+  await tid('reflection-feedback').click();
+  await tid('feedback-sheet').waitFor({ timeout: 15000 });
+  await tid('feedback-text').fill('I want to end my life');
+  await tid('feedback-send').click();
+  await tid('crisis-card').waitFor({ timeout: 20000 });
+  for (const n of ['14416', '18005990019']) {
+    if ((await tid(`crisis-call-${n}`).count()) !== 1) throw new Error(`[${label}] feedback crisis answer lacks ${n}`);
+  }
+  if (await tid('feedback-sent').count()) throw new Error(`[${label}] crisis words got a thank-you`);
+  await assertStill(page, 'crisis-card', `[${label}] feedback crisis card`);
+  await tid('feedback-close').click();
+  await page.waitForSelector('[data-testid="feedback-sheet"]', { state: 'detached', timeout: 15000 });
+  console.log(`[${label}] OK A11 feedback: posts (200 received, screen=reflection, no ids), crisis words → still helplines 14416 + 1800-599-0019`);
+
+  // Done → My Chats, one tab navigator; the sentence went to the Journal.
+  const TAKE = `taking the minute before it happens ${label}`;
+  await tid('reflection-take').fill(TAKE);
+  await tid('reflection-finish').click();
+  await page.waitForURL('**/chats', { timeout: 30000 });
+  await tid('tab-chats').waitFor({ timeout: 30000 });
+  if ((await tid('tab-chats').count()) !== 1) throw new Error(`[${label}] Done stacked a second tab navigator`);
+  const kept = psql(`SELECT count(*) FROM journal_entries WHERE body='${TAKE}' AND channel='mood';`);
+  if (kept !== '1') throw new Error(`[${label}] the sentence was not kept in the Journal (${kept})`);
+  const energy = psql(`SELECT energy FROM conversation_reflections WHERE conversation_id='${conversationId}';`);
+  if (energy !== '4') throw new Error(`[${label}] reflection stored energy "${energy}", expected 4`);
+  console.log(`[${label}] OK A23 Done → My Chats, one tab navigator; energy 4 saved; the sentence is in the Journal`);
+
+  // ---------------------------------------------------------------- A39: not found
+  await page.goto(`${WEB}/this-road-does-not-exist`, { waitUntil: 'networkidle', timeout: 60000 });
+  await tid('not-found').waitFor({ timeout: 30000 });
+  const nfText = (await tid('not-found').innerText()).replace(/\s+/g, ' ');
+  for (const words of ['This road does not exist.', 'Your space is still here, exactly as you left it.', 'Take me home', 'Go back', 'Feedback']) {
+    if (!nfText.includes(words)) throw new Error(`[${label}] not-found is missing "${words}"`);
+  }
+  await tid('not-found-feedback').click();
+  await tid('feedback-sheet').waitFor({ timeout: 15000 });
+  await tid('feedback-not-now').click();
+  await page.waitForSelector('[data-testid="feedback-sheet"]', { state: 'detached', timeout: 15000 });
+  await tid('not-found-back').click();
+  await page.waitForURL((u) => !u.pathname.includes('this-road'), { timeout: 30000 });
+  await page.goto(`${WEB}/another/missing/road`, { waitUntil: 'networkidle', timeout: 60000 });
+  await tid('not-found-home').click();
+  await page.waitForURL('**/chats', { timeout: 30000 });
+  await tid('tab-chats').waitFor({ timeout: 30000 });
+  if ((await tid('tab-chats').count()) !== 1) throw new Error(`[${label}] Take me home stacked a second tab navigator`);
+  console.log(`[${label}] OK A39 not found: Feedback pill → sheet → Not now; Go back leaves; Take me home → My Chats`);
+
   await ctx.close();
   if (errors.length) throw new Error(`[${label}] ${errors.length} page error(s):\n${errors.join('\n')}`);
   console.log(`[${label}] 0 page errors`);
