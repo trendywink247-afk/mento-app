@@ -146,7 +146,7 @@ export function ConnectingStep({
     setError(null);
     setPhase('searching');
     const draft = getDraft();
-    if (!draft.dob) {
+    if (!draft.dob && !draft.sessionBacked) {
       onInvalidDraft();
       return;
     }
@@ -154,6 +154,12 @@ export function ConnectingStep({
       // Onboard exactly once. A session lingering from a previous attempt (or an
       // earlier retry in this run) is reused — only the match is retried.
       if (!onboardedRef.current && !(await getSessionToken())) {
+        // No account yet and no DOB to make one with (a session-backed draft whose
+        // session vanished): start over rather than mint an account without an age gate.
+        if (!draft.dob) {
+          onInvalidDraft();
+          return;
+        }
         const onboarding = await api.startOnboarding({
           dob: draft.dob,
           email: draft.email ?? null,
@@ -163,6 +169,9 @@ export function ConnectingStep({
         await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
         if (draft.companionAnimal) await saveCompanionAnimal(draft.companionAnimal);
         capture('onboarding_completed');
+      } else if (draft.sessionBacked && draft.companionAnimal) {
+        // Existing account (mentor → talk): nothing to mint, but the pick still has to stick.
+        await saveCompanionAnimal(draft.companionAnimal);
       }
       onboardedRef.current = true;
       setHasSession(true);

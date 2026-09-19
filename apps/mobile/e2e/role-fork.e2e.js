@@ -46,10 +46,43 @@ async function run(browser, reduced) {
   await page.waitForSelector('text=Mentor application received', { timeout: 30000 });
   console.log(`${label}: OK application submitted → pending status card`);
 
+  // First switch: a mentor never chose a companion, so "I'd rather talk today" walks the
+  // rest of the member journey on the SAME account — never a silent default Panda, never
+  // a second account.
+  const tokenBefore = await page.evaluate(() => globalThis.localStorage.getItem('mento.session_token'));
   await tid('mentor-switch-talk').click();
-  await page.waitForURL('**/chats', { timeout: 30000 });
+  await page.waitForSelector('text=Your growth, your theme', { timeout: 30000 });
+  if ((await page.evaluate(() => globalThis.localStorage.getItem('mento.role'))) !== 'mentor') {
+    throw new Error('role flipped to mentee before a companion was confirmed');
+  }
+  // Back from the pick = "never mind": still a mentor, back on Mentor Home.
+  await tid('back').click();
+  await tid('mentor-switch-talk').waitFor({ timeout: 30000 });
+  console.log(`${label}: OK first switch opens the companion pick; back returns to Mentor Home as a mentor`);
+
+  await tid('mentor-switch-talk').click();
+  await page.waitForSelector('text=Your growth, your theme', { timeout: 30000 });
+  await tid('animal-capybara').scrollIntoViewIfNeeded();
+  await tid('animal-capybara').click();
+  await tid('colour-sage').click();
+  await tid('continue').click();
+  await page.waitForSelector('text=Your Mento space is ready.', { timeout: 30000 });
+  await tid('enter').click();
+  await page.waitForURL('**/chat/**', { timeout: 60000 });
+  await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
+  const after = await page.evaluate(() => ({
+    token: globalThis.localStorage.getItem('mento.session_token'),
+    role: globalThis.localStorage.getItem('mento.role'),
+    animal: globalThis.localStorage.getItem('mento.companion_animal'),
+  }));
+  if (after.token !== tokenBefore) throw new Error('switching to talk minted a second account');
+  if (after.role !== 'mentee') throw new Error(`role is ${after.role}, expected mentee`);
+  if (after.animal !== 'Capybara') throw new Error(`companion is ${after.animal}, expected the one they picked`);
+  console.log(`${label}: OK companion → ready → live chat on the same account, as the chosen Capybara`);
+
+  await page.goto(`${WEB}/chats`, { waitUntil: 'networkidle', timeout: 60000 });
   await tid('tab-chats').waitFor({ timeout: 30000 });
-  console.log(`${label}: OK switch to talking → Chats tab renders`);
+  console.log(`${label}: OK Chats tab renders`);
 
   await ctx.close();
   return errors;

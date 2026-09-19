@@ -18,20 +18,13 @@ import { api, type ListenerApplication } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
-import {
-  getCompanionAnimal,
-  getPersona,
-  saveCompanionAnimal,
-  saveCompanionColor,
-  saveRole,
-  type Persona,
-} from '@/lib/session';
+import { setDraft } from '@/lib/onboardingDraft';
+import { getCompanionAnimal, getPersona, saveRole, type Persona } from '@/lib/session';
 import { registerPush } from '@/lib/pushNotifications';
 import { useMentorConsole } from '@/lib/useMentorConsole';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
-import { DEFAULT_COMPANION_COLOR } from '@/theme/companion';
 import { radius, space, type } from '@/theme/tokens';
 
 /** Mentor Home (DECISIONS §K.7): the mentor branch's landing, and — once approved —
@@ -41,7 +34,7 @@ import { radius, space, type } from '@/theme/tokens';
 export default function MentorHome() {
   useSessionGuard();
   const router = useRouter();
-  const { colors, elevation, setCompanionColor } = useTheme();
+  const { colors, elevation } = useTheme();
   const { t } = useI18n();
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
@@ -129,11 +122,16 @@ export default function MentorHome() {
     if (switching) return;
     setSwitching(true);
     try {
-      // Mentors never chose a companion; the talking side needs one for theming.
+      // Mentors never chose a companion. The chosen animal is the star of the talking
+      // side (DECISIONS §I.5), so a first switch walks the rest of the member journey —
+      // companion → ready → connecting — on the SAME account. The role flips to
+      // mentee only once the pick is made (OnboardingJourney), so backing out leaves
+      // them a mentor.
       if (!(await getCompanionAnimal())) {
-        await saveCompanionAnimal('Panda');
-        await saveCompanionColor(DEFAULT_COMPANION_COLOR);
-        setCompanionColor(DEFAULT_COMPANION_COLOR);
+        setDraft({ role: 'mentee', sessionBacked: true });
+        router.dismissAll();
+        router.replace({ pathname: '/onboarding', params: { step: 'companion' } });
+        return;
       }
       await saveRole('mentee');
       router.dismissAll();
