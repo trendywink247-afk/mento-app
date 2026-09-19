@@ -51,6 +51,15 @@ export const stagger = {
   unit: 80,
 } as const;
 
+/** Tab hand-over (components/motion/tabTransition.ts): a short lateral shift in tab order. */
+export const tabSwitch = {
+  /** How far a tab sits to its side while parked (px) — a nudge, not a page slide. */
+  distance: 24,
+  /** Progress past which a scene is fully clear: the leaving tab is gone before the
+   * arriving one appears, so two screens never ghost through each other. */
+  clear: 0.5,
+} as const;
+
 export const breathe = {
   /** Full inhale+exhale cycle (ms) — a calm human breathing tempo. */
   period: 5200,

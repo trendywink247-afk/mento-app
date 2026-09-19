@@ -92,6 +92,46 @@ async function run(browser, reduced) {
     await page.waitForSelector('[data-testid="journal-mood"]', { timeout: 30000 });
   });
 
+  // Tabs move sideways in bar order instead of cutting: Path is already mounted, so coming
+  // back to it from Journal (one to its right) it must arrive from the LEFT and settle at
+  // rest. Under reduced motion there is no transition — it never leaves x = 0.
+  await visit('tabs: switch moves sideways', async () => {
+    await page.evaluate(() => {
+      window.__tabSamples = [];
+      const t0 = performance.now();
+      const tick = () => {
+        const el = document.querySelector('[data-testid="path-start"],[data-testid="path-change"]');
+        if (el) {
+          let o = 1;
+          let x = 0;
+          for (let n = el; n && n.nodeType === 1; n = n.parentElement) {
+            const cs = getComputedStyle(n);
+            o *= Number(cs.opacity);
+            if (cs.transform && cs.transform !== 'none') x += new DOMMatrix(cs.transform).m41;
+          }
+          window.__tabSamples.push({ o, x });
+        }
+        if (performance.now() - t0 < 1500) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await tid('tab-path').click();
+    await page.waitForTimeout(1700);
+    const samples = await page.evaluate(() => window.__tabSamples);
+    if (!samples.length) throw new Error('Path was not kept mounted between tab switches');
+    const last = samples[samples.length - 1];
+    if (last.o < 0.99 || Math.abs(last.x) > 0.5) throw new Error(`Path did not settle: opacity ${last.o}, x ${last.x}`);
+    const minX = Math.min(...samples.map((s) => s.x));
+    const maxX = Math.max(...samples.map((s) => s.x));
+    if (reduced) {
+      if (minX !== 0 || maxX !== 0) throw new Error(`reduced motion moved the tab sideways (x ${minX}..${maxX})`);
+    } else {
+      if (minX > -4) throw new Error(`tab switch was a cut: Path never sat to the left (min x ${minX})`);
+      if (maxX > 0.5) throw new Error(`Path arrived from the wrong side (max x ${maxX})`);
+      if (!samples.some((s) => s.o > 0.02 && s.o < 0.98)) throw new Error('tab switch did not fade');
+    }
+  });
+
   // Every journal channel screen.
   // Finance is Coming soon on the unified hub (no tappable row for a member with no
   // finance history) — the channel route itself is still swept below.
