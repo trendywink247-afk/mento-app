@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-09-20 (session 36, part 9) — LIVE: an open web thread marks itself read; the port, re-costed and NOT taken ✅
+
+**Founder: nothing new to see on the phone.** OTA `01a0bef8` (commit `c5cf3ca`) carries a web-only fix; the phone's chat is unchanged from `01a0bee2`.
+
+**Done**
+
+- **Neither hand-rolled web thread ever called `markRead`** (`c5cf3ca`). On native the kit's `MessageList` marks read on viewability; on web nobody did — so a My Chats row's "new" dot never cleared (`app/(tabs)/chats.tsx` and `lib/useMentorConsole.ts` both read `countUnread`), and the person on the other side never saw their message turn to **Read**. Both web threads now mark read on open and when a message lands while the thread is on screen, fire-and-forget so a failed `markRead` can never break a conversation. Found by auditing the two renderers against each other, not by a report.
+
+**The port was re-costed and NOT taken — an earlier recommendation of mine was wrong.**
+
+An audit of `ChatScreen.web.tsx` against `ChatScreen.tsx` found the web thread does NOT implement what the kit gives the phone for free: **keyboard avoidance** (`Channel`'s `KeyboardCompatibleView`), **backward pagination** (`loadMore` + `onEndReached`), **reconnect / state re-sync** after a dropped socket (`connection.changed`), `message.updated` / `message.deleted`, the inverted virtualised list, the unread separator and the scroll-to-bottom button. Porting `ThreadRow` to native wholesale would have traded five cosmetic bugs for several functional ones.
+
+**The route to take instead:** `MessageContent` — the bubble itself — is an overridable component slot (`defaultComponents.ts:225`, read at `MessageItemView.tsx:249`). Overriding it draws the board's bubble ourselves while `Channel` / `MessageList` keep doing the keyboard, pagination, read-marking, reconnect and inversion. Half a day, low risk, ends the "close but not the board" loop. **Not started — awaiting the founder's call**, deliberately, after the first recommendation proved wrong.
+
+**A real bug the audit found, not yet fixed — the web app cannot scroll back.** `ChatScreen.web.tsx` has no `onEndReached`, no `loadMore`, no `hasMore`: the thread shows exactly the page `ch.watch()` returns (Stream's default 25) and **older history is unreachable on `app.agentin.chat`, permanently**. Not cosmetic; it has been true the whole time the web app has been served. Needs `loadMore` plus an inverted list.
+
+**Also worth knowing (audit, unfixed):** `ThreadRow` has no `maxFontSizeMultiplier` cap on the bubble text or the delivery line, where the native path caps at 1.3 (`MessageText.tsx:45`, `KitMessageFooter.tsx:82`) — an OS-font-scaling gap on web; and `ThreadRow` has no emoji-only enlargement, which the native path does (`MessageText.tsx:54-55`).
+
+**Machine note:** this box is under memory pressure tonight — a background gate watcher was killed by the system while idle (the gate itself completed, 16 ok). `two-party-chat` needs `LISTENER_ID` and one-online-listener DB surgery; it asserts delivery only, not read state, so it was not run for this change.
+
+---
+
 ## 2026-09-20 (session 36, part 8) — LIVE: no reactions on the phone, one delivery line, the board's bubble padding ✅
 
 **Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0bee2` (preview, commit `c549dd5`).
