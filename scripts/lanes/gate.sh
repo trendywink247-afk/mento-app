@@ -89,7 +89,7 @@ for spec in $SOLO_RUN; do
   docker exec mento-postgres psql -U mento -d mento -c     "UPDATE listener_profiles SET status='online', last_seen_at=NULL, active_conversations=0;" >/dev/null 2>&1
   run_spec "$spec"
 done
-( cd "$ROOT/apps/mobile" && for t in test:placement test:question test:route; do
+( cd "$ROOT/apps/mobile" && for t in test:placement test:question test:route test:bubble; do
     npm run -s $t > "$OUT/$t.log" 2>&1; echo "$t exit=$? :: $(tail -1 "$OUT/$t.log")" >> "$OUT/summary.txt"; done )
 
 fails=$(grep -c "exit=[^0]" "$OUT/summary.txt")

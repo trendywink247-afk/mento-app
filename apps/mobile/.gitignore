@@ -10,3 +10,4 @@ expo-env.d.ts
 # question-builder test's on-the-fly tsc output (see e2e/question-builder.test.mjs)
 .tmp-question/
 .tmp-placement/
+.tmp-bubble/

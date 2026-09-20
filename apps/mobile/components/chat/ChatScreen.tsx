@@ -24,6 +24,7 @@ import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/compon
 import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
 import { AllowanceNote } from '@/components/chat/AllowanceNote';
 import { bubbleMaxWidth } from '@/components/chat/bubbleWidth';
+import { buildMyMessageTheme, buildStreamTheme } from '@/components/chat/streamTheme';
 import { AllowanceRow } from '@/components/chat/AllowanceRow';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { Composer } from '@/components/chat/Composer';
@@ -53,9 +54,6 @@ import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
-/** Bubble geometry (board A05): 22 all round, 8 on the tail corner; the pillow edge is a
- * thicker bottom border because the kit's bubble clips its own overflow. */
-const BUBBLE_EDGE = 3;
 
 /**
  * Real-time 1:1 chat backed by a live Stream channel (stream-chat-expo).
@@ -268,37 +266,7 @@ export default function ChatScreen() {
   // 22px corners with an 8px tail, and a pillow edge along the bottom of each bubble.
   const streamTheme = useMemo<StreamChatStyle>(
     () => ({
-      semantics: {
-        accentPrimary: colors.accent,
-        // The thread lies on the one sky (components/motion/SkyGround.tsx).
-        backgroundCoreApp: 'transparent',
-        chatBgIncoming: colors.surface,
-        chatTextIncoming: colors.ink,
-        chatBgOutgoing: colors.accent,
-        chatTextOutgoing: colors.onAccent,
-        chatTextTimestamp: colors.inkMuted,
-        buttonPrimaryBg: colors.accent,
-      },
-      messageItemView: {
-        content: {
-          // The kit reads the corner radii off `container` and lays them over its own.
-          container: {
-            borderTopLeftRadius: radius.lg,
-            borderTopRightRadius: radius.lg,
-            borderBottomRightRadius: radius.lg,
-            borderBottomLeftRadius: radius.sm,
-          },
-          containerInner: {
-            borderWidth: 1,
-            borderColor: colors.border,
-            borderBottomWidth: 1 + BUBBLE_EDGE,
-            borderBottomColor: colors.edgeSurface,
-          },
-          // The kit's own `maxWidth: 256` is a fixed number, not a share of the screen;
-          // the theme's value is applied after it, so this is where the board's 80% lands.
-          textContainer: { maxWidth: bubbleMax },
-        },
-      },
+      ...buildStreamTheme(colors, bubbleMax, radius),
       inlineDateSeparator: {
         container: { backgroundColor: 'transparent' },
         text: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18, color: colors.inkMuted },
@@ -318,20 +286,10 @@ export default function ChatScreen() {
     }),
     [colors, bubbleMax],
   );
-  // The member's own bubbles: the tail moves to the bottom-right and the edge goes accent.
+  // The member's own bubbles. The accent is stated twice on purpose — the kit drops our
+  // semantics when it re-merges for own messages (see components/chat/streamTheme.ts).
   const myMessageTheme = useMemo(
-    () => ({
-      messageItemView: {
-        content: {
-          container: { borderBottomRightRadius: radius.sm, borderBottomLeftRadius: radius.lg },
-          containerInner: {
-            borderWidth: 0,
-            borderBottomWidth: BUBBLE_EDGE,
-            borderBottomColor: colors.accentEdge,
-          },
-        },
-      },
-    }),
+    () => buildMyMessageTheme(colors, radius),
     [colors],
   );
 
