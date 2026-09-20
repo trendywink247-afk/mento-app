@@ -72,15 +72,19 @@ run_spec() {
 }
 
 SOLO_RUN=""
+SPEC_PIDS=""
 for spec in $SPECS; do
   name=$(basename "$spec" .e2e.js)
   case " $SOLO " in *" $name "*) SOLO_RUN="$SOLO_RUN $spec"; continue;; esac
   run_spec "$spec" &
+  SPEC_PIDS="$SPEC_PIDS $!"
   # keep at most WORKERS browsers alive at once
   while [ "$(jobs -rp | wc -l)" -ge "$((WORKERS + 3))" ]; do sleep 2; done
 done
+# Wait on the NAMED jobs only. A bare `wait` also waits on the flusher loop below, which
+# never returns — the batch would finish and the gate would hang before the solo specs.
 wait $PY_PID $TSC_PID $AL_PID $LINT_PID 2>/dev/null
-wait
+if [ -n "$SPEC_PIDS" ]; then wait $SPEC_PIDS 2>/dev/null; fi
 for spec in $SOLO_RUN; do
   docker exec mento-postgres psql -U mento -d mento -c     "UPDATE listener_profiles SET status='online', last_seen_at=NULL, active_conversations=0;" >/dev/null 2>&1
   run_spec "$spec"
