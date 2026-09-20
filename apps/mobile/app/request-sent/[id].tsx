@@ -13,7 +13,8 @@
  * yes, `replying` (status matched: the chat with them is open). A question nobody has opened
  * yet shows Sent alone, and the other two stay in the quiet not-yet state.
  * While the screen is focused it re-reads quietly; when the mentor accepts, the key becomes
- * "Open the chat" (a push also takes the member there — lib/notificationRoute `accepted`).
+ * "Open the chat" (a push also takes the member there — lib/notificationRoute `accepted`) and
+ * My Chats drops to the quiet key beneath it — that door never disappears.
  *
  * Arrival (FINAL_SPEC): back key, Feedback pill and companion are already there; the
  * headline rises, the note lands (tilted, a beat later), then the strip, Meanwhile and the
@@ -271,13 +272,22 @@ export default function RequestSentScreen() {
           spacer puts it. */}
       <Entrance index={6} style={styles.footer}>
         {phase === 'accepted' && request?.conversation_id ? (
-          <PrimaryButton
-            label={t('requestSent.openChat')}
-            shape="key"
-            trailing="arrow"
-            onPress={openChat}
-            testID="request-sent-open-chat"
-          />
+          <>
+            <PrimaryButton
+              label={t('requestSent.openChat')}
+              shape="key"
+              trailing="arrow"
+              onPress={openChat}
+              testID="request-sent-open-chat"
+            />
+            {/* The mentor saying yes must never take the way out with it: My Chats stays
+                reachable underneath, as the quiet key. */}
+            <QuietKey
+              label={t('requestSent.goChats')}
+              onPress={() => leaveToChats(router)}
+              testID="request-sent-go-chats"
+            />
+          </>
         ) : (
           <>
             <PrimaryButton
@@ -288,24 +298,48 @@ export default function RequestSentScreen() {
               testID="request-sent-go-chats"
             />
             {phase === 'pending' && request && !missing ? (
-              <PressKey
+              <QuietKey
+                label={t('askFlow.closeThis')}
                 onPress={closeQuestion}
-                edge="transparent"
-                travel={2}
-                haptic="none"
                 disabled={closing}
-                accessibilityLabel={t('askFlow.closeThis')}
                 testID="request-sent-close"
-                containerStyle={styles.closeBox}
-                style={styles.closeKey}
-              >
-                <Text style={[styles.closeText, { color: colors.inkMuted }]}>{t('askFlow.closeThis')}</Text>
-              </PressKey>
+              />
             ) : null}
           </>
         )}
       </Entrance>
     </SafeAreaView>
+  );
+}
+
+/** The underlined text key beneath the primary one — closing the question, or the way to
+ * My Chats when the primary key has become "Open the chat". */
+function QuietKey({
+  label,
+  onPress,
+  disabled,
+  testID,
+}: {
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  testID: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <PressKey
+      onPress={onPress}
+      edge="transparent"
+      travel={2}
+      haptic="none"
+      disabled={disabled}
+      accessibilityLabel={label}
+      testID={testID}
+      containerStyle={styles.closeBox}
+      style={styles.closeKey}
+    >
+      <Text style={[styles.closeText, { color: colors.inkMuted }]}>{label}</Text>
+    </PressKey>
   );
 }
 

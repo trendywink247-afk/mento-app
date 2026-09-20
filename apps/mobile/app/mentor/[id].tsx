@@ -225,7 +225,7 @@ export default function MentorBeforeAsk() {
                   {t('pathQuestion.count', { used: count, max: QUESTION_MAX })}
                 </Text>
               </View>
-              <View>
+              <View style={styles.fieldFill}>
                 {/* The member's companion peeks over the field (decor only). */}
                 <View style={styles.peek} pointerEvents="none">
                   <Companion animal={animal ?? null} size={COMPANION} />
@@ -247,7 +247,7 @@ export default function MentorBeforeAsk() {
                     maxFontSizeMultiplier={1.3}
                     accessibilityLabel={t('askFlow.fieldLabel')}
                     testID="intro-input"
-                    style={[type.body, styles.input, { color: colors.ink }]}
+                    style={[type.body, styles.input, styles.inputFill, { color: colors.ink }]}
                   />
                 </EdgeSurface>
               </View>
@@ -285,8 +285,6 @@ export default function MentorBeforeAsk() {
                 })}
               </View>
             </Entrance>
-
-            <View style={styles.grow} />
 
             <Entrance index={4} style={styles.promises}>
               <View style={styles.promise}>
@@ -520,12 +518,16 @@ const styles = StyleSheet.create({
   topTitle: { fontFamily: font.sansBold, fontSize: 17, lineHeight: 24 },
   composeBody: { flexGrow: 1, paddingHorizontal: space.md + space.xs, paddingTop: space.sm, paddingBottom: space.sm, gap: 12 },
   headline: { fontFamily: font.sansHeavy, fontSize: 24, lineHeight: 30 },
-  fieldBlock: { marginTop: space.xs },
+  // The spare height on a tall phone goes to the writing field, not to an empty band
+  // between the chips and the promises (the walk found one at 390×844).
+  fieldBlock: { marginTop: space.xs, flexGrow: 1, minHeight: 0 },
+  fieldFill: { flex: 1 },
+  inputFill: { flex: 1 },
   groupHead: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: space.sm, marginBottom: space.xs + 2 },
   groupTitle: { fontFamily: font.sansBold, fontSize: 14, lineHeight: 18 },
   peek: { position: 'absolute', right: 18, top: -(COMPANION - COMPANION_TUCK), zIndex: 0 },
-  fieldBox: { zIndex: 1 },
-  field: { borderWidth: 1, paddingHorizontal: space.md, paddingVertical: space.sm + 2 },
+  fieldBox: { zIndex: 1, flex: 1 },
+  field: { flex: 1, borderWidth: 1, paddingHorizontal: space.md, paddingVertical: space.sm + 2 },
   input: { minHeight: 5 * 24, textAlignVertical: 'top', padding: 0, margin: 0 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: { height: 44, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },

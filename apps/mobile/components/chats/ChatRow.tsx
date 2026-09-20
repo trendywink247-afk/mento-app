@@ -210,7 +210,9 @@ const styles = StyleSheet.create({
   body: { flex: 1, minWidth: 0, gap: 1 },
   headline: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   name: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22, flexShrink: 1 },
-  time: { flexGrow: 1, textAlign: 'right' },
+  // The time is pushed right by the margin, NOT by growing: a growing time ate the row's
+  // spare width and clipped a long name to one word at 390 ("Gentle …").
+  time: { marginLeft: 'auto', textAlign: 'right', flexShrink: 0 },
   last: { fontFamily: font.sans, fontSize: 14, lineHeight: 20 },
   lastUnread: { fontFamily: font.sansSemi },
   foot: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 3 },

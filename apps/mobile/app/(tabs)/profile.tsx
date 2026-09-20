@@ -149,6 +149,11 @@ export default function ProfileTab() {
   // The hero place only exists once the animal is known — until then there is no home slot.
   // A sheet over the screen (Start fresh) hides the companion.
   const perch = useCompanionPlacement('profile', animal ? PERCHES : PERCHES.slice(1), { hidden: sheetOpen });
+  // A perch that hangs off its card's edge lands UNDER the next card, because the blocks
+  // share one zIndex and the later sibling paints last. Lift the block that actually
+  // holds the companion — one of them does, at most.
+  const hosts = (...ids: string[]) =>
+    perch.slotId && ids.includes(perch.slotId) ? styles.furnitureLift : null;
 
   useFocusEffect(
     useCallback(() => {
@@ -204,7 +209,7 @@ export default function ProfileTab() {
             </Entrance>
 
             {/* The identity card. Its right-hand corner belongs to the companion. */}
-            <View style={styles.furniture}>
+            <View style={[styles.furniture, hosts('bubble', 'besideAvatar', 'cardHang')]}>
               <Entrance index={1}>
                 <EdgeSurface
                   edge={colors.edgeSurface}
@@ -232,7 +237,7 @@ export default function ProfileTab() {
               <CompanionSlot id="cardHang" size={56} inset={40} />
             </View>
 
-            <View style={styles.furniture}>
+            <View style={[styles.furniture, hosts('growthTop', 'growthNap')]}>
               <CompanionSlot id="growthTop" size={56} inset={36} />
               <CompanionSlot id="growthNap" size={56} inset={36} />
               <Entrance index={2}>
@@ -498,6 +503,7 @@ const styles = StyleSheet.create({
   scroll: { paddingHorizontal: space.md, paddingBottom: space.lg, gap: 14 },
   title: { paddingTop: space.xs, paddingHorizontal: space.sm },
   furniture: { zIndex: 1 },
+  furnitureLift: { zIndex: 4 },
   identity: {
     minHeight: 124,
     paddingVertical: space.md,

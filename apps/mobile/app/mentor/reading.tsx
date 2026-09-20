@@ -157,7 +157,7 @@ export default function MentorReading() {
               radius={radius.md}
               intent="navigate"
               testID="reading-back"
-              containerStyle={styles.keyBack}
+              containerStyle={page === LAST ? styles.keyBackShort : styles.keyBack}
               style={[styles.key, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
             >
               <Text style={[styles.keyText, { color: colors.ink }]} numberOfLines={1}>
@@ -170,10 +170,13 @@ export default function MentorReading() {
               radius={radius.md}
               intent="navigate"
               testID="reading-next"
-              containerStyle={styles.keyNext}
+              containerStyle={page === LAST ? styles.keyNextWide : styles.keyNext}
               style={[styles.key, { backgroundColor: colors.accent }]}
             >
-              <Text style={[styles.keyText, styles.keyTextLead, { color: colors.onAccent }]} numberOfLines={1}>
+              <Text
+                style={[styles.keyText, page === LAST ? null : styles.keyTextLead, { color: colors.onAccent }]}
+                numberOfLines={1}
+              >
                 {forwardLabel}
               </Text>
               {page < COMMITMENT ? <Ionicons name="arrow-forward" size={20} color={colors.onAccent} /> : null}
@@ -203,7 +206,11 @@ const styles = StyleSheet.create({
   keys: { flexDirection: 'row', gap: 12 },
   keyBack: { flex: 1, minWidth: 0 },
   keyNext: { flex: 1.4, minWidth: 0 },
+  // The last page swaps the weights: "Read again" is short and "Back to Mentor Home" is the
+  // longest label in the reader — in the usual 1 : 1.4 pair it clipped at 390.
+  keyBackShort: { flex: 0.8, minWidth: 0 },
+  keyNextWide: { flex: 2, minWidth: 0 },
   key: { height: 56, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingHorizontal: 12 },
-  keyText: { fontSize: 16, lineHeight: 24, fontFamily: type.label.fontFamily },
+  keyText: { fontSize: 16, lineHeight: 24, fontFamily: type.label.fontFamily, flexShrink: 1, minWidth: 0 },
   keyTextLead: { fontSize: 18 },
 });
