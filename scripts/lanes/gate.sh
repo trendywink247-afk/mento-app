@@ -23,6 +23,10 @@ export MENTO_WEB="${MENTO_WEB:-http://localhost:8081}"
 # plus the guarantees that protect people (crisis, identity, erasure) which live in pytest.
 FAST_SPECS="e2e/connecting-experience.e2e.js e2e/conversation-port.e2e.js e2e/tabs-port.e2e.js e2e/mentor-path.e2e.js e2e/member-screens.e2e.js e2e/hindi-core-loop.e2e.js e2e/desktop-frame.e2e.js e2e/chat-header.e2e.js"
 
+# These specs set EVERY mentor away or online to reach a state (busy, one free mentor…),
+# so they undo each other when run side by side: they run one at a time, after the batch.
+SOLO="ask-loop ask-flow chat-header mentor-face tabs-port two-party-chat connecting-busy"
+
 say() { echo "$*" | tee -a "$OUT/summary.txt"; }
 psqlc() { docker exec mento-postgres psql -U mento -d "${1}" -t -A -c "${2}" >/dev/null 2>&1; }
 
@@ -63,13 +67,20 @@ run_spec() {
   echo "$name exit=$code :: $(grep -v '^[[:space:]]*$' "$OUT/$name.log" | tail -1 | cut -c1-140)" >> "$OUT/summary.txt"
 }
 
+SOLO_RUN=""
 for spec in $SPECS; do
+  name=$(basename "$spec" .e2e.js)
+  case " $SOLO " in *" $name "*) SOLO_RUN="$SOLO_RUN $spec"; continue;; esac
   run_spec "$spec" &
   # keep at most WORKERS browsers alive at once
   while [ "$(jobs -rp | wc -l)" -ge "$((WORKERS + 3))" ]; do sleep 2; done
 done
 wait $PY_PID $TSC_PID $AL_PID 2>/dev/null
 wait
+for spec in $SOLO_RUN; do
+  docker exec mento-postgres psql -U mento -d mento -c     "UPDATE listener_profiles SET status='online', last_seen_at=NULL, active_conversations=0;" >/dev/null 2>&1
+  run_spec "$spec"
+done
 ( cd "$ROOT/apps/mobile" && for t in test:placement test:question test:route; do
     npm run -s $t > "$OUT/$t.log" 2>&1; echo "$t exit=$? :: $(tail -1 "$OUT/$t.log")" >> "$OUT/summary.txt"; done )
 
