@@ -177,11 +177,21 @@ export default function MentorChatScreenWeb() {
           appendMessage(m as RawMsg);
           surfaceCrisis(m as CrisisCarrier);
         });
+        // Reading a thread marks it read. On native the kit's MessageList does this for us;
+        // the hand-rolled thread had nobody doing it, so on web the row's "new" dot never
+        // cleared (app/(tabs)/chats.tsx + lib/useMentorConsole.ts read `countUnread`) and the
+        // other side never saw their message turn to Read. Fire-and-forget: a failed markRead
+        // must never break the conversation.
+        const markRead = () => {
+          void ch.markRead().catch(() => {});
+        };
+        markRead();
         ch.on('message.new', (e: Event) => {
           if (e.message) {
             appendMessage(e.message as RawMsg);
             surfaceCrisis(e.message as CrisisCarrier);
           }
+          if (e.user && e.user.id !== client.userID) markRead();
         });
         ch.on('message.read', () => setReadTick((t) => t + 1));
         // "here now" = the member is watching this channel (presence only, never content).
