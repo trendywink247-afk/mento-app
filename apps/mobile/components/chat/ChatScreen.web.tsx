@@ -37,6 +37,7 @@ import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TFunc } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
+import { chatFaceKey } from '@/lib/originStore';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
@@ -470,15 +471,19 @@ export default function ChatScreenWeb() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: depth.shown ? colors.dotIdle : colors.bg }]}
+      style={styles.safe}
       edges={['top', 'bottom']}
     >
       <CompanionPerches placement={perch}>
       <Animated.View
-        style={[styles.back, { backgroundColor: colors.bg }, depth.shown && styles.backSettled, depth.backStyle]}
+        style={[styles.back, depth.shown && styles.backSettled, depth.backStyle]}
       >
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the native chat. */}
       <ChatHeaderCard
+        // Hand-overs: the avatar flies in from the My Chats row that opened this chat, and
+        // leaves its own place behind for the profile hero (board T05 / T06).
+        conversationId={conversationId}
+        faceOriginKey={conversationId ? chatFaceKey(conversationId) : undefined}
         name={headerName}
         face={header.face ?? undefined}
         status={header.profile?.status ?? null}

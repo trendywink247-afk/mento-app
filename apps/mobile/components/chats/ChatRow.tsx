@@ -8,12 +8,13 @@
  * no saved count at zero.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';
 
 import { InTouchBadge } from '@/components/InTouchBadge';
 import { MentorFace, type MentorLook } from '@/components/art/MentorFace';
+import { measureRect, rememberOrigin } from '@/lib/originStore';
 import { PressKey } from '@/components/motion/PressKey';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
@@ -88,6 +89,7 @@ export function ChatRow({
   lockedLabel,
   accessibilityLabel,
   onPress,
+  faceOriginKey,
 }: {
   testID: string;
   /** The mentor's face from the server (`companion_animal` / `companion_colour`). */
@@ -111,14 +113,21 @@ export function ChatRow({
   lockedLabel?: string | null;
   accessibilityLabel: string;
   onPress: () => void;
+  /** The origin key this row's face flies from when the chat opens (board T05). */
+  faceOriginKey?: string;
 }) {
   const { colors } = useTheme();
+  const faceRef = useRef<View>(null);
   const wiped = state === 'wiped';
   const showFoot = state === 'active' || Boolean(savedLabel) || Boolean(lockedLabel);
 
   return (
     <PressKey
-      onPress={onPress}
+      onPress={() => {
+        // "Things come from where you touched": the chat header's avatar starts here.
+        if (faceOriginKey) measureRect(faceRef.current, (rect) => rememberOrigin(faceOriginKey, rect));
+        onPress();
+      }}
       edge={wiped ? colors.edgeAlt : colors.edgeSurface}
       radius={radius.lg}
       accessibilityLabel={accessibilityLabel}
@@ -129,7 +138,7 @@ export function ChatRow({
         showFoot || secondLine ? styles.rowTop : null,
       ]}
     >
-      <View>
+      <View ref={faceRef} collapsable={false}>
         <MentorFace animal={face.animal} colour={face.colour} size={52} />
         {unread ? <NewDot label={unreadLabel} /> : null}
       </View>

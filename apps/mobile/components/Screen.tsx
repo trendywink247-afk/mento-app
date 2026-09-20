@@ -35,7 +35,8 @@ export function Screen({
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: lavender ? colors.bgLavender : colors.bg }]}
+      // Cream = the one sky shows through (components/motion/SkyGround.tsx).
+      style={[styles.safe, lavender && { backgroundColor: colors.bgLavender }]}
       edges={['top', 'bottom']}
     >
       {onBack ? (

@@ -14,9 +14,15 @@
  *
  * Motion: a header drop-in, staggered chips, one presence ripple at breathing tempo —
  * transform/opacity only, tokens only; reduced motion = a still ring, no loop.
+ *
+ * Hand-overs (board T05 / T06, lib/originStore.ts): when the chat was opened from a My
+ * Chats row, the avatar starts at that row's face and settles into the card; when the
+ * member opens the mentor's profile from here, this avatar's place is left behind for the
+ * profile's hero to grow out of. Both are one mover, and neither happens under reduced
+ * motion — the avatar is simply where it belongs.
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -31,8 +37,10 @@ import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { MentorFace, type MentorLook } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
+import { FlyFrom } from '@/components/motion/FlyFrom';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
+import { measureRect, mentorHeroKey, rememberOrigin } from '@/lib/originStore';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { breathe, easing } from '@/theme/motion';
@@ -67,6 +75,10 @@ type Props = {
   savedCount: number;
   onBack: () => void;
   onOpenProfile: () => void;
+  /** This chat's id — the key the profile hero's hand-over is stored under (T06). */
+  conversationId?: string;
+  /** Where this avatar flies in from, when the chat was opened from its row (T05). */
+  faceOriginKey?: string;
   onOpenOptions: () => void;
 };
 
@@ -137,8 +149,11 @@ export function ChatHeaderCard({
   onBack,
   onOpenProfile,
   onOpenOptions,
+  conversationId,
+  faceOriginKey,
 }: Props) {
   const { colors } = useTheme();
+  const avatarRef = useRef<View>(null);
   const { t } = useI18n();
   const online = status === 'online';
 
@@ -186,7 +201,13 @@ export function ChatHeaderCard({
             </PressKey>
 
             <PressKey
-              onPress={onOpenProfile}
+              onPress={() => {
+                // The profile's hero grows out of this avatar (board T06).
+                if (conversationId) {
+                  measureRect(avatarRef.current, (rect) => rememberOrigin(mentorHeroKey(conversationId), rect));
+                }
+                onOpenProfile();
+              }}
               edge={colors.surface}
               travel={2}
               intent="navigate"
@@ -196,11 +217,15 @@ export function ChatHeaderCard({
               style={[styles.identity, { backgroundColor: colors.surface }]}
               containerStyle={styles.identityContainer}
             >
-              <View style={styles.avatarBox}>
+              <View style={styles.avatarBox} ref={avatarRef} collapsable={false}>
                 {online ? <PresenceRing color={colors.accent} /> : null}
-                <View style={[styles.avatarFrame, { borderColor: colors.surface }]}>
+                <FlyFrom
+                  originKey={faceOriginKey}
+                  testID="chat-header-face"
+                  style={[styles.avatarFrame, { borderColor: colors.surface }]}
+                >
                   <MentorFace animal={face?.animal} colour={face?.colour} size={AVATAR - 4} />
-                </View>
+                </FlyFrom>
                 {online ? (
                   // Decorative: the status line below says the same thing in words.
                   <View

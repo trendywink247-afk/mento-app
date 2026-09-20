@@ -177,7 +177,7 @@ export default function FindTheThreadsScreen() {
   const found = phase.kind === 'result';
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <CompanionPerches placement={perch}>
         <View style={styles.page}>
           <JournalPageHeader

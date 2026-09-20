@@ -12,6 +12,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PinPad } from '@/components/chat/options/bits';
 import { ChatRow, type ChatRowState } from '@/components/chats/ChatRow';
+import { chatFaceKey } from '@/lib/originStore';
 import { ChatsEmpty } from '@/components/chats/ChatsEmpty';
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
@@ -358,6 +359,8 @@ export default function ChatsTab() {
       row = (
         <ChatRow
           testID={`convo-${c.id}`}
+          // The chat's header avatar flies out of this row's face (board T05).
+          faceOriginKey={chatFaceKey(c.id)}
           face={{ animal: c.listener_companion_animal, colour: c.listener_companion_colour }}
           name={c.listener_persona_name}
           state={s}
@@ -411,7 +414,7 @@ export default function ChatsTab() {
 
           {/* Search, the switch and the filters: one block with a pillow underside, and the
               companion's home on its bottom edge. It is simply there — no arrival. */}
-          <View style={[styles.tools, { backgroundColor: colors.bg, borderBottomColor: colors.border }]}>
+          <View style={[styles.tools, { borderBottomColor: colors.border }]}>
             {showTools ? (
               <EdgeSurface
                 edge={colors.edgeSurface}

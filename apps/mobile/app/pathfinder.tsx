@@ -275,7 +275,7 @@ export default function Pathfinder() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <SkyBlob />
       <CompanionPerches placement={perch}>
         <View style={styles.top}>

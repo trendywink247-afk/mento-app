@@ -197,11 +197,11 @@
     },
     "companion": {
       "headline": "Your growth,\nyour ",
-      "sub": "Your growth will be represented by an animal and a colour.",
+      "sub": "Your companion and colour travel with you across Mento.",
       "step1": "1. Choose an animal",
-      "step1Sub": "This will be your growth companion",
+      "step1Sub": "Your companion, on every screen",
       "step2": "2. Choose a colour",
-      "step2Sub": "This will be your growth colour",
+      "step2Sub": "Your colour, across the app",
       "surprise": "Surprise Me",
       "surpriseA11y": "Surprise me with a random theme",
       "changeLater": "You can change your theme later from Profile.",
@@ -273,7 +273,7 @@
     "errorBusy": "All our mentors are with someone right now. Try again shortly, or choose a mentor and they'll reply when they're free.",
     "waitTitle": "While you wait",
     "tryAgain": "Try again",
-    "browseMentors": "Browse mentors instead",
+    "browseMentors": "Send your question instead",
     "card2Title": "Not sure how to start?",
     "card2Body": "“Today felt heavy” is more than enough for a first message.",
     "findingA": "Finding a mentor\nwho is ",
@@ -1305,7 +1305,8 @@
     "mentorA11y": "%{name}'s companion",
     "postmarkA11y": "Sent through Mento",
     "notFound": "We could not find this question. It may have been closed.",
-    "loadError": "We could not load your question just now. It is still on its way."
+    "loadError": "We could not load your question just now. It is still on its way.",
+    "stripA11yReplying": "All three are done. Sent, seen, and your mentor is replying."
   },
   "chatsEmpty": {
     "companionA11y": "Your companion, here with you"
@@ -1356,7 +1357,8 @@
       "life": "Life in general",
       "feeling_stuck": "Feeling stuck",
       "motivation": "Motivation"
-    }
+    },
+    "threadPrivacy": "Keep personal details out of the chat — no names, numbers or addresses."
   },
   "stepBack": {
     "notify": "Notify the Mento team",

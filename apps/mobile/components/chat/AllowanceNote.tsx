@@ -1,7 +1,12 @@
 /**
  * AllowanceNote — the pause (board A22): "That's three in a row. Give Steady Cedar a
- * moment to reply.", the count, a quiet Helplines toggle, and one kind key into the
- * Journal. Shown when the member has sent three in a row or has reached the day's ten.
+ * moment to reply.", the count, the promise that nothing urgent is ever held, a quiet
+ * Helplines toggle and one kind key into the Journal. Shown when the member has sent three
+ * in a row or has reached the day's ten.
+ *
+ * The promise is never folded away (T&S #1): a person who has just been paused has to be
+ * able to read, without tapping anything, that a message that matters still goes through.
+ * The two numbers sit one tap behind it, so the pause never competes with the crisis card.
  *
  * STILL (T&S #11): nothing here animates — no entrance, no breathing pip, no haptic on
  * arrival — and nothing is red. The field below stays live; only the send key rests.
@@ -79,6 +84,12 @@ export function AllowanceNote({ allowance, reason, name, onJournal }: Props) {
             <Text style={[type.caption, styles.count, { color: colors.inkMuted }]} testID="allowance-note-count">
               {t('allowance.leftShort', counts)}
             </Text>
+          </View>
+
+          <View style={styles.promiseRow}>
+            <Text style={[type.caption, styles.promise, { color: colors.inkMuted }]} testID="allowance-urgent">
+              {t('allowance.urgent')}
+            </Text>
             <Pressable
               onPress={() => setHelpOpen((open) => !open)}
               accessibilityRole="button"
@@ -116,7 +127,6 @@ export function AllowanceNote({ allowance, reason, name, onJournal }: Props) {
                   </PressKey>
                 ))}
               </View>
-              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('allowance.urgent')}</Text>
             </View>
           ) : null}
         </EdgeSurface>
@@ -143,8 +153,10 @@ const styles = StyleSheet.create({
   lead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   badge: { width: 36, height: 36, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   leadText: { flex: 1, fontFamily: font.sans, fontSize: 15, lineHeight: 22 },
-  countRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
+  countRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 6 },
   count: { flex: 1 },
+  promiseRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
+  promise: { flex: 1 },
   helpToggle: { height: 44, paddingHorizontal: 2, flexDirection: 'row', alignItems: 'center', gap: 6 },
   underlined: { textDecorationLine: 'underline' },
   help: { gap: 8, paddingBottom: 10 },

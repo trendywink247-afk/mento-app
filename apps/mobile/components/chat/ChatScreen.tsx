@@ -5,7 +5,15 @@ import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps } from 'react';
 import type { Channel as ChannelType, Event } from 'stream-chat';
-import { Channel, Chat, MessageComposer, MessageList, useMessageComposer, WithComponents } from 'stream-chat-expo';
+import {
+  Channel,
+  Chat,
+  MessageComposer,
+  MessageList,
+  useAttachmentPickerContext,
+  useMessageComposer,
+  WithComponents,
+} from 'stream-chat-expo';
 
 // stream-chat-expo's star re-exports collide on the name `Theme` (the kit's UI theme vs
 // a stream-chat type), so derive the exact prop type from the component instead.
@@ -33,6 +41,7 @@ import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
+import { chatFaceKey } from '@/lib/originStore';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
@@ -68,6 +77,41 @@ type SentMessage = CrisisCarrier & { type?: string; text?: string; allowance?: H
  * the crisis card or an error is showing, or while the options sheet is up (T&S #11). */
 const CHAT_PERCH: PlacementSlot[] = [{ id: 'composerTop', type: 'top', level: 'low', home: true }];
 const COMPOSER_PERCH = <CompanionSlot id="composerTop" size={COMPOSER_SEAT.size} inset={space.lg} />;
+
+/**
+ * Mento is text + emoji only (CLAUDE.md SCOPE §3) — a member never attaches anything.
+ *
+ * The kit still mounts its attachment picker: `<Channel>` always renders `<AttachmentPicker/>`,
+ * a @gorhom bottom sheet parked at index −1 inside the channel's own layout, and the sheet
+ * re-snaps to index 0 when that layout changes under it (the crisis card arriving above the
+ * thread, the keyboard closing behind a `tel:` link). Index 0 makes the picker's store pick
+ * `images`, which mounts the media gallery — on Android that asks for the photo permission:
+ * the "unnecessary media-selection pop-up" the founder hit mid-crisis.
+ *
+ * Three locks, so it can neither open nor show anything if it does:
+ *   1. every door off — `hasImagePicker` / `hasFilePicker` / `hasCameraPicker` / `hasCommands`
+ *      false and `disableAttachmentPicker` (which also drops the sheet to 72px);
+ *   2. the sheet's own two parts are overridden with nothing;
+ *   3. this guard shuts the store the instant anything selects a picker.
+ * The composer, and with it the send key, is untouched — a member can always keep talking.
+ */
+function NoAttachments() {
+  const { attachmentPickerStore, closePicker } = useAttachmentPickerContext();
+  useEffect(() => {
+    const unsubscribe = attachmentPickerStore.state.subscribe((state) => {
+      if (!state.selectedPicker) return;
+      attachmentPickerStore.setSelectedPicker(undefined);
+      closePicker();
+    });
+    return unsubscribe;
+  }, [attachmentPickerStore, closePicker]);
+  return null;
+}
+
+/** Nothing at all — the kit's picker chrome, removed (see NoAttachments). */
+function RenderNothing() {
+  return null;
+}
 
 /** Puts a held message's words back into the field: the kit clears its composer
  * optimistically, and a held message exists nowhere but on the device (API doc B1). */
@@ -221,7 +265,8 @@ export default function ChatScreen() {
     () => ({
       semantics: {
         accentPrimary: colors.accent,
-        backgroundCoreApp: colors.bg,
+        // The thread lies on the one sky (components/motion/SkyGround.tsx).
+        backgroundCoreApp: 'transparent',
         chatBgIncoming: colors.surface,
         chatTextIncoming: colors.ink,
         chatBgOutgoing: colors.accent,
@@ -420,7 +465,7 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView
-      style={[styles.safe, { backgroundColor: depth.shown ? colors.dotIdle : colors.bg }]}
+      style={styles.safe}
       edges={['top', 'bottom']}
     >
       <CompanionPerches placement={perch}>
@@ -429,10 +474,14 @@ export default function ChatScreen() {
       <KitThreadContext.Provider value={thread}>
       <OwnBubbleToneContext.Provider value="accent">
       <Animated.View
-        style={[styles.back, { backgroundColor: colors.bg }, depth.shown && styles.backSettled, depth.backStyle]}
+        style={[styles.back, depth.shown && styles.backSettled, depth.backStyle]}
       >
       {/* Header card + "In this chat" strip (DECISIONS §L.8) — shared with the web chat. */}
       <ChatHeaderCard
+        // Hand-overs: the avatar flies in from the My Chats row that opened this chat, and
+        // leaves its own place behind for the profile hero (board T05 / T06).
+        conversationId={conversationId}
+        faceOriginKey={conversationId ? chatFaceKey(conversationId) : undefined}
         name={headerName}
         face={header.face ?? undefined}
         status={header.profile?.status ?? null}
@@ -469,6 +518,9 @@ export default function ChatScreen() {
                 // The empty thread in the board's language (no kit bubble icon / "No chats").
                 EmptyStateIndicator: ThreadEmpty,
                 Input: Composer,
+                // The attachment sheet has no bar and no gallery here (see NoAttachments).
+                AttachmentPickerSelectionBar: RenderNothing,
+                AttachmentPickerContent: RenderNothing,
                 MessageFooter: KitMessageFooter,
                 MessageHeader: KitSavedHeader,
                 TypingIndicator: KitTyping,
@@ -479,7 +531,14 @@ export default function ChatScreen() {
               doSendMessageRequest={doSendMessageRequest}
               messageActions={customMessageActions}
               myMessageTheme={myMessageTheme}
+              // Text + emoji only: every upload door is shut (see NoAttachments).
+              hasImagePicker={false}
+              hasFilePicker={false}
+              hasCameraPicker={false}
+              hasCommands={false}
+              disableAttachmentPicker
             >
+              <NoAttachments />
               <HeldDraft text={heldDraft} onRestored={clearHeldDraft} />
               <StarterSeed text={starter} />
               {/* Inverted list: `paddingTop` is the visual foot — the companion's room. */}

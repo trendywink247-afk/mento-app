@@ -1,6 +1,8 @@
 /** Connecting experience: staged copy → found crescendo card → chat.
  * Also guards the WS-1b polish: the "found your listener" beat must read as one
- * deliberate moment (>= MIN_FOUND_DWELL_MS on screen), never a sub-second flash. */
+ * deliberate moment (>= MIN_FOUND_DWELL_MS on screen), never a sub-second flash — and
+ * that the one safety line ("Keep personal details out of the chat") is on the empty
+ * thread, where a member reads it BEFORE their first message (founder review 2026-09-20). */
 const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 
@@ -55,6 +57,14 @@ async function runFull(browser) {
 
   await page.waitForSelector('[data-testid="chat-ready"]', { timeout: 60000 });
   console.log('OK landed in chat');
+
+  // The safety line, before anything is said, still and unmissable.
+  await page.waitForSelector('[data-testid="chat-empty-privacy"]', { timeout: 30000 });
+  const tip = (await page.locator('[data-testid="chat-empty-privacy"]').innerText()).replace(/\s+/g, ' ').trim();
+  if (!tip.endsWith('Keep personal details out of the chat — no names, numbers or addresses.')) {
+    throw new Error(`the safety line before the first chat reads "${tip}"`);
+  }
+  console.log('OK the empty thread carries the safety line before the first message');
 
   await ctx.close();
   return errors;

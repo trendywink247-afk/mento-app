@@ -151,12 +151,17 @@ async function run(browser, reduced) {
     if (await page.locator(`[data-testid^="mine-"]`, { hasText: HELD }).count()) throw new Error(`[${label}] a held message was sent`);
     if (await tid('composer-send-error').count()) throw new Error(`[${label}] a limit must not read as an error`);
 
+    // The promise is on the card itself — never folded away behind a tap (T&S #1).
+    await tid('allowance-urgent').waitFor({ timeout: 5000 });
+    if ((await tid('allowance-urgent').innerText()).trim() !== 'Anything urgent is never held back or counted.') {
+      throw new Error(`[${label}] the "nothing urgent is held" promise is not on the note`);
+    }
     // The quiet Helplines toggle: exactly the two verified lines.
     await tid('allowance-helplines-toggle').click();
     await tid('allowance-call-14416').waitFor({ timeout: 5000 });
     await tid('allowance-call-18005990019').waitFor({ timeout: 5000 });
     await page.waitForSelector('text=Anything urgent is never held back or counted.', { timeout: 5000 });
-    console.log(`[${label}] OK A22 note at three in a row: still, names ${mentor}, send key disabled, field live, helplines 14416 + 1800-599-0019`);
+    console.log(`[${label}] OK A22 note at three in a row: still, names ${mentor}, send key disabled, field live, the urgent promise in plain sight, helplines 14416 + 1800-599-0019`);
 
     // Crisis-exempt (the API says so): never a note, the key is live again.
     const allowanceRoute = /\/conversations\/[^/]+\/allowance$/;
@@ -265,7 +270,23 @@ async function run(browser, reduced) {
     if (!(await tid('allowance-text').innerText()).includes('not counted')) throw new Error(`[${label}] meter does not say "not counted"`);
     // The companion is absent while the card shows.
     if (await page.locator('[data-testid^="companion-slot-"]').count()) throw new Error(`[${label}] the companion is drawn beside the crisis card`);
-    console.log(`[${label}] OK A21 crisis card: still, both call keys, why toggle, no note at 3-in-a-row, composer live, no companion`);
+    // Crisis never blocks talking: the member writes again WITH the card up, and it lands.
+    const KEEP_TALKING = `still here, telling you ${Date.now()}`;
+    await tid('composer-input').fill(KEEP_TALKING);
+    await tid('composer-send').click();
+    await page.locator(`[data-testid^="mine-"]`, { hasText: KEEP_TALKING }).first().waitFor({ timeout: 30000 });
+    if (!(await tid('crisis-card').count())) throw new Error(`[${label}] the crisis card left when the member wrote again`);
+    // Nothing anywhere in the chat offers to attach media (Mento is text + emoji only).
+    const doors = await page.evaluate(() => ({
+      files: document.querySelectorAll('input[type="file"]').length,
+      attach: [...document.querySelectorAll('[aria-label],[data-testid]')].filter((n) =>
+        /attach|gallery|photo|camera|image picker|file picker/i.test(
+          `${n.getAttribute('aria-label') ?? ''} ${n.getAttribute('data-testid') ?? ''}`,
+        ),
+      ).length,
+    }));
+    if (doors.files || doors.attach) throw new Error(`[${label}] the chat offers attachments: ${JSON.stringify(doors)}`);
+    console.log(`[${label}] OK A21 crisis card: still, both call keys, why toggle, no note at 3-in-a-row, the member can keep writing beside it, no attachment door, no companion`);
   } finally {
     await page.unroute(sendRoute);
     psql(`UPDATE conversations SET member_streak=0 WHERE id='${conversationId}';`);

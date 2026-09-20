@@ -3,13 +3,11 @@
  * FINAL_SPEC "arrDeep": 48px, fade, 500 ms settle), then its inner blocks rise with
  * `Entrance`. The back key is NOT wrapped: it is simply already there.
  *
- * Native: the stack already pushes the whole page in from the right
- * (`animation: 'slide_from_right'`), so there the column only fades — a second sideways
- * move on top of the push would read as a stutter. Web has no stack animation, so the
- * column carries the move itself. Reduced motion: a short fade, nothing moves.
+ * The page itself only crossfades over the one sky (native) or cuts (web), so the column
+ * carries the sideways move on both. Reduced motion: a short fade, nothing moves.
  */
 import { ReactNode, useEffect } from 'react';
-import { Platform, StyleProp, ViewStyle } from 'react-native';
+import { StyleProp, ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -18,7 +16,9 @@ import { duration, easing, press, sheet } from '@/theme/motion';
 export function DeepArrival({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const reduced = useReducedMotion();
   const p = useSharedValue(0);
-  const shift = Platform.OS === 'web' ? sheet.deepShift : 0;
+  // The root stack crossfades pages over the one sky (app/_layout.tsx), so on every
+  // platform the column itself carries the move in from the side.
+  const shift = sheet.deepShift;
 
   useEffect(() => {
     p.value = reduced

@@ -7,9 +7,36 @@
 import { ReactNode, RefObject, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
 
 import { Entrance } from '@/components/motion/Entrance';
+import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
+
+/** How deep the body dissolves as it passes under a fixed header. */
+const HEADER_FADE = 22;
+
+/**
+ * The scroll edge under a fixed header: without it a row of picks is sliced clean in half
+ * right below the words (founder review 2026-09-20, "the cut-off in sync"). The strip is
+ * the sky's own top tone, so the content dissolves into the ground rather than being cut.
+ */
+function HeaderFade({ top }: { top: number }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.fade, { top, height: HEADER_FADE }]} pointerEvents="none" testID="step-header-fade">
+      <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <Defs>
+          <LinearGradient id="stepHeaderFade" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={colors.accentTint} stopOpacity={0.88} />
+            <Stop offset="1" stopColor={colors.accentTint} stopOpacity={0} />
+          </LinearGradient>
+        </Defs>
+        <Rect x="0" y="0" width="100" height="100" fill="url(#stepHeaderFade)" />
+      </Svg>
+    </View>
+  );
+}
 
 type Props = {
   children: ReactNode;
@@ -47,11 +74,19 @@ export function StepScaffold({ children, footer, footerIndex, footerDelay, foote
   const footerBottom = { paddingBottom: Math.max(insets.bottom + space.sm, FOOTER_BOTTOM) - insets.bottom };
   const [viewportH, setViewportH] = useState(0);
   const [contentH, setContentH] = useState(0);
+  const [headerH, setHeaderH] = useState(0);
+  // The fade belongs to a body that has actually moved under the header — at rest it would
+  // only be a band of tint across the sky.
+  const [scrolled, setScrolled] = useState(false);
   const scrollable = contentH > viewportH + 1;
 
   return (
     <View style={styles.root}>
-      {header ? <View style={styles.header}>{header}</View> : null}
+      {header ? (
+        <View style={styles.header} onLayout={(e) => setHeaderH(e.nativeEvent.layout.height)}>
+          {header}
+        </View>
+      ) : null}
       <ScrollView
         ref={scrollRef}
         contentContainerStyle={[styles.scrollContent, header ? styles.scrollUnderHeader : null]}
@@ -61,11 +96,14 @@ export function StepScaffold({ children, footer, footerIndex, footerDelay, foote
         bounces={false}
         alwaysBounceVertical={false}
         overScrollMode="never"
+        scrollEventThrottle={16}
+        onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > 2)}
         onLayout={(e) => setViewportH(e.nativeEvent.layout.height)}
         onContentSizeChange={(_w, h) => setContentH(h)}
       >
         {children}
       </ScrollView>
+      {header && scrollable && scrolled ? <HeaderFade top={headerH} /> : null}
       {footer ? (
         footerIndex === undefined && footerDelay === undefined ? (
           <View style={[styles.footer, footerBottom]}>{footer}</View>
@@ -90,6 +128,7 @@ const styles = StyleSheet.create({
   // A little air under the header, so a pick scrolling under it is cut clear of the words.
   header: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.sm, zIndex: 1 },
   scrollUnderHeader: { paddingTop: 0 },
+  fade: { position: 'absolute', left: 0, right: 0 },
   footer: {
     paddingHorizontal: space.lg,
     paddingTop: space.xs,

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
@@ -30,6 +30,11 @@ import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
  * stored, and the header chip appears for them once the server names them.
  *
  * A screens-backed `transparentModal` route, not an RN <Modal> (blank on Android new arch).
+ *
+ * It is also the ask loop's one door (lib/askLoop.ts): whenever nobody is free — here, on
+ * the connecting step or in the first-question builder — the member arrives on THIS sheet
+ * with the still busy card (`busy=1`), and "Pick a mentor" carries any question they had
+ * already drafted (`question`) on to Browse, the mentor page and the question step.
  */
 const PERCHES: PlacementSlot[] = [{ id: 'sheetEdge', type: 'top', level: 'mid', home: true }];
 
@@ -46,9 +51,12 @@ export default function NewChatSheet() {
   const { colors } = useTheme();
   const { t } = useI18n();
   const sheet = useRef<BoardSheetHandle | null>(null);
-  const [topic, setTopic] = useState<string | null>(null);
+  // The ask loop hands the sheet what the member already had: a chosen topic, a drafted
+  // question, and whether they got here because nobody was free.
+  const params = useLocalSearchParams<{ topic?: string; question?: string; busy?: string }>();
+  const [topic, setTopic] = useState<string | null>(params.topic ?? null);
   const [matching, setMatching] = useState(false);
-  const [note, setNote] = useState<Note | null>(null);
+  const [note, setNote] = useState<Note | null>(params.busy === '1' ? { kind: 'busy' } : null);
   // "Everyone is busy" is a still state: the companion sits, nothing moves.
   const perch = useCompanionPlacement('newChat', PERCHES, { still: note !== null });
 
@@ -87,7 +95,13 @@ export default function NewChatSheet() {
     if (matching) return;
     sheet.current?.close(() => {
       router.back();
-      router.push({ pathname: '/mentors', params: topic ? { topic } : {} });
+      router.push({
+        pathname: '/mentors',
+        params: {
+          ...(topic ? { topic } : {}),
+          ...(params.question ? { question: params.question } : {}),
+        },
+      });
     });
   };
 

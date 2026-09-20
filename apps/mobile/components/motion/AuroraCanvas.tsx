@@ -11,11 +11,11 @@
  * On web this component must only render AFTER LoadSkiaWeb() resolves — it is
  * lazy-imported by AmbientBackground.web.tsx for that reason.
  */
-import { useIsFocused } from '@react-navigation/native';
-import { Canvas, Fill, Shader, Skia, useClock } from '@shopify/react-native-skia';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { NavigationContext } from '@react-navigation/native';
+import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
-import { useDerivedValue, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useDerivedValue, useFrameCallback, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { ambientLift } from '@/components/motion/ambientLift';
 import { hexToRgba01, mixHex01, mixRgba, type Rgba } from '@/components/motion/color';
@@ -81,36 +81,61 @@ function mixPalette(from: Palette, to: Palette, t: number): Palette {
 // Frozen clock value (seconds) under reduced motion — an arbitrary pleasant pose.
 const FROZEN_T = 40;
 
-// One sky time for the whole app. Every canvas reads the SAME clock (ms since this module
-// loaded), so the sky a route mounts is at exactly the phase of the sky the last route was
-// showing — landing → journey no longer restarts the drift from zero.
+// One sky time for the whole app: seconds since this module loaded. A canvas starts at the
+// wall-clock phase (so a screen-hosted sky and the root sky agree), and after a pause it
+// resumes from where IT stopped — never a jump in the blobs' positions.
 const SKY_EPOCH = Date.now();
 
-export function AuroraCanvas() {
+/** Focus of the screen hosting this canvas; `true` outside any navigator (the root sky). */
+function useHostFocused(): boolean {
+  const nav = useContext(NavigationContext);
+  const [focused, setFocused] = useState(() => nav?.isFocused() ?? true);
+  useEffect(() => {
+    if (!nav) return;
+    setFocused(nav.isFocused());
+    const offFocus = nav.addListener('focus', () => setFocused(true));
+    const offBlur = nav.addListener('blur', () => setFocused(false));
+    return () => {
+      offFocus();
+      offBlur();
+    };
+  }, [nav]);
+  return focused;
+}
+
+/**
+ * `paused`: the root sky (components/motion/SkyGround) holds still while an opaque screen
+ * covers it. Paused, focus-lost or reduced motion = the frame callback is OFF, so the
+ * uniforms are constant and Skia draws nothing new — no shader work under a covered sky.
+ */
+export function AuroraCanvas({ paused = false }: { paused?: boolean }) {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   // The frame, not the window: on a wide browser the sky fills the 480 app column.
   const { width, height } = useFrameSize();
-  const clock = useClock();
 
-  // `useClock` counts from this canvas's mount; the offset turns it into shared sky time.
-  const [mountOffset] = useState(() => Date.now() - SKY_EPOCH);
+  // expo-router keeps the previous screen mounted underneath the next one, so a
+  // screen-hosted sky that lost focus stops its clock too.
+  const focused = useHostFocused();
+  const running = !paused && focused && !reduced;
 
-  // Focus pause: expo-router keeps the previous screen mounted underneath the next
-  // one, so two shader canvases would animate at once. While unfocused the shader time
-  // holds still (constant uniforms = no redraws). On refocus it rejoins the shared sky
-  // time — which is where the sky on the screen you just came back FROM had got to, so
-  // there is no jump in either direction.
-  const isFocused = useIsFocused();
-  const pausedAt = useSharedValue(-1); // clock ms when the screen blurred; -1 = running
+  const skyT = useSharedValue((Date.now() - SKY_EPOCH) / 1000);
+  const resumeFrom = useSharedValue(0); // sky seconds when the clock last started
+  const startedAt = useSharedValue(-1); // frame timestamp of the first frame since then
+  const tick = useFrameCallback((frame) => {
+    if (startedAt.value < 0) startedAt.value = frame.timestamp;
+    skyT.value = resumeFrom.value + (frame.timestamp - startedAt.value) / 1000;
+  }, false);
 
   useEffect(() => {
-    if (!isFocused) {
-      if (pausedAt.value < 0) pausedAt.value = clock.value;
-    } else {
-      pausedAt.value = -1;
+    if (running) {
+      resumeFrom.value = skyT.value;
+      startedAt.value = -1;
     }
-  }, [isFocused, clock, pausedAt]);
+    tick.setActive(running);
+    // reason: shared values and the frame-callback handle are stable refs
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running]);
 
   const effect = useMemo(() => {
     const e = Skia.RuntimeEffect.Make(SKSL);
@@ -142,8 +167,7 @@ export function AuroraCanvas() {
 
   const { from, to } = palettes;
   const uniforms = useDerivedValue(() => {
-    const clockMs = pausedAt.value >= 0 ? pausedAt.value : clock.value;
-    const t = reduced ? FROZEN_T : (clockMs + mountOffset) / 1000;
+    const t = reduced ? FROZEN_T : skyT.value;
     const k = progress.value;
     const mix4 = (a: Rgba, b: Rgba) => [
       a[0] + (b[0] - a[0]) * k,
@@ -160,7 +184,7 @@ export function AuroraCanvas() {
       uB: mix4(from.b, to.b),
       uC: mix4(from.c, to.c),
     };
-  }, [reduced, width, height, from, to, mountOffset]);
+  }, [reduced, width, height, from, to]);
 
   return (
     <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">

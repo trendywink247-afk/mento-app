@@ -11,7 +11,8 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import AuroraCanvas, { AURORA_FADE_MS } from '@/components/motion/AuroraCanvas';
 import { StaticAmbient } from '@/components/motion/StaticAmbient';
 
-export function AmbientBackground() {
+/** `paused`: see AuroraCanvas — the root sky holds still under an opaque screen. */
+export function AmbientBackground({ paused = false }: { paused?: boolean }) {
   const [mountCanvas, setMountCanvas] = useState(false);
   const opacity = useSharedValue(0);
 
@@ -32,7 +33,7 @@ export function AmbientBackground() {
       <StaticAmbient />
       {mountCanvas ? (
         <Animated.View style={[StyleSheet.absoluteFill, fade]}>
-          <AuroraCanvas />
+          <AuroraCanvas paused={paused} />
         </Animated.View>
       ) : null}
     </View>

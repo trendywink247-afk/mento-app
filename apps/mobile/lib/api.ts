@@ -110,6 +110,11 @@ export type PersonalRequest = {
   intro_message: string | null;
   conversation_id: string | null;
   created_at: string;
+  /** When the question first appeared in the mentor's console inbox — the letter's "Seen"
+   * (board A04). Null while nobody has been shown it. */
+  seen_at?: string | null;
+  /** The mentor said yes and the chat is open — the letter's "Replying". */
+  replying?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
   listener_companion_animal?: string | null;
   listener_companion_colour?: string | null;

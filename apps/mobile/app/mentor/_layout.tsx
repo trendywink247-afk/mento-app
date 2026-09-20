@@ -8,7 +8,8 @@ import { Stack } from 'expo-router';
 export default function MentorLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="[id]" />
+      {/* The member-side mentor page lies on the one sky (components/motion/SkyGround). */}
+      <Stack.Screen name="[id]" options={{ contentStyle: { backgroundColor: 'transparent' } }} />
       <Stack.Screen name="chat/[id]" options={{ animation: 'fade' }} />
       <Stack.Screen name="member/[id]" />
       <Stack.Screen name="reading" />
