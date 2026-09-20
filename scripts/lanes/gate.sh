@@ -39,6 +39,10 @@ PY_PID=$!
 TSC_PID=$!
 ( cd "$ROOT/services/api" && "$PY" -m alembic check > "$OUT/alembic.log" 2>&1; echo "alembic exit=$? :: $(tail -1 "$OUT/alembic.log")" >> "$OUT/summary.txt" ) &
 AL_PID=$!
+# The same two the GitHub workflow runs first — a formatting slip there fails CI before the
+# tests even start, so catch it here.
+( cd "$ROOT/services/api" && "$PY" -m ruff check . > "$OUT/ruff.log" 2>&1 && "$PY" -m black --check . >> "$OUT/ruff.log" 2>&1;   echo "lint exit=$? :: $(tail -1 "$OUT/ruff.log")" >> "$OUT/summary.txt" ) &
+LINT_PID=$!
 
 # --- the spec list --------------------------------------------------------------------
 cd "$ROOT/apps/mobile"
@@ -75,7 +79,7 @@ for spec in $SPECS; do
   # keep at most WORKERS browsers alive at once
   while [ "$(jobs -rp | wc -l)" -ge "$((WORKERS + 3))" ]; do sleep 2; done
 done
-wait $PY_PID $TSC_PID $AL_PID 2>/dev/null
+wait $PY_PID $TSC_PID $AL_PID $LINT_PID 2>/dev/null
 wait
 for spec in $SOLO_RUN; do
   docker exec mento-postgres psql -U mento -d mento -c     "UPDATE listener_profiles SET status='online', last_seen_at=NULL, active_conversations=0;" >/dev/null 2>&1

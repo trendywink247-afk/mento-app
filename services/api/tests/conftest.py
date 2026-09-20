@@ -19,6 +19,7 @@ from app.config import get_settings
 
 API_DIR = Path(__file__).resolve().parents[1]  # services/api
 
+
 def _worker_db_url(url: str) -> str:
     """Each pytest-xdist worker gets its OWN database, created on the fly.
 
