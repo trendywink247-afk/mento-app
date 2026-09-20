@@ -177,6 +177,7 @@ export default function ChatScreen() {
   // back into the field.
   const [crisisAt, setCrisisAt] = useState(0);
   const [lastTheirsId, setLastTheirsId] = useState<string | null>(null);
+  const [lastMineId, setLastMineId] = useState<string | null>(null);
   const [savedNow, setSavedNow] = useState<ReadonlySet<string>>(() => new Set());
   const [heldDraft, setHeldDraft] = useState<string | null>(null);
   // Surface each crisis message once, so dismissing it isn't undone by later events.
@@ -363,6 +364,9 @@ export default function ChatScreen() {
         // in the thread (board A05); once the member has written back it is gone (A22).
         const newest = ch.state.messages[ch.state.messages.length - 1];
         setLastTheirsId(newest && newest.user?.id !== client.userID ? newest.id : null);
+        setLastMineId(
+          [...ch.state.messages].reverse().find((m) => m.user?.id === client.userID)?.id ?? null,
+        );
         ch.on('message.new', (e: Event) => {
           surfaceCrisis(e.message as CrisisCarrier);
           if (!e.message || !e.user) return;
@@ -371,6 +375,7 @@ export default function ChatScreen() {
             void refreshAllowance(); // the mentor wrote: the member's run starts over
           } else {
             setLastTheirsId(null);
+            setLastMineId(e.message.id);
           }
         });
       } catch (e) {
@@ -419,13 +424,14 @@ export default function ChatScreen() {
   const thread = useMemo<KitThread>(
     () => ({
       lastTheirsId,
+      lastMineId,
       openSaveId,
       savedIds: new Set([...savedMessageIds, ...savedNow]),
       savedNow,
       run: note === 'in_a_row' && allowance ? allowance.in_a_row : null,
       onSave: saveNote,
     }),
-    [lastTheirsId, openSaveId, savedMessageIds, savedNow, note, allowance, saveNote],
+    [lastTheirsId, lastMineId, openSaveId, savedMessageIds, savedNow, note, allowance, saveNote],
   );
   const clearHeldDraft = useCallback(() => setHeldDraft(null), []);
 
@@ -492,6 +498,11 @@ export default function ChatScreen() {
                 // The attachment sheet has no bar and no gallery here (see NoAttachments).
                 AttachmentPickerSelectionBar: RenderNothing,
                 AttachmentPickerContent: RenderNothing,
+                // No reactions anywhere: Mento's thread is text + emoji only (SCOPE §3) and
+                // the board draws none. The kit renders its own dark reaction pill over the
+                // bubble's corner — where the board puts the "Saved" chip.
+                ReactionListTop: RenderNothing,
+                ReactionListBottom: RenderNothing,
                 MessageFooter: KitMessageFooter,
                 MessageHeader: KitSavedHeader,
                 TypingIndicator: KitTyping,
@@ -507,6 +518,9 @@ export default function ChatScreen() {
               hasFilePicker={false}
               hasCameraPicker={false}
               hasCommands={false}
+              // …and none to give: an empty set also takes the reaction picker out of the
+              // long-press menu, not just the pill off the bubble.
+              supportedReactions={[]}
               disableAttachmentPicker
             >
               <NoAttachments />

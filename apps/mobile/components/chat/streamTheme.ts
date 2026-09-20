@@ -44,6 +44,10 @@ export type BubbleColors = {
  * clips its own overflow. */
 export const BUBBLE_EDGE = 3;
 
+/** The bubble's padding, board A05 (components/chat/ThreadRow.tsx's `bubble`). */
+export const BUBBLE_PAD_X = 14;
+export const BUBBLE_PAD_Y = 10;
+
 /** The kit theme for the thread as a whole — the mentor's bubbles and everything around
  * them. `bubbleMax` caps the text container (see components/chat/bubbleWidth.ts). */
 export function buildStreamTheme(c: BubbleColors, bubbleMax: number, radius: BubbleRadii) {
@@ -75,8 +79,17 @@ export function buildStreamTheme(c: BubbleColors, bubbleMax: number, radius: Bub
           borderBottomWidth: 1 + BUBBLE_EDGE,
           borderBottomColor: c.edgeSurface,
         },
-        // The kit's own `maxWidth: 256` is a fixed number, not a share of the screen.
-        textContainer: { maxWidth: bubbleMax },
+        // The bubble's own padding, board A05: 14 across, 10 down (ThreadRow's `bubble`).
+        // The kit pads with its own spacing tokens, which drew a thinner, pill-like bubble.
+        contentContainer: {
+          gap: 0,
+          paddingHorizontal: BUBBLE_PAD_X,
+          paddingTop: BUBBLE_PAD_Y,
+          paddingBottom: BUBBLE_PAD_Y,
+        },
+        // The kit's own `maxWidth: 256` is a fixed number, not a share of the screen; its
+        // `paddingHorizontal` is dropped so the bubble is padded once, by contentContainer.
+        textContainer: { maxWidth: bubbleMax, paddingHorizontal: 0 },
       },
     },
   };

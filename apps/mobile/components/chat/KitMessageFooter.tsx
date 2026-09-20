@@ -31,6 +31,11 @@ export type KitThread = {
   savedIds: ReadonlySet<string>;
   /** …and the ones kept during this visit (their chip settles in). */
   savedNow: ReadonlySet<string>;
+  /** The member's OWN latest message — the only one that carries the delivery line
+   * (board A05, and what ChatScreen.web.tsx does with `lastMineId`). The kit's
+   * `showMessageStatus` is true for every message the member sent, which put a "Read"
+   * under all of them. */
+  lastMineId: string | null;
   /** The member's current run while the three-in-a-row note shows, else null. */
   run: number | null;
   onSave: (message: { id: string; text?: string }) => void;
@@ -38,6 +43,7 @@ export type KitThread = {
 
 export const KitThreadContext = createContext<KitThread>({
   lastTheirsId: null,
+  lastMineId: null,
   openSaveId: null,
   savedIds: new Set(),
   savedNow: new Set(),
@@ -65,7 +71,7 @@ export function KitMessageFooter() {
     );
   }
 
-  if (!showMessageStatus) return null;
+  if (!showMessageStatus || message.id !== thread.lastMineId) return null;
   if (message.status === 'sending' || message.status === 'failed' || message.type === 'error') return null;
   const text = readBy
     ? t('allowance.read')
