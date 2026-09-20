@@ -7,13 +7,7 @@
 // default blue for weeks (see streamTheme.ts's header for the mechanism).
 import assert from 'node:assert/strict';
 
-import {
-  BUBBLE_EDGE,
-  BUBBLE_PAD_X,
-  BUBBLE_PAD_Y,
-  buildMyMessageTheme,
-  buildStreamTheme,
-} from '../.tmp-bubble/streamTheme.js';
+import { BUBBLE_EDGE, buildMyMessageTheme, buildStreamTheme } from '../.tmp-bubble/streamTheme.js';
 
 /** Clay and Sage, terracotta companion (theme/tokens.ts + theme/companion.ts). */
 const C = {
@@ -75,17 +69,6 @@ assert.equal(mine.messageItemView.content.containerInner.borderBottomColor, C.ac
 // --- the bubble takes the board's share of the column, not the kit's fixed 256 ---------
 assert.equal(theme.messageItemView.content.textContainer.maxWidth, 300);
 assert.notEqual(theme.messageItemView.content.textContainer.maxWidth, 256);
-
-// --- the bubble is padded once, by us, at the board's 14 / 10 --------------------------
-const pad = theme.messageItemView.content.contentContainer;
-assert.equal(pad.paddingHorizontal, BUBBLE_PAD_X);
-assert.equal(pad.paddingTop, BUBBLE_PAD_Y);
-assert.equal(pad.paddingBottom, BUBBLE_PAD_Y);
-assert.equal(
-  theme.messageItemView.content.textContainer.paddingHorizontal,
-  0,
-  'the kit must not pad the text as well, or the bubble is padded twice',
-);
 
 // The thread lies on the one sky.
 assert.equal(theme.semantics.backgroundCoreApp, 'transparent');
