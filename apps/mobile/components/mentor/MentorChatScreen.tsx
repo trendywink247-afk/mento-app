@@ -21,6 +21,8 @@ import { MentorMessageText } from '@/components/mentor/MentorMessageText';
 import { MentorOptionsMenu } from '@/components/mentor/MentorOptionsMenu';
 import { PressKey } from '@/components/motion/PressKey';
 import { SageSky } from '@/components/motion/SageSky';
+import { bubbleMaxWidth } from '@/components/chat/bubbleWidth';
+import { useFrameSize } from '@/lib/useFrameSize';
 import { useI18n } from '@/lib/i18n';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { ensureListenerConnected, getListenerStreamClient } from '@/lib/listenerStreamClient';
@@ -47,6 +49,11 @@ const MENU_TOP = 96;
 type CrisisCarrier = { id?: string; crisis?: CrisisPayload };
 
 type MenuState = 'closed' | 'open' | 'confirmEnd';
+
+/** A kit slot we draw nothing into. */
+function RenderNothing() {
+  return null;
+}
 
 export default function MentorChatScreen() {
   const router = useRouter();
@@ -93,6 +100,9 @@ export default function MentorChatScreen() {
     };
   }, [id]);
 
+  const { width: frameWidth } = useFrameSize();
+  const bubbleMax = bubbleMaxWidth(frameWidth);
+
   // Theme the Stream kit (v9 semantics tokens): the mentor's bubbles are the accent with
   // white text (MentorMessageText), the member's white with ink.
   const streamTheme = useMemo<StreamChatStyle>(
@@ -107,13 +117,20 @@ export default function MentorChatScreen() {
         chatTextTimestamp: colors.inkMuted,
         buttonPrimaryBg: colors.accent,
       },
+      messageItemView: {
+        content: {
+          // The kit caps its bubble text at a fixed 256px; the thread takes the same
+          // share of the column the member's side does (components/chat/ChatScreen.tsx).
+          textContainer: { maxWidth: bubbleMax },
+        },
+      },
       // See components/chat/Composer.tsx's header comment: neutralises the kit's own
       // composer wrapper chrome so the pillow-key row is the only visible chrome.
       messageComposer: {
         wrapper: { paddingHorizontal: 0, paddingTop: 0, borderTopWidth: 0, backgroundColor: 'transparent' },
       },
     }),
-    [colors],
+    [colors, bubbleMax],
   );
 
   const surfaceCrisis = useCallback((message: CrisisCarrier | undefined) => {
@@ -217,7 +234,12 @@ export default function MentorChatScreen() {
       ) : channel ? (
         <View style={styles.flex} testID="mentor-chat-ready">
           <Chat client={getListenerStreamClient()} style={streamTheme}>
-            <WithComponents overrides={{ MessageText: MentorMessageText, Input: Composer }}>
+            {/* MessageAuthor off: the kit reserves an avatar's width beside every incoming
+                message (an avatar on the last of a run, a spacer on the rest) — no thread
+                in this app has an avatar column. */}
+            <WithComponents
+              overrides={{ MessageText: MentorMessageText, Input: Composer, MessageAuthor: RenderNothing }}
+            >
               <Channel channel={channel}>
                 <MessageList additionalFlatListProps={listProps} />
                 {/* Your companion over the message field, seated on the footer's edge. */}

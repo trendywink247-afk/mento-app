@@ -23,6 +23,7 @@ import { IconBadge } from '@/components/IconBadge';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
 import { AllowanceNote } from '@/components/chat/AllowanceNote';
+import { bubbleMaxWidth } from '@/components/chat/bubbleWidth';
 import { AllowanceRow } from '@/components/chat/AllowanceRow';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { Composer } from '@/components/chat/Composer';
@@ -47,6 +48,7 @@ import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
 import { CRISIS_EXEMPT_MS, noteFor, useAllowance, type HeldAllowance } from '@/lib/useAllowance';
 import { useChatHeader } from '@/lib/useChatHeader';
+import { useFrameSize } from '@/lib/useFrameSize';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
@@ -257,6 +259,9 @@ export default function ChatScreen() {
     [saveNote, t],
   );
 
+  const { width: frameWidth } = useFrameSize();
+  const bubbleMax = bubbleMaxWidth(frameWidth);
+
   // Theme the Stream kit (v9 semantics tokens) to board A05: oat app bg, white mentor
   // bubbles with a hairline rim, ACCENT member bubbles with white words (the words are
   // drawn by components/chat/MessageText.tsx, told the tone through OwnBubbleToneContext),
@@ -289,6 +294,9 @@ export default function ChatScreen() {
             borderBottomWidth: 1 + BUBBLE_EDGE,
             borderBottomColor: colors.edgeSurface,
           },
+          // The kit's own `maxWidth: 256` is a fixed number, not a share of the screen;
+          // the theme's value is applied after it, so this is where the board's 80% lands.
+          textContainer: { maxWidth: bubbleMax },
         },
       },
       inlineDateSeparator: {
@@ -308,7 +316,7 @@ export default function ChatScreen() {
         wrapper: { paddingHorizontal: 0, paddingTop: 0, borderTopWidth: 0, backgroundColor: 'transparent' },
       },
     }),
-    [colors],
+    [colors, bubbleMax],
   );
   // The member's own bubbles: the tail moves to the bottom-right and the edge goes accent.
   const myMessageTheme = useMemo(
@@ -517,6 +525,11 @@ export default function ChatScreen() {
                 MessageText,
                 // The empty thread in the board's language (no kit bubble icon / "No chats").
                 EmptyStateIndicator: ThreadEmpty,
+                // No avatar column in the thread — the board draws none, and the kit's
+                // MessageAuthor reserves an avatar's width beside EVERY mentor message
+                // (an avatar on the last of a run, a spacer on the rest), which indented
+                // and narrowed every one of them on the phone.
+                MessageAuthor: RenderNothing,
                 Input: Composer,
                 // The attachment sheet has no bar and no gallery here (see NoAttachments).
                 AttachmentPickerSelectionBar: RenderNothing,
