@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
@@ -25,6 +26,8 @@ from app.models.moderation import ModerationEvent
 from app.models.request import ConversationRequest
 from app.models.user import User
 from app.services import stream
+
+logger = logging.getLogger("mento.matching")
 
 
 class NoListenerAvailable(Exception):
@@ -318,7 +321,7 @@ def accept_personal_request(
         req.status = RequestStatus.pending
         req.conversation_id = None
 
-    open_conversation(
+    convo = open_conversation(
         db,
         req.requester_id,
         listener,
@@ -326,6 +329,18 @@ def accept_personal_request(
         before_commit=_mark_matched,
         on_stream_failure=_revert_request,
     )
+
+    # The question the member asked opens the thread, in their own words. Best-effort: the
+    # conversation is already open and the mentor already said yes — a Stream hiccup here
+    # must not undo that, and the mentor still has the question on the request card.
+    if req.intro_message and convo.stream_channel_id:
+        try:
+            stream.post_message(convo.stream_channel_id, req.requester_id, req.intro_message)
+        except Exception:
+            logger.warning(
+                "could not post the held question into %s", convo.stream_channel_id, exc_info=True
+            )
+
     db.refresh(req)
     return req
 

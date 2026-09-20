@@ -100,6 +100,26 @@ def create_dm_channel(channel_id: str, user_id: str, listener_id: str) -> str:
     return channel_id
 
 
+def post_message(channel_id: str, user_id: str, text: str) -> str | None:
+    """Send `text` into a channel AS `user_id`, server-side. Returns the message id.
+
+    Used for the question a member asked before the mentor accepted: it is written in the
+    ask flow, held on the request, and belongs in the thread as the member's own first
+    message once there IS a thread.
+
+    The crisis scan still applies — Stream calls the before-message-send webhook for every
+    message including a server-side one (T&S #1, proven in tests/test_stream_hooks), so
+    posting a held question here can never route around it.
+    """
+    client = _client()
+    if client is None:
+        logger.warning("Stream not configured — skipping post_message(%s)", channel_id)
+        return None
+    channel = client.channel("messaging", channel_id)
+    resp = channel.send_message({"text": text}, user_id)
+    return (resp or {}).get("message", {}).get("id")
+
+
 def wipe_channel(channel_id: str) -> None:
     """Panda Wipe: hard-delete the channel and its messages on Stream's servers."""
     client = _client()
