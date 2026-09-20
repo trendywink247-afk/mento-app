@@ -58,6 +58,13 @@ export MENTO_ADMIN_TOKEN="$TOKEN" ADMIN_TOKEN="$TOKEN"
 # the ground out from under the other two. Seats are plentiful (every seeded mentor is free),
 # and a background flush keeps the per-IP onboarding limit from tripping a long run.
 docker exec mento-redis redis-cli -n 0 FLUSHDB >/dev/null 2>&1
+# Re-seed BEFORE the specs (never beside them — seeding mid-run pulls the pool out from
+# under a spec in flight). A listener row whose Stream USER object does not exist makes
+# every flow that opens a chat 500 with "GetOrCreateChannel failed ... users don't exist",
+# which fails 8 specs at once while pytest and the tabs stay green — an hour to diagnose
+# on 20 Sep. seed_listeners upserts those users, so this is the cheap insurance.
+"$PY" -m scripts.seed_listeners > "$OUT/seed.log" 2>&1
+echo "seed exit=$? :: $(tail -1 "$OUT/seed.log")" >> "$OUT/summary.txt"
 docker exec mento-postgres psql -U mento -d mento -c   "UPDATE listener_profiles SET status='online', last_seen_at=NULL, active_conversations=0;" >/dev/null 2>&1
 ( while :; do sleep 45; docker exec mento-redis redis-cli -n 0 FLUSHDB >/dev/null 2>&1; done ) &
 FLUSHER=$!
