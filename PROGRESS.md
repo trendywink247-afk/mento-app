@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-09-20 (session 36, part 7) — LIVE: the member's own bubbles are the accent again ✅
+
+**Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0becf` (preview, commit `78d120b`). The Profile update row prints what is running, so `ota 01a0becf` is the proof it landed.
+
+**Done**
+
+- **The phone showed the member's own messages on a pale blue pillow with white words, barely readable**, while the mentor's kept our palette — founder's screenshot, 20 Sep. The cause is upstream, in stream-chat-react-native-core 9.3.0: `mergeThemes` (`contexts/themeContext/ThemeContext.tsx`) builds its result as `{...baseTheme, semantics}` — it **recomputes `semantics` from its own light/dark tokens and overwrites whatever the theme being merged had**. At `<Chat style>` that is harmless, because our style merges in afterwards. But `MessageList` re-merges for the member's OWN messages (`mergeThemes({style: myMessageTheme, theme})`), and `myMessageTheme` carried no semantics — so every message the member sent fell back to the kit's `chatBgOutgoing` `#e3edff`, while our own `MessageText` went on drawing the words white. Only the member's side went through that re-merge, which is exactly why only the member's side was wrong.
+- **The fix** (`78d120b`): the kit theme moved out of the screen into `components/chat/streamTheme.ts` as two pure functions, and the own-bubble accent is stated **twice** — in `myMessageTheme.semantics`, so the re-merge keeps it, and as `containerInner.backgroundColor`, which `MessageContent` applies AFTER the semantics-derived colour in its style array. Either alone is enough; both cost nothing.
+- **A guard, because this was the second invisible native break in one day** — `npm run test:bubble` (`e2e/bubble-theme.test.mjs`, now in the gate alongside test:placement / test:question / test:route) asserts the member's bubble is the companion accent and never `#e3edff`, that the tails sit on the right corners, that the pillow edge is the accent edge, and that the width is the board's share and not the kit's 256. Gate: **16 ok, 0 failed**.
+
+**The gap this keeps exposing.** `ChatScreen.web.tsx` draws the thread itself (`ThreadRow`, board A05); `ChatScreen.tsx` hands it to the kit and only re-skins it. Every browser spec drives the WEB thread, so **nothing automatic looks at the phone's chat** — today that hid the avatar gutter, the 256 px cap and the blue bubbles, and in all three the founder was the test. Written into CLAUDE.md's gotchas. A screenshot check on a device or emulator is the only real answer.
+
+**Not claimed, for the next look:** the bubble corners may already be correct — `radius.lg` is 22 px, which on a one-line bubble reads almost like a pill, and the screenshot could not settle whether the 8 px tail lands. The mentor bubble's `#E6DFD3` hairline on oat is genuinely subtle; making it more present on the phone would be a board decision, not a bug.
+
+---
+
 ## 2026-09-20 (session 36, part 6) — LIVE: the five walk findings, the native chat bubbles, and a gate that was lying ✅
 
 **Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0be91` (preview, commit `e537d52`). Web: https://app.agentin.chat · https://admin.agentin.chat/admin. Board: https://claude.ai/artifact/SWQyjqF1e5nBwDuCWZcjyr (**Version 54** — the five Finding cards are Fixed cards now, each saying what changed).
