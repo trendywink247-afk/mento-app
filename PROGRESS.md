@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-09-20 (session 36, part 5) — LIVE: the founder's board review, both halves ✅ — and the board is finalised
+
+**Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0bc7f` (preview channel, commit `c9d6740`). Web: https://app.agentin.chat · https://admin.agentin.chat/admin. Board: https://claude.ai/artifact/SWQyjqF1e5nBwDuCWZcjyr (**Version 53**).
+
+**Done — round 4, from `docs/superpowers/plans/2026-09-20-founder-board-review.md`**
+
+- **Lane u14, the mentor side** — merged `0ecddf5`, shipped as OTA `01a0bbe9` (commit `5492fe0`). Mentors are **Owls** by default, told apart by a stable per-mentor wash (`app/services/mentor_face.py`, migration `d14a0owl0001`) — one mentor, one face, everywhere the member sees them. Self-serve **step back** on Start fresh for a live mentor ("Notify the Mento team" / "Back to mentoring", migration `d14b0step001`): admin sees the notice, suspending them then lets erasure proceed. Mentor Home rebuilt as one console; the "Your line" sheet finished; **Reading 1 is a real 10-page reader** that ends on an honest "the next reading is being written"; the mentor chat menu pinned to exactly two options (Report · End); the declined state finished; console + admin draw people as themselves.
+- **Lane u13, the member side** — merged `638f31d`, shipped as OTA `01a0bc7f` (commit `c9d6740`). **One sky for the whole member app** — react-navigation was painting its own rgb(242) theme background over the hoisted aurora; the root now uses a transparent navigation theme with `sceneStyle: transparent`, and the shader pauses under covered screens. A03 rewritten in the grown-up register with the picks dissolving under a fixed header. **The ask loop**: every busy door now goes A24 → A25 → the mentor page → the question → the A04 letter → My Chats, carrying the draft (`lib/askLoop.ts`). **No attachment picker in a member chat** — root cause: stream-chat-expo always mounts its attachment sheet inside `<Channel>` at index −1, and any layout change under it (the crisis card mounting) re-snapped it to 0, which asked Android for photo permission; pickers and commands are now off for member chats, and the send key is proven working with the crisis card up. A21/A22 solid. **The letter's Seen and Replying are real** (`conversation_requests.seen_at`, migration `c13a0seen001`, stamped when the asked mentor's own inbox lists it; Replying = accepted). The safety line is back on the empty thread. T05/T06: the mentor's face flies from the row into the chat header, and the profile hero grows from it.
+- **Migrations stay one chain:** `d14a0owl0001` → `d14b0step001` → `c13a0seen001` (u13's revision was re-chained onto u14's head at merge). A backup precedes each deploy; prod alembic head is `c13a0seen001`; `/health` and `/health/ready` 200; GitHub API CI green on `c9d6740`.
+- **The gate is two-tier now** (`scripts/lanes/gate.sh fast|full`, `scripts/lanes/ship.sh`) — the founder's "this excessive testing is so frustrating" turned into: pytest across 4 processes each on its own database (~50 s, was ~180 s); the browser specs 2–3 at a time sharing the dev DB with ONE seat reset up front and a background Redis flush; the presence-mutating specs (ask-loop, ask-flow, chat-header, mentor-face, tabs-port, two-party-chat, connecting-busy) run serially after the batch because they set every mentor away/online and undo each other; ruff + black run alongside, since a black slip on `tests/conftest.py` had failed CI on `5492fe0` before the tests even started (fixed in `c9d6740`). `ship.sh` chains gate → push → backup → API → web → OTA and stops at the first failure. Fast gate plus a full deploy is ~10 minutes, was ~60.
+- **The board is finalised — Version 53, three pages.** **The app** (opens here): 88 fresh captures of the shipped build laid out as seven flows — first run, a conversation, the Chats tab, Path/Journals/Profile, the mentor path, the mentor side, admin — each screen labelled with its route, the control that leads to the next one, and a chip linking to its design artboard or saying "Not on the board"; plus a "Still open · waiting on you" artboard. **Design source**: the 39 `A*` artboards, moved untouched. **Motion and feel**: `T01`–`T07`, `T90`, `T91`, `X90`, `X91`, moved untouched. The stale "as wired" walk (`W1`–`W5`, `W9`) and its notes were deleted. Walker and generators live in `C:\ml\u16tools\`, captures in `C:\ml\capture2\`.
+
+**Next — five small things the final walk found (each is a Finding card on the board)**
+
+1. My Chats clips a long mentor name at 390 ("Gentle …").
+2. The letter loses its "Go to My Chats" door once the mentor is replying — "Open the chat" replaces it.
+3. The question builder has a tall empty band at 390×844.
+4. Profile's perched companion sits behind the card below it.
+5. Reading 1's last page clips its key ("Back to Mentor Ho…").
+
+**Open decisions — the board's "Still open · waiting on you" artboard**
+
+Reading 1's true text from the partner · the mentor-side crisis wording · the paid version vs the 2-mentor cap, and where paid mentoring sits in navigation · the motion rule of three · Module B naming (volunteer "mentor" vs paid mentor) · the DECISIONS §L veto list · the privacy-policy sign-off · one real message on prod to clear the stale `/health/crisis`.
+
+**Parked:** the companion glide (T02); living loops for all 8 animals and native animated WebP (needs Higgsfield credits and a new APK, not an OTA); the feedback screenshot (no file storage yet); Razorpay credentials for contributions.
+
+**How to resume:** `git pull`, then `bash scripts/lanes/gate.sh fast` to confirm the state, and `bash scripts/lanes/ship.sh "what changed"` to ship. The five findings above are the natural next round; the lane procedure is in `docs/superpowers/plans/2026-09-19-board-port-lanes.md`.
+
+---
+
 ## 2026-09-20 (session 36, part 4) — LIVE: the "Left to build or wire" fixes (round 3) ✅
 
 **Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0bb44` (preview, commit `17eea27`). Web: https://app.agentin.chat · https://admin.agentin.chat/admin (new tabs: Allowance, Feedback).
