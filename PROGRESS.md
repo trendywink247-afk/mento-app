@@ -4,6 +4,27 @@
 
 ---
 
+## 2026-09-20 (session 36, part 6) — LIVE: the five walk findings, the native chat bubbles, and a gate that was lying ✅
+
+**Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0be91` (preview, commit `e537d52`). Web: https://app.agentin.chat · https://admin.agentin.chat/admin. Board: https://claude.ai/artifact/SWQyjqF1e5nBwDuCWZcjyr (**Version 54** — the five Finding cards are Fixed cards now, each saying what changed).
+
+**Done**
+
+- **The five things the final board walk found** (`79bc0a7`). My Chats clipped a long mentor name to one word — the time was `flexGrow: 1` and ate the row's spare width, so it is pushed right by a margin now. The question letter lost its way to My Chats the moment the mentor started replying — "Open the chat" stays the key and My Chats drops to the quiet key beneath it, because that door should never disappear. The question builder held a tall empty band at 390×844 — the spacer is gone and the spare height goes to the writing field instead. Profile's perched companion sat behind the card below it — the furniture blocks shared one `zIndex` so the later card painted over it; whichever block holds the companion is lifted now. Reading 1's last page clipped "Back to Mentor Ho…" — that page swaps its key weights and drops the lead size so the reader's longest label fits.
+- **The native chat bubbles now take the board's geometry, not the kit's** (`17ed554`) — the founder noticed the phone's chat "feels off" while the browser matches the board, and he was right. The web thread is ours (`components/chat/ThreadRow.tsx`, drawn to A05); the native one is stream-chat-expo's `MessageList`, which we had only re-skinned — colours, radii, text, footer, header, typing pill — leaving two pieces of the kit's own geometry in place. **(1)** `MessageAuthor` reserves an avatar's width beside EVERY incoming message (an avatar on the last of a run, a spacer on the rest), so every mentor bubble was indented and narrowed; no thread in this app has an avatar column, so the slot renders nothing. **(2)** `MessageTextContainer` caps its text at a FIXED 256 px — a number, not a share of the screen — so bubbles wrapped well before the board's do; both native threads now set that `maxWidth` from the frame's width at the web thread's 80% (`components/chat/bubbleWidth.ts`). Verified against the installed 9.3.0 source; **not covered by e2e — every spec drives the WEB chat, so the native bubble has never been under test.** The phone is the proof.
+- **The gate was hanging before its serial specs, and had been since `9d61e13`** (`e537d52`). A bare `wait` waits for every background job of the shell — including the periodic Redis-flush loop started just above it — so the parallel batch finished, the gate blocked forever, and ask-loop, ask-flow, chat-header, mentor-face, tabs-port, two-party-chat and connecting-busy never ran. I had been reading a `summary.txt` that simply never listed them. It now waits on the batch's own pids. The parallel specs did run and did pass on everything shipped in rounds 3 and 4; it is the seven serial ones that were silently skipped.
+
+**Next**
+
+- The mentor-side thread still has no bubble corner/tail theming of its own (the member's does) — worth a pass if the mentor chat is to match its artboard exactly.
+- A native-surface test gap stands: nothing in `e2e/` drives the phone build, so kit-geometry regressions like this one can only be caught by eye. A screenshot check on a device or emulator is the only real answer.
+
+**Open decisions** — unchanged, on the board's "Still open · waiting on you" artboard: Reading 1's true text · the mentor-side crisis wording · the paid version vs the 2-mentor cap · the motion rule of three · Module B naming · the DECISIONS §L veto list · the privacy-policy sign-off · one real message on prod to clear `/health/crisis`.
+
+**How to resume:** `git pull`, `bash scripts/lanes/gate.sh fast` to confirm the state, `bash scripts/lanes/ship.sh "what changed"` to ship.
+
+---
+
 ## 2026-09-20 (session 36, part 5) — LIVE: the founder's board review, both halves ✅ — and the board is finalised
 
 **Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0bc7f` (preview channel, commit `c9d6740`). Web: https://app.agentin.chat · https://admin.agentin.chat/admin. Board: https://claude.ai/artifact/SWQyjqF1e5nBwDuCWZcjyr (**Version 53**).
