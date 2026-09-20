@@ -15,6 +15,15 @@ die() { echo "STOPPED: $*" >&2; exit 1; }
 
 cd "$ROOT"
 [ -z "$(git status --porcelain)" ] || die "the working tree is dirty — commit first"
+# Pin the commit this run is shipping. The steps below take minutes, and anything committed
+# into that window would otherwise be picked up by `eas update`, which bundles the working
+# tree as it stands when IT runs — not what the run started with. That is how an ungated
+# commit reached the founder's phone on 20 Sep while the API and web got the previous one.
+SHIP_SHA="$(git rev-parse HEAD)"
+assert_unmoved() {
+  [ -z "$(git status --porcelain)" ] || die "the tree changed mid-ship — nothing further sent"
+  [ "$(git rev-parse HEAD)" = "$SHIP_SHA" ]     || die "HEAD moved mid-ship ($SHIP_SHA -> $(git rev-parse --short HEAD)) — nothing further sent"
+}
 
 if [ -z "${MENTO_SKIP_GATE:-}" ]; then
   step "gate (${MENTO_TIER:-fast})"
@@ -35,10 +44,12 @@ for u in health health/ready; do
 done
 
 step "prod: the web build"
+assert_unmoved
 env -u EXPO_PUBLIC_API_URL -u CI ./deploy/deploy-web.sh 2>&1 | grep "deploy-web\]" | tail -6 \
   || die "the web deploy failed"
 
 step "phone: the OTA"
+assert_unmoved
 ( cd apps/mobile && env -u EXPO_PUBLIC_API_URL -u CI NODE_ENV=production \
     npx eas-cli update --branch preview --message "$MSG" --non-interactive 2>&1 \
     | grep -E "Android update ID|Commit|Published" ) || die "the OTA failed"
