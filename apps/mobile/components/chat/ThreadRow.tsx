@@ -188,7 +188,9 @@ const styles = StyleSheet.create({
   bubble: { paddingHorizontal: BUBBLE_PAD_X, paddingVertical: BUBBLE_PAD_Y },
   theirs: { borderWidth: 1 },
   bubbleWrap: { maxWidth: '80%', flexShrink: 1, alignSelf: 'flex-start' },
-  mineBubbleWrap: { maxWidth: '80%', flexShrink: 1 },
+  // The width cap lives in Bubble now, as a number (see its header) — don't re-add a
+  // percentage here or it overrides the pixel value the shared component computes.
+  mineBubbleWrap: { flexShrink: 1 },
   // The chip sits on the bubble's top-right corner, 2px proud of it.
   roomForChip: { paddingTop: 8 },
   chipSeat: { position: 'absolute', right: 14, top: -2 },

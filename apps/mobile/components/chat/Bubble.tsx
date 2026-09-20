@@ -20,17 +20,22 @@
  * ThreadRow wraps it in a PressKey, MentoBubble in the kit's own press handling.
  */
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, type StyleProp, type ViewStyle } from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { useFrameSize } from '@/lib/useFrameSize';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, type } from '@/theme/tokens';
 
 /** The board's bubble padding. */
 export const BUBBLE_PAD_X = 14;
 export const BUBBLE_PAD_Y = 10;
-/** The share of the column a bubble may take. */
-export const BUBBLE_SHARE = '80%';
+/** The share of the column a bubble may take. It is resolved to a NUMBER of pixels, never
+ * left as '80%': a percentage resolves against the parent, and inside the kit's own flex row
+ * that parent is unsized — the bubble then collapsed to its minimum width and broke short
+ * messages into one letter per line ("Hi" as a vertical sliver, founder's phone, 20 Sep).
+ * EdgeSurface's own header warns about exactly this. */
+export const BUBBLE_SHARE = 0.8;
 
 /** The face's colours and tail, for a caller that draws its own surface (a PressKey, or
  * the kit's own bubble view) instead of using <Bubble>. */
@@ -60,6 +65,7 @@ export function Bubble({
   testID?: string;
 }) {
   const { colors } = useTheme();
+  const { width } = useFrameSize();
   const face = bubbleFace(mine, colors);
   return (
     <EdgeSurface
@@ -72,7 +78,7 @@ export function Bubble({
         { backgroundColor: face.backgroundColor },
         mine ? null : { borderWidth: 1, borderColor: colors.border },
       ]}
-      containerStyle={[styles.wrap, containerStyle]}
+      containerStyle={[{ maxWidth: Math.round(width * BUBBLE_SHARE) }, containerStyle]}
       testID={testID}
     >
       <BubbleText mine={mine} text={text} />
@@ -95,5 +101,4 @@ export function BubbleText({ mine, text }: { mine: boolean; text: string }) {
 
 const styles = StyleSheet.create({
   bubble: { paddingHorizontal: BUBBLE_PAD_X, paddingVertical: BUBBLE_PAD_Y },
-  wrap: { maxWidth: BUBBLE_SHARE, flexShrink: 1 },
 });
