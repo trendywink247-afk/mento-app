@@ -28,7 +28,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { EdgeSurface } from '@/components/EdgeSurface';
+import { Bubble, BubbleText, BUBBLE_PAD_X, BUBBLE_PAD_Y } from '@/components/chat/Bubble';
 import { SaveKey } from '@/components/chat/SaveKey';
 import { SavedChip } from '@/components/chat/SavedChip';
 import { PressKey } from '@/components/motion/PressKey';
@@ -133,17 +133,7 @@ export const ThreadRow = memo(function ThreadRow({
 
       {item.mine ? (
         <View style={styles.mineWrap}>
-          <EdgeSurface
-            edge={colors.accentEdge}
-            travel={3}
-            radius={radius.lg}
-            faceRadiusStyle={{ borderBottomRightRadius: radius.sm }}
-            style={[styles.bubble, { backgroundColor: colors.accent }]}
-            containerStyle={styles.mineBubbleWrap}
-            testID={`mine-${item.id}`}
-          >
-            <Text style={[type.body, { color: colors.onAccent }]}>{item.text}</Text>
-          </EdgeSurface>
+          <Bubble mine text={item.text} containerStyle={styles.mineBubbleWrap} testID={`mine-${item.id}`} />
           {statusText ? (
             <Text style={[styles.status, { color: colors.inkMuted }]} testID="chat-delivery">
               {statusText}
@@ -170,7 +160,7 @@ export const ThreadRow = memo(function ThreadRow({
               testID={`msg-${item.id}`}
               style={[styles.bubble, styles.theirs, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
-              <Text style={[type.body, { color: colors.ink }]}>{item.text}</Text>
+              <BubbleText mine={false} text={item.text} />
             </PressKey>
             {isSaved ? (
               <View style={styles.chipSeat} pointerEvents="none">
@@ -195,7 +185,7 @@ export const ThreadRow = memo(function ThreadRow({
 
 const styles = StyleSheet.create({
   day: { alignSelf: 'center', fontFamily: font.sansBold, fontSize: 13, lineHeight: 18, marginBottom: 10 },
-  bubble: { paddingHorizontal: 14, paddingVertical: 10 },
+  bubble: { paddingHorizontal: BUBBLE_PAD_X, paddingVertical: BUBBLE_PAD_Y },
   theirs: { borderWidth: 1 },
   bubbleWrap: { maxWidth: '80%', flexShrink: 1, alignSelf: 'flex-start' },
   mineBubbleWrap: { maxWidth: '80%', flexShrink: 1 },

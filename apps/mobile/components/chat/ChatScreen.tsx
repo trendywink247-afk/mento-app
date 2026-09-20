@@ -34,6 +34,7 @@ import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { KitMessageFooter, KitThreadContext, type KitThread } from '@/components/chat/KitMessageFooter';
 import { KitSavedHeader } from '@/components/chat/KitSavedHeader';
 import { KitTyping } from '@/components/chat/KitTyping';
+import { MentoBubble } from '@/components/chat/MentoBubble';
 import { MessageText, OwnBubbleToneContext } from '@/components/chat/MessageText';
 import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
@@ -486,6 +487,9 @@ export default function ChatScreen() {
                 above it, the typing pill. */}
             <WithComponents
               overrides={{
+                // OUR bubble, not the kit's re-skinned one (components/chat/MentoBubble.tsx).
+                // MessageText stays registered for the places the kit still draws text itself.
+                MessageContent: MentoBubble,
                 MessageText,
                 // The empty thread in the board's language (no kit bubble icon / "No chats").
                 EmptyStateIndicator: ThreadEmpty,
