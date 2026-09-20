@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-09-20 (session 36, part 8) — LIVE: no reactions on the phone, one delivery line, the board's bubble padding ✅
+
+**Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0bee2` (preview, commit `c549dd5`).
+
+**Done** — three more ways the native thread drew itself differently from board A05, found in the founder's second screenshot:
+
+- **The kit's dark reaction pill** sat over the mentor bubble's corner — where the board puts the "Saved" chip. Mento's thread is text + emoji only (SCOPE §3) and the board draws no reactions anywhere: both `ReactionListTop` / `ReactionListBottom` slots render nothing, and `supportedReactions={[]}` takes the picker out of the long-press menu too.
+- **"Read" sat under every message the member had sent** — the kit's `showMessageStatus` is true for all of them. The board (and `ChatScreen.web.tsx`, via `lastMineId`) puts ONE quiet line under the member's latest message; `KitThreadContext` now carries `lastMineId` and the footer honours it.
+- **The bubble was padded by the kit and then padded again inside** (its own spacing tokens plus `MessageTextContainer`'s `paddingHorizontal`), which drew a thin, pill-like bubble. It is the board's 14 × 10 now, applied once. `npm run test:bubble` covers it.
+
+**The pattern, which matters more than any of the three.** All five native-chat bugs today were the same bug: **we re-skin someone else's message list and hope it lands on the board.** The browser looks right because on web we draw the thread ourselves (`components/chat/ThreadRow.tsx`, built to A05); on the phone we hand it to stream-chat-expo and patch from outside. That is why it keeps coming out "good, but not what we expected", and why the founder keeps being the test.
+
+**Next — the port (started, not shipped).** Make `app/chat/[id]` render through the SAME `ThreadRow` the web thread uses: bubbles, day label, delivery line, save key and Saved chip become our components on both platforms, with Stream kept for the socket, typing, read state and pagination. Two reasons: "exactly the board" stops being a negotiation with someone else's defaults, and — the real prize — **the existing browser specs would then cover the phone's thread, which nothing does today.** Scope held deliberately narrow: the member chat only; the mentor thread, the composer, the crisis card and the allowance row are untouched in that pass.
+
+---
+
 ## 2026-09-20 (session 36, part 7) — LIVE: the member's own bubbles are the accent again ✅
 
 **Founder: update and test this.** Phone: shake (or Profile → Check for updates) → OTA `01a0becf` (preview, commit `78d120b`). The Profile update row prints what is running, so `ota 01a0becf` is the proof it landed.
