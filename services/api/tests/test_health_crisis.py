@@ -86,3 +86,45 @@ def test_malformed_stamp_is_degraded_not_500(client, monkeypatch):
     r = client.get("/api/v1/health/crisis")
     assert r.status_code == 503
     assert r.json()["status"] == "degraded"
+
+
+# --- /status/public: the public status page's only allowed data source --------
+
+
+def test_public_status_always_200_even_when_crisis_stale(client, monkeypatch):
+    stale = (datetime.now(UTC) - timedelta(hours=2)).isoformat()
+    _patch(monkeypatch, configured=True, last=stale)
+    r = client.get("/api/v1/status/public")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["crisis_safety_net"] == "stale"
+    assert body["api"] == "healthy"
+
+
+def test_public_status_is_cors_open(client, monkeypatch):
+    # The status page lives on a different origin (status.mento.chat) and fetches
+    # this route directly from the browser — it needs its own CORS header,
+    # independent of the app's normal CORS_ORIGINS allowlist.
+    _patch(monkeypatch, configured=False, last=None)
+    r = client.get("/api/v1/status/public")
+    assert r.headers.get("access-control-allow-origin") == "*"
+
+
+def test_public_status_shape_has_no_pii_or_crisis_counts(client, monkeypatch):
+    _patch(monkeypatch, configured=False, last=None)
+    r = client.get("/api/v1/status/public")
+    body = r.json()
+    allowed = {
+        "api",
+        "database",
+        "crisis_safety_net",
+        "members_total",
+        "mentors_online",
+        "conversations_active",
+    }
+    # A public page's data source is a promise: nothing beyond this fixed shape
+    # ever leaks in without a deliberate code change and a fresh look at T&S.
+    assert set(body.keys()) == allowed
+    assert isinstance(body["members_total"], int)
+    assert isinstance(body["mentors_online"], int)
+    assert isinstance(body["conversations_active"], int)

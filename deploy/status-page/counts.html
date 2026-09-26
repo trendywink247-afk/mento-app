@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mento — live counts</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #F4EFE6;
+    color: #2B2B2B;
+    margin: 0;
+    padding: 32px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1c1a17; color: #f0ece4; }
+    .card { background: #2a2622 !important; border-color: #3a352f !important; }
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 8px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .card {
+    background: #fff;
+    border: 1px solid #E6DFD3;
+    border-radius: 14px;
+    padding: 20px 28px;
+    min-width: 140px;
+    text-align: center;
+  }
+  .num { font-size: 32px; font-weight: 700; color: #A2533A; }
+  .label { font-size: 13px; opacity: 0.7; margin-top: 4px; }
+  .stale { opacity: 0.5; font-size: 12px; margin-top: 8px; }
+  a { color: #A2533A; }
+</style>
+</head>
+<body>
+  <h1>Mento — right now</h1>
+  <div class="row">
+    <div class="card"><div class="num" id="members">—</div><div class="label">members</div></div>
+    <div class="card"><div class="num" id="mentors">—</div><div class="label">mentors online</div></div>
+    <div class="card"><div class="num" id="conversations">—</div><div class="label">active conversations</div></div>
+  </div>
+  <div class="stale" id="updated">loading…</div>
+  <div class="stale"><a href="/status/mento">Full status page</a></div>
+  <script>
+    async function refresh() {
+      try {
+        const r = await fetch("https://api.mento.chat/api/v1/status/public", { cache: "no-store" });
+        const d = await r.json();
+        document.getElementById("members").textContent = d.members_total;
+        document.getElementById("mentors").textContent = d.mentors_online;
+        document.getElementById("conversations").textContent = d.conversations_active;
+        document.getElementById("updated").textContent =
+          "updated " + new Date().toLocaleTimeString() +
+          (d.database !== "healthy" ? " — database unhealthy" : "");
+      } catch (e) {
+        document.getElementById("updated").textContent = "couldn't reach the API right now";
+      }
+    }
+    refresh();
+    setInterval(refresh, 30000);
+  </script>
+</body>
+</html>
