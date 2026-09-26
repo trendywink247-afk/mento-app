@@ -9,11 +9,13 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MSG="${1:?a one-line message for the phone update}"
-VPS="mento-ops@87.232.72.79"
 step() { echo; echo "=== $*"; }
 die() { echo "STOPPED: $*" >&2; exit 1; }
 
 cd "$ROOT"
+# shellcheck source=../../deploy/domains.env
+. deploy/domains.env
+VPS="$VPS_SSH"
 [ -z "$(git status --porcelain)" ] || die "the working tree is dirty — commit first"
 # Pin the commit this run is shipping. The steps below take minutes, and anything committed
 # into that window would otherwise be picked up by `eas update`, which bundles the working
@@ -38,7 +40,7 @@ ssh -o BatchMode=yes -o ConnectTimeout=20 "$VPS" \
   'cd /opt/mento && ./deploy/backup-postgres.sh 2>&1 | tail -1 && ./deploy/deploy.sh 2>&1 | tail -2' \
   || die "the API deploy failed (the backup line above says whether it was taken)"
 for u in health health/ready; do
-  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://api.agentin.chat/api/v1/$u")
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://${API_HOST}/api/v1/$u")
   [ "$code" = 200 ] || die "prod $u answered $code"
   echo "prod $u ok"
 done
