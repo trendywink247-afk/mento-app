@@ -63,7 +63,7 @@ docker exec mento-redis redis-cli -n 0 FLUSHDB >/dev/null 2>&1
 # every flow that opens a chat 500 with "GetOrCreateChannel failed ... users don't exist",
 # which fails 8 specs at once while pytest and the tabs stay green — an hour to diagnose
 # on 20 Sep. seed_listeners upserts those users, so this is the cheap insurance.
-"$PY" -m scripts.seed_listeners > "$OUT/seed.log" 2>&1
+( cd "$ROOT/services/api" && "$PY" -m scripts.seed_listeners > "$OUT/seed.log" 2>&1 )
 echo "seed exit=$? :: $(tail -1 "$OUT/seed.log")" >> "$OUT/summary.txt"
 docker exec mento-postgres psql -U mento -d mento -c   "UPDATE listener_profiles SET status='online', last_seen_at=NULL, active_conversations=0;" >/dev/null 2>&1
 ( while :; do sleep 45; docker exec mento-redis redis-cli -n 0 FLUSHDB >/dev/null 2>&1; done ) &
