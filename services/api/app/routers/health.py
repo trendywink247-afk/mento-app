@@ -95,7 +95,11 @@ def _crisis_status() -> dict:
         return {"status": "unknown", "detail": "redis unreachable — webhook liveness unknowable"}
 
     if last_raw is None:
-        return {"status": "stale", "detail": "no Stream webhook ever recorded", "last_webhook_at": None}
+        return {
+            "status": "stale",
+            "detail": "no Stream webhook ever recorded",
+            "last_webhook_at": None,
+        }
 
     try:
         last = datetime.fromisoformat(last_raw)
