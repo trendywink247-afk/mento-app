@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
@@ -181,3 +182,13 @@ class AdminApplicationItem(BaseModel):
 
 class AdminApplicationDeclineIn(BaseModel):
     reason: str = Field(min_length=3, max_length=255)
+
+
+class ModerationResolveIn(BaseModel):
+    """Optional action when resolving a report about a MEMBER (T3.7): suspend or ban
+    the reported member, with a reason (audited) and an optional end (null = until
+    lifted). Omitted = resolve only, as before."""
+
+    action: Literal["suspend", "ban"]
+    reason: str = Field(min_length=3, max_length=300)
+    until: datetime | None = None

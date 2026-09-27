@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from functools import lru_cache
 from urllib.parse import urlsplit
 
@@ -32,7 +33,27 @@ class Settings(BaseSettings):
     # sign/verify with it (a leaked user/listener secret can't forge admin access).
     # Empty = fall back to jwt_secret (backward compatible).
     admin_jwt_secret: str = ""
+    # Dedicated signing secret for LISTENER (mentor console) tokens (T3.1). Required
+    # outside dev and distinct from JWT_SECRET and ADMIN_JWT_SECRET — a leaked member
+    # secret must not forge a mentor. Empty (dev only) = fall back to jwt_secret.
+    listener_jwt_secret: str = ""
+    # Tokens minted before T3.1 carry no iss/aud/jti (and pre-split listener tokens
+    # are signed with JWT_SECRET). They stay valid until this date — it must be at
+    # least (the day T3.1 reaches production + jwt_ttl_days), because production
+    # keeps minting claim-less 90-day tokens until then. 2027-01-31 covers a deploy
+    # on or before 2026-11-02; set LEGACY_CLAIMS_ACCEPTED_UNTIL if it ships later.
+    legacy_claims_accepted_until: date = date(2027, 1, 31)
+    # Refresh-token sessions (T3.2): short access tokens, rotating refresh tokens.
+    # The refresh window slides — every rotation starts a new one.
+    access_token_minutes: int = 15
+    refresh_token_ttl_days: int = 90
     min_age: int = 18
+    # Terms gate (T3.9). `terms_version` is what a member accepts (bump it when the text
+    # changes — an older acceptance then no longer counts). Enforcement ships OFF: no
+    # terms text exists yet (T10.5 / H6) and older app builds cannot ask; flip it once
+    # both are true. Off, acceptance is still recorded.
+    terms_version: str = "2026-09-27"
+    terms_gate_enforced: bool = False
 
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"
     # Sized for a single process: workers × (pool_size + max_overflow) must stay

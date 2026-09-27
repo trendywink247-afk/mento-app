@@ -13,9 +13,9 @@ from app import ratelimit
 from app.db import get_db
 from app.errors import ApiProblem
 from app.models.user import User
-from app.schemas import AllowanceOut, CompanionUpdateIn, ExportOut, MeOut, OkResult
-from app.security import current_user_id
-from app.services import allowance, companions, erasure, export
+from app.schemas import AllowanceOut, CompanionUpdateIn, ExportOut, MeOut, OkResult, RecoveryOut
+from app.security import current_user_id, current_user_id_any_standing
+from app.services import allowance, companions, erasure, export, member_status, recovery, terms
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -33,7 +33,13 @@ def current_user(
 
 
 def _out(user: User) -> MeOut:
+    now = member_status.standing(user.status, user.banned_until)
     return MeOut(
+        status=now.status.value,
+        status_until=now.until.isoformat() if now.until else None,
+        terms_accepted=terms.accepted(user),
+        terms_required=terms.required(user),
+        has_recovery=user.recovery_hash is not None,
         id=user.id,
         persona_name=user.persona_name,
         persona_avatar=user.persona_avatar,
@@ -46,8 +52,42 @@ def _out(user: User) -> MeOut:
 
 
 @router.get("", response_model=MeOut)
-def me(user: User = Depends(current_user)) -> MeOut:
+def me(
+    user_id: str = Depends(current_user_id_any_standing),
+    db: Session = Depends(get_db),
+) -> MeOut:
+    """Reachable while suspended or banned (T3.7) — the one read that lets the app say
+    why the rest answers 403, and until when."""
+    return _out(current_user(user_id, db))
+
+
+@router.post("/terms", response_model=MeOut)
+def accept_terms(user: User = Depends(current_user), db: Session = Depends(get_db)) -> MeOut:
+    """Accept the current terms (T3.9) — for members who joined before the app asked,
+    or after the version changed. Idempotent: re-accepting moves the time forward."""
+    terms.accept(user)
+    db.commit()
+    db.refresh(user)
     return _out(user)
+
+
+@router.post("/recovery", response_model=RecoveryOut)
+def make_recovery_code(
+    user: User = Depends(current_user), db: Session = Depends(get_db)
+) -> RecoveryOut:
+    """A recovery code (T3.5), shown ONCE — the app says "Mento will never ask you for
+    this". A new one replaces the old. Rate-limited and fail-closed (a 503 beats an
+    unthrottled secret mint)."""
+    ratelimit.enforce(
+        f"recovery-issue:{user.id}",
+        5,
+        3600,
+        detail="Too many new codes — please try again in an hour.",
+        fail_closed=True,
+    )
+    phrase = recovery.issue(user)
+    db.commit()
+    return RecoveryOut(phrase=phrase)
 
 
 @router.get("/allowance", response_model=AllowanceOut)

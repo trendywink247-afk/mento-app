@@ -9,6 +9,8 @@ export type OnboardingDraft = {
   companionColour?: string | null;
   /** The member's own name for the companion (cleaned; null = none). Never analytics. */
   companionName?: string | null;
+  /** Continuing past the age step, under the house-rules line, is agreeing (WS3 T3.9). */
+  termsAccepted?: boolean;
   /** The person already holds a session (a mentor choosing to talk): the age gate
    * was passed server-side at hand-off, so there is no DOB in memory — and the
    * journey must NOT mint a second account. Resumes at the companion pick. */

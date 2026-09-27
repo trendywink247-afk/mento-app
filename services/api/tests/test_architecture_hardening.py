@@ -184,6 +184,8 @@ def _boot_problems(**overrides) -> str:
         stream_api_secret="s",
         cors_origins="https://console.example",
         admin_jwt_secret="a-distinct-admin-secret",
+        listener_jwt_secret="a-distinct-listener-secret",
+        trusted_proxy_hops=1,
     )
     base.update(overrides)
     settings = Settings(_env_file=None, **base)
@@ -208,3 +210,40 @@ def test_prod_refuses_empty_admin_jwt_secret():
 
 def test_prod_refuses_admin_secret_equal_to_jwt_secret():
     assert "ADMIN_JWT_SECRET" in _boot_problems(admin_jwt_secret="a-real-long-random-secret")
+
+
+# --- T3.1: listener secret + explicit proxy hops ---------------------------------
+
+
+def test_prod_refuses_missing_listener_secret():
+    assert "LISTENER_JWT_SECRET" in _boot_problems(listener_jwt_secret="")
+
+
+def test_prod_refuses_listener_secret_shared_with_member_or_admin():
+    assert "LISTENER_JWT_SECRET" in _boot_problems(listener_jwt_secret="a-real-long-random-secret")
+    assert "LISTENER_JWT_SECRET" in _boot_problems(listener_jwt_secret="a-distinct-admin-secret")
+
+
+def test_prod_refuses_unset_trusted_proxy_hops():
+    base = dict(
+        env="prod",
+        jwt_secret="a-real-long-random-secret",
+        stream_api_key="k",
+        stream_api_secret="s",
+        cors_origins="https://console.example",
+        admin_jwt_secret="a-distinct-admin-secret",
+        listener_jwt_secret="a-distinct-listener-secret",
+    )
+    from app import main
+
+    original = main.settings
+    main.settings = Settings(_env_file=None, **base)
+    try:
+        with pytest.raises(RuntimeError, match="TRUSTED_PROXY_HOPS"):
+            main._enforce_prod_invariants()
+    finally:
+        main.settings = original
+
+
+def test_prod_accepts_explicit_zero_proxy_hops():
+    assert _boot_problems(trusted_proxy_hops=0) == ""

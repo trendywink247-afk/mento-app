@@ -5,8 +5,8 @@ What goes, what stays, and why (the privacy policy, docs/PRIVACY.md §5, says th
 DELETED — the member row (persona, DOB, optional email, companion, path choice) and
 everything keyed to it: journals (every channel, Mentor Notes included), favourites,
 stay-in-touch links (ended first, so the mentor side updates at once), Personal
-requests, push tokens, the message-allowance ledger, their reflections, applications
-that never became a live mentor, and their conversations — each active one is ENDED
+requests, push tokens, sign-in sessions (refresh tokens), the message-allowance ledger,
+their reflections, applications that never became a live mentor, and their conversations — each active one is ENDED
 through `services/conversations` (the mentor's seat frees at once), each channel is
 hard-deleted on Stream exactly as Clean Wipe does, and the conversation rows go too.
 Last, the member's Stream user.
@@ -70,6 +70,7 @@ from app.models.push_token import PushToken
 from app.models.reflection import ConversationReflection
 from app.models.request import ConversationRequest
 from app.models.safety import SafetyFlag
+from app.models.session import Session as AuthSession
 from app.models.user import User
 from app.services import conversations, stream
 
@@ -83,7 +84,10 @@ AUDIT_ACTION = "member.erased"
 
 # The tables whose rows are the member's own and are DELETED (the `counts` keys of
 # phase C that are not "_detached"). GET /me/export hands every one of them back first
-# (services/export.py; tests/test_export.py keeps the two in step).
+# (services/export.py; tests/test_export.py keeps the two in step) — EXCEPT "sessions"
+# (WS3 T3.2): refresh-token/device metadata is deleted here too, but it is not member
+# content, so it deliberately never reaches the export. The test pins this exception
+# by name, not by omission — a genuinely new deleted category still trips it.
 MEMBER_TABLES = (
     "reflections",
     "conversations",
@@ -237,6 +241,7 @@ def _phase_c_delete(db: Session, user_id: str) -> dict[str, int]:
             delete(ListenerApplication).where(ListenerApplication.user_id == user_id)
         ),
         "contributions": gone(delete(Contribution).where(Contribution.user_id == user_id)),
+        "sessions": gone(delete(AuthSession).where(AuthSession.user_id == user_id)),
         "safety_flags_detached": gone(
             update(SafetyFlag).where(SafetyFlag.user_id == user_id).values(user_id=None)
         ),

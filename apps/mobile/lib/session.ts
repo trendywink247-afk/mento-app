@@ -6,6 +6,9 @@ import { Platform } from 'react-native';
 import { screenCache } from './screenCache';
 
 const SESSION_KEY = 'mento.session_token';
+/** T3.2: present once the session refreshes (a short access token in SESSION_KEY). A
+ * missing key = an install from before refresh, holding a long-lived token. */
+const REFRESH_KEY = 'mento.refresh_token';
 const STREAM_KEY = 'mento.stream_token';
 const PERSONA_KEY = 'mento.persona';
 const COMPANION_COLOR_KEY = 'mento.companion_colour';
@@ -41,16 +44,34 @@ export async function saveSession(
   sessionToken: string,
   streamToken: string,
   persona: Persona,
+  refreshToken?: string | null,
 ): Promise<void> {
   // A new identity never inherits the previous one's last-loaded tab data.
   screenCache.clear();
   await store.setItemAsync(SESSION_KEY, sessionToken);
+  // Never leave the previous identity's refresh token beside a new access token.
+  if (refreshToken) await store.setItemAsync(REFRESH_KEY, refreshToken);
+  else await store.deleteItemAsync(REFRESH_KEY);
   await store.setItemAsync(STREAM_KEY, streamToken);
   await store.setItemAsync(PERSONA_KEY, JSON.stringify(persona));
 }
 
+/** The bearer token for member calls: the access token once the session refreshes,
+ * the long-lived session token before that. Also the "is there a session?" check. */
 export async function getSessionToken(): Promise<string | null> {
   return store.getItemAsync(SESSION_KEY);
+}
+
+export async function getRefreshToken(): Promise<string | null> {
+  return store.getItemAsync(REFRESH_KEY);
+}
+
+/** Store a rotated pair (POST /auth/refresh or /auth/upgrade) — same identity, so the
+ * screen cache stays. Refresh first: a crash between the two writes then leaves a
+ * valid refresh token beside a stale access token, which the next 401 repairs. */
+export async function saveTokenPair(accessToken: string, refreshToken: string): Promise<void> {
+  await store.setItemAsync(REFRESH_KEY, refreshToken);
+  await store.setItemAsync(SESSION_KEY, accessToken);
 }
 
 export async function getStreamToken(): Promise<string | null> {
@@ -102,6 +123,7 @@ export async function clearSession(): Promise<void> {
   }
   await Promise.all([
     store.deleteItemAsync(SESSION_KEY),
+    store.deleteItemAsync(REFRESH_KEY),
     store.deleteItemAsync(STREAM_KEY),
     store.deleteItemAsync(PERSONA_KEY),
     store.deleteItemAsync(COMPANION_COLOR_KEY),

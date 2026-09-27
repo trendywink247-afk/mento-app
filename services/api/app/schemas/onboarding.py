@@ -19,6 +19,15 @@ class OnboardingStart(BaseModel):
     # The member's own name for the companion — same never-reject rule: a name that
     # fails services/companions.clean_name is dropped, never a reason to refuse.
     companion_name: str | None = None
+    # T3.2: a refresh-capable client asks for a short access token + refresh token
+    # pair. Older clients omit it and keep getting the long-lived session token.
+    refresh: bool = False
+    device_id: str | None = Field(default=None, max_length=64)
+    # The app's random per-install id (T3.7/T3.8). Stored only as a SHA-256; a
+    # re-join and age-gate signal, never an identity. Older builds omit it.
+    install_id: str | None = Field(default=None, max_length=128)
+    # T3.9: the member agreed to the current terms on the way in (the age step).
+    terms_accepted: bool = False
 
     @field_validator("companion_animal")
     @classmethod
@@ -43,9 +52,12 @@ class PersonaOut(BaseModel):
 
 
 class OnboardingResult(BaseModel):
-    session_token: str  # Mento anonymous JWT
+    session_token: str  # Mento anonymous JWT (the access token when refresh was asked)
     stream_token: str  # Stream Chat client token
     user: PersonaOut
+    # Only when the client asked for `refresh` (T3.2).
+    refresh_token: str | None = None
+    expires_in: int | None = None
 
 
 class MeOut(BaseModel):
@@ -64,6 +76,16 @@ class MeOut(BaseModel):
     member_setup_complete: bool = False
     # Only ever returned to the member themself (never in a mentor or admin payload).
     companion_name: str | None = None
+    # Standing (T3.7): "active" | "suspended" | "banned"; `status_until` bounds a
+    # suspension or ban (null = until lifted). Additive; older builds ignore them.
+    status: str = "active"
+    status_until: str | None = None
+    # Terms (T3.9): accepted the CURRENT version; `terms_required` = the gate is on and
+    # they have not — the app then asks before any chat starts. Additive.
+    terms_accepted: bool = False
+    terms_required: bool = False
+    # A recovery code exists (T3.5); the code itself is never readable again.
+    has_recovery: bool = False
 
 
 class CompanionUpdateIn(BaseModel):
@@ -91,3 +113,14 @@ class CompanionUpdateIn(BaseModel):
         if not self.model_fields_set:
             raise ValueError("send companion_animal, companion_colour and/or companion_name")
         return self
+
+
+class RecoveryOut(BaseModel):
+    """A fresh recovery code (T3.5) — returned once, never stored in the clear."""
+
+    phrase: str
+
+
+class RecoverIn(BaseModel):
+    phrase: str = Field(max_length=64)
+    device_id: str | None = Field(default=None, max_length=64)

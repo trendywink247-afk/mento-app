@@ -140,8 +140,14 @@ export function ConnectingStep({
           companion_animal: draft.companionAnimal ?? null,
           companion_colour: draft.companionColour ?? null,
           companion_name: draft.companionName ?? null,
+          terms_accepted: draft.termsAccepted ?? false,
         });
-        await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
+        await saveSession(
+          onboarding.session_token,
+          onboarding.stream_token,
+          onboarding.user,
+          onboarding.refresh_token,
+        );
         setMemberName(onboarding.user.persona_name);
         if (draft.companionAnimal) await saveCompanionAnimal(draft.companionAnimal);
         capture('onboarding_completed');

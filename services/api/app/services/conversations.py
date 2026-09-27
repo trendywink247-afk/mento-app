@@ -74,6 +74,26 @@ def end_all_for_listener(db: Session, listener_id: str) -> list[str | None]:
     return [c.stream_channel_id for c in convos if end(db, c, ConversationEndedBy.system)]
 
 
+def end_all_for_member(db: Session, user_id: str) -> list[str | None]:
+    """End every active conversation a MEMBER holds (suspension / ban, T3.7), as
+    `system` — the mirror of `end_all_for_listener`, same id-ordered locking."""
+    convos = (
+        db.execute(
+            select(Conversation)
+            .where(
+                Conversation.user_id == user_id,
+                Conversation.status == ConversationStatus.active,
+            )
+            .order_by(Conversation.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        .scalars()
+        .all()
+    )
+    return [c.stream_channel_id for c in convos if end(db, c, ConversationEndedBy.system)]
+
+
 def seal(channel_id: str | None) -> None:
     """Freeze the Stream channel after a safety end. Call AFTER the commit — never
     hold a DB transaction across the HTTP call."""

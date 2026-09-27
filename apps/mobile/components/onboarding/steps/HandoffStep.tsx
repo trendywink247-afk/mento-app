@@ -88,8 +88,17 @@ export function HandoffStep({
     }
     try {
       if (!(await getSessionToken())) {
-        const onboarding = await api.startOnboarding({ dob: draft.dob, email: draft.email ?? null });
-        await saveSession(onboarding.session_token, onboarding.stream_token, onboarding.user);
+        const onboarding = await api.startOnboarding({
+          dob: draft.dob,
+          email: draft.email ?? null,
+          terms_accepted: draft.termsAccepted ?? false,
+        });
+        await saveSession(
+          onboarding.session_token,
+          onboarding.stream_token,
+          onboarding.user,
+          onboarding.refresh_token,
+        );
         capture('onboarding_completed');
       }
       if (!mountedRef.current) return;

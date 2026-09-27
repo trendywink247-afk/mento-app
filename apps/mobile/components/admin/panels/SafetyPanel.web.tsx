@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminFlag, type AdminMessage } from '@/lib/adminApi';
@@ -10,10 +10,14 @@ import { radius, space, type, wash } from '@/theme/tokens';
 
 type ReviewAction = 'helpline_shown' | 'escalated' | 'no_action';
 
+/** Server minimum for the reason a read is written into the audit trail with (T3.12). */
+const REASON_MIN = 8;
+
 /**
  * Crisis-flag review (T&S #1). Each inbound message our scan flagged surfaces here as
  * a SIGNAL only — never the body. The reviewer can open the conversation read-only to
  * see context, then record what happened (helpline shown / escalated / no action).
+ * Opening a conversation needs a stated reason; it is written into the audit trail.
  */
 export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) {
   const { colors, elevation } = useTheme();
@@ -23,6 +27,7 @@ export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) 
   const [messages, setMessages] = useState<AdminMessage[] | null>(null);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [reasons, setReasons] = useState<Record<string, string>>({});
 
   useEffect(() => {
     let active = true;
@@ -46,11 +51,13 @@ export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) 
       setMessages(null);
       return;
     }
+    const reason = (reasons[flag.id] ?? '').trim();
+    if (reason.length < REASON_MIN) return;
     setOpenId(flag.id);
     setMessages(null);
     setLoadingMsgs(true);
     try {
-      setMessages(await adminApi.conversationMessages(flag.conversation_id));
+      setMessages(await adminApi.conversationMessages(flag.conversation_id, reason));
     } catch {
       setError('Could not load that conversation.');
     } finally {
@@ -110,9 +117,24 @@ export default function SafetyPanel({ onReviewed }: { onReviewed: () => void }) 
               {flag.member_persona ?? 'Member'} ↔ {flag.listener_persona ?? 'Listener'}
             </Text>
 
+            {flag.conversation_id && openId !== flag.id ? (
+              <TextInput
+                value={reasons[flag.id] ?? ''}
+                onChangeText={(v) => setReasons((prev) => ({ ...prev, [flag.id]: v }))}
+                placeholder="Why are you opening this conversation? (kept in the audit trail)"
+                placeholderTextColor={colors.inkMuted}
+                accessibilityLabel="Reason for opening this conversation"
+                style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
+                testID={`admin-flag-reason-${flag.id}`}
+              />
+            ) : null}
+
             {flag.conversation_id ? (
               <ConsolePressable
                 onPress={() => void toggleConversation(flag)}
+                disabled={
+                  openId !== flag.id && (reasons[flag.id] ?? '').trim().length < REASON_MIN
+                }
                 accessibilityRole="button"
                 accessibilityLabel={`${
                   openId === flag.id ? 'Hide' : 'Open'
@@ -202,6 +224,15 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   thread: { borderRadius: radius.md, padding: space.sm, gap: space.sm },
+  input: {
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingVertical: space.sm,
+    paddingHorizontal: space.md,
+    fontFamily: type.body.fontFamily,
+    fontSize: type.body.fontSize,
+    minHeight: 44,
+  },
   bubble: { gap: 2 },
   actions: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap' },
   reviewBtn: {

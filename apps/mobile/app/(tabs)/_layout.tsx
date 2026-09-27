@@ -1,12 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { tabSceneInterpolator, tabTransitionSpec } from '@/components/motion/tabTransition';
+import { api } from '@/lib/api';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { registerForPushNotifications } from '@/lib/pushNotifications';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -100,6 +101,23 @@ export default function TabsLayout() {
   useEffect(() => {
     void registerForPushNotifications();
   }, []);
+
+  // The terms gate (WS3 T3.9): a member who joined before the app asked is asked once,
+  // explicitly, before a chat can start — only while the server enforces it
+  // (`terms_required`). Best-effort: a failed read asks nothing; the server still refuses.
+  const router = useRouter();
+  useEffect(() => {
+    let live = true;
+    api
+      .me()
+      .then((me) => {
+        if (live && me.terms_required) router.push('/terms?ask=1');
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [router]);
 
   // Tabs move sideways in bar order instead of cutting (components/motion/tabTransition.ts).
   // Reduced motion: no transition at all — the switch is an instant, still swap.

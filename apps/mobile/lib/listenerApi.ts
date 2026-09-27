@@ -180,6 +180,14 @@ export const listenerApi = {
   devToken: (id: string) =>
     apiRequest<{ token: string }>(`/listener/dev/token/${id}`, { method: 'POST' }),
 
+  /** Trade a one-time console code (`#code=` link, T3.10) for a listener session. No
+   * token needed: the code IS the credential, and it works once, within ten minutes. */
+  exchangeCode: (code: string) =>
+    apiRequest<{ listener_token: string; listener_id: string; expires_at: string }>(
+      '/listener/session/exchange',
+      { method: 'POST', body: JSON.stringify({ code }) },
+    ),
+
   heartbeat: () => req<{ status: string }>('/listener/me/heartbeat', { method: 'POST' }),
 
   report: (conversationId: string, reason: ListenerReportReason, note: string | null) =>

@@ -2,6 +2,7 @@
 
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.allowance import MessageAllowanceDay
+from app.models.console_code import ConsoleCode
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation
 from app.models.data_request import DataRequest
@@ -16,11 +17,13 @@ from app.models.push_token import PushToken
 from app.models.reflection import ConversationReflection
 from app.models.request import ConversationRequest
 from app.models.safety import SafetyFlag
+from app.models.session import Session
 from app.models.user import User
 
 __all__ = [
     "AdminAccount",
     "AdminAuditLog",
+    "ConsoleCode",
     "Contribution",
     "Conversation",
     "ConversationReflection",
@@ -37,5 +40,6 @@ __all__ = [
     "ProductFeedback",
     "PushToken",
     "SafetyFlag",
+    "Session",
     "User",
 ]

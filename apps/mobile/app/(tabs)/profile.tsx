@@ -12,6 +12,7 @@ import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { CompanionNameRow } from '@/components/profile/CompanionNameRow';
+import { RecoveryCard } from '@/components/profile/RecoveryCard';
 import { api, type ListenerApplication } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
@@ -144,6 +145,8 @@ export default function ProfileTab() {
   );
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | 'idle'>('idle');
   const [openNote, setOpenNote] = useState<'mentors' | 'privacy' | null>(null);
+  // null until GET /me answers (the recovery card waits for it).
+  const [hasRecovery, setHasRecovery] = useState<boolean | null>(null);
   const [swatch, setSwatch] = useState(SWATCH);
   const running = runningUpdate();
   // The hero place only exists once the animal is known — until then there is no home slot.
@@ -172,6 +175,21 @@ export default function ProfileTab() {
       };
     }, []),
   );
+
+  useEffect(() => {
+    let active = true;
+    void api
+      .me()
+      .then((me) => {
+        if (active) setHasRecovery(Boolean(me.has_recovery));
+      })
+      .catch(() => {
+        if (active) setHasRecovery(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -395,6 +413,10 @@ export default function ProfileTab() {
                   testID="profile-check-updates"
                 />
               ) : null}
+
+              {/* The member's own way back on a new phone (WS3 T3.5). Waits for GET /me so
+                  "make" vs "make a new one" is right the first time. */}
+              {hasRecovery !== null ? <RecoveryCard hasCode={hasRecovery} /> : null}
 
               <Row
                 icon="leaf-outline"

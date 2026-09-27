@@ -13,6 +13,7 @@ import { LogoWordmark } from '@/components/art/Logo';
 import { FloatingChatCard } from '@/components/landing/FloatingChatCard';
 import { Entrance } from '@/components/motion/Entrance';
 import { GroundGlow } from '@/components/motion/GroundGlow';
+import { PressKey } from '@/components/motion/PressKey';
 import { Stage } from '@/components/motion/Stage';
 import { capture } from '@/lib/analytics';
 import { useI18n } from '@/lib/i18n';
@@ -22,7 +23,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getRole, getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import { duration, easing, forkArrival } from '@/theme/motion';
-import { space, type } from '@/theme/tokens';
+import { radius, space, type } from '@/theme/tokens';
 
 /** Board A01 metrics (390×844). */
 const TOP_PAD = 44;
@@ -319,6 +320,23 @@ export default function Landing() {
               <Animated.Text style={[type.caption, styles.footer, { color: colors.inkMuted }, textExit]}>
                 {t('landing.footer')}
               </Animated.Text>
+              {/* Back on a new phone (WS3 T3.5): the one way in for an account that has no
+                  email or password. Quiet — a link, never a second CTA. */}
+              <Animated.View style={textExit}>
+                <PressKey
+                  onPress={() => router.push('/recover')}
+                  edge="transparent"
+                  travel={2}
+                  radius={radius.sm}
+                  accessibilityRole="link"
+                  accessibilityLabel={t('recovery.landingLink')}
+                  testID="landing-recover"
+                  containerStyle={styles.recoverBox}
+                  style={styles.recover}
+                >
+                  <Text style={[type.caption, { color: colors.accentEdge }]}>{t('recovery.landingLink')}</Text>
+                </PressKey>
+              </Animated.View>
             </Entrance>
           </View>
         </View>
@@ -342,6 +360,8 @@ const styles = StyleSheet.create({
   cardMember: { position: 'absolute', left: CARD_SIDE },
   cardMentor: { position: 'absolute', right: CARD_SIDE },
   column: { flex: 1, paddingHorizontal: space.lg },
+  recoverBox: { alignSelf: 'center', minHeight: 44, justifyContent: 'center' },
+  recover: { paddingHorizontal: 8, paddingVertical: 2 },
   grow: { flex: 1 },
   textBlock: { gap: space.lg },
   copy: { gap: 12 },

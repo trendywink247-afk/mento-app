@@ -15,7 +15,9 @@ Fail-mode: OPEN with a warning when Redis is unreachable (never silent). This
 is a support app — an infra hiccup must degrade to "no throttle", never to
 "nobody can talk" (same philosophy as the crisis-webhook fail-open, T&S #1).
 Exception: call sites guarding secrets (the conversation PIN) pass
-``fail_closed=True`` and get a 503 instead — see routers/conversation.py.
+``fail_closed=True`` and get a 503 instead — see routers/conversation.py — and so
+does signup (routers/onboarding.py, T3.11): each call mints a real account, so a
+blind limiter would mean unbounded accounts. Chat never fails closed.
 """
 
 from __future__ import annotations
@@ -49,6 +51,12 @@ def _is_enabled() -> bool:
     if ENABLED is not None:
         return ENABLED
     return get_settings().rate_limit_enabled
+
+
+def limits_enabled() -> bool:
+    """Public read of the switch, for Redis-backed frictions that ride it (the
+    age-gate cooldown in routers/onboarding.py)."""
+    return _is_enabled()
 
 
 def allow(key: str, limit: int, window_seconds: int, *, fail_closed: bool = False) -> bool:
@@ -115,10 +123,16 @@ def client_ip(request: Request) -> str:
     return parts[index]
 
 
-def by_ip(name: str, limit: int, window_seconds: int, *, detail: str):
+def by_ip(name: str, limit: int, window_seconds: int, *, detail: str, fail_closed: bool = False):
     """Dependency factory: per-IP fixed-window limit for anonymous endpoints."""
 
     def dependency(request: Request) -> None:
-        enforce(f"{name}:{client_ip(request)}", limit, window_seconds, detail=detail)
+        enforce(
+            f"{name}:{client_ip(request)}",
+            limit,
+            window_seconds,
+            detail=detail,
+            fail_closed=fail_closed,
+        )
 
     return dependency

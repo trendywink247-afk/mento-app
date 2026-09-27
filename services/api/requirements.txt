@@ -10,6 +10,7 @@ psycopg[binary]==3.2.3
 procrastinate==3.10.0  # job queue on our own Postgres (WS4); its schema ships via Alembic
 redis==5.2.1
 PyJWT==2.15.0
+argon2-cffi==25.1.0
 stream-chat==4.19.0
 httpx==0.28.1
 sentry-sdk[fastapi]==2.66.1

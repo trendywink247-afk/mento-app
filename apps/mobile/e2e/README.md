@@ -23,6 +23,36 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   onboards → sends a Personal request. Mentor: accept → chat → mentor rail → reply;
   member sees it; Report sheet files; End frees the seat (row shows Ended).
   Reduced-motion pass reopens the console. 0 page errors in every context.
+- session-refresh.e2e.js — refreshing sessions (WS3 T3.2), on Journals so it needs no
+  Stream: (A) a pre-refresh install (long-lived token only) loads and upgrades silently,
+  its old token still valid; (B) a stale access token is refreshed and the call retried;
+  (C) /auth/refresh unreachable → still signed in, tokens untouched; (D) a dead refresh
+  family → the old sign-out to the landing. Normal + reduced-motion, 0 page errors.
+- admin-read-scope.e2e.js — REQUIRES ADMIN_TOKEN. Scoped admin reads (WS3 T3.12): a flagged
+  conversation opens from the Safety panel only after a stated reason (8+ chars, sent to
+  the server and kept in the audit trail); the API refuses no reason (422) and a chat with
+  no open flag/report (403 `no_open_case`). Normal + reduced-motion, 0 page errors.
+- console-code.e2e.js — REQUIRES ADMIN_TOKEN. One-time mentor console links (WS3 T3.10):
+  the status poll carries no token; an approved mentor's `#code=` link opens the web
+  console once (fragment stripped) and the same link again shows "expired or was already
+  used". Normal + reduced-motion, 0 page errors.
+- age-gate-friction.e2e.js — the /apply age step (WS3 T3.8): no passing default (Continue
+  disabled on arrival, limit line only after a touch); a refusal remembered on the device
+  holds for an adult year; the server's per-install cooldown (403 age_gate_cooldown) shows
+  the refused line and is remembered. Needs rate limits ON. Spends 2 under-age refusals per
+  run from your address — 3 in a day cool the ADDRESS down too: clear `agegate:*` in Redis
+  between runs. Normal + reduced-motion, 0 page errors.
+- onboarding-terms.e2e.js — the terms gate (WS3 T3.9). A: the age step carries the house-
+  rules line, "Read them" opens and closes the sheet, the signup sends terms_accepted and
+  the account records it (stops at the signup — no Stream needed). B (only when the API
+  runs with TERMS_GATE_ENFORCED=true; otherwise printed as SKIP): a member who joined
+  without accepting is asked once on the tabs; match is 409 before, allowed after.
+  Normal + reduced-motion, 0 page errors.
+- recovery-code.e2e.js — the recovery code (WS3 T3.5): Profile makes a code, shows it once
+  with "Mento will never ask you for this", then hides it; a fresh browser → landing → "I
+  have a recovery code" → a wrong code is a still line → the right one (lower case, spaces)
+  signs in as the same member; the first device's refresh token is dead. Normal +
+  reduced-motion, 0 page errors.
 - notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
   notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.
 - connecting-busy.e2e.js — flips every seeded listener to away (docker exec), drives

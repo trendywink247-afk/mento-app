@@ -152,7 +152,12 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ action, note }),
     }),
-  conversationMessages: (id: string) => req<AdminMessage[]>(`/admin/conversations/${id}/messages`),
+  /** Only while the conversation has an open flag or report (else 403 `no_open_case`), and
+   * only with a stated reason (8+ characters) — the reason is written to the audit trail. */
+  conversationMessages: (id: string, reason: string) =>
+    req<AdminMessage[]>(
+      `/admin/conversations/${id}/messages?reason=${encodeURIComponent(reason.trim())}`,
+    ),
   moderationQueue: () => req<AdminModerationItem[]>('/admin/moderation/queue'),
   resolveEvent: (id: string) =>
     req<{ status: string }>(`/admin/moderation/${id}/resolve`, { method: 'POST' }),

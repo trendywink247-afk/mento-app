@@ -124,6 +124,14 @@ def test_me_returns_persona_and_companion_and_nothing_private(client, db_session
         "has_dob": True,
         "member_setup_complete": True,
         "companion_name": None,
+        # The member's own standing (T3.7) — theirs to read, never anyone else's.
+        "status": "active",
+        "status_until": None,
+        # Terms (T3.9): the gate ships off, so nothing is required.
+        "terms_accepted": False,
+        "terms_required": False,
+        # Only THAT a recovery code exists (T3.5) — never the code.
+        "has_recovery": False,
     }
 
 

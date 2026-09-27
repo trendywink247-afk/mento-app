@@ -26,6 +26,7 @@ from app.schemas.admin import (
     AdminReconcileOut,
     AttentionItem,
     ModerationItem,
+    ModerationResolveIn,
 )
 from app.schemas.allowance import (
     AdminAllowanceDay,
@@ -37,6 +38,11 @@ from app.schemas.applications import (
     ConsoleSessionOut,
     ListenerApplicationIn,
     ListenerApplicationOut,
+)
+from app.schemas.auth import (
+    RefreshIn,
+    SessionPairOut,
+    UpgradeIn,
 )
 from app.schemas.common import (
     OkResult,
@@ -104,6 +110,8 @@ from app.schemas.onboarding import (
     OnboardingResult,
     OnboardingStart,
     PersonaOut,
+    RecoverIn,
+    RecoveryOut,
 )
 from app.schemas.paths import (
     PathChoice,
@@ -123,6 +131,11 @@ from app.schemas.safety import (
 )
 
 __all__ = [
+    "RecoveryOut",
+    "RecoverIn",
+    "RefreshIn",
+    "SessionPairOut",
+    "UpgradeIn",
     "AdminAccountItem",
     "AdminAllowanceDay",
     "AdminAllowanceOut",
@@ -183,6 +196,7 @@ __all__ = [
     "ExportOut",
     "MentorNoteIn",
     "ModerationItem",
+    "ModerationResolveIn",
     "OkResult",
     "OnboardingResult",
     "OnboardingStart",

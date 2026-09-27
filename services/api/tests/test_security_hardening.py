@@ -242,20 +242,27 @@ def _raw_token(payload: dict, secret: str) -> str:
 def test_user_token_carries_explicit_role_and_resolves():
     token = issue_session_token("u-role")
     assert jwt.decode(token, options={"verify_signature": False})["role"] == "user"
-    assert security.current_user_id(_creds(token)) == "u-role"
+    assert security.user_id_from_token(_creds(token)) == "u-role"
 
 
-def test_legacy_roleless_token_remains_valid_user_session():
+def _pin_clock(monkeypatch, day) -> None:
+    """Judge the legacy windows on `day` (noon UTC), not on whatever today is."""
+    at = datetime.combine(day, datetime.min.time(), UTC) + timedelta(hours=12)
+    monkeypatch.setattr(security, "_now", lambda: at)
+
+
+def test_legacy_roleless_token_remains_valid_user_session(monkeypatch):
     # Deployed clients hold 90-day role-less tokens (pre 2026-07-19); they must
     # keep working until one TTL cycle passes (see current_user_id).
+    _pin_clock(monkeypatch, date(2026, 10, 16))
     token = _raw_token({"sub": "u-legacy"}, get_settings().jwt_secret)
-    assert security.current_user_id(_creds(token)) == "u-legacy"
+    assert security.user_id_from_token(_creds(token)) == "u-legacy"
 
 
 def test_listener_and_admin_tokens_rejected_as_user_session():
     for token in (issue_listener_token("l-cross"), issue_admin_token("a-cross")):
         with pytest.raises(HTTPException) as exc:
-            security.current_user_id(_creds(token))
+            security.user_id_from_token(_creds(token))
         assert exc.value.status_code == 401
 
 
@@ -263,9 +270,12 @@ def test_admin_token_uses_dedicated_secret_when_configured(monkeypatch):
     monkeypatch.setattr(get_settings(), "admin_jwt_secret", "admin-only-secret")
     token = issue_admin_token("a-sec")
     # Signed with the dedicated secret, NOT the shared one.
-    assert jwt.decode(token, "admin-only-secret", algorithms=["HS256"])["sub"] == "a-sec"
+    aud = security.AUDIENCES["admin"]
+    assert (
+        jwt.decode(token, "admin-only-secret", algorithms=["HS256"], audience=aud)["sub"] == "a-sec"
+    )
     with pytest.raises(JWTError):
-        jwt.decode(token, get_settings().jwt_secret, algorithms=["HS256"])
+        jwt.decode(token, get_settings().jwt_secret, algorithms=["HS256"], audience=aud)
     assert security.current_admin_id(_creds(token)) == "a-sec"
     # A shared-secret forgery must not open admin (blast-radius reduction).
     forged = _raw_token({"sub": "a-forged", "role": "admin"}, get_settings().jwt_secret)
@@ -277,7 +287,10 @@ def test_admin_token_uses_dedicated_secret_when_configured(monkeypatch):
 def test_admin_token_falls_back_to_shared_secret_when_unset(monkeypatch):
     monkeypatch.setattr(get_settings(), "admin_jwt_secret", "")
     token = issue_admin_token("a-fallback")
-    assert jwt.decode(token, get_settings().jwt_secret, algorithms=["HS256"])["role"] == "admin"
+    decoded = jwt.decode(
+        token, get_settings().jwt_secret, algorithms=["HS256"], audience=security.AUDIENCES["admin"]
+    )
+    assert decoded["role"] == "admin"
     assert security.current_admin_id(_creds(token)) == "a-fallback"
 
 
@@ -289,3 +302,181 @@ def test_role_isolation_on_user_endpoint(client, db_session):
     for token in (issue_listener_token("l1"), issue_admin_token("a1")):
         resp = client.get("/api/v1/journals/summary", headers={"Authorization": f"Bearer {token}"})
         assert resp.status_code == 401
+
+
+# --- T3.1: iss / aud / jti claims and the split listener secret ---
+
+
+def _claims(token: str) -> dict:
+    return jwt.decode(token, options={"verify_signature": False})
+
+
+def test_new_tokens_carry_iss_aud_jti():
+    tokens = {
+        "user": issue_session_token("u-claims"),
+        "listener": issue_listener_token("l-claims"),
+        "admin": issue_admin_token("a-claims"),
+    }
+    for role, token in tokens.items():
+        claims = _claims(token)
+        assert claims["iss"] == security.ISSUER
+        assert claims["aud"] == security.AUDIENCES[role]
+        assert claims["jti"]
+    # jti is unique per mint, even for the same subject in the same second
+    assert _claims(issue_session_token("u-x"))["jti"] != _claims(issue_session_token("u-x"))["jti"]
+
+
+def test_listener_token_signed_with_its_own_secret(monkeypatch):
+    monkeypatch.setattr(get_settings(), "listener_jwt_secret", "listener-only-secret")
+    token = issue_listener_token("l-own")
+    assert jwt.decode(
+        token, "listener-only-secret", algorithms=["HS256"], audience=security.AUDIENCES["listener"]
+    )
+    with pytest.raises(JWTError):
+        jwt.decode(
+            token,
+            get_settings().jwt_secret,
+            algorithms=["HS256"],
+            audience=security.AUDIENCES["listener"],
+        )
+    assert security.current_listener_id(_creds(token)) == "l-own"
+    # a member-secret signature on a NEW-format listener token is a forgery
+    forged = _raw_token(
+        {
+            "sub": "l-forged",
+            "role": "listener",
+            "iss": security.ISSUER,
+            "aud": security.AUDIENCES["listener"],
+            "jti": "x",
+        },
+        get_settings().jwt_secret,
+    )
+    with pytest.raises(HTTPException) as exc:
+        security.current_listener_id(_creds(forged))
+    assert exc.value.status_code == 401
+
+
+def test_legacy_listener_token_on_member_secret_lives_until_cutoff(monkeypatch):
+    # Console links and native console sessions minted before the split were signed
+    # with JWT_SECRET and carry no iss/aud/jti; they keep working until the cutoff.
+    monkeypatch.setattr(get_settings(), "listener_jwt_secret", "listener-only-secret")
+    _pin_clock(monkeypatch, date(2026, 10, 1))
+    legacy = _raw_token({"sub": "l-legacy", "role": "listener"}, get_settings().jwt_secret)
+    assert security.current_listener_id(_creds(legacy)) == "l-legacy"
+    assert security.current_member_or_listener(_creds(legacy)) == ("mentor", "l-legacy")
+    after = datetime.combine(get_settings().legacy_claims_accepted_until, datetime.min.time(), UTC)
+    monkeypatch.setattr(security, "_now", lambda: after + timedelta(seconds=1))
+    with pytest.raises(HTTPException) as exc:
+        security.current_listener_id(_creds(legacy))
+    assert exc.value.status_code == 401
+
+
+def test_legacy_user_token_without_claims_lives_until_cutoff(monkeypatch):
+    _pin_clock(monkeypatch, date(2026, 10, 1))
+    legacy = _raw_token({"sub": "u-old", "role": "user"}, get_settings().jwt_secret)
+    assert security.user_id_from_token(_creds(legacy)) == "u-old"
+    after = datetime.combine(get_settings().legacy_claims_accepted_until, datetime.min.time(), UTC)
+    monkeypatch.setattr(security, "_now", lambda: after + timedelta(seconds=1))
+    with pytest.raises(HTTPException):
+        security.user_id_from_token(_creds(legacy))
+    # a claimed token is unaffected by the cutoff
+    monkeypatch.setattr(security, "_now", lambda: datetime.now(UTC))
+    fresh = issue_session_token("u-new")
+    monkeypatch.setattr(security, "_now", lambda: after + timedelta(seconds=1))
+    assert security.user_id_from_token(_creds(fresh)) == "u-new"
+
+
+def test_wrong_audience_or_issuer_is_refused(monkeypatch):
+    # Same secret (dev fallback) — only aud tells a listener token from a member one.
+    monkeypatch.setattr(get_settings(), "listener_jwt_secret", "")
+    secret = get_settings().jwt_secret
+    base = {"sub": "x", "jti": "j", "iss": security.ISSUER}
+    wrong_aud = _raw_token({**base, "role": "listener", "aud": security.AUDIENCES["user"]}, secret)
+    with pytest.raises(HTTPException):
+        security.current_listener_id(_creds(wrong_aud))
+    wrong_iss = _raw_token(
+        {**base, "role": "user", "aud": security.AUDIENCES["user"], "iss": "evil"}, secret
+    )
+    with pytest.raises(HTTPException):
+        security.user_id_from_token(_creds(wrong_iss))
+    half = _raw_token({"sub": "x", "role": "user", "iss": security.ISSUER}, secret)  # iss, no aud
+    with pytest.raises(HTTPException):
+        security.user_id_from_token(_creds(half))
+
+
+def test_member_or_listener_resolves_new_listener_tokens(monkeypatch):
+    monkeypatch.setattr(get_settings(), "listener_jwt_secret", "listener-only-secret")
+    assert security.current_member_or_listener(_creds(issue_listener_token("l-both"))) == (
+        "mentor",
+        "l-both",
+    )
+    assert security.current_member_or_listener(_creds(issue_session_token("u-both"))) == (
+        "member",
+        "u-both",
+    )
+    with pytest.raises(HTTPException):
+        security.current_member_or_listener(_creds(issue_admin_token("a-both")))
+
+
+# --- T3.8: age-gate friction (a refusal cools down per install and per IP) ---
+
+
+@pytest.fixture
+def limits_on(monkeypatch):
+    """The cooldown rides the rate-limit switch (off suite-wide); on here, with a
+    trusted proxy hop so each test can speak from its own address."""
+    monkeypatch.setattr(get_settings(), "trusted_proxy_hops", 1)
+    ratelimit.ENABLED = True
+    if not ratelimit.allow(f"probe:{uuid.uuid4()}", 1, 5):
+        pytest.skip("Redis unavailable")
+    yield
+    ratelimit.ENABLED = False
+
+
+def _signup(client, years: int, *, ip: str, install: str | None):
+    body = {"dob": _dob_for_age(years)}
+    if install:
+        body["install_id"] = install
+    return client.post("/api/v1/onboarding/start", json=body, headers={"X-Forwarded-For": ip})
+
+
+@requires_postgres
+def test_underage_refusal_cools_down_that_install(client, db_session, limits_on):
+    ip, install = f"198.51.100.{uuid.uuid4().int % 250}", f"inst-{uuid.uuid4()}"
+    assert _signup(client, 16, ip=ip, install=install).status_code == 403
+    # Same install, now claiming to be an adult: still refused, for the cooldown.
+    again = _signup(client, 25, ip=f"203.0.113.{uuid.uuid4().int % 250}", install=install)
+    assert again.status_code == 403
+    assert again.json()["code"] == "age_gate_cooldown"
+    # Another install on another address is untouched.
+    fresh = _signup(client, 25, ip=f"192.0.2.{uuid.uuid4().int % 250}", install=f"i-{uuid.uuid4()}")
+    assert fresh.status_code == 201
+
+
+@requires_postgres
+def test_an_address_cools_down_only_after_repeated_refusals(client, db_session, limits_on):
+    """Shared addresses are normal (hostels, mobile carriers): one refusal on an IP must
+    not lock out the adults behind it — three in a day does."""
+    ip = f"10.{uuid.uuid4().int % 250}.{uuid.uuid4().int % 250}.7"
+    assert _signup(client, 16, ip=ip, install=None).status_code == 403
+    assert _signup(client, 30, ip=ip, install=f"a-{uuid.uuid4()}").status_code == 201
+    assert _signup(client, 15, ip=ip, install=None).status_code == 403
+    assert _signup(client, 14, ip=ip, install=None).status_code == 403
+    blocked = _signup(client, 30, ip=ip, install=f"b-{uuid.uuid4()}")
+    assert blocked.status_code == 403
+    assert blocked.json()["code"] == "age_gate_cooldown"
+
+
+@requires_postgres
+def test_no_cooldown_when_limits_are_off(client, db_session):
+    install = f"inst-{uuid.uuid4()}"
+    assert (
+        client.post(
+            "/api/v1/onboarding/start", json={"dob": _dob_for_age(16), "install_id": install}
+        ).status_code
+        == 403
+    )
+    ok = client.post(
+        "/api/v1/onboarding/start", json={"dob": _dob_for_age(25), "install_id": install}
+    )
+    assert ok.status_code == 201

@@ -94,10 +94,25 @@ export default function ListenerConsoleWeb() {
   );
 
   const boot = useCallback(async () => {
-    // #token= fragment ONLY — fragments never reach servers, proxies, or access
-    // logs. Query-param tokens are not accepted.
+    // #token= / #code= fragment ONLY — fragments never reach servers, proxies, or
+    // access logs. Query-param tokens are not accepted. `#code=` is the one-time link
+    // (T3.10): traded once for a session; `#token=` is the older long-lived link.
+    const codeMatch = window.location.hash.match(/[#&]code=([^&]+)/);
+    const hashCode = codeMatch?.[1] ? decodeURIComponent(codeMatch[1]) : null;
     const hashMatch = window.location.hash.match(/[#&]token=([^&]+)/);
-    const hashToken = hashMatch?.[1] ? decodeURIComponent(hashMatch[1]) : null;
+    let hashToken = hashMatch?.[1] ? decodeURIComponent(hashMatch[1]) : null;
+    if (hashCode) {
+      // Strip first: the code is spent the moment it is sent, so it must not linger.
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      try {
+        hashToken = (await listenerApi.exchangeCode(hashCode)).listener_token;
+      } catch {
+        // No router.replace here: it remounts the console, whose fresh boot (no
+        // fragment, no token) would overwrite this with the generic no-session state.
+        setError('This console link has expired or was already used. Ask for a fresh one.');
+        return;
+      }
+    }
     if (hashToken) {
       await saveListenerToken(hashToken);
       // Clear the fragment from the URL/history immediately — BOTH in the browser

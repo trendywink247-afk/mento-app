@@ -82,6 +82,15 @@ export default function RootLayout() {
               <Stack.Screen name="mentor-home" options={{ animation: 'fade' }} />
               {/* A board sheet as a screens-backed transparent modal (see app/start-fresh.tsx):
                   the sheet animates itself, so the route does not. */}
+              {/* The house rules (WS3 T3.9) — the same board sheet shape as start-fresh. */}
+              <Stack.Screen
+                name="terms"
+                options={{
+                  presentation: 'transparentModal',
+                  animation: 'none',
+                  contentStyle: { backgroundColor: 'transparent' },
+                }}
+              />
               <Stack.Screen
                 name="start-fresh"
                 options={{
