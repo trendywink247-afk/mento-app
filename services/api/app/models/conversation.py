@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -14,6 +14,12 @@ from app.models.mixins import TimestampMixin, UUIDMixin
 
 class Conversation(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "conversations"
+    __table_args__ = (
+        # My Chats: a member's conversations, newest first (T2.2).
+        Index("ix_conversations_user_created", "user_id", "created_at"),
+        # Mentor console list and seat accounting: a mentor's conversations by status.
+        Index("ix_conversations_listener_status", "listener_id", "status"),
+    )
 
     type: Mapped[ConversationType] = mapped_column(default=ConversationType.anon)
     status: Mapped[ConversationStatus] = mapped_column(

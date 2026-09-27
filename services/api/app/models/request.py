@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -14,6 +14,10 @@ from app.models.mixins import TimestampMixin, UUIDMixin
 
 class ConversationRequest(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "conversation_requests"
+    # A mentor's inbox: their pending Personal requests (T2.2).
+    __table_args__ = (
+        Index("ix_conversation_requests_target_status", "target_listener_id", "status"),
+    )
 
     kind: Mapped[RequestKind] = mapped_column(default=RequestKind.general)
     status: Mapped[RequestStatus] = mapped_column(default=RequestStatus.pending, index=True)
