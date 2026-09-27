@@ -21,6 +21,7 @@ import logging
 from typing import Any
 
 from procrastinate import App, PsycopgConnector, SyncPsycopgConnector
+from procrastinate.exceptions import AlreadyEnqueued
 from procrastinate.manager import JobManager
 from procrastinate.tasks import Task
 from sqlalchemy.orm import Session
@@ -63,6 +64,13 @@ def enqueue(
             raw = db.connection().connection.driver_connection
             job = task.configure(queueing_lock=queueing_lock).make_new_job(**task_kwargs)
             return _defer_manager.defer_job(job, connection=raw).id
+    except AlreadyEnqueued as exc:
+        # The same work is already waiting (a queueing lock) — for best-effort work
+        # that is the desired outcome, not a fault.
+        if best_effort:
+            logger.debug("enqueue %s: already queued", task.name)
+            return None
+        raise EnqueueFailed(task.name) from exc
     except Exception as exc:  # noqa: BLE001 — classified below, never swallowed silently
         logger.warning("enqueue %s failed: %s", task.name, type(exc).__name__)
         if best_effort:

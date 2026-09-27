@@ -16,7 +16,6 @@ from collections.abc import Iterable
 from typing import Any
 
 from procrastinate import PsycopgConnector
-from psycopg_pool import AsyncConnectionPool
 from sqlalchemy.engine import make_url
 
 from app.config import get_settings
@@ -40,18 +39,20 @@ def conninfo() -> str:
 
 
 async def _run(**options: Any) -> None:
-    # A fresh connector per run: Procrastinate's keeps a reference to the pool it
-    # was opened with, even once that pool is closed.
-    app = queue.with_connector(PsycopgConnector())
-    async with AsyncConnectionPool(conninfo(), open=False, min_size=1, max_size=4) as pool:
-        async with app.open_async(pool):
+    # A fresh connector per run, on the SAME app object (replace_connector): tasks and
+    # the periodic scheduler hold a link back to `queue`, so a copied app
+    # (with_connector) would leave them deferring through a connector never opened.
+    # The connector owns its pool, so closing it leaves nothing behind for a next run.
+    connector = PsycopgConnector(conninfo=conninfo(), min_size=1, max_size=4)
+    with queue.replace_connector(connector) as app:
+        async with app.open_async():
             await app.run_worker_async(**{**WORKER_OPTIONS, **options})
 
 
 def drain(queues: Iterable[str] | None = None) -> None:
     """Run every job that is due right now, then return (tests, one-off ops).
-    Same options as the long-running worker, minus the waiting and the periodic
-    scheduler's side effects on shutdown."""
+    Same options as the long-running worker, minus the waiting. Like any worker start,
+    it also queues a periodic job whose tick is due (it runs if its queue is drained)."""
     asyncio.run(
         _run(
             queues=list(queues) if queues is not None else None,

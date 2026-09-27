@@ -76,7 +76,10 @@ def _push_jobs() -> list[tuple[str, str, int]]:
         return [
             (r.task_name, r.status, r.attempts)
             for r in s.execute(
-                text("SELECT task_name, status, attempts FROM procrastinate_jobs ORDER BY id")
+                text(
+                    "SELECT task_name, status, attempts FROM procrastinate_jobs "
+                    "WHERE queue_name = 'push' ORDER BY id"
+                )
             )
         ]
 

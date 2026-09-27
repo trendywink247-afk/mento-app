@@ -341,6 +341,7 @@ def test_the_mentors_own_reply_ends_the_snooze(client):
         },
     )
     assert r.status_code == 200
+    worker.drain(queues=["default"])  # the snooze ends in a job (WS4)
     assert _snoozed_until(cid) is None
     row = client.get("/api/v1/conversations", headers=member(uid)).json()[0]
     assert row["reply_within_a_day"] is False
