@@ -3,9 +3,9 @@
 # Fill the `github:` block with the real repo before first use, and set every
 # SECRET env in the DO console — this file never carries real values.
 #
-# The container's entrypoint ALSO runs `alembic upgrade head` before serving
-# (migrations-on-deploy, session 20); the PRE_DEPLOY job below runs them once
-# up-front so old containers never overlap a half-migrated schema. Idempotent.
+# Migrations run ONLY in the PRE_DEPLOY job below (the container entrypoint stopped
+# migrating on boot in WS1 T1.9), once and up-front, so old containers never overlap
+# a half-migrated schema. Idempotent.
 name: mento-api
 region: blr # Bangalore — closest to the first (India) cohort
 

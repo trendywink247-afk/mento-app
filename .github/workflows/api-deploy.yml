@@ -1,0 +1,93 @@
+name: API Deploy
+
+# Ships the API after API CI passes on master (WS1 T1.9). OFF until the founder
+# turns it on: nothing runs unless the repository variable API_AUTO_DEPLOY is
+# "true" (Settings → Secrets and variables → Actions → Variables). Manual runs
+# (Actions → API Deploy → Run workflow) need no variable.
+#
+# The runner never gets a shell on the box. It connects with a deploy-only key
+# whose authorized_keys line FORCES one command:
+#   restrict,command="/opt/mento/deploy/deploy.sh --from-ssh" ssh-ed25519 AAAA… mento-ci-deploy
+# deploy.sh then accepts exactly "deploy <40-hex sha>" (the sha must be on
+# origin/master), takes the database backup, migrates in a one-off container
+# and swaps. Setup: docs/DEPLOYMENT_VPS.md → "CI deploys".
+#
+# Secrets: API_DEPLOY_SSH_KEY (the private half of that key) and
+# API_DEPLOY_KNOWN_HOSTS (the box's host key line, pinned — never keyscanned here).
+# The SSH target and hostnames come from deploy/domains.env.
+on:
+  workflow_run:
+    workflows: ["API CI"]
+    types: [completed]
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Commit to deploy (40 hex, must be on master). Empty = master's head."
+        required: false
+
+permissions:
+  contents: read
+
+# One deploy at a time; a newer one waits instead of cancelling a running one.
+concurrency:
+  group: api-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (vars.API_AUTO_DEPLOY == 'true' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    # A GitHub environment lets the founder add required reviewers before prod.
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Pick the commit
+        id: pick
+        env:
+          INPUT_SHA: ${{ github.event.inputs.sha }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          sha="${INPUT_SHA:-${RUN_SHA:-$(git rev-parse HEAD)}}"
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || { echo "not a 40-hex sha: $sha"; exit 1; }
+          git merge-base --is-ancestor "$sha" origin/master || { echo "$sha is not on master"; exit 1; }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Set up SSH
+        env:
+          API_DEPLOY_SSH_KEY: ${{ secrets.API_DEPLOY_SSH_KEY }}
+          API_DEPLOY_KNOWN_HOSTS: ${{ secrets.API_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          [ -n "$API_DEPLOY_SSH_KEY" ] && [ -n "$API_DEPLOY_KNOWN_HOSTS" ] \
+            || { echo "API_DEPLOY_SSH_KEY / API_DEPLOY_KNOWN_HOSTS are not set"; exit 1; }
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$API_DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$API_DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          SHA: ${{ steps.pick.outputs.sha }}
+        run: |
+          . deploy/domains.env
+          # The forced command ignores anything but this exact request.
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -o ConnectTimeout=20 \
+            "$VPS_SSH" "deploy $SHA"
+
+      - name: Verify
+        run: |
+          . deploy/domains.env
+          for path in health health/ready; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://${API_HOST}/api/v1/$path")
+            echo "$path -> $code"
+            [ "$code" = 200 ] || exit 1
+          done

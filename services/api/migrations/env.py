@@ -7,7 +7,7 @@ from __future__ import annotations
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 
 # Importing the model registry registers every mapper on Base.metadata.
 import app.models  # noqa: F401
@@ -46,6 +46,13 @@ def run_migrations_online() -> None:
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
+        if connection.dialect.name == "postgresql":
+            # A migration that waits on a lock held by live traffic gives up after 3 s
+            # instead of queueing every request behind it; the deploy then fails and
+            # the old containers keep serving (deploy/deploy.sh). Session-level, so it
+            # outlives this commit and covers every migration in the run.
+            connection.execute(text("SET lock_timeout = '3s'"))
+            connection.commit()
         context.configure(
             connection=connection,
             target_metadata=target_metadata,

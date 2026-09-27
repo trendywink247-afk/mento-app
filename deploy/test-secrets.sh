@@ -101,7 +101,7 @@ else ok "a plaintext file is refused"; fi
 # A directory that is certainly on disk (the repo's gitignored .secrets/), so this
 # holds even on a box whose /tmp is itself tmpfs.
 DISK="$(mkdir -p "$ROOT/.secrets" && mktemp -d -p "$ROOT/.secrets")"
-if SOPS_AGE_KEY_FILE="$TMP/server.key" MENTO_ALLOW_DISK_ENV= "$HERE/decrypt-env.sh" \
+if SOPS_AGE_KEY_FILE="$TMP/server.key" MENTO_ALLOW_DISK_ENV='' "$HERE/decrypt-env.sh" \
     "$TMP/prod.env.sops.yaml" "$DISK/api.env" >/dev/null 2>&1; then
     fail "wrote plaintext to a non-tmpfs directory"
 else ok "a non-tmpfs output directory is refused"; fi

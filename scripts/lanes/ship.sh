@@ -36,9 +36,16 @@ step "push"
 git push origin master || die "push failed"
 
 step "prod: backup, then deploy the API"
+# The box's checkout moves to SHIP_SHA BEFORE deploy.sh runs, so the deploy.sh that
+# runs is the one being shipped (a script that `git reset`s itself mid-run would
+# otherwise finish as a mix of old and new lines), and it deploys exactly SHIP_SHA —
+# never whatever origin/master became in the meantime. `--backup` takes the database
+# backup first and deploys nothing if it fails; pipefail keeps `| tail` from turning
+# a failed backup or deploy into a success (it used to).
 ssh -o BatchMode=yes -o ConnectTimeout=20 "$VPS" \
-  'cd /opt/mento && ./deploy/backup-postgres.sh 2>&1 | tail -1 && ./deploy/deploy.sh 2>&1 | tail -2' \
-  || die "the API deploy failed (the backup line above says whether it was taken)"
+  "cd /opt/mento && git fetch -q origin && git reset -q --hard $SHIP_SHA \
+   && bash -o pipefail -c './deploy/deploy.sh --backup $SHIP_SHA 2>&1 | tail -6'" \
+  || die "the API deploy failed (its last lines are above; nothing after it was shipped)"
 for u in health health/ready; do
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "https://${API_HOST}/api/v1/$u")
   [ "$code" = 200 ] || die "prod $u answered $code"

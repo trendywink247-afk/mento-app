@@ -7,8 +7,9 @@
 # so certbot's standard renewal path just works. This compose file only binds the
 # API to 127.0.0.1, so it's unreachable except through the host Nginx reverse proxy.
 #
-# Usage (from repo root on the VPS):
-#   docker compose -f deploy/docker-compose.prod.yml up -d --build
+# Usage: ./deploy/deploy.sh (migrations first, then the api container). A bare
+#   `docker compose -f deploy/docker-compose.prod.yml up -d --build` no longer
+#   migrates — the API container stopped running migrations on boot (WS1 T1.9).
 
 # mem_limit values below assume the 1-2 GB RAM VPS this was first deployed to
 # (docs/DEPLOYMENT_VPS.md) plus the 2 GB swap file set up there. Raise/remove
@@ -20,7 +21,7 @@ services:
     restart: always
     mem_limit: 256m
     env_file:
-      - ../services/api/.env
+      - ${MENTO_ENV_FILE:-../services/api/.env}
     environment:
       POSTGRES_USER: mento
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in services/api/.env}
@@ -53,11 +54,14 @@ services:
     build:
       context: ../services/api
       dockerfile: Dockerfile
+    # Tagged per commit by deploy/deploy.sh, so a failed deploy can put the previous
+    # image back. It no longer migrates on boot: deploy.sh runs migrations first.
+    image: mento-api:${API_TAG:-latest}
     container_name: mento-api-prod
     restart: always
     mem_limit: 384m
     env_file:
-      - ../services/api/.env
+      - ${MENTO_ENV_FILE:-../services/api/.env}
     environment:
       DATABASE_URL: postgresql+psycopg://mento:${POSTGRES_PASSWORD}@postgres:5432/mento
       REDIS_URL: redis://redis:6379/0

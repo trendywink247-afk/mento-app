@@ -25,7 +25,7 @@ command -v sops >/dev/null || die "sops is not installed (docs/DEPLOYMENT_VPS.md
 grep -q '^sops:' "$SRC" || die "$SRC is not SOPS-encrypted — refusing to use it"
 
 OUT_DIR="$(dirname "$OUT")"
-mkdir -p -m 700 "$OUT_DIR"
+mkdir -p "$OUT_DIR" && chmod 700 "$OUT_DIR"
 # Plaintext secrets belong on tmpfs only. MENTO_ALLOW_DISK_ENV=1 is for the test
 # script, which writes into a throwaway temp dir.
 if [ "${MENTO_ALLOW_DISK_ENV:-}" != 1 ] && [ "$(stat -f -c %T "$OUT_DIR")" != tmpfs ]; then

@@ -260,14 +260,30 @@ Old hosts keep redirecting for as long as their DNS records and certs live.
 
 1. Do the work locally against Test, verify per `mento-verify` (pytest, `alembic
    check`, `tsc --noEmit`, e2e for touched flows).
-2. Commit, push to `master` on the GitHub remote (`origin` = `github.com/trendywink247-afk/mento-app`, private).
-3. `ssh mento-ops@<vps-ip> 'cd /opt/mento && ./deploy/deploy.sh'`
+2. Ship: `bash scripts/lanes/ship.sh "what changed"` (gate → push → box checkout to
+   that exact commit → `deploy.sh --backup <sha>` → web → OTA). By hand:
+   `ssh mento-ops@<vps-ip> 'cd /opt/mento && git fetch -q origin && git reset -q --hard <sha> && ./deploy/deploy.sh --backup <sha>'`
 
-`deploy.sh` hard-resets the VPS checkout to `origin/master`, rebuilds the API image,
-and brings the stack up — the container entrypoint runs `alembic upgrade head`
-automatically before serving, and refuses to serve if migrations fail. If a
-migration is destructive or backward-incompatible, run
-`./deploy/backup-postgres.sh` manually right before deploying that one.
+What `deploy.sh` does (WS1 T1.9; proof: `bash deploy/test-deploy.sh`):
+
+1. checks out the commit and builds `mento-api:<sha12>` (skipped if it exists);
+2. runs `alembic upgrade head` in a **one-off container** on the new image. The
+   serving container no longer migrates on boot. Each migration waits at most **3 s**
+   for a lock (`migrations/env.py`), so it can't queue live traffic behind it. **If
+   the migration fails, the deploy stops and the old container keeps serving;**
+3. swaps. On today's stack the one `api` container is recreated (a few seconds of
+   502s from Nginx — as before) and, if it never turns healthy on
+   `/api/v1/health/ready`, is **put back on the previous image tag** automatically.
+   On the Balanced stack (`MENTO_STACK=balanced`, after the server move) it is a
+   blue/green swap through Caddy with no failed requests (`deploy/bluegreen.sh`).
+
+One deploy at a time (a lock refuses a second). State (live tag, previous tag, live
+colour) lives in `~/.local/state/mento/` on the box. Env: the SOPS file when it
+exists (see "Secrets"), otherwise `services/api/.env`.
+
+**Migrations must be backward-compatible with the code still serving** (add a
+column, backfill, only then use it; drop in a later release). Blue/green and the
+automatic rollback both run the previous image against the new schema.
 
 **If the change touched anything in `apps/mobile`** (the web build serves the
 whole app), also run `./deploy/deploy-web.sh` (locally — see step 11) — the two
@@ -276,14 +292,40 @@ deploys are independent; `deploy.sh` only ships the API.
 ### Rollback
 
 ```bash
-git log --oneline -5          # find the last-good commit
-git reset --hard <sha>
-docker compose -f deploy/docker-compose.prod.yml up -d --build
+ssh mento-ops@<vps-ip> 'cd /opt/mento && ./deploy/deploy.sh --rollback'
 ```
 
-Rolling back past a migration that already ran requires an Alembic downgrade or a
-restore from `deploy/backup-postgres.sh`'s dump — forward-only migrations
-(CLAUDE.md) mean rollback is not free; plan destructive migrations accordingly.
+Puts the previous image back (no migrations run; the schema stays). Rolling back
+past a migration that already ran requires a new forward migration or a restore
+from `deploy/backup-postgres.sh`'s dump — forward-only migrations (CLAUDE.md) mean
+rollback is not free; plan destructive migrations accordingly.
+
+### CI deploys (`.github/workflows/api-deploy.yml`) — off until you turn them on
+
+After **API CI** passes on master, the workflow can SSH to the box with a deploy-only
+key that can run nothing but `deploy.sh --from-ssh` (backup, then deploy that exact
+commit). It is inert until all of this exists:
+
+```bash
+# On the laptop: a key used for nothing else.
+ssh-keygen -t ed25519 -N '' -C mento-ci-deploy -f mento-ci-deploy
+# On the box, as mento-ops: append ONE line to ~/.ssh/authorized_keys —
+#   restrict,command="/opt/mento/deploy/deploy.sh --from-ssh" <contents of mento-ci-deploy.pub>
+# `restrict` = no shell, no pty, no forwarding; the command ignores what the client asks
+# for except "deploy <40-hex sha>", and that sha must be on origin/master.
+# The box's host key line, for pinning (run from the laptop, check it against the box):
+ssh-keyscan -t ed25519 <vps-ip>
+```
+
+GitHub → Settings → Secrets and variables → Actions: secrets `API_DEPLOY_SSH_KEY`
+(private key file contents) and `API_DEPLOY_KNOWN_HOSTS` (the keyscan line); then the
+variable `API_AUTO_DEPLOY=true` to deploy after every green API CI on master. Manual
+runs (Actions → API Deploy → Run workflow) work without the variable. Optional:
+Settings → Environments → `production` → required reviewers, to approve each deploy.
+CI deploys do not ship the web build or the OTA — `ship.sh` still does.
+**Turn CI on only after one `ship.sh` run** has put this version of `deploy.sh` on the
+box: the forced command runs the `deploy.sh` already on disk, and the one before
+WS1 T1.9 knows nothing about `--from-ssh`.
 
 ### Rotation
 

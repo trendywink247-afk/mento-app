@@ -3,11 +3,6 @@
 # Run:                     docker run --env-file .env -p 8000:8000 mento-api
 FROM python:3.12-slim
 
-# curl is needed only for the HEALTHCHECK below.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
-
 # Non-root runtime user.
 RUN useradd --create-home --uid 1000 mento
 
@@ -35,9 +30,12 @@ ENV UVICORN_WORKERS=2 \
 
 EXPOSE 8000
 
-# /api/v1/health is plain liveness. (/api/v1/health/crisis is the ACTIVE
-# alerting hook — point an external uptime monitor at it; see docs/DEPLOYMENT.md.)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS "http://127.0.0.1:${PORT}/api/v1/health" || exit 1
+# Readiness, not liveness: /api/v1/health/ready is 503 while Postgres is unreachable
+# (Redis and Stream are reported, never fatal), so `docker compose up --wait` and the
+# blue/green swap only count a container that can actually serve. Python, not curl:
+# no apt layer in this image. (/api/v1/health/crisis is the ACTIVE alerting hook —
+# point an external uptime monitor at it; see docs/DEPLOYMENT_VPS.md.)
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c "import os, urllib.request as u; u.urlopen('http://127.0.0.1:%s/api/v1/health/ready' % os.environ.get('PORT', '8000'), timeout=4)"
 
 ENTRYPOINT ["docker-entrypoint.sh"]

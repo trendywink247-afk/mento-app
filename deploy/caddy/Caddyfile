@@ -12,7 +12,17 @@
 #
 # The host map mirrors deploy/test-nginx.sh row for row; deploy/test-caddy.sh
 # asserts it. No access logs are configured on purpose: request logs would hold
-# member IP addresses (CLAUDE.md T&S #7).
+# member IP addresses (CLAUDE.md T&S #7). Caddy's error log still records the
+# client address of a request that FAILED (e.g. no upstream) — nothing else.
+#
+# deploy/deploy.sh reloads this file on every deploy (`caddy reload`, graceful);
+# an invalid file fails the deploy and the running config stays.
+{
+	log default {
+		# The idle blue/green colour fails its health check every 2 s by design.
+		exclude http.handlers.reverse_proxy.health_checker.active
+	}
+}
 
 (tls_auto) {
 }

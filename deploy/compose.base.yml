@@ -81,7 +81,9 @@ services:
     restart: unless-stopped
     # api_* are not hard dependencies: Caddy retries until a colour is healthy.
     volumes:
-      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The directory, not the file: `git reset` replaces the Caddyfile with a new
+      # inode, and a single-file bind mount would keep showing Caddy the old one.
+      - ./caddy:/etc/caddy:ro
       - ${WEB_ROOT:-./web-root}:/srv/web:ro
       - ${CADDY_CERTS:-./caddy/certs}:/certs:ro
       - caddy_data:/data
