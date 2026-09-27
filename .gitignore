@@ -66,3 +66,6 @@ mento-crisis-card.png
 deploy/secrets/*
 !deploy/secrets/*.sops.yaml
 !deploy/secrets/README.md
+
+# ---- Local Balanced stack: the web build Caddy serves (deploy/compose.local.yml) ----
+deploy/web-root/

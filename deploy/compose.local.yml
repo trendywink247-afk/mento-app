@@ -1,0 +1,49 @@
+# Local overrides for the Balanced stack — dev-only values, never secrets.
+#   docker compose -f deploy/compose.base.yml -f deploy/compose.local.yml up -d --wait
+# Allowed differences from prod: env values, published ports, memory/log limits,
+# hostnames, host-side paths (deploy/test-parity.sh enforces this).
+#
+# Web build for Caddy (optional; Metro on :8081 is the everyday dev server):
+#   cd apps/mobile && npx expo export --platform web --output-dir ../../deploy/web-root/current
+x-api-env: &api-env
+  ENV: dev
+  DATABASE_URL: postgresql+psycopg://mento:mento@postgres:5432/mento
+  REDIS_URL: redis://valkey:6379/0
+  JWT_SECRET: local-dev-only-not-a-secret
+  APP_BASE_URL: https://app.mento.localhost
+  ADMIN_BASE_URL: https://admin.mento.localhost
+
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: mento
+      POSTGRES_PASSWORD: mento
+      POSTGRES_DB: mento
+    ports:
+      - "5432:5432"
+
+  valkey:
+    ports:
+      - "6379:6379"
+
+  api_blue:
+    environment: *api-env
+    ports:
+      - "8000:8000" # Expo web, the e2e specs and the gate talk to localhost:8000
+
+  api_green:
+    environment: *api-env
+
+  migrate:
+    environment: *api-env
+
+  caddy:
+    environment:
+      CADDY_TLS: ${CADDY_TLS:-internal}
+      ROOT_DOMAIN: mento.localhost
+      APP_HOST: app.mento.localhost
+      API_HOST: api.mento.localhost
+      ADMIN_HOST: admin.mento.localhost
+    ports:
+      - "80:80"
+      - "443:443"
