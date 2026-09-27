@@ -10,8 +10,13 @@
 # The two placeholders below are NOT keys. sops refuses to encrypt until they are
 # replaced with the real public keys (`age-keygen -y <keyfile>` prints one) — that
 # failure is deliberate: nothing gets encrypted to a key nobody holds.
+#
+# The character class in path_regex ([\/] not /) matters on Windows: sops matches
+# --filename-override against its own path representation, which uses backslashes
+# there — a plain forward-slash regex silently matches nothing and sops refuses
+# with "no matching creation rules found" (found generating this file, session 47).
 creation_rules:
-  - path_regex: deploy/secrets/prod\.env\.sops\.yaml$
+  - path_regex: deploy[\\/]secrets[\\/]prod\.env\.sops\.yaml$
     age: >-
-      REPLACE_WITH_FOUNDER_AGE_PUBLIC_KEY,
-      REPLACE_WITH_SERVER_AGE_PUBLIC_KEY
+      age19wwdklnyc0r37czhr6e8fg73ww43xenx8ge96gsyezhk8lq7zv6qedacrv,
+      age1qylx0yw47x9vsvlkrfqfpufvnrqcwe9sj38zekm0uxs4pajcpgeqjpm33l
