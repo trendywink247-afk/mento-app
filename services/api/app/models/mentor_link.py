@@ -44,9 +44,11 @@ class MentorLink(UUIDMixin, TimestampMixin, Base):
     listener_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("listener_profiles.id", ondelete="CASCADE"), index=True
     )
-    # The conversation the ask was made from (the mentor's card opens it). No FK —
-    # conversations carry none today (audit F20).
-    conversation_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # The conversation the ask was made from (the mentor's card opens it). SET NULL:
+    # an accepted link outlives the conversation it began in (T2.1).
+    conversation_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True
+    )
 
     status: Mapped[LinkStatus] = mapped_column(default=LinkStatus.pending, index=True)
 

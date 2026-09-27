@@ -82,6 +82,23 @@ AUDIT_ACTOR_NAME = "Member erasure"
 AUDIT_ACTION = "member.erased"
 
 
+# The tables whose rows are the member's own and are DELETED (the `counts` keys of
+# phase C that are not "_detached"). GET /me/export hands every one of them back first
+# (services/export.py; tests/test_export.py keeps the two in step).
+MEMBER_TABLES = (
+    "reflections",
+    "conversations",
+    "journal_entries",
+    "favourites",
+    "stay_in_touch_links",
+    "requests",
+    "push_tokens",
+    "allowance_days",
+    "applications",
+    "contributions",
+)
+
+
 class MentorActive(Exception):
     """The member is also a live mentor — refused, nothing touched."""
 

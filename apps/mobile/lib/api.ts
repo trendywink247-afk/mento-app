@@ -279,6 +279,46 @@ export async function apiRequest<T>(
   init: RequestInit = {},
   getToken?: () => Promise<string | null>,
 ): Promise<T> {
+  const res = await apiFetch(path, init, getToken);
+  if (res.status === 204) return undefined as T; // bodyless success (e.g. leave path)
+  return (await res.json()) as T;
+}
+
+/** One page of a paged list endpoint (API T2.3): the body is still a plain list, and
+ * the server puts the next page's cursor in `X-Next-Cursor` (absent on the last page). */
+export type ApiPage<T> = { items: T[]; nextCursor: string | null };
+
+export async function apiRequestPage<T>(
+  path: string,
+  getToken?: () => Promise<string | null>,
+): Promise<ApiPage<T>> {
+  const res = await apiFetch(path, {}, getToken);
+  return { items: (await res.json()) as T[], nextCursor: res.headers.get('X-Next-Cursor') };
+}
+
+/** Walk a paged list from the start, at most `maxPages` pages of `limit` — a screen
+ * that shows the whole list stays bounded per request AND per load. */
+export async function collectPages<T>(
+  fetchPage: (query: string) => Promise<ApiPage<T>>,
+  { limit = 50, maxPages = 4 }: { limit?: number; maxPages?: number } = {},
+): Promise<T[]> {
+  const items: T[] = [];
+  let cursor: string | null = null;
+  for (let n = 0; n < maxPages; n += 1) {
+    const query: string = `limit=${limit}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`;
+    const page: ApiPage<T> = await fetchPage(query);
+    items.push(...page.items);
+    cursor = page.nextCursor;
+    if (!cursor) break;
+  }
+  return items;
+}
+
+async function apiFetch(
+  path: string,
+  init: RequestInit,
+  getToken?: () => Promise<string | null>,
+): Promise<Response> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(init.headers as Record<string, string>),
@@ -321,8 +361,7 @@ export async function apiRequest<T>(
     }
     throw new ApiError(res.status, detail, code, body);
   }
-  if (res.status === 204) return undefined as T; // bodyless success (e.g. leave path)
-  return (await res.json()) as T;
+  return res;
 }
 
 // --- Message allowance (DECISIONS §L.2, boards A05 / A22) ---
@@ -555,6 +594,18 @@ async function request<T>(path: string, init: RequestInit = {}, auth = false): P
   }
 }
 
+/** A signed-in paged read, with the same 401 handling as `request`. */
+async function requestPage<T>(path: string): Promise<ApiPage<T>> {
+  try {
+    return await apiRequestPage<T>(path, getSessionToken);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      await handleUserUnauthorized();
+    }
+    throw e;
+  }
+}
+
 export const api = {
   startOnboarding: (body: {
     dob: string; // YYYY-MM-DD
@@ -606,7 +657,8 @@ export const api = {
   leavePath: () => request<void>('/paths/me', { method: 'DELETE' }, true),
 
   // --- Mentor discovery + personal requests ---
-  listListeners: () => request<Listener[]>('/listeners', {}, true),
+  // Paged server-side (API T2.3); Browse still shows one list, walked here up to 200.
+  listListeners: () => collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}`)),
 
   requestListener: (id: string, intro_message: string, issue_category?: string | null) =>
     request<PersonalRequest>(`/listeners/${id}/request`, { method: 'POST', body: JSON.stringify({ intro_message, issue_category }) }, true),

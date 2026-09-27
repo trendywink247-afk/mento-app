@@ -1,6 +1,6 @@
 /** Typed client for the listener console (/listener/me endpoints). Same transport as
  * lib/api.ts, bound to the listener token instead of the member session. */
-import { ApiError, apiRequest } from '@/lib/api';
+import { ApiError, type ApiPage, apiRequest, apiRequestPage, collectPages } from '@/lib/api';
 import { clearListenerSession, getListenerToken } from '@/lib/listenerSession';
 
 export type ListenerMe = {
@@ -112,11 +112,24 @@ async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   try {
     return await apiRequest<T>(path, init, getListenerToken);
   } catch (e) {
-    if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
-      await clearListenerSession();
-      sessionLostListeners.forEach((fn) => fn());
-    }
+    await onConsoleError(e);
     throw e;
+  }
+}
+
+async function reqPage<T>(path: string): Promise<ApiPage<T>> {
+  try {
+    return await apiRequestPage<T>(path, getListenerToken);
+  } catch (e) {
+    await onConsoleError(e);
+    throw e;
+  }
+}
+
+async function onConsoleError(e: unknown): Promise<void> {
+  if (e instanceof ApiError && (e.status === 401 || e.status === 403)) {
+    await clearListenerSession();
+    sessionLostListeners.forEach((fn) => fn());
   }
 }
 
@@ -128,7 +141,22 @@ export const listenerApi = {
 
   conversations: () => req<ListenerConversation[]>('/listener/me/conversations'),
 
-  requests: () => req<ListenerRequest[]>('/listener/me/requests'),
+  /** The inbox, oldest first (paged server-side, API T2.3 — walked here up to 200).
+   * Reading no longer marks anything; what came back is then marked seen, so the
+   * member's letter lights "Seen" exactly as before (board A04). A failed stamp never
+   * fails the inbox — the next load retries it. */
+  requests: async () => {
+    const rows = await collectPages<ListenerRequest>((q) =>
+      reqPage<ListenerRequest>(`/listener/me/requests?${q}`),
+    );
+    if (rows.length > 0) {
+      req<{ status: string }>('/listener/me/requests/seen', {
+        method: 'POST',
+        body: JSON.stringify({ request_ids: rows.map((r) => r.id) }),
+      }).catch(() => undefined);
+    }
+    return rows;
+  },
 
   brief: (convoId: string) => req<MemberBrief>(`/listener/me/conversations/${convoId}/brief`),
 

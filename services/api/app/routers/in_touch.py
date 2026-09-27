@@ -21,7 +21,7 @@ endpoint that lists or counts who stays in touch with a mentor (T&S #5).
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -162,12 +162,25 @@ def my_in_touch(
     }
     latest: dict[str, Conversation] = {}
     if listener_ids:
-        for convo in db.scalars(
-            select(Conversation)
+        # Only the newest conversation with each mentor (T2.3) — one row per link, not
+        # every chat the pair ever had. Ties on created_at break by id, deterministically.
+        newest = (
+            select(
+                Conversation.id,
+                func.row_number()
+                .over(
+                    partition_by=Conversation.listener_id,
+                    order_by=(Conversation.created_at.desc(), Conversation.id.desc()),
+                )
+                .label("n"),
+            )
             .where(Conversation.user_id == user_id, Conversation.listener_id.in_(listener_ids))
-            .order_by(Conversation.created_at.asc())
+            .subquery()
+        )
+        for convo in db.scalars(
+            select(Conversation).join(newest, newest.c.id == Conversation.id).where(newest.c.n == 1)
         ).all():
-            latest[convo.listener_id] = convo  # ascending → the last one wins
+            latest[convo.listener_id] = convo
     items: list[InTouchItem] = []
     waiting: list[InTouchItem] = []
     for link in links:

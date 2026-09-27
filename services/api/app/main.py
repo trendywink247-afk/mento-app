@@ -136,6 +136,8 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    # The web app reads the next page's cursor from a list response (app/pagination.py).
+    expose_headers=["X-Next-Cursor"],
 )
 
 API = "/api/v1"

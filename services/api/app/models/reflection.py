@@ -14,7 +14,7 @@ keep them out of engagement dashboards (T&S #5/#10).
 
 from __future__ import annotations
 
-from sqlalchemy import Integer, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -25,5 +25,7 @@ class ConversationReflection(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "conversation_reflections"
     __table_args__ = (UniqueConstraint("conversation_id", name="uq_reflection_conversation"),)
 
-    conversation_id: Mapped[str] = mapped_column(String(36), index=True)
+    conversation_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("conversations.id", ondelete="CASCADE"), index=True
+    )
     energy: Mapped[int] = mapped_column(Integer)  # 1 (drained) … 5 (energized)

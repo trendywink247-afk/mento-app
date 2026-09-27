@@ -13,9 +13,16 @@ from app.models.mixins import TimestampMixin, UUIDMixin
 class SafetyFlag(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "safety_flags"
 
+    # Deliberately NO foreign key (T2.1): erasure deletes the conversation row but the
+    # flag keeps its id — it only groups flags that came from the same chat.
     conversation_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
-    # NULL once the member has erased their account (DELETE /me): the signal stays for
-    # safety review, the person does not (DECISIONS §L.11).
+    # The SENDER's Stream id — a member id, or a mentor's listener id when a mentor
+    # wrote. NULL once that person is deleted (DECISIONS §L.11): the signal stays for
+    # safety review, the person does not.
+    # Deliberately NO foreign key (T2.1): the crisis scan must never have a flag
+    # insert rejected — scan_and_flag reads an IntegrityError as a lost dedupe race,
+    # so an FK would silently drop a mentor's crisis flag. SET NULL on delete comes
+    # from the parent-delete triggers instead (migration d2a1fk000001).
     user_id: Mapped[str | None] = mapped_column(String(36), index=True, nullable=True)
     signal: Mapped[SafetySignal] = mapped_column(default=SafetySignal.none, index=True)
 

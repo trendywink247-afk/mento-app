@@ -5,6 +5,7 @@ from app.models.allowance import MessageAllowanceDay
 from app.models.console_code import ConsoleCode
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation
+from app.models.data_request import DataRequest
 from app.models.favourite import FavouriteListener
 from app.models.feedback import ProductFeedback
 from app.models.journal import JournalEntry
@@ -27,6 +28,7 @@ __all__ = [
     "Conversation",
     "ConversationReflection",
     "ConversationRequest",
+    "DataRequest",
     "FavouriteListener",
     "JournalEntry",
     "ListenerApplication",
