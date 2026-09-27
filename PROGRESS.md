@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-09-27 (session 38) — Balanced-architecture Phase 0: WS0 T0.1–T0.6 on `claude/eloquent-curie-acsz2h` (not merged, not deployed)
+
+**Done** (one commit each, plan `docs/superpowers/plans/2026-09-20-mento-program-plan.md` §WS0)
+- **T0.1** `e1eae09` — RECORD_AUDIO / MODIFY_AUDIO_SETTINGS and the `expo-audio` plugin out of app.json; `expo-audio` + `expo-av` uninstalled (optional try/catch peers of stream-chat-expo only).
+- **T0.2** `a2d5db9` — new `apps/mobile/app.config.ts`: Android cleartext on unless `APP_VARIANT=production`. Set in the EAS production profile **and** `scripts/build-android-release.ps1` (the real release path — the plan only named eas.json). Doc note in `docs/ANDROID_BUILD.md` §8g.
+- **T0.3** `6324fea` — 77 files import `@expo/vector-icons/Ionicons` (`scripts/codemod-icons.mjs`). Web export 16.57 → 12.72 MB, android 21.60 → 17.75 MB; 1 icon font instead of 19.
+- **T0.4** `05ba3e1` — removed expo-media-library, expo-image-picker, expo-document-picker, expo-sharing, @react-native-community/datetimepicker. Merged manifest loses CAMERA, RECORD_AUDIO, READ_MEDIA_*. **Kept, contrary to the plan list:** `expo-clipboard` (ChatScreen's custom messageActions returns the kit's copyMessage without the kit's availability guard — removing it crashes Copy) and `expo-image-manipulator` (static import in stream-chat-expo `handlers/compressImage.ts`). netinfo, teleport (+patch), expo-file-system kept as the plan anticipated.
+- **T0.5** `db91c9c` — razorpay + posthog out of requirements.txt; their settings fields kept (placeholders, `extra="ignore"`).
+- **T0.6** `4e5c8a8` — python-jose → PyJWT 2.15.0 (already a stream-chat dependency). Decode requires exp/iat/sub; tokens minted by the old code verified under the new. New `tests/test_jwt_pyjwt.py` (plan's two tests + alg=none rejection).
+
+**Verify (cloud container, no Docker daemon — Postgres 16 + Redis run natively):** pytest 496 passed (493 baseline + 3), alembic check, ruff, black; tsc; `expo export` web/android/ios; throwaway `expo prebuild` manifests; web probe (Ionicons loaded, 0 page errors, normal + reduced motion, identical to the pre-change baseline). **Not run:** `bash scripts/lanes/gate.sh fast` — chat specs need Stream creds, role-fork's film check needs H.264 (Playwright's Chromium has none), several specs `docker exec`. Run the gate on the dev machine before merging; also one Android release build + on-device smoke (chat Copy, no mic/camera prompts).
+
+**Open decisions**
+- PyJWT emits `InsecureKeyLengthWarning` for HMAC keys < 32 bytes — confirm prod `JWT_SECRET` / `ADMIN_JWT_SECRET` are ≥ 32 bytes or logs get a warning per request.
+- `expo-sensors` still adds ACTIVITY_RECOGNITION to the merged manifest (shake-to-update only needs the accelerometer) — candidate for a later hygiene pass.
+
+**How to resume:** gate on the dev machine, then merge the branch. Next WS0 cards: T0.7 (FastAPI/SQLAlchemy bump, deps T0.6), T0.8 (tooling), T0.9 (conductor).
+
+---
+
 ## 2026-09-27 (session 37) — post-cutover cleanup: real backups, external monitoring, a public status page, and a prod DB that was silently empty ✅
 
 **Context:** the 2026-09-26 cutover to mento.chat left three loose ends (mobile still on the old API URL, off-site backups still a placeholder, old box's fate undecided) plus a new ask (a public status page). Founder ruled: repurpose the old box (87.232.72.79) instead of decommissioning it — backups, external monitoring, and now the status page all live there — and only stop it serving `agentin.chat` once mento.chat is proven out.
