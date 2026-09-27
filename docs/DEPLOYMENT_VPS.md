@@ -292,6 +292,89 @@ Rotating `STREAM_API_SECRET` invalidates webhook signatures — re-run
 
 ---
 
+## Secrets (SOPS + age)
+
+**Status:** tooling committed (WS1 T1.8); **not yet adopted on prod.** Until
+`deploy/secrets/prod.env.sops.yaml` exists, the box keeps reading the plaintext
+`services/api/.env` exactly as before. The steps below need the founder: only the
+founder creates keys and holds real secrets.
+
+**What it is.** The production env file is committed to git **encrypted**
+(`deploy/secrets/prod.env.sops.yaml`). At deploy time `deploy/decrypt-env.sh`
+decrypts it into the deploy user's tmpfs runtime dir (`/run/user/<uid>/mento/api.env`,
+mode 600, wiped at reboot) and compose reads that as `env_file`. Plaintext secrets
+never sit on the server's disk and never go through GitHub.
+
+### Key custody
+
+| Key | Where the private half lives | Who can decrypt with it |
+|---|---|---|
+| **Founder key** | Founder's laptop (`~/.config/sops/age/keys.txt`) **plus** a password-manager entry **plus** a printed paper copy in a safe place. Never on the server, never in GitHub, never in chat. | The founder, to edit secrets or recover. |
+| **Server key** | Generated **on** the prod box as `mento-ops`, at `~/.config/sops/age/keys.txt` (mode 600). Never copied off the box. | The box, at deploy time. |
+
+Every secret is encrypted to **both** public keys (`.sops.yaml`), so losing either
+one private key loses nothing. GitHub Actions never gets an age key: CI only SSHes
+in; the box decrypts.
+
+### One-time setup
+
+```bash
+# 1. Tools (laptop and box). age from the distro; sops as a pinned release binary.
+sudo apt-get install -y age
+SOPS_V=3.10.2
+curl -fsSLo /tmp/sops "https://github.com/getsops/sops/releases/download/v${SOPS_V}/sops-v${SOPS_V}.linux.amd64"
+curl -fsSLo /tmp/sops.sums "https://github.com/getsops/sops/releases/download/v${SOPS_V}/sops-v${SOPS_V}.checksums.txt"
+(cd /tmp && grep " sops-v${SOPS_V}.linux.amd64\$" sops.sums | sed "s| sops-v${SOPS_V}.linux.amd64| sops|" | sha256sum -c -)
+sudo install -m 755 /tmp/sops /usr/local/bin/sops
+
+# 2. Founder key (on the laptop). Back up the file it writes, then note the public key.
+mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/keys.txt
+age-keygen -y ~/.config/sops/age/keys.txt        # → age1… (founder public key)
+
+# 3. Server key (on the box, as mento-ops).
+mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/keys.txt && chmod 600 ~/.config/sops/age/keys.txt
+age-keygen -y ~/.config/sops/age/keys.txt        # → age1… (server public key)
+
+# 4. Laptop, repo root: put both PUBLIC keys into .sops.yaml (replace the two
+#    REPLACE_WITH_… placeholders), then encrypt the current prod .env. The copy of
+#    the prod .env comes off the box over ssh, straight into sops — never saved.
+ssh mento-ops@<box> 'cat /opt/mento/services/api/.env' \
+  | sops --encrypt --filename-override deploy/secrets/prod.env.sops.yaml \
+         --input-type dotenv --output-type yaml /dev/stdin > deploy/secrets/prod.env.sops.yaml
+git add .sops.yaml deploy/secrets/prod.env.sops.yaml && git commit -m "chore(deploy): encrypted prod env"
+
+# 5. Box, after pulling: prove the box can open it.
+./deploy/decrypt-env.sh && echo decrypted OK
+```
+
+`--filename-override` matters: sops picks the recipients by matching the rule's
+`path_regex` against the file name it is given, and the input here is stdin.
+
+### Everyday use
+
+- **Edit a secret:** `sops deploy/secrets/prod.env.sops.yaml` on the laptop (opens
+  `$EDITOR` on the decrypted text, re-encrypts on save). Commit, then deploy.
+- **No `$` in any value.** Compose rewrites `$` inside `env_file` values (`x$HOMEy`
+  arrives as `x`), so `decrypt-env.sh` refuses such a file and names the key. Generate
+  secrets from `[A-Za-z0-9_-]` (e.g. `openssl rand -hex 32`).
+- **Prove the tooling:** `bash deploy/test-secrets.sh` (throwaway keys, needs Docker).
+
+### Rotation and loss
+
+- **A secret leaked:** change it at its source (Stream, DB password, …), `sops` edit,
+  commit, deploy.
+- **Server key lost** (box rebuilt): new server key on the new box, replace its public
+  key in `.sops.yaml`, then on the laptop `sops updatekeys deploy/secrets/prod.env.sops.yaml`
+  (re-wraps the data key for the new recipient set), commit.
+- **Founder key lost:** restore it from the password manager or paper copy. If every
+  copy is gone, the server key still decrypts: have the box decrypt, make a new founder
+  key, `updatekeys` from a machine holding the server key. Never leave it at one key.
+- **A private key leaked:** treat every secret in the file as leaked. Rotate each at its
+  source, make a new key pair for the leaked holder, `updatekeys`, commit. Removing a
+  recipient does not un-leak old ciphertext already in git history.
+
+---
+
 ## What's still missing (flag before real users depend on this)
 
 - ~~Admin dashboard / listener console have no production web build~~ **Resolved

@@ -61,3 +61,8 @@ mento-crisis-card.png
 # Claude Code session worktrees (isolated checkouts, never commit)
 .claude/worktrees/
 *.rdb
+
+# ---- SOPS: only encrypted files are tracked in deploy/secrets ----
+deploy/secrets/*
+!deploy/secrets/*.sops.yaml
+!deploy/secrets/README.md
