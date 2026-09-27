@@ -4,6 +4,21 @@
 
 ---
 
+## 2026-09-27 (session 42) — T1.7 error tracker (GlitchTip), on `feat/ws1-t1.7-error-tracker` (not merged)
+
+**Done**
+- GlitchTip wired into `deploy/compose.prod.yml`: its own database inside the existing Postgres (`glitchtip-init-db` one-off, idempotent), its own Valkey db index, `SERVER_ROLE=all_in_one`, `ALLOWED_HOSTS` pinned, registration closed from the start, a healthcheck, SSH-tunnel-only access (not on Caddy, no public hostname). `deploy/test-parity.sh` gets a `PROD_ONLY_SERVICES`/`PROD_ONLY_VOLUMES` exception (glitchtip has no local equivalent, same reasoning as T1.2's command/ulimits exception). `autoSessionTracking: false` added to both `AppProviders*.tsx` Sentry.init calls per the task card.
+- Commit `c5b7376`.
+
+**Open decisions**
+- **H12 (founder-only: "check the GlitchTip and Bugsink licences and choose one") was not independently completed.** Founder chose GlitchTip before I started (matches the plan's own recorded D6 default). I confirmed via web search that GlitchTip's backend is MIT-licensed (gitlab.com/glitchtip/glitchtip-backend; cross-checked against app-sre/glitchtip's LICENSE mirror) — no copyleft concern for self-hosting. I did not research Bugsink's licence at all, since the founder had already decided. If H12 meant a deeper review than "confirm the licence is permissive," that's still open.
+- `prod.env.sops.yaml`/`services/api/.env` on the real box still needs a real `GLITCHTIP_SECRET_KEY` (openssl rand -hex 32) added — not generated or written to any real secret store by this session, only used as a throwaway value in isolated verification.
+- The one GlitchTip account is created via `docker exec ... createsuperuser`, documented in `docs/DEPLOYMENT_VPS.md` — not yet done for real since the server move (T1.10) hasn't happened.
+
+**How to resume:** merge this branch. WS1 remaining: T1.10 (server move, founder-gated) is the only card left untouched; T1.2, T1.3, T1.4, T1.7, T1.8, T1.9 are all done. T1.5/T1.6 are covered differently (session 39's call, still standing). Founder may want to look at WS2/WS3/WS4 next per the plan's Wave 1 (they run in parallel with WS1, not strictly after it).
+
+---
+
 ## 2026-09-27 (session 41) — T1.4's HTTPS-gate proof, on `fix/desktop-frame-admin-host-split` (not merged)
 
 Closed the one gap session 40 left open: "the gate passes against `https://app.mento.localhost`."
