@@ -117,9 +117,7 @@ def client_ip(request: Request) -> str:
     return parts[index]
 
 
-def by_ip(
-    name: str, limit: int, window_seconds: int, *, detail: str, fail_closed: bool = False
-):
+def by_ip(name: str, limit: int, window_seconds: int, *, detail: str, fail_closed: bool = False):
     """Dependency factory: per-IP fixed-window limit for anonymous endpoints."""
 
     def dependency(request: Request) -> None:

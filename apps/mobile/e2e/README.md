@@ -28,6 +28,10 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   its old token still valid; (B) a stale access token is refreshed and the call retried;
   (C) /auth/refresh unreachable → still signed in, tokens untouched; (D) a dead refresh
   family → the old sign-out to the landing. Normal + reduced-motion, 0 page errors.
+- admin-read-scope.e2e.js — REQUIRES ADMIN_TOKEN. Scoped admin reads (WS3 T3.12): a flagged
+  conversation opens from the Safety panel only after a stated reason (8+ chars, sent to
+  the server and kept in the audit trail); the API refuses no reason (422) and a chat with
+  no open flag/report (403 `no_open_case`). Normal + reduced-motion, 0 page errors.
 - notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
   notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.
 - connecting-busy.e2e.js — flips every seeded listener to away (docker exec), drives

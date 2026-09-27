@@ -161,8 +161,15 @@ def test_live_conversation_view_is_audited(client, db_session, monkeypatch):
         stream_channel_id="c-x2",
     )
     db_session.add(c)
+    db_session.flush()
+    # T3.12: a read needs an open case on the conversation and a stated reason.
+    db_session.add(SafetyFlag(user_id=uid, conversation_id=c.id, signal=SafetySignal.suicidal))
     db_session.commit()
-    r = client.get(f"/api/v1/admin/conversations/{c.id}/messages", headers=_auth(admin_id))
+    r = client.get(
+        f"/api/v1/admin/conversations/{c.id}/messages",
+        params={"reason": "reviewing the open crisis flag"},
+        headers=_auth(admin_id),
+    )
     assert r.status_code == 200 and r.json()[0]["text"] == "hi"
     with TestSession() as s:
         assert "conversation.viewed" in [a.action for a in s.query(AdminAuditLog).all()]

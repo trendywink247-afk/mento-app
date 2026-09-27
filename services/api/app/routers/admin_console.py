@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
+from app.errors import ApiProblem
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.conversation import Conversation
 from app.models.enums import (
@@ -230,18 +231,68 @@ def review_flag(
     return OkResult(status="reviewed")
 
 
-@router.get("/conversations/{convo_id}/messages", response_model=list[AdminMessageItem])
+def _open_case(db: Session, convo_id: str) -> str | None:
+    """Why this conversation may be read: an unreviewed safety flag or an unresolved
+    report on IT. None = no open case, no read."""
+    flag = db.scalars(
+        select(SafetyFlag.id)
+        .where(SafetyFlag.conversation_id == convo_id, SafetyFlag.reviewed.is_(False))
+        .limit(1)
+    ).first()
+    if flag is not None:
+        return "safety_flag"
+    report = db.scalars(
+        select(ModerationEvent.id)
+        .where(
+            ModerationEvent.conversation_id == convo_id,
+            ModerationEvent.reviewed.is_(False),
+        )
+        .limit(1)
+    ).first()
+    return "report" if report is not None else None
+
+
+READ_REASON_MIN = 8
+
+
+@router.get(
+    "/conversations/{convo_id}/messages",
+    response_model=list[AdminMessageItem],
+    responses={403: {"description": "`no_open_case` — no open flag or report on it"}},
+)
 def conversation_messages(
     convo_id: str,
+    reason: str = Query(min_length=READ_REASON_MIN, max_length=300),
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> list[AdminMessageItem]:
     """Read-only live view for crisis review. Fetched from Stream, never stored.
-    The VIEW itself is audit-logged (reads are accountable)."""
+
+    Scoped (T3.12): only while the conversation has an open case — an unreviewed
+    safety flag or an unresolved report on it — and only with a stated reason. The
+    view is audit-logged with that reason and the kind of case (reads are
+    accountable); a refused read fetches nothing."""
+    reason = reason.strip()
+    if len(reason) < READ_REASON_MIN:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "a reason is required")
     convo = db.get(Conversation, convo_id)
     if convo is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "conversation not found")
-    audit.record(db, admin, "conversation.viewed", subject_type="conversation", subject_id=convo_id)
+    case = _open_case(db, convo_id)
+    if case is None:
+        raise ApiProblem(
+            status.HTTP_403_FORBIDDEN,
+            "no_open_case",
+            "This conversation has no open flag or report, so it cannot be opened.",
+        )
+    audit.record(
+        db,
+        admin,
+        "conversation.viewed",
+        subject_type="conversation",
+        subject_id=convo_id,
+        meta={"reason": reason, "case": case},
+    )
     db.commit()
     msgs = stream.fetch_channel_messages(convo.stream_channel_id or "")
     return [AdminMessageItem(**m) for m in msgs]
