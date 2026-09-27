@@ -8,7 +8,7 @@
  * nobody should have to tap forty times). The press is a 3px travel of the target's own
  * content — transform only; under reduced motion it is a short opacity dip instead.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';

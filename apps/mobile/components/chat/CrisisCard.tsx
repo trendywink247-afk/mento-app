@@ -17,7 +17,7 @@
  * `onDismiss`, when given, adds one quiet "Close" (the mentor console, and the native
  * member chat where the card sits above the thread rather than inside it).
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 

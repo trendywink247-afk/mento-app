@@ -10,7 +10,7 @@
  * Used by the web thread (ListEmptyComponent) and, on native, as the kit's message-list
  * `EmptyStateIndicator` (member chat only).
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { useI18n } from '@/lib/i18n';

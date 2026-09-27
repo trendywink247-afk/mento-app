@@ -22,7 +22,7 @@
  * flight (the envelope rests at the top of the arc), no ripples, the note simply there.
  * A closed or failed question is a still state: nothing on it moves.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';

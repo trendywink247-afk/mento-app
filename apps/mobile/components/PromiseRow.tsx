@@ -3,7 +3,7 @@
  * "A real person replies", A19 "Not sure how to start?"). Static; it belongs inside a card
  * or an EdgeSurface the caller draws.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { IconBadge } from '@/components/IconBadge';

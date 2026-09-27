@@ -21,7 +21,7 @@
  * profile's hero to grow out of. Both are one mover, and neither happens under reduced
  * motion — the avatar is simply where it belongs.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useId, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {

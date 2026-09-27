@@ -1,6 +1,6 @@
 /** The small "Saved" chip that settles on a mentor bubble's top-right corner once the
  * server has the note (board A05). Decorative wash + sage ink, never the accent. */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Settle } from '@/components/motion/Settle';

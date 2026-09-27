@@ -2,7 +2,7 @@
  * DeepHeader — the top of a deeper page (board A25 / A26 / A28…): a round white pillow
  * back key that is simply there, and the page's title + quiet line arriving from the side.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 

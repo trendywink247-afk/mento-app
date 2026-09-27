@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Picker } from '@react-native-picker/picker';
 import { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';

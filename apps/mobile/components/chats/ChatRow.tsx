@@ -7,7 +7,7 @@
  * no badge without an accepted link, no "first talked as" unless the server sent a name,
  * no saved count at zero.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSequence, withTiming } from 'react-native-reanimated';

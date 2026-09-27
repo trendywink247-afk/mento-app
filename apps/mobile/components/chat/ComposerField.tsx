@@ -8,7 +8,7 @@
  * drafts). This component owns no message/send state of its own — callers keep
  * their own text state and guard/async logic and just hand it primitives.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,

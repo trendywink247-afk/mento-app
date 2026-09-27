@@ -5,7 +5,7 @@ import {
   Baloo2_700Bold,
   Baloo2_800ExtraBold,
 } from '@expo-google-fonts/baloo-2';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';

@@ -16,7 +16,7 @@
  * Arrival: the pill, back key and companion are already there; the words, the slider card,
  * the note, Done and the link rise in reading order. Reduced motion: no breath, no glide.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {

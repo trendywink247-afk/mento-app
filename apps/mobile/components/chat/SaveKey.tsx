@@ -1,6 +1,6 @@
 /** "Save to Mentor Notes" — the accent-tint pillow key that rests under a mentor's message
  * (board A05), with the one-line nudge beneath it on the mentor's latest message. */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressKey } from '@/components/motion/PressKey';

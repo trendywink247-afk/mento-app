@@ -13,7 +13,7 @@
  * The companion waits on the note's top-left edge (it is this screen's one perch while
  * the note shows).
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 

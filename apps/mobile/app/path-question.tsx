@@ -16,7 +16,7 @@
  * Sentence assembly, chip rules and the 160 limit live in lib/questionBuilder.ts (pure,
  * unit-tested: `npm run test:question`).
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';

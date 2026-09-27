@@ -4,7 +4,7 @@
  * right so the dots stay centred. It has NO arrival animation — it is simply already
  * there from step to step, which is what reads as one continuous flow.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
 
 import { PressKey } from '@/components/motion/PressKey';

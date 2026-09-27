@@ -9,7 +9,7 @@
  * The companion breathes (the board's 5.2 s lean); words and keys rise in reading order.
  * Reduced motion: all still.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
