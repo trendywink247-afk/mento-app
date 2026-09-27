@@ -275,7 +275,15 @@ What `deploy.sh` does (WS1 T1.9; proof: `bash deploy/test-deploy.sh`):
    502s from Nginx — as before) and, if it never turns healthy on
    `/api/v1/health/ready`, is **put back on the previous image tag** automatically.
    On the Balanced stack (`MENTO_STACK=balanced`, after the server move) it is a
-   blue/green swap through Caddy with no failed requests (`deploy/bluegreen.sh`).
+   blue/green swap through Caddy with no failed requests (`deploy/bluegreen.sh`);
+4. moves the **job worker** (`worker` service, WS4 — `python -m app.jobs.worker`, same
+   image, no port) onto the image now serving. Pushes, the 5-minute capacity/presence
+   sweep and the 04:00 IST mentor-name rotation run there; while it restarts, jobs
+   wait in Postgres (`procrastinate_jobs`) and nothing is lost. If it will not
+   start, the deploy says so and exits non-zero — the API stays on the new image.
+   `docker logs mento-worker-prod` on today's stack. **Admin → Health → `jobs`**
+   shows the backlog and the worker's heartbeat: `worker_alive: false` or a climbing
+   `oldest_queued_seconds` means no pushes are going out.
 
 One deploy at a time (a lock refuses a second). State (live tag, previous tag, live
 colour) lives in `~/.local/state/mento/` on the box. Env: the SOPS file when it
@@ -295,7 +303,8 @@ deploys are independent; `deploy.sh` only ships the API.
 ssh mento-ops@<vps-ip> 'cd /opt/mento && ./deploy/deploy.sh --rollback'
 ```
 
-Puts the previous image back (no migrations run; the schema stays). Rolling back
+Puts the previous image back (no migrations run; the schema stays), then the worker
+onto the same image. Rolling back
 past a migration that already ran requires a new forward migration or a restore
 from `deploy/backup-postgres.sh`'s dump — forward-only migrations (CLAUDE.md) mean
 rollback is not free; plan destructive migrations accordingly.
