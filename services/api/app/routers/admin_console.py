@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
+from app.jobs.health import queue_health
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.conversation import Conversation
 from app.models.enums import (
@@ -46,6 +47,7 @@ from app.schemas import (
     AdminFlagItem,
     AdminFlagReviewIn,
     AdminHealthOut,
+    AdminJobsHealth,
     AdminListenerCreateIn,
     AdminListenerItem,
     AdminListenerPatchIn,
@@ -655,6 +657,7 @@ def health_deep(
         stream_configured=stream.is_configured(),
         last_webhook_at=last_webhook,
         rate_limiter_ok=redis_ok,
+        jobs=AdminJobsHealth(**queue_health(db)),
     )
 
 

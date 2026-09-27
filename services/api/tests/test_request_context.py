@@ -51,6 +51,14 @@ def test_access_line_names_the_route_never_the_id_or_the_query(client, caplog):
     assert convo_id not in lines[-1] and "secret" not in lines[-1]
 
 
+def test_the_healthcheck_stays_out_of_the_access_log(client, caplog):
+    """The container probe hits /health every 30 s; its line is noise, and the quiet
+    list is keyed on the FULL route template (prefix included)."""
+    with caplog.at_level(logging.INFO, logger="mento.access"):
+        client.get("/api/v1/health")
+    assert not [r for r in caplog.records if r.name == "mento.access"]
+
+
 def test_unhandled_error_is_json_with_the_request_id_and_no_internals(client, caplog):
     def _boom():
         raise RuntimeError("the member wrote: my name is Rahul")

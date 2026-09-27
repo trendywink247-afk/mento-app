@@ -41,11 +41,13 @@ import anyio.to_thread
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from sqlalchemy import select
 
+from app import jobs
 from app.config import get_settings
 from app.db import SessionLocal
+from app.jobs import tasks
 from app.models.conversation import Conversation
 from app.models.enums import SafetySignal
-from app.services import allowance, crisis, moderation, push, safety, snooze, stream
+from app.services import allowance, crisis, moderation, safety, snooze, stream
 from app.services.crisis import CrisisResult
 from app.services.moderation import RedactionResult
 
@@ -400,8 +402,39 @@ async def push_webhook(request: Request, background: BackgroundTasks) -> Respons
             message_id=message.get("id"),
         )
         if channel_id:
-            # The mentor wrote: nothing is waiting on them now, so a snooze ends
-            # (before the push task, which only ever pushes the OTHER party).
-            background.add_task(snooze.end_on_mentor_reply, channel_id, sender_id)
-            background.add_task(push.notify_message_safe, channel_id, sender_id)
+            # AFTER the scan above, always. Its own thread: a slow Postgres must not
+            # hold the event loop, and the crisis scan has its own thread budget.
+            await anyio.to_thread.run_sync(_enqueue_after_message, channel_id, sender_id)
     return Response(status_code=status.HTTP_200_OK)
+
+
+def _enqueue_after_message(channel_id: str, sender_id: str) -> None:
+    """Queue what follows a delivered message (WS4 jobs, one transaction):
+    - if the mentor wrote in a chat they snoozed, the snooze ends (nothing is waiting
+      on them now) — queued only then, not for every message;
+    - the push to the OTHER party.
+    Never raises: a queue that refuses the jobs costs one push, never the webhook's
+    200 — Stream retries a non-200, and the retry would re-run everything above."""
+    try:
+        with SessionLocal() as db:
+            snoozed_by_sender = db.execute(
+                select(Conversation.id).where(
+                    Conversation.stream_channel_id == channel_id,
+                    Conversation.listener_id == sender_id,
+                    Conversation.snoozed_until.is_not(None),
+                )
+            ).first()
+            if snoozed_by_sender is not None:
+                jobs.enqueue(
+                    db,
+                    tasks.snooze_end_on_mentor_reply,
+                    best_effort=True,
+                    channel_id=channel_id,
+                    sender_id=sender_id,
+                )
+            jobs.enqueue(
+                db, tasks.push_message, best_effort=True, channel_id=channel_id, sender_id=sender_id
+            )
+            db.commit()
+    except Exception as exc:  # noqa: BLE001 — best-effort by design
+        logger.warning("push not queued after a message: %s", type(exc).__name__)

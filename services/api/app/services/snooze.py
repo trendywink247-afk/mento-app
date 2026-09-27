@@ -12,8 +12,8 @@ What a snooze does, while `conversations.snoozed_until` is in the future:
 What ends it early:
 - a crisis-flagged MEMBER message (`end_for_crisis`, called from the Stream hooks AFTER
   the scan has flagged — the scan always runs first). A snooze never hides a crisis;
-- the mentor's own reply (`end_on_mentor_reply`, async message.new hook) — once they
-  have written, nothing is waiting on them any more;
+- the mentor's own reply (`end_on_mentor_reply`, a job queued by the async
+  message.new hook) — once they have written, nothing is waiting on them any more;
 - the mentor's undo (`DELETE …/snooze`).
 
 A member's ordinary new message does NOT end it: the point is "I can't reply today".
@@ -85,23 +85,19 @@ def end_for_crisis(db: Session, conversation_id: str | None, sender_id: str) -> 
     return bool(result.rowcount)
 
 
-def end_on_mentor_reply(channel_id: str, sender_id: str) -> None:
-    """Background task (own session, best-effort): the mentor wrote in a snoozed chat,
-    so nothing is waiting on them — drop the snooze and the member's "will reply within
-    a day" line with it. Every failure is swallowed and logged (never the ids)."""
-    from app.db import SessionLocal
-
-    try:
-        with SessionLocal() as db:
-            db.execute(
-                update(Conversation)
-                .where(
-                    Conversation.stream_channel_id == channel_id,
-                    Conversation.listener_id == sender_id,
-                    Conversation.snoozed_until.is_not(None),
-                )
-                .values(snoozed_until=None, updated_at=Conversation.updated_at)
-            )
-            db.commit()
-    except Exception as exc:  # noqa: BLE001 — a nicety, never a guarantee
-        logger.warning("snooze not cleared after a mentor reply (%s)", type(exc).__name__)
+def end_on_mentor_reply(db: Session, channel_id: str, sender_id: str) -> bool:
+    """The mentor wrote in a snoozed chat, so nothing is waiting on them — drop the
+    snooze and the member's "will reply within a day" line with it. Runs as the
+    `snooze.end_on_mentor_reply` job (WS4), retried by the queue; commits. Idempotent:
+    a second run finds no snooze. Returns True when a snooze was ended."""
+    result = db.execute(
+        update(Conversation)
+        .where(
+            Conversation.stream_channel_id == channel_id,
+            Conversation.listener_id == sender_id,
+            Conversation.snoozed_until.is_not(None),
+        )
+        .values(snoozed_until=None, updated_at=Conversation.updated_at)
+    )
+    db.commit()
+    return bool(result.rowcount)

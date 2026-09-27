@@ -73,6 +73,28 @@ services:
     ports:
       - "127.0.0.1:8000:8000"   # host Nginx proxies to this; never expose publicly here
 
+  # The job queue's worker (WS4, app/jobs/worker.py): same image as api, no port.
+  # deploy.sh recreates it on the new image once api is healthy. Without it, queued
+  # pushes and the periodic sweeps wait in Postgres (admin Health shows the backlog).
+  worker:
+    image: mento-api:${API_TAG:-latest}
+    container_name: mento-worker-prod
+    command: ["python", "-m", "app.jobs.worker"]
+    restart: always
+    mem_limit: 256m
+    env_file:
+      - ${MENTO_ENV_FILE:-../services/api/.env}
+    environment:
+      DATABASE_URL: postgresql+psycopg://mento:${POSTGRES_PASSWORD}@postgres:5432/mento
+      REDIS_URL: redis://redis:6379/0
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   mento_pgdata_prod:
   mento_redisdata_prod:

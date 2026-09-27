@@ -154,7 +154,7 @@ def db_session():
                     "TRUNCATE conversations, listener_profiles, users, safety_flags, "
                     "moderation_events, journal_entries, conversation_reflections, "
                     "conversation_requests, push_tokens, message_allowance_days, mentor_links, "
-                    "listener_name_history, product_feedback "
+                    "listener_name_history, product_feedback, procrastinate_jobs "
                     "RESTART IDENTITY CASCADE"
                 )
             )

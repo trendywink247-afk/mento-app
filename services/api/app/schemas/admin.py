@@ -95,12 +95,27 @@ class AdminReconcileOut(BaseModel):
     presence_swept: int = 0
 
 
+class AdminJobsHealth(BaseModel):
+    """The job queue (WS4): backlog, backoff, failures by TASK NAME, the worker's
+    pulse. Never a job's arguments. `available` is False if the queue can't be read."""
+
+    available: bool
+    queued: int = 0  # due now, waiting for a worker
+    scheduled: int = 0  # waiting on purpose (a retry's backoff)
+    running: int = 0
+    failed_24h: dict[str, int] = Field(default_factory=dict)
+    oldest_queued_seconds: int | None = None  # climbing = nobody is working the queue
+    worker_last_heartbeat_seconds: int | None = None  # None = no worker has ever started
+    worker_alive: bool = False
+
+
 class AdminHealthOut(BaseModel):
     db_ok: bool
     redis_ok: bool
     stream_configured: bool
     last_webhook_at: str | None
     rate_limiter_ok: bool
+    jobs: AdminJobsHealth
 
 
 class AdminContributionItem(BaseModel):

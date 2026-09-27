@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 
 from app import ratelimit
+from app.jobs import worker
 from app.main import app
 from app.models.conversation import Conversation
 from app.models.enums import (
@@ -303,6 +304,7 @@ def test_the_async_net_ends_the_snooze_too(client, sent):
     )
     assert r.status_code == 200
     assert _snoozed_until(cid) is None
+    worker.drain(queues=["push"])  # pushes are jobs (WS4)
     assert len(sent) == 1 and sent[0]["to"] == "ExponentPushToken[mentor]"
 
 
@@ -339,6 +341,7 @@ def test_the_mentors_own_reply_ends_the_snooze(client):
         },
     )
     assert r.status_code == 200
+    worker.drain(queues=["default"])  # the snooze ends in a job (WS4)
     assert _snoozed_until(cid) is None
     row = client.get("/api/v1/conversations", headers=member(uid)).json()[0]
     assert row["reply_within_a_day"] is False
