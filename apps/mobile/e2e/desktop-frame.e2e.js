@@ -1,5 +1,9 @@
 // Desktop web frame proof (spec 2026-09-19-desktop-web-layout §9).
 // Run:  MENTO_WEB=http://localhost:8082 NODE_PATH=<playwright>/node_modules node e2e/desktop-frame.e2e.js
+// Against the Caddy-fronted Balanced stack (deploy/compose.local.yml), /admin lives
+// on its own host (deploy/caddy/Caddyfile splits it off APP_HOST — T1.3) — pass
+// MENTO_ADMIN_WEB=https://admin.mento.localhost too, or it defaults to MENTO_WEB
+// (today's single-host Metro dev server, where one server still serves everything).
 // Read-only: never submits a form. Asserts, per viewport, normal + reduced motion:
 //   - the app column's box (≤ columnMax, centered) — or the full window on phones and /admin
 //   - the landing's Start key and an opened sheet sit inside the column
@@ -7,6 +11,7 @@
 const { chromium } = require('playwright');
 
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
+const ADMIN_WEB = process.env.MENTO_ADMIN_WEB || WEB;
 const COLUMN_MAX = 480; // theme/layout.ts
 
 const VIEWPORTS = [
@@ -66,7 +71,7 @@ const near = (a, b) => Math.abs(a - b) <= 1;
       check(`${tag} sheet content inside the column`, !!col2 && sheetRight > 0 && sheetRight <= col2.x + col2.width + 1, `right=${sheetRight} col=${JSON.stringify(col2)}`);
 
       // /admin keeps its own wide layout.
-      await page.goto(`${WEB}/admin`, { waitUntil: 'networkidle', timeout: 120000 });
+      await page.goto(`${ADMIN_WEB}/admin`, { waitUntil: 'networkidle', timeout: 120000 });
       await page.waitForTimeout(800);
       const adminCol = await columnBox();
       check(`${tag} /admin is not framed`, !!adminCol && near(adminCol.width, vp.width), JSON.stringify(adminCol));

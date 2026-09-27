@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-09-27 (session 41) — T1.4's HTTPS-gate proof, on `fix/desktop-frame-admin-host-split` (not merged)
+
+Closed the one gap session 40 left open: "the gate passes against `https://app.mento.localhost`."
+
+**Done**
+- Founder installed mkcert (`winget install FiloSottile.mkcert`) and ran `mkcert -install` (local CA now in the Windows trust store); issued a cert for `mento.localhost`/`app`/`api`/`admin` into `deploy/caddy/certs/` (gitignored, per T1.3). Founder added the three `hosts` file lines from `docs/DEPLOYMENT_VPS.md` via an elevated PowerShell (I can't write that file from here).
+- Built the web export (`expo export --platform web --output-dir deploy/web-root/current`).
+- Brought up the local Balanced stack with `CADDY_TLS=mkcert` **in place of** the developer's normal dev-infra stack (both use the fixed container names `mento-postgres`/`mento-redis` by design — deploy/compose.base.yml's own comment says why). Downtime was a few minutes; the founder's real data lives in a different named volume (`api_mento_pgdata`) than the Balanced stack's (`mento_pgdata`), so nothing was at risk — confirmed after restore: same 9 listener rows, dev API back to 200.
+- Ran `e2e/desktop-frame.e2e.js` (the spec CLAUDE.md already names as the `MENTO_WEB` proof) against `https://app.mento.localhost` through the real Caddy container with the trusted mkcert cert. **Found a real bug**, not a proof-only formality: the spec navigated to `${WEB}/admin` unconditionally, but `deploy/caddy/Caddyfile` (T1.3) deliberately 404s `/admin` on `APP_HOST` and only serves it on `ADMIN_HOST` — a leftover from the single-host Metro dev server. Fixed with a new `MENTO_ADMIN_WEB` env var, defaulting to `MENTO_WEB` so today's default gate run is unaffected (regression-checked against the running Metro server — still `ALL PASS`). Commit `7ef2c8b`.
+- Full result against the Caddy stack: 40 assertions, 3 viewports × 2 motion settings, 0 page errors, `ALL PASS`.
+- Balanced stack torn down completely after (containers + network; its volumes left in place, harmless, useful for next time); developer's original dev-infra stack restored exactly.
+
+**Open decisions**
+- This proves the *mechanism* works, not the full `gate.sh fast` tier (8 specs) against the Caddy domain — the chat-heavy specs need Stream creds provisioned in `compose.local.yml` too, which wasn't done here. Worth doing before calling T1.4 fully closed, but the harder unknown (does Caddy + mkcert + the split-host routing actually work end to end in a real browser) is now answered: yes.
+- T1.4 is otherwise done. Remaining WS1 cards: T1.5–T1.7 (T1.5/T1.6 already covered differently, per session 39), T1.10 (server move, founder-gated).
+
+**How to resume:** merge this branch, then either provision Stream creds in `compose.local.yml` and run the full fast-tier gate against the Caddy stack, or move to T1.7 (error tracker).
+
+---
+
 ## 2026-09-27 (session 40) — WS1: T1.2, T1.4 on `feat/ws1-t1.2-t1.4` (not merged, not deployed)
 
 Session 39's PR (`claude/eloquent-curie-acsz2h`, T1.8/T1.3/T1.1/T1.9) reviewed and merged to master first (`6969474`). This session continues WS1 from a fresh branch off master.
