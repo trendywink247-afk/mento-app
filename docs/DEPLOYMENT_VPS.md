@@ -430,14 +430,193 @@ byte-for-byte against the raw stored event, not just the fields we expected to
 check); a plain unhandled exception arrives with its type and message intact
 (by design — only *request* data is stripped, not the error itself).
 
+### The cutover runbook (T1.10) — legacy → Balanced, same box
+
+**Not run yet.** `129.121.122.28` is the box — it's already the live one (DNS
+already points here), so this is **not** a two-box move with a DNS switch. It's an
+in-place conversion: legacy stack (host nginx, `docker-compose.prod.yml`) → Balanced
+stack (Caddy, `compose.base.yml` + `compose.prod.yml`). Read the whole thing before
+starting; steps 1–6 touch nothing live and are fully reversible, step 7 is the one
+that takes traffic, step 8 is the point of no easy return.
+
+Founder-only before starting: order/confirm nothing else needs to happen to the box
+itself (H1 is already satisfied — this box exists); decide how much downtime is
+acceptable if the cutover needs a retry (expect low seconds, not zero, for step 7).
+
+**Prerequisites (all done as of session 47):** real secrets encrypted to
+`deploy/secrets/prod.env.sops.yaml`; `sops`/`age` installed on the box; the box's
+own age key at `~/.config/sops/age/keys.txt`. Confirm before starting:
+
+```bash
+ssh mento-ops@129.121.122.28 'cd /opt/mento && bash deploy/decrypt-env.sh && echo OK'
+```
+
+**1. Fresh backup, off this exact moment.**
+
+```bash
+ssh mento-ops@129.121.122.28 'bash /opt/mento/deploy/backup-postgres.sh'
+# note the filename it prints — step 4 restores this one
+```
+
+**2. Move the box's checkout past this commit**, so `deploy.sh` starts reading the
+encrypted secrets and everything else T1.1–T1.9/WS2–WS4 shipped is present:
+
+```bash
+ssh mento-ops@129.121.122.28 'cd /opt/mento && git fetch -q && git reset -q --hard origin/master'
+```
+
+This alone changes nothing running — no compose command has touched the Balanced
+stack yet. The legacy containers keep serving on whatever image they already had.
+
+**3. Bring up the Balanced stack's data services only — nothing public yet.**
+Nothing here binds a host port (compose.prod.yml's `postgres`/`valkey` publish
+nothing), so this cannot collide with the legacy stack still running:
+
+```bash
+ssh mento-ops@129.121.122.28 '
+  cd /opt/mento
+  export MENTO_STACK=balanced
+  mkdir -p ~/.config/mento && echo balanced > ~/.config/mento/stack   # deploy.sh reads this too; belt and suspenders
+  export MENTO_ENV_FILE="$(deploy/decrypt-env.sh)"
+  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= "$MENTO_ENV_FILE" | cut -d= -f2-)"
+  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml up -d --wait postgres valkey
+'
+```
+
+**4. Restore step 1's backup into the new (still schema-less) database first —
+before migrations, not after.** `POSTGRES_DB=mento` makes the postgres image
+auto-create an empty `mento` database on first boot, but nothing has created a
+single table in it yet. Restore the backup now, while that's still true: it's a
+plain `pg_dump` (`CREATE TABLE ...` + data), so it needs empty tables to create,
+not ones already-created by a later `alembic upgrade` — run migrations first and
+this step turns into a wall of "already exists" errors on every restored table.
+**Each of these `ssh '...'` blocks is its own shell** — the env exports from step
+3 do not carry over; every step below repeats them:
+
+```bash
+ssh mento-ops@129.121.122.28 '
+  gunzip -c /opt/mento-backups/mento-<STAMP>.sql.gz \
+    | docker exec -i mento-postgres psql -v ON_ERROR_STOP=1 -U mento -d mento
+'
+```
+
+`-v ON_ERROR_STOP=1` matters here — without it psql logs an error and keeps going,
+so a real restore failure could pass silently instead of stopping the runbook.
+
+Sanity-check row counts match the legacy database before continuing (e.g.
+`SELECT count(*) FROM users` against both `mento-postgres-prod` and `mento-postgres`
+— they should be close; a live gap of a few rows from traffic since step 1
+is expected and fine).
+
+**5. Run migrations** — brings the just-restored, old-schema data up to what the
+new code (WS2/WS3/WS4 and everything since) expects:
+
+```bash
+ssh mento-ops@129.121.122.28 '
+  cd /opt/mento
+  export MENTO_ENV_FILE="$(deploy/decrypt-env.sh)"
+  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= "$MENTO_ENV_FILE" | cut -d= -f2-)"
+  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml \
+    --profile tools run --rm --no-deps migrate
+'
+```
+
+**6. Build and start the API on the Balanced stack — still not public.** This is
+the real test: does the app boot correctly against the restored data, with the new
+env file, before anything sees it?
+
+```bash
+ssh mento-ops@129.121.122.28 '
+  cd /opt/mento
+  export MENTO_STACK=balanced
+  export MENTO_ENV_FILE="$(deploy/decrypt-env.sh)"
+  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= "$MENTO_ENV_FILE" | cut -d= -f2-)"
+  export API_TAG=$(git rev-parse --short=12 HEAD)
+  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml build migrate
+  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml up -d --wait api_blue
+  docker exec mento-api_blue-1 python -c \
+    "import urllib.request as u; print(u.urlopen(\"http://127.0.0.1:8000/api/v1/health/ready\").status)"
+'
+```
+
+If this fails, **nothing public has changed** — fix it, or stop here and clean up
+(`docker compose -f compose.base.yml -f compose.prod.yml down`) with zero impact on
+the live legacy stack.
+
+**7. The actual cutover — this is the step that takes traffic.** Stop nginx (frees
+:80/:443), start Caddy (claims them, proxies to the now-healthy `api_blue`, issues
+its own Let's Encrypt certs on first boot — expect a few seconds of cert issuance
+before HTTPS answers cleanly, HTTP still redirects immediately):
+
+```bash
+ssh mento-ops@129.121.122.28 '
+  sudo systemctl stop nginx
+  cd /opt/mento
+  export MENTO_STACK=balanced
+  export MENTO_ENV_FILE="$(deploy/decrypt-env.sh)"
+  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= "$MENTO_ENV_FILE" | cut -d= -f2-)"
+  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml up -d --wait caddy
+'
+for u in https://api.mento.chat/api/v1/health https://app.mento.chat/ https://admin.mento.chat/admin; do
+  curl -sS -o /dev/null -w "$u -> %{http_code}\n" "$u"
+done
+```
+
+**If step 7 fails or the health checks come back wrong: roll back immediately.**
+Legacy containers were never stopped, so this is fast:
+
+```bash
+ssh mento-ops@129.121.122.28 '
+  cd /opt/mento
+  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml stop caddy
+  sudo systemctl start nginx
+'
+```
+Then debug against the still-running Balanced stack (not in front of traffic) and
+retry step 7 when fixed. The legacy stack is untouched throughout steps 1–7 — it
+only stops mattering once step 7's health checks come back green and stay green.
+
+**8. Once stable (the plan says roughly a week, judgement call), retire the
+legacy stack:**
+
+```bash
+ssh mento-ops@129.121.122.28 '
+  cd /opt/mento
+  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= services/api/.env | cut -d= -f2-)"
+  docker compose -f deploy/docker-compose.prod.yml down
+  sudo systemctl disable nginx
+'
+```
+After this, `deploy.sh` with no `MENTO_STACK` override defaults to `legacy` — but
+`~/.config/mento/stack` (set in step 3) overrides that default, so ordinary deploys
+keep targeting the Balanced stack without needing `MENTO_STACK=balanced` on every
+call. Confirm this before trusting it silently.
+
+**Not yet handled by this runbook, flag before relying on it fully:**
+- `deploy/backup-postgres.sh` still hard-codes `mento-postgres-prod` — after step 8
+  it will start failing (the container it targets is gone). Update it to
+  `mento-postgres` as part of step 8, not after.
+- No rehearsal of this exact sequence has happened — each step's commands are
+  individually proven (the compose files, the migrate/seed pattern, Caddy's host
+  map, decrypt-env.sh) but not run back-to-back as one script yet. Treat this as a
+  checklist to execute carefully by hand the first time, not a one-command deploy.
+
 ---
 
 ## Secrets (SOPS + age)
 
-**Status:** tooling committed (WS1 T1.8); **not yet adopted on prod.** Until
-`deploy/secrets/prod.env.sops.yaml` exists, the box keeps reading the plaintext
-`services/api/.env` exactly as before. The steps below need the founder: only the
-founder creates keys and holds real secrets.
+**Status:** adopted (session 47) — `deploy/secrets/prod.env.sops.yaml` exists,
+encrypted to the founder's key and the box's own key. `deploy.sh` prefers it over
+plaintext `services/api/.env` automatically once it exists (`use_env_file` in
+`deploy/deploy.sh`) — no flag needed. The box's live checkout hasn't been reset to
+a commit past this yet, so today's running containers still read the plaintext
+file; the next deploy picks up the encrypted one on its own.
+
+**One thing to know before you next edit a secret:** `.sops.yaml`'s `path_regex`
+uses `[\\/]` (matches either slash), not a plain `/` — a forward-slash-only regex
+silently fails to match on Windows (sops compares against its own path
+representation, which uses backslashes there) with no clearer error than "no
+matching creation rules found". Found generating this file; don't revert the fix.
 
 **What it is.** The production env file is committed to git **encrypted**
 (`deploy/secrets/prod.env.sops.yaml`). At deploy time `deploy/decrypt-env.sh`
