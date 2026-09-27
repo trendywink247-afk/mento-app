@@ -25,13 +25,16 @@ services:
       initial_delay_seconds: 20
     envs:
       # Outside dev the API REFUSES TO BOOT with a default JWT_SECRET, missing
-      # Stream creds, empty CORS origins, or a reused ADMIN_JWT_SECRET — that is
+      # Stream creds, empty CORS origins, a reused ADMIN_JWT_SECRET or
+      # LISTENER_JWT_SECRET, or an unset TRUSTED_PROXY_HOPS — that is
       # the invariant working, not a deploy bug (docs/DEPLOYMENT.md).
       - key: ENV
         value: prod
       - key: JWT_SECRET
         type: SECRET
       - key: ADMIN_JWT_SECRET # must differ from JWT_SECRET
+        type: SECRET
+      - key: LISTENER_JWT_SECRET # must differ from JWT_SECRET and ADMIN_JWT_SECRET
         type: SECRET
       - key: DATABASE_URL # DO Managed Postgres 16, keep the +psycopg driver prefix
         type: SECRET

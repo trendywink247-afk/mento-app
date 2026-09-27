@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 from functools import lru_cache
 from urllib.parse import urlsplit
 
@@ -32,6 +33,16 @@ class Settings(BaseSettings):
     # sign/verify with it (a leaked user/listener secret can't forge admin access).
     # Empty = fall back to jwt_secret (backward compatible).
     admin_jwt_secret: str = ""
+    # Dedicated signing secret for LISTENER (mentor console) tokens (T3.1). Required
+    # outside dev and distinct from JWT_SECRET and ADMIN_JWT_SECRET — a leaked member
+    # secret must not forge a mentor. Empty (dev only) = fall back to jwt_secret.
+    listener_jwt_secret: str = ""
+    # Tokens minted before T3.1 carry no iss/aud/jti (and pre-split listener tokens
+    # are signed with JWT_SECRET). They stay valid until this date — it must be at
+    # least (the day T3.1 reaches production + jwt_ttl_days), because production
+    # keeps minting claim-less 90-day tokens until then. 2027-01-31 covers a deploy
+    # on or before 2026-11-02; set LEGACY_CLAIMS_ACCEPTED_UNTIL if it ships later.
+    legacy_claims_accepted_until: date = date(2027, 1, 31)
     min_age: int = 18
 
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"

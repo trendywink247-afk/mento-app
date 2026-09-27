@@ -67,6 +67,17 @@ def _enforce_prod_invariants() -> None:
             "ADMIN_JWT_SECRET is empty or equal to JWT_SECRET — set a distinct "
             "long random value so admin tokens can't be forged with the shared secret"
         )
+    listener_secret = settings.listener_jwt_secret
+    if not listener_secret or listener_secret in (settings.jwt_secret, settings.admin_jwt_secret):
+        problems.append(
+            "LISTENER_JWT_SECRET is empty or equal to JWT_SECRET / ADMIN_JWT_SECRET — "
+            "set a distinct long random value so mentor tokens can't be forged"
+        )
+    if "trusted_proxy_hops" not in settings.model_fields_set:
+        problems.append(
+            "TRUSTED_PROXY_HOPS is not set — set it to the number of reverse proxies "
+            "in front of the API (1 behind Caddy or nginx, 0 if none)"
+        )
     if problems:
         raise RuntimeError(f"unsafe {settings.env} configuration: " + "; ".join(problems))
 

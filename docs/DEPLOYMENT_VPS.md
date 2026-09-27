@@ -120,7 +120,8 @@ cp services/api/.env.example services/api/.env
 nano services/api/.env
 ```
 
-Set at minimum: `ENV=prod`, distinct random `JWT_SECRET` and `ADMIN_JWT_SECRET`,
+Set at minimum: `ENV=prod`, three distinct random secrets `JWT_SECRET`, `ADMIN_JWT_SECRET`
+and `LISTENER_JWT_SECRET` (the API refuses to boot on a missing or shared one),
 `POSTGRES_PASSWORD` (new value — this is the VPS path, `DATABASE_URL` itself is
 overridden by `deploy/docker-compose.prod.yml`), `APP_BASE_URL`, `ADMIN_BASE_URL`, `CORS_ORIGINS` (hosts from `deploy/domains.env`),
 `STREAM_API_KEY`/`STREAM_API_SECRET`, `TRUSTED_PROXY_HOPS=1` (single Nginx hop).
