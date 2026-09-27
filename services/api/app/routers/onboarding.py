@@ -6,12 +6,14 @@ import hashlib
 import logging
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import redis
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.config import get_settings
 from app.db import get_db
+from app.errors import ApiProblem
 from app.models.user import User
 from app.schemas import OnboardingResult, OnboardingStart, PersonaOut
 from app.security import issue_session_token
@@ -27,6 +29,49 @@ def _install_hash(install_id: str | None) -> str | None:
     if not install_id:
         return None
     return hashlib.sha256(install_id.encode()).hexdigest()
+
+
+# Age-gate friction (T3.8): after an under-age refusal the same install is refused for a
+# day whatever date it sends next, and an address is refused once it has collected
+# AGE_REFUSALS_PER_IP refusals in that day (one refusal must not lock out the adults
+# sharing a hostel or carrier address). Friction, not proof — the server-side DOB rule
+# stays the gate. Rides the rate-limit switch and Redis; a Redis error skips it.
+AGE_COOLDOWN_SECONDS = 24 * 3600
+AGE_REFUSALS_PER_IP = 3
+
+
+def _age_keys(request: Request, install_hash: str | None) -> tuple[str, str | None]:
+    ip_key = f"agegate:ip:{ratelimit.client_ip(request)}"
+    return ip_key, f"agegate:install:{install_hash}" if install_hash else None
+
+
+def _age_cooling_down(request: Request, install_hash: str | None) -> bool:
+    if not ratelimit.limits_enabled():
+        return False
+    ip_key, install_key = _age_keys(request, install_hash)
+    try:
+        r = ratelimit._redis()
+        if install_key and r.exists(install_key):
+            return True
+        return int(r.get(ip_key) or 0) >= AGE_REFUSALS_PER_IP
+    except redis.RedisError:
+        logger.warning("age-gate cooldown unavailable — skipped")
+        return False
+
+
+def _remember_age_refusal(request: Request, install_hash: str | None) -> None:
+    if not ratelimit.limits_enabled():
+        return
+    ip_key, install_key = _age_keys(request, install_hash)
+    try:
+        pipe = ratelimit._redis().pipeline()
+        pipe.incr(ip_key)
+        pipe.expire(ip_key, AGE_COOLDOWN_SECONDS, nx=True)
+        if install_key:
+            pipe.set(install_key, "1", ex=AGE_COOLDOWN_SECONDS)
+        pipe.execute()
+    except redis.RedisError:
+        logger.warning("age-gate cooldown unavailable — refusal not remembered")
 
 
 def _age_on(dob: date, today: date) -> int:
@@ -53,8 +98,17 @@ def _age_on(dob: date, today: date) -> int:
         )
     ],
 )
-def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> OnboardingResult:
+def start(
+    payload: OnboardingStart, request: Request, db: Session = Depends(get_db)
+) -> OnboardingResult:
     settings = get_settings()
+    install_hash = _install_hash(payload.install_id)
+    if _age_cooling_down(request, install_hash):
+        raise ApiProblem(
+            status.HTTP_403_FORBIDDEN,
+            "age_gate_cooldown",
+            f"Mento is available to people {settings.min_age} and older.",
+        )
     # UTC, not server-local: a user a day either side of the min-age boundary must
     # not be admitted/denied by the server's timezone.
     today = datetime.now(UTC).date()
@@ -65,6 +119,7 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
     age = _age_on(payload.dob, today)
     if age < settings.min_age:
         # Helped out, not retained. Block under-min-age (PRD §10 recommendation).
+        _remember_age_refusal(request, install_hash)
         raise HTTPException(
             status.HTTP_403_FORBIDDEN,
             detail=f"Mento is available to people {settings.min_age} and older.",
@@ -80,7 +135,7 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
         companion_animal=payload.companion_animal,
         companion_colour=payload.companion_colour,
         companion_name=payload.companion_name,
-        install_hash=_install_hash(payload.install_id),
+        install_hash=install_hash,
     )
     db.add(user)
     db.commit()

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { dobToISO, type Dob } from '@/components/DobPicker';
@@ -6,6 +6,7 @@ import { DobWheels } from '@/components/DobWheels';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { MentorPageHeader } from '@/components/mentor/MentorPageHeader';
 import { Entrance } from '@/components/motion/Entrance';
+import { ageRefusalActive, rememberAgeRefusal } from '@/lib/ageGateMemory';
 import { ApiError, api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { saveSession } from '@/lib/session';
@@ -31,14 +32,34 @@ export function AgeGateStep({ onBack, onPassed }: { onBack: () => void; onPassed
   const { colors } = useTheme();
   const { t } = useI18n();
   const today = new Date();
-  const [dob, setDob] = useState<Dob>({ day: 1, month: 1, year: today.getFullYear() - MIN_AGE });
+  // T3.8: the wheels open on a date that does NOT pass (a year short of the minimum), so
+  // nobody is 18 by default — the year has to be set. The limit line waits for a touch.
+  const [dob, setDob] = useState<Dob>({ day: 1, month: 1, year: today.getFullYear() - MIN_AGE + 1 });
+  const [touched, setTouched] = useState(false);
+  const [refused, setRefused] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+
+  // A refusal on this device in the last day is the answer now too (the server agrees).
+  useEffect(() => {
+    let live = true;
+    void ageRefusalActive().then((active) => {
+      if (live && active) setRefused(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   const age = ageFrom(dob, today);
   const future = new Date(dob.year, dob.month - 1, dob.day) > today;
   const underAge = !future && age < MIN_AGE;
-  const canContinue = !future && !underAge;
+  const canContinue = !refused && !future && !underAge;
+
+  const changeDob = (next: Dob) => {
+    setTouched(true);
+    setDob(next);
+  };
 
   const start = async () => {
     if (!canContinue || starting) return;
@@ -49,7 +70,12 @@ export function AgeGateStep({ onBack, onPassed }: { onBack: () => void; onPassed
       await saveSession(result.session_token, result.stream_token, result.user, result.refresh_token);
       onPassed();
     } catch (e) {
-      setStartError(e instanceof ApiError ? e.message : t('mentorApply.error'));
+      if (e instanceof ApiError && e.status === 403) {
+        await rememberAgeRefusal();
+        setRefused(true);
+      } else {
+        setStartError(e instanceof ApiError ? e.message : t('mentorApply.error'));
+      }
       setStarting(false);
     }
   };
@@ -67,14 +93,18 @@ export function AgeGateStep({ onBack, onPassed }: { onBack: () => void; onPassed
         <Entrance index={1}>
           <Text style={[type.body, { color: colors.inkMuted }]}>{t('publicApply.ageSub')}</Text>
         </Entrance>
-        <DobWheels value={dob} onChange={setDob} entranceFrom={2} />
+        <DobWheels value={dob} onChange={changeDob} entranceFrom={2} />
         {/* A limit state is still: plain text, no motion, no haptic (T&S #11). */}
-        {underAge ? (
+        {refused ? (
+          <Text style={[type.caption, styles.center, { color: colors.ink }]} testID="apply-age-refused">
+            {t('publicApply.ageRefused')}
+          </Text>
+        ) : touched && underAge ? (
           <Text style={[type.caption, styles.center, { color: colors.danger }]}>
             {t('onboarding.age.underAge', { age: MIN_AGE })}
           </Text>
         ) : null}
-        {future ? <Text style={[type.caption, styles.center, { color: colors.danger }]}>{t('onboarding.age.future')}</Text> : null}
+        {!refused && future ? <Text style={[type.caption, styles.center, { color: colors.danger }]}>{t('onboarding.age.future')}</Text> : null}
         {startError ? <Text style={[type.note, styles.center, { color: colors.ink }]}>{startError}</Text> : null}
         <Entrance index={5}>
           <PrimaryButton

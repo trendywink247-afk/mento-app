@@ -416,3 +416,67 @@ def test_member_or_listener_resolves_new_listener_tokens(monkeypatch):
     )
     with pytest.raises(HTTPException):
         security.current_member_or_listener(_creds(issue_admin_token("a-both")))
+
+
+# --- T3.8: age-gate friction (a refusal cools down per install and per IP) ---
+
+
+@pytest.fixture
+def limits_on(monkeypatch):
+    """The cooldown rides the rate-limit switch (off suite-wide); on here, with a
+    trusted proxy hop so each test can speak from its own address."""
+    monkeypatch.setattr(get_settings(), "trusted_proxy_hops", 1)
+    ratelimit.ENABLED = True
+    if not ratelimit.allow(f"probe:{uuid.uuid4()}", 1, 5):
+        pytest.skip("Redis unavailable")
+    yield
+    ratelimit.ENABLED = False
+
+
+def _signup(client, years: int, *, ip: str, install: str | None):
+    body = {"dob": _dob_for_age(years)}
+    if install:
+        body["install_id"] = install
+    return client.post("/api/v1/onboarding/start", json=body, headers={"X-Forwarded-For": ip})
+
+
+@requires_postgres
+def test_underage_refusal_cools_down_that_install(client, db_session, limits_on):
+    ip, install = f"198.51.100.{uuid.uuid4().int % 250}", f"inst-{uuid.uuid4()}"
+    assert _signup(client, 16, ip=ip, install=install).status_code == 403
+    # Same install, now claiming to be an adult: still refused, for the cooldown.
+    again = _signup(client, 25, ip=f"203.0.113.{uuid.uuid4().int % 250}", install=install)
+    assert again.status_code == 403
+    assert again.json()["code"] == "age_gate_cooldown"
+    # Another install on another address is untouched.
+    fresh = _signup(client, 25, ip=f"192.0.2.{uuid.uuid4().int % 250}", install=f"i-{uuid.uuid4()}")
+    assert fresh.status_code == 201
+
+
+@requires_postgres
+def test_an_address_cools_down_only_after_repeated_refusals(client, db_session, limits_on):
+    """Shared addresses are normal (hostels, mobile carriers): one refusal on an IP must
+    not lock out the adults behind it — three in a day does."""
+    ip = f"10.{uuid.uuid4().int % 250}.{uuid.uuid4().int % 250}.7"
+    assert _signup(client, 16, ip=ip, install=None).status_code == 403
+    assert _signup(client, 30, ip=ip, install=f"a-{uuid.uuid4()}").status_code == 201
+    assert _signup(client, 15, ip=ip, install=None).status_code == 403
+    assert _signup(client, 14, ip=ip, install=None).status_code == 403
+    blocked = _signup(client, 30, ip=ip, install=f"b-{uuid.uuid4()}")
+    assert blocked.status_code == 403
+    assert blocked.json()["code"] == "age_gate_cooldown"
+
+
+@requires_postgres
+def test_no_cooldown_when_limits_are_off(client, db_session):
+    install = f"inst-{uuid.uuid4()}"
+    assert (
+        client.post(
+            "/api/v1/onboarding/start", json={"dob": _dob_for_age(16), "install_id": install}
+        ).status_code
+        == 403
+    )
+    ok = client.post(
+        "/api/v1/onboarding/start", json={"dob": _dob_for_age(25), "install_id": install}
+    )
+    assert ok.status_code == 201

@@ -36,6 +36,12 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   the status poll carries no token; an approved mentor's `#code=` link opens the web
   console once (fragment stripped) and the same link again shows "expired or was already
   used". Normal + reduced-motion, 0 page errors.
+- age-gate-friction.e2e.js — the /apply age step (WS3 T3.8): no passing default (Continue
+  disabled on arrival, limit line only after a touch); a refusal remembered on the device
+  holds for an adult year; the server's per-install cooldown (403 age_gate_cooldown) shows
+  the refused line and is remembered. Needs rate limits ON. Spends 2 under-age refusals per
+  run from your address — 3 in a day cool the ADDRESS down too: clear `agegate:*` in Redis
+  between runs. Normal + reduced-motion, 0 page errors.
 - notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
   notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.
 - connecting-busy.e2e.js — flips every seeded listener to away (docker exec), drives

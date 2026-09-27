@@ -53,6 +53,12 @@ def _is_enabled() -> bool:
     return get_settings().rate_limit_enabled
 
 
+def limits_enabled() -> bool:
+    """Public read of the switch, for Redis-backed frictions that ride it (the
+    age-gate cooldown in routers/onboarding.py)."""
+    return _is_enabled()
+
+
 def allow(key: str, limit: int, window_seconds: int, *, fail_closed: bool = False) -> bool:
     """True if this hit is within the window's budget.
 
