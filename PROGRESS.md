@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-09-27 (session 44) — WS3 auth & abuse: T3.1–T3.3, T3.5, T3.7–T3.12 on `claude/determined-ride-4ah0wd` (not merged, not deployed)
+
+**Context:** cloud session 3, WS3 of `docs/superpowers/plans/2026-09-20-mento-program-plan.md`. Skipped by instruction: T3.4 (needs H3, Google Cloud) and T3.6 (needs T6.2).
+
+**Done** (one commit per card, each proven before the next)
+- **T3.1** `460a12e` — every token carries `iss`/per-role `aud`/`jti`; mentor tokens sign with `LISTENER_JWT_SECRET`; pre-split mentor tokens (member secret) and claim-less tokens of every role keep working until `legacy_claims_accepted_until` (default 2027-01-31). Boot refuses a missing/shared `LISTENER_JWT_SECRET` and an unset `TRUSTED_PROXY_HOPS`.
+- **T3.2** `5aab69e` + e2e `8aa0a24` — `sessions` table (hash-only refresh tokens, family + rotation chain, row-locked rotation, reuse kills the family). `POST /auth/upgrade` (old token NOT revoked), `POST /auth/refresh`, `onboarding/start` pair only on `refresh: true`. App: pair stored (refresh written first), proactive refresh, single-flight + Web Lock, one retry after 401; only a definite 401 from /auth/refresh signs out. Proof: `e2e/session-refresh.e2e.js` (pre-refresh install upgrades silently / stale access refreshed / refresh offline keeps the session / dead family signs out), mutation-checked (made "offline" count as dead → scenario C failed).
+- **T3.3** `ce1780f` — the role-less (2026-10-17) and claim-less windows close automatically on their dates; tests pin the clock both sides. Nothing removed early; delete the dead branches after the claims cutoff.
+- **T3.11** `5f35027` — signup limiter fails closed (503) on Redis outage; chat sends still fail open.
+- **T3.12** `90fdca4` — admin conversation reads need an open flag/report on THAT conversation + a reason (8–300 chars) written to the audit row; Safety panel asks for the reason. `e2e/admin-read-scope.e2e.js`. (T9.1 roles not needed for this.)
+- **T3.10** `b2d8458` — status poll no longer mints a 30-day console token (`console_active` replaces the signal Start fresh read from `console_url`); `POST /listener-applications/me/console-code` (10 min, single use, hashed) + `POST /listener/session/exchange`; web console takes `#code=`. `e2e/console-code.e2e.js`.
+- **T3.7** `17d5666` — `users.status/banned_until/install_hash`; `current_user_id` refuses suspended/banned (403 with code + until), `GET /me` still answers; `services/member_status` suspend/ban/lift (audited, ends chats + in-touch links); resolving a member report can suspend/ban. **Sessions are NOT revoked** (a dead family = sign-out = anonymous account lost). A new account from a blocked member's install is flagged (`system` moderation event), not refused. App sends a random install id (`lib/installId.ts`, survives Start fresh).
+- **T3.8** `f9454f8` — after an under-age 403: same install refused 24 h, same IP after 3 refusals/day. `/apply` age step: no passing default, limit line after a touch, refusal remembered on the device. `e2e/age-gate-friction.e2e.js`.
+- **T3.9** `266b400` — `terms_accepted_at` + `terms_version`; signup `terms_accepted`, `POST /me/terms`; `TERMS_GATE_ENFORCED` (default OFF) → match + Personal request 409 `terms_required`. App: clickwrap line on both age steps + house-rules sheet (`app/terms.tsx`, EN+HI); existing members asked once on the tabs when `terms_required`. `e2e/onboarding-terms.e2e.js` (part B run with the gate on too).
+- **T3.5** `d620876` — recovery code: 28 Crockford chars (8-char selector in clear + argon2id of the rest), `POST /me/recovery` (shown once), `POST /onboarding/recover` (revokes all families, starts one; per-IP + per-code limits, fail closed). Profile `RecoveryCard` ("Mento will never ask you for this"), `/recover` screen, landing link. `e2e/recovery-code.e2e.js`.
+
+**Verify (literal, this container):** pytest `573 passed` (was 496) on an isolated `mento_test` DB · `alembic check` clean · ruff/black clean · `tsc --noEmit` clean · node unit tests PASS ×3 · e2e ALL PASS: session-refresh, recovery-code, onboarding-terms, age-gate-friction, console-code, admin-read-scope, apply, age-gate, listener-apply.
+**NOT verified here:** `member-screens.e2e.js` and `role-fork.e2e.js` (the plan's T3.2 accept specs). No Stream creds in this container → `chat-ready` never renders; role-fork also dies on the landing film (this Chromium has no H.264: `canPlayType('video/mp4; avc1')` = "", video error 4). `admin-dashboard.e2e.js` needs `docker exec mento-postgres`. **Run those three on the founder's machine before merging.**
+
+**Open decisions (founder veto)**
+- **Deploy prerequisites (boot will refuse otherwise):** set `LISTENER_JWT_SECRET` (new, distinct) and `TRUSTED_PROXY_HOPS=1` in prod env BEFORE deploying. If the deploy lands after 2026-11-02, set `LEGACY_CLAIMS_ACCEPTED_UNTIL` = deploy date + 90 days. Five additive migrations: `e3a2sess0001 → e3a10code0001 → e3a7stat0001 → e3a9term0001 → e3a5recv0001` (backup first).
+- Refresh reuse detection is strict (plan's test): two tabs racing an old token would sign the member out. Mitigated client-side (single-flight, Web Lock, storage re-read); a small server reuse leeway is the alternative if it bites.
+- Suspension/ban keep sessions alive (see T3.7) — deliberate.
+- Terms: clickwrap on the age step instead of a separate TermsStep (a new step breaks 30 onboarding specs); enforcement OFF until the terms text (T10.5/H6) exists and the updated app is out. House-rules copy is a draft for review.
+- T3.8 friction only on the `/apply` age step (the card's scope); the member `AgeStep` still defaults to exactly 18 — same change there means updating ~15 specs.
+- Banned/suspended members cannot `DELETE /me` (current_user_id refuses) — erasure vs ban evasion is your call.
+- Admin-issued console links (`/admin/listeners/{id}/console-link`) still mint a `#token=` link; only the member poll moved to codes.
+- Install id falls back to `Math.random` on native (no CSPRNG in the app yet) — a label, not a secret.
+- No member-facing screen for "your account is paused" yet (403s carry code + until; GET /me reports status) — T9.5 territory.
+- Existing landing footer "Mentors are real people, not therapists." violates plan invariant 6 (pre-existing, untouched).
+
+**How to resume:** review/merge the PR for this branch; run member-screens / role-fork / admin-dashboard locally with Stream; then provision the two env vars and deploy (founder-approved). Remaining WS3: T3.4 (after H3), T3.6 (after T6.2), and deleting the legacy branches after the cutoffs.
+
+---
+
 ## 2026-09-27 (session 43) — first real deploy.sh run on prod (129.121.122.28, legacy stack)
 
 Every WS1 session since 39 flagged the same gap: the new `deploy.sh` had only ever run in a sandbox harness, never for real. Closed it.

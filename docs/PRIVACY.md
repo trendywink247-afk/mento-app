@@ -44,6 +44,20 @@ person seeking support and the listener — appears only as an auto-assigned per
 - **Journals** — mood, finance, gratitude entries, and mentor notes you save are
   stored so you can read them back. They are private to you; no one else, including
   listeners or admins, can read your journal. Start fresh deletes them (§5).
+- **Sign-in sessions** — the app refreshes its sign-in every few minutes; we keep a
+  record of each sign-in session (which device session it is, when it started and
+  ends) as a one-way hash, never the token itself. Start fresh deletes them.
+- **An install label** — a random id the app makes on first open (not a hardware or
+  advertising id). We keep only a one-way hash of it, for two safety signals: an
+  age-gate refusal is remembered for a day, and a new account from the install of a
+  suspended or banned member is flagged for the team to look at. It is never shown to
+  anyone and never sent to analytics. Uninstalling the app resets it.
+- **Your standing** — if the team suspends or bans an account for breaking the house
+  rules, we keep that status, why, and until when.
+- **Terms acceptance** — when you agreed to Mento's house rules, and which version.
+- **Recovery code — optional.** If you make one in Profile, we keep a lookup part and
+  a one-way (argon2id) hash of the rest — never the code itself. It can bring your
+  account back on a new phone; Mento will never ask you for it.
 - **Listener applications** (if you apply to become a listener) — motivation,
   community interests, availability, and optional email. Stored, not sent anywhere,
   until an admin reviews the application.
@@ -175,6 +189,9 @@ updated in the same change as any data-handling change described above.
 ## 10. Open items before this can be published
 
 - Founder + legal (India, DPDP Act 2023) sign-off.
+- The install label, standing, terms acceptance and recovery-code bullets in §2
+  (added with WS3, 2026-09-27) need the same sign-off; the full terms the house
+  rules point to do not exist yet (T10.5).
 - A real user-facing surface (in-app screen + link) that displays this policy —
   not yet built.
 - A named contact/grievance-officer point, required for DPDP compliance — not yet
