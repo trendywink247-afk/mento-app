@@ -11,7 +11,7 @@
  * fades the scrim (components/motion/useSheetDepth.ts); its rows then arrive in reading
  * order. Reduced motion: a plain fade, rows simply there. Transform + opacity only.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {

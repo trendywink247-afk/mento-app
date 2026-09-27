@@ -21,12 +21,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#F4EFE6"
       },
-      "permissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.MODIFY_AUDIO_SETTINGS"
-      ]
+      "permissions": []
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +30,6 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-audio",
       "expo-video",
       "expo-font",
       "@sentry/react-native",

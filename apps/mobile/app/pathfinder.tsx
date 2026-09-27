@@ -15,7 +15,7 @@
  *     exactly like any other member (community is a soft preference).
  * A route the server does not serve (the board also draws "Work and career") is not invented.
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';

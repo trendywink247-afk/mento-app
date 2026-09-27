@@ -7,9 +7,7 @@ sqlalchemy==2.0.36
 alembic==1.14.0
 psycopg[binary]==3.2.3
 redis==5.2.1
-python-jose[cryptography]==3.3.0
+PyJWT==2.15.0
 stream-chat==4.19.0
-razorpay==1.4.2
-posthog==3.7.4
 httpx==0.28.1
 sentry-sdk[fastapi]==2.66.1

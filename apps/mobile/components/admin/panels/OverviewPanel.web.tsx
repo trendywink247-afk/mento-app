@@ -1,4 +1,4 @@
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ConsolePressable } from '@/components/console/ConsolePressable';

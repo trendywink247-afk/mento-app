@@ -7,7 +7,7 @@
  *
  * Presentational and still: nothing here animates (the screen arrives it as one block).
  */
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 

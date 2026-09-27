@@ -344,6 +344,12 @@ inherits it. **Not yet root-caused:** why the config-plugin doesn't honor `app.j
 for the base manifest — worth a proper fix, or just target HTTPS-only backends in
 production to sidestep the whole class of bug.
 
+**Current state (2026-09-27, WS0 T0.2):** cleartext is set through the `expo-build-properties`
+plugin, and `apps/mobile/app.config.ts` turns it **off** when `APP_VARIANT=production`
+(set by `scripts/build-android-release.ps1` and the EAS `production` profile). Every other
+build keeps it on for LAN development. A release APK built by hand must export
+`APP_VARIANT=production` before `expo prebuild`, or it keeps cleartext on. Prod is https-only.
+
 ### 8h. Diagnosing "the app times out but the network is fine" on a real device
 
 - **Never trust `adb shell curl`** as proof the app itself can connect — different
