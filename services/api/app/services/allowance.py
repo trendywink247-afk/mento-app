@@ -209,12 +209,29 @@ def find_conversation(db: Session, channel_id: str):
     ).first()
 
 
+def _done(db: Session, commit: bool) -> None:
+    if commit:
+        db.commit()
+    else:
+        db.flush()
+
+
 def register(
-    db: Session, *, channel_id: str, sender_id: str, now: datetime | None = None
+    db: Session,
+    *,
+    channel_id: str,
+    sender_id: str,
+    now: datetime | None = None,
+    commit: bool = True,
 ) -> Verdict | None:
     """Count one NON-crisis message on its way through the before-send hook and say
-    whether it is held. Commits. Returns None when the allowance does not apply (a
-    mentor's message, an unknown channel, a sender who is not the member).
+    whether it is held. Returns None when the allowance does not apply (a mentor's
+    message, an unknown channel, a sender who is not the member).
+
+    Commits unless `commit=False`: then the count (and the member-row lock that
+    serialises it) stays in the caller's transaction, so the own-chat write path
+    stores the message and its count in ONE commit (WS5 T5.3) — and a message that
+    never lands is never counted.
 
     A held message is not counted. Serialised per member (`locks.serialize_member`)
     so two quick sends can never both take the last place."""
@@ -231,7 +248,7 @@ def register(
             .where(Conversation.id == convo_id, Conversation.member_streak != 0)
             .values(member_streak=0, updated_at=Conversation.updated_at)
         )
-        db.commit()
+        _done(db, commit)
         return None
     if sender_id != member_id:
         return None
@@ -248,7 +265,7 @@ def register(
 
     if _conversation_exempt(db, convo_id, now):
         row.crisis_exempt += 1
-        db.commit()
+        _done(db, commit)
         return Verdict(held=None, state=_state(streak, row.sent, now, exempt=True))
 
     before = _state(streak, row.sent, now, exempt=False)
@@ -257,7 +274,7 @@ def register(
             row.day_cap_hits += 1
         else:
             row.row_cap_hits += 1
-        db.commit()
+        _done(db, commit)
         return Verdict(held=before.held_reason, state=before)
 
     row.sent += 1
@@ -269,7 +286,7 @@ def register(
         .values(member_streak=Conversation.member_streak + 1, updated_at=Conversation.updated_at)
     )
     sent = row.sent
-    db.commit()
+    _done(db, commit)
     return Verdict(held=None, state=_state(streak + 1, sent, now, exempt=False))
 
 

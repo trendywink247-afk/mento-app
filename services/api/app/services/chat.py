@@ -246,12 +246,18 @@ def _record_crisis(
 def apply_allowance(
     db: Session, convo: Conversation, kind: str, sender_id: str
 ) -> allowance.Verdict | None:
-    """Count a NON-crisis message (a mentor's resets the member's run). Fail-open: a
-    fault delivers the message uncounted, and says so."""
+    """Count a NON-crisis message (a mentor's resets the member's run). The count stays
+    in the open transaction, so the message and its count commit together
+    (`persist_message`). Fail-open: a fault delivers the message uncounted, and says so."""
     if not get_settings().allowance_enabled:
         return None
     try:
-        return allowance.register(db, channel_id=channel_key(convo), sender_id=sender_id)
+        verdict = allowance.register(
+            db, channel_id=channel_key(convo), sender_id=sender_id, commit=False
+        )
+        if verdict is not None and verdict.held:
+            db.commit()  # a held message is not stored, but its cap hit is kept
+        return verdict
     except Exception as exc:  # noqa: BLE001 — the allowance must never stop a message
         db.rollback()
         logger.warning("message allowance unavailable (%s) — delivering", type(exc).__name__)
@@ -281,12 +287,13 @@ def persist_message(
     redacted: bool,
 ) -> dict | Duplicate:
     """THE insert. Under the conversation's row lock: re-check the client_id (a twin
-    may have landed since `send` looked), allocate the next seq, insert, commit."""
+    may have landed since `send` looked), allocate the next seq, insert, commit — one
+    commit for the message and the allowance count `send` left in the transaction."""
     _lock_conversation(db, conversation_id)
     prior = _prior(db, conversation_id, sender_id, client_id)
     if prior is not None:
         out = message_out(prior)
-        db.commit()  # release the lock
+        db.rollback()  # release the lock; this send's allowance count goes with it
         return Duplicate(out)
     row = ChatMessage(
         id=message_id,
@@ -396,6 +403,33 @@ def _held(verdict: allowance.Verdict) -> dict:
         "daily_limit": s.daily_limit,
         "resets_at": s.resets_at.isoformat(),
     }
+
+
+@dataclass
+class Opening:
+    """Everything a socket's hello needs, from ONE database round (T5.3)."""
+
+    side: str
+    peer_id: str
+    last_seq: int
+    read: dict[str, int]
+    replay: list[dict]
+
+
+def opening(db: Session, conversation_id: str, actor_id: str, after_seq: int) -> Opening | None:
+    """Authorize a socket and snapshot what it missed. None = refuse (no such chat,
+    not a participant, or ended — one answer for all three)."""
+    convo = db.get(Conversation, conversation_id)
+    side = side_of(convo, actor_id) if convo is not None else None
+    if side is None or not is_open(convo):
+        return None
+    return Opening(
+        side=side,
+        peer_id=convo.listener_id if side == "member" else convo.user_id,
+        last_seq=last_seq(db, conversation_id),
+        read=read_markers(db, conversation_id),
+        replay=history(db, conversation_id, max(0, after_seq)),
+    )
 
 
 def history(db: Session, conversation_id: str, after_seq: int = 0, limit: int = 200) -> list[dict]:

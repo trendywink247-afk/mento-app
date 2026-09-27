@@ -69,7 +69,16 @@ def two_workers():
         for _ in range(2):
             port = _free_port()
             proc = subprocess.Popen(
-                [sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(port)],
+                [
+                    sys.executable,
+                    "-m",
+                    "uvicorn",
+                    "app.main:app",
+                    "--port",
+                    str(port),
+                    "--ws-max-size",
+                    "16384",
+                ],
                 cwd=API_DIR,
                 env=env,
                 stdout=subprocess.DEVNULL,

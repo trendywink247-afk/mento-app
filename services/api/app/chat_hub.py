@@ -1,14 +1,24 @@
-"""Realtime fan-out for own-chat (WS5 T5.1, from `spike/own-chat`).
+"""Realtime fan-out for own-chat (WS5 T5.1, hardened in T5.3).
 
 One `Hub` per process. Sockets register per conversation; `publish` sends an event to
-every socket of that conversation on EVERY worker: through Valkey/Redis pub/sub when it is
-up (one psubscribe per process, `mento:chat:*`), straight to local sockets when it is
-not. The database — not the hub — is the source of truth: a socket that misses an event
-(dropped connection, worker restart) catches up with `history(after_seq)`, so pub/sub
-may be lossy without ever losing a message.
+every socket of that conversation on EVERY worker: through Valkey pub/sub when it is up
+(one psubscribe per process, `mento:chat:*`), straight to local sockets when it is not.
+The database — not the hub — is the source of truth: a socket that misses an event
+(dropped connection, worker restart, a full queue) catches up with `history(after_seq)`,
+so pub/sub may be lossy without ever losing a message.
 
-Presence is a Redis hash with a TTL (refreshed by each socket's ping), so it is correct
-across workers; without Redis it falls back to this process's sockets.
+A slow client cannot stall a room (T5.3): every socket has its own bounded send queue
+and its own writer task. Delivery only ever does `put_nowait`; a socket whose queue is
+full is dropped (closed 1013) and reconnects with its last seq. Every frame to a socket
+goes through its queue — one writer per socket, never two coroutines on one socket.
+
+A new socket joins PAUSED: its queue buffers live events while the router replays
+history straight to it, then `arrive` starts the writer, which skips any message the
+replay already carried (seq at or below it). A reconnect therefore gets exactly the
+messages after its last seq, no more and no less.
+
+Presence is a Valkey hash with a TTL (refreshed by each socket's ping), so it is correct
+across workers; without Valkey it falls back to this process's sockets.
 """
 
 from __future__ import annotations
@@ -18,6 +28,7 @@ import contextlib
 import json
 import logging
 from collections import defaultdict
+from dataclasses import dataclass, field
 
 import redis
 from fastapi import WebSocket
@@ -32,14 +43,33 @@ _PREFIX = "mento:chat:"
 _PRESENCE = "mento:chatp:"  # not under _PREFIX, so the pub/sub pattern never matches it
 _PRESENCE_TTL_S = 150  # sockets ping every ~30 s and refresh it
 
+SEND_QUEUE = 64  # frames buffered per socket before it is dropped as too slow
+SOCKETS_PER_USER = 3  # per conversation; the oldest goes when a fourth arrives
+CLOSE_TOO_SLOW = 1013  # "try again later": the client reconnects with its last seq
+CLOSE_REPLACED = 4409  # a newer socket of the same person took this one's place
+_CLOSE_TIMEOUT_S = 2.0
+
+
+@dataclass(eq=False)
+class Peer:
+    """One socket in one conversation, with its own queue and writer."""
+
+    ws: WebSocket
+    user_id: str
+    queue: asyncio.Queue = field(default_factory=lambda: asyncio.Queue(maxsize=SEND_QUEUE))
+    writer: asyncio.Task | None = None
+    replayed_to: int = 0  # messages at or below this seq were sent by the replay
+    closed: bool = False
+    present: bool = False  # counted in presence (only once the socket is authorized)
+
 
 class Hub:
     def __init__(self) -> None:
-        # conversation_id -> {websocket: user_id}
-        self._sockets: dict[str, dict[WebSocket, str]] = defaultdict(dict)
+        # conversation_id -> {websocket: Peer}, insertion-ordered (oldest first)
+        self._rooms: dict[str, dict[WebSocket, Peer]] = defaultdict(dict)
         self._redis: aioredis.Redis | None = None
-        self._task: asyncio.Task | None = None
         self._sync: redis.Redis | None = None
+        self._task: asyncio.Task | None = None
 
     # ---- lifecycle -------------------------------------------------------------
     async def start(self) -> None:
@@ -48,7 +78,7 @@ class Hub:
             await self._redis.ping()
         except Exception as exc:  # noqa: BLE001 — degrade to local fan-out, never crash boot
             logger.warning(
-                "chat hub: Redis unavailable (%s) — local fan-out only", type(exc).__name__
+                "chat hub: Valkey unavailable (%s) — local fan-out only", type(exc).__name__
             )
             self._redis = None
             return
@@ -75,7 +105,7 @@ class Hub:
                     if item.get("type") != "pmessage":
                         continue
                     conversation_id = item["channel"].removeprefix(_PREFIX)
-                    await self._deliver(conversation_id, json.loads(item["data"]))
+                    self._deliver(conversation_id, json.loads(item["data"]))
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 — reconnect; clients catch up from the DB
@@ -83,19 +113,86 @@ class Hub:
                 await asyncio.sleep(1)
 
     # ---- sockets ---------------------------------------------------------------
-    async def join(self, conversation_id: str, ws: WebSocket, user_id: str) -> None:
-        self._sockets[conversation_id][ws] = user_id
-        await self._presence(conversation_id, user_id, +1)
+    def join(self, conversation_id: str, ws: WebSocket, user_id: str) -> Peer:
+        """Register a socket, PAUSED and not yet present (see the module docstring):
+        it starts buffering live events at once, so nothing published while the
+        router authorizes and reads history can fall between the two."""
+        peer = Peer(ws=ws, user_id=user_id)
+        self._rooms[conversation_id][ws] = peer
+        return peer
+
+    async def arrive(self, conversation_id: str, peer: Peer, replayed_to: int) -> None:
+        """The socket is authorized and its replay is on the wire: count it present,
+        start its writer, and hold the person to SOCKETS_PER_USER here (their oldest
+        socket goes, so a reconnect is never refused)."""
+        room = self._rooms.get(conversation_id, {})
+        mine = [p for p in room.values() if p.user_id == peer.user_id and p is not peer]
+        for old in mine[: max(0, len(mine) - SOCKETS_PER_USER + 1)]:
+            await self._drop(conversation_id, old, CLOSE_REPLACED)
+        peer.replayed_to = replayed_to
+        peer.present = True
+        await self._presence(conversation_id, peer.user_id, +1)
+        if peer.writer is None and not peer.closed:
+            peer.writer = asyncio.create_task(self._write(peer))
 
     async def leave(self, conversation_id: str, ws: WebSocket) -> None:
-        room = self._sockets.get(conversation_id)
-        user_id = room.pop(ws, None) if room is not None else None
+        room = self._rooms.get(conversation_id)
+        peer = room.pop(ws, None) if room is not None else None
         if room is not None and not room:
-            self._sockets.pop(conversation_id, None)
-        if user_id is not None:
-            await self._presence(conversation_id, user_id, -1)
+            self._rooms.pop(conversation_id, None)
+        if peer is None:
+            return
+        peer.closed = True
+        if peer.writer is not None and peer.writer is not asyncio.current_task():
+            peer.writer.cancel()
+        if peer.present:
+            peer.present = False
+            await self._presence(conversation_id, peer.user_id, -1)
 
-    # Presence lives in Redis (a per-conversation hash of open-socket counts per user) so
+    def send_to(self, peer: Peer, frame: dict) -> None:
+        """A frame for this one socket (pong, an error, a held note), through its queue."""
+        self._offer(peer, frame, conversation_id=None)
+
+    def room_size(self, conversation_id: str) -> int:
+        return len(self._rooms.get(conversation_id, {}))
+
+    async def _write(self, peer: Peer) -> None:
+        try:
+            while True:
+                frame = await peer.queue.get()
+                if frame.get("t") == "message" and _seq(frame) <= peer.replayed_to:
+                    continue  # the replay already carried it
+                await peer.ws.send_json(frame)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa: BLE001 — a dead socket; its own receive loop cleans up
+            peer.closed = True
+
+    def _offer(self, peer: Peer, frame: dict, *, conversation_id: str | None) -> None:
+        if peer.closed:
+            return
+        try:
+            peer.queue.put_nowait(frame)
+        except asyncio.QueueFull:
+            logger.warning("chat socket too slow — dropped (it reconnects by seq)")
+            room_id = conversation_id or self._room_of(peer)
+            if room_id is not None:
+                asyncio.get_running_loop().create_task(self._drop(room_id, peer, CLOSE_TOO_SLOW))
+
+    def _room_of(self, peer: Peer) -> str | None:
+        for cid, room in self._rooms.items():
+            if room.get(peer.ws) is peer:
+                return cid
+        return None
+
+    async def _drop(self, conversation_id: str, peer: Peer, code: int) -> None:
+        """Remove a socket and close it without ever waiting on it for long: a stuck
+        client must not stall whoever is dropping it."""
+        await self.leave(conversation_id, peer.ws)
+        with contextlib.suppress(Exception):
+            await asyncio.wait_for(peer.ws.close(code=code), _CLOSE_TIMEOUT_S)
+
+    # Presence lives in Valkey (a per-conversation hash of open-socket counts per user) so
     # it is right across workers. The hash expires unless a socket touches it, so a worker
     # that dies mid-conversation cannot leave someone "online" for long.
     async def _presence(self, conversation_id: str, user_id: str, delta: int) -> None:
@@ -125,7 +222,7 @@ class Hub:
                 )
             except RedisError:
                 pass
-        return user_id in self._sockets.get(conversation_id, {}).values()
+        return any(p.user_id == user_id for p in self._rooms.get(conversation_id, {}).values())
 
     # ---- events ----------------------------------------------------------------
     async def publish(self, conversation_id: str, event: dict) -> None:
@@ -135,7 +232,7 @@ class Hub:
                 return
             except RedisError as exc:
                 logger.warning("chat hub publish failed (%s) — local fan-out", type(exc).__name__)
-        await self._deliver(conversation_id, event)
+        self._deliver(conversation_id, event)
 
     def publish_sync(self, conversation_id: str, event: dict) -> bool:
         """Publish from code with no event loop (a job, a script): straight to Valkey,
@@ -149,19 +246,24 @@ class Hub:
             logger.warning("chat hub sync publish failed (%s)", type(exc).__name__)
             return False
 
-    async def _deliver(self, conversation_id: str, event: dict) -> None:
-        room = self._sockets.get(conversation_id)
+    def _deliver(self, conversation_id: str, event: dict) -> None:
+        """Never awaits a socket: one full queue drops one socket, the room moves on."""
+        room = self._rooms.get(conversation_id)
         if not room:
             return
         skip = event.get("_skip")  # typing echo suppression: don't tell the typist
         payload = {k: v for k, v in event.items() if k != "_skip"}
-        for ws, user_id in list(room.items()):
-            if skip and user_id == skip:
+        for peer in list(room.values()):
+            if skip and peer.user_id == skip:
                 continue
-            try:
-                await ws.send_json(payload)
-            except Exception:  # noqa: BLE001 — a dead socket is cleaned up by its own loop
-                await self.leave(conversation_id, ws)
+            self._offer(peer, payload, conversation_id=conversation_id)
+
+
+def _seq(frame: dict) -> int:
+    message = frame.get("message")
+    if isinstance(message, dict):
+        return int(message.get("seq") or 0)
+    return 0
 
 
 hub = Hub()
