@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-09-28 (session 47) — T1.10 prep: real secrets adopted, cutover runbook written
+
+**Done**
+- **Secrets (T1.8 finally adopted):** founder age key generated locally (`~/.config/sops/age/keys.txt`, locked to this user via `icacls`); server age key generated **on the box** as `mento-ops`, never left it; `sops`/`age` installed both places. `.sops.yaml` has both real public keys now. `deploy/secrets/prod.env.sops.yaml` committed — the box's current secrets plus what merged WS1/WS3 work needs and didn't have: a fresh `POSTGRES_PASSWORD` (clean start for the new container), `LISTENER_JWT_SECRET`, `GLITCHTIP_SECRET_KEY`. Verified decrypting correctly with **both** recipient keys (founder-side and box-side), byte-for-byte against the source. Commit `d3b6af4`.
+- **Real bug found and fixed getting there:** `.sops.yaml`'s `path_regex` used a bare `/`; sops matches `--filename-override` against its own path representation, which is backslash-separated on Windows, so it silently found no matching rule. Fixed with `[\\/]`. Cost about 20 minutes of confused debugging before finding it — documented prominently so nobody "fixes" it back to a plain slash.
+- **The T1.10 cutover runbook** (`docs/DEPLOYMENT_VPS.md` → "The cutover runbook (T1.10)"): 8 steps, in-place legacy→Balanced conversion on the same box (not a two-box DNS move — that already happened whenever this box was stood up). Steps 1–6 touch nothing public; step 7 is the actual traffic cutover with an immediate rollback path; step 8 retires nginx/legacy for good. Two sequencing bugs caught **writing** it, not after: restore must happen before migrations (not after — a fresh alembic schema plus a pg_dump restore collide on every `CREATE TABLE`), and each `ssh` step is its own shell, so env exports don't carry across steps the way a first draft assumed. Commit `6255850`.
+
+**Not done**
+- The runbook itself has not been rehearsed end-to-end — each piece is individually proven, not run back-to-back as one sequence.
+- `deploy/backup-postgres.sh` still targets `mento-postgres-prod`; the runbook's step 8 note says to fix it then, not before.
+- The founder's private age key exists only on this machine right now — the doc's custody model (password manager + paper backup) is on you to actually do.
+
+**How to resume:** review the runbook (`docs/DEPLOYMENT_VPS.md`), confirm you're comfortable with the downtime window in step 7, then either rehearse it once against a throwaway box or go straight to executing it by hand on `129.121.122.28`. Nothing here is scheduled or automated — it waits on you.
+
+---
+
 ## 2026-09-27 (session 46) — WS3 auth & abuse: T3.1–T3.3, T3.5, T3.7–T3.12 on `claude/determined-ride-4ah0wd` (not merged, not deployed)
 
 **Numbering note:** this session and WS2's both independently called themselves "session 45" (two parallel cloud sessions, neither aware of the other). WS2 merged first and kept 45; this entry is renumbered to 46 on merge.
