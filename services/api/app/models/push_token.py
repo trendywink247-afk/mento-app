@@ -27,11 +27,15 @@ class PushToken(UUIDMixin, TimestampMixin, Base):
         Index("ix_push_tokens_owner", "owner_kind", "owner_id"),
     )
 
-    # Legacy column (member id) — kept one release for backfill; `owner_*` is the truth.
+    # Legacy column — kept one release for backfill; `owner_*` is the truth. It holds a
+    # listener id on listener rows, so it can carry no foreign key.
     user_id: Mapped[str] = mapped_column(String(36), index=True)
     # Who this device belongs to right now: a member (User id) or a listener
     # (ListenerProfile id). One physical device can flip between the two.
     owner_kind: Mapped[PushOwnerKind] = mapped_column(default=PushOwnerKind.member)
+    # Polymorphic, so no plain FK: a deferred Postgres constraint trigger (migration
+    # d2a1fk000001) rejects an owner that does not exist for its kind, and deleting
+    # the member / listener deletes their rows (CASCADE semantics, per role).
     owner_id: Mapped[str] = mapped_column(String(36))
     expo_push_token: Mapped[str] = mapped_column(String(255), index=True)
     platform: Mapped[str] = mapped_column(String(16))  # ios | android

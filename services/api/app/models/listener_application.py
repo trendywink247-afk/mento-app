@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -17,7 +17,9 @@ from app.models.mixins import TimestampMixin, UUIDMixin
 class ListenerApplication(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "listener_applications"
 
-    user_id: Mapped[str] = mapped_column(String(36), index=True)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
     motivation: Mapped[str] = mapped_column(Text)
     # Path lenses the applicant has walked (upsc/neet/jee/exams/life).
     communities: Mapped[list[str]] = mapped_column(JSON, default=list)
@@ -34,5 +36,7 @@ class ListenerApplication(UUIDMixin, TimestampMixin, Base):
     status: Mapped[ApplicationStatus] = mapped_column(default=ApplicationStatus.pending, index=True)
     decline_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # Set on approval — the ListenerProfile this application became.
-    listener_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    listener_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("listener_profiles.id", ondelete="SET NULL"), nullable=True
+    )
     pledge_accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
