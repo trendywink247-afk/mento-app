@@ -37,6 +37,21 @@ services:
   migrate:
     environment: *api-env
 
+  # Dev convenience only (T1.4): seeds a few approved, online listeners so General
+  # matching works against this stack. Never runs in prod (deploy/test-parity.sh
+  # excludes it from the parity check on purpose).
+  #   docker compose -f deploy/compose.base.yml -f deploy/compose.local.yml --profile seed run --rm seed
+  seed:
+    build:
+      context: ../services/api
+    image: mento-api:${API_TAG:-local}
+    profiles: ["seed"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment: *api-env
+    command: ["python", "-m", "scripts.seed_listeners"]
+
   caddy:
     environment:
       CADDY_TLS: ${CADDY_TLS:-internal}

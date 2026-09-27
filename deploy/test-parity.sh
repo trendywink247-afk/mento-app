@@ -25,8 +25,13 @@ MENTO_ENV_FILE="$TMP/api.env" POSTGRES_PASSWORD=parity-check render compose.prod
 python3 - "$TMP/local.json" "$TMP/prod.json" <<'EOF'
 import json, sys
 
+# command/ulimits (T1.2): Postgres/Valkey/API tuning flags sized to the 4 GB prod
+# box (deploy/compose.prod.yml) have no local equivalent — same image and
+# behaviour either side, only sized differently. Deliberately allowed, not an
+# oversight: everything else about the service (image, healthcheck, depends_on,
+# volumes' container paths, profiles, restart policy) must still match exactly.
 ALLOWED = {"environment", "env_file", "ports", "mem_limit", "mem_reservation",
-           "memswap_limit", "logging"}
+           "memswap_limit", "logging", "command", "ulimits"}
 
 def normalise(path):
     cfg = json.load(open(path))

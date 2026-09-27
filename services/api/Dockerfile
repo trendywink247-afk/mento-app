@@ -14,6 +14,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY alembic.ini ./
 COPY migrations ./migrations
 COPY app ./app
+# Admin/dev one-off scripts (seed_listeners, issue_admin_token, configure_stream,
+# ...) — never run automatically, only via an explicit one-off container command
+# (deploy/compose.local.yml's `seed` service; docker compose run for the rest).
+COPY scripts ./scripts
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh && chown -R mento:mento /app
 

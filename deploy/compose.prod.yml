@@ -3,32 +3,80 @@
 # deploy/decrypt-env.sh — or services/api/.env before SOPS is adopted) and
 # POSTGRES_PASSWORD read from it.
 # Allowed differences from local: env values, published ports, memory/log limits,
-# hostnames, host-side paths (deploy/test-parity.sh enforces this).
-# Memory/log limits and Postgres/Valkey tuning are T1.2 — not in this file yet.
+# hostnames, host-side paths, and (T1.2) command/ulimits — the tuning flags below
+# size Postgres/Valkey/the API to the 4 GB prod box and have no local equivalent;
+# they are the same image and behaviour either side, only sized differently
+# (deploy/test-parity.sh's ALLOWED set says so explicitly).
 x-api-env: &api-env
   DATABASE_URL: postgresql+psycopg://mento:${POSTGRES_PASSWORD:?exported by deploy.sh}@postgres:5432/mento
   REDIS_URL: redis://valkey:6379/0
 
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 10m
+      max-file: "3"
+
+x-api-common: &api-common
+  <<: *logging
+  ulimits:
+    nofile: 65535
+
 services:
   postgres:
+    <<: *logging
     environment:
       POSTGRES_USER: mento
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?exported by deploy.sh}
       POSTGRES_DB: mento
+    # Sized for the 4 GB box (docs/DEPLOYMENT_VPS.md); mem_limit leaves headroom for
+    # the API, Valkey and Caddy alongside it.
+    command:
+      - postgres
+      - -c
+      - max_connections=50
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - effective_cache_size=1536MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=128MB
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - wal_compression=on
+      - -c
+      - checkpoint_timeout=15min
+      - -c
+      - max_wal_size=1GB
+    mem_limit: 1024m
+
+  valkey:
+    <<: *logging
+    # No persistence (Valkey here is cache + rate-limit state, not a store of
+    # record): --save "" --appendonly no. Bounded and self-evicting under pressure.
+    command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
 
   api_blue:
+    <<: *api-common
     env_file: ["${MENTO_ENV_FILE:?exported by deploy.sh}"]
     environment: *api-env
 
   api_green:
+    <<: *api-common
     env_file: ["${MENTO_ENV_FILE:?exported by deploy.sh}"]
     environment: *api-env
 
   migrate:
+    <<: *api-common
     env_file: ["${MENTO_ENV_FILE:?exported by deploy.sh}"]
     environment: *api-env
 
   caddy:
+    <<: *logging
     # Hostnames come only from deploy/domains.env.
     env_file: ["./domains.env"]
     environment:

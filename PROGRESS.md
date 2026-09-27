@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-09-27 (session 40) — WS1: T1.2, T1.4 on `feat/ws1-t1.2-t1.4` (not merged, not deployed)
+
+Session 39's PR (`claude/eloquent-curie-acsz2h`, T1.8/T1.3/T1.1/T1.9) reviewed and merged to master first (`6969474`). This session continues WS1 from a fresh branch off master.
+
+**Done** (one commit each)
+- **T1.2** `29a6057` — `deploy/compose.prod.yml`: Postgres tuning flags (max_connections=50, shared_buffers=512MB, effective_cache_size=1536MB, work_mem=8MB, maintenance_work_mem=128MB, random_page_cost=1.1, wal_compression=on, checkpoint_timeout=15min, max_wal_size=1GB) + 1024m mem_limit; Valkey (no persistence, 128mb maxmemory, volatile-lru); API services get `ulimits.nofile=65535`; every service gets a bounded json-file log driver. `deploy/test-parity.sh`'s `ALLOWED` set now explicitly permits `command`/`ulimits` to differ (prod-only, sized to the box, same image/behaviour either side) — documented as deliberate, not an oversight, and mutation-checked (a planted `read_only: true` on Valkey was still caught).
+- **T1.4** `0b8ba1e` — `deploy/compose.local.yml` gains a `seed` service (`profiles: ["seed"]`) running `python -m scripts.seed_listeners` as a one-off container. Needed adding `scripts/` to `services/api/Dockerfile` and removing it from `.dockerignore` — it was never in the image. `scripts.lanes/gate.sh` already accepted `MENTO_WEB`/`MENTO_API` (grepped: they're the only two web/api entry points in the script) — no change needed there.
+
+**Verify:** both changes verified against an **isolated** stack (own compose project name, no published ports) so the developer's already-running dev containers (`mento-postgres`, `mento-redis`, 11h uptime) were never touched. Postgres/Valkey booted standalone with the exact T1.2 flags — `pg_settings` and `config get` confirmed every value took. T1.4: image built with `scripts/` present, migrations ran, `--profile seed run --rm seed` seeded 3 listeners, confirmed by `psql`; isolated stack torn down cleanly after (containers, volume, network — zero leftover). `test-parity.sh` passes on both, shellcheck clean.
+
+**Open decisions**
+- **T1.4's HTTPS-gate acceptance criterion is NOT done.** "The gate passes against `https://app.mento.localhost`" needs the one-time local `mkcert -install` + three `hosts` file lines already documented in `docs/DEPLOYMENT_VPS.md` (T1.3) — that's a system-level change (installs software, edits a protected Windows file) this session didn't make unasked. `gate.sh` itself needs no code change once that's done (verified: no hardcoded URL bypasses `MENTO_WEB`/`MENTO_API`). Founder: say the word and it's a 10-minute setup, or do it yourself per the doc.
+- `services/api/scripts/` now ships inside the prod image (needed for the `seed` service to use the real image rather than a bind mount). Harmless — plain Python, no secrets — but note for anyone auditing image contents.
+
+**How to resume:** either do the mkcert+hosts setup and prove the gate against the Caddy domain, or move on to T1.7 (error tracker) — both are open, neither touches production. T1.10 (server move) still waits on founder approval and T1.7 first (plan's dep order).
+
+---
+
 ## 2026-09-27 (session 39) — WS1 slice: T1.8, T1.3, T1.1, T1.9 on `claude/eloquent-curie-acsz2h` (not merged, not deployed)
 
 Branch restarted from master after the WS0 merge. Scope set by the founder: T1.8, T1.1, T1.3, T1.9 only. **Not done, on purpose:** T1.2, T1.4 (Docker-stack tuning/seeding), T1.5, T1.6 (already live differently — sftp backups, ntfy monitor), T1.7, T1.10.
