@@ -84,7 +84,10 @@ AUDIT_ACTION = "member.erased"
 
 # The tables whose rows are the member's own and are DELETED (the `counts` keys of
 # phase C that are not "_detached"). GET /me/export hands every one of them back first
-# (services/export.py; tests/test_export.py keeps the two in step).
+# (services/export.py; tests/test_export.py keeps the two in step) — EXCEPT "sessions"
+# (WS3 T3.2): refresh-token/device metadata is deleted here too, but it is not member
+# content, so it deliberately never reaches the export. The test pins this exception
+# by name, not by omission — a genuinely new deleted category still trips it.
 MEMBER_TABLES = (
     "reflections",
     "conversations",

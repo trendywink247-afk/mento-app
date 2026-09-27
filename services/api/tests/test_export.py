@@ -233,5 +233,8 @@ def test_member_tables_matches_what_erasure_really_deletes(db_session, monkeypat
         s.commit()
         done = erasure.erase_member(s, uid)
     assert done is not None
-    deleted = {k for k in done.counts if not k.endswith("_detached")}
+    # "sessions" (WS3 T3.2, merged after this test was written): refresh-token/device
+    # metadata, not member content — deliberately excluded from the export, same as
+    # "_detached" rows. Everything else deleted must still be exported.
+    deleted = {k for k in done.counts if not k.endswith("_detached") and k != "sessions"}
     assert deleted == set(erasure.MEMBER_TABLES)
