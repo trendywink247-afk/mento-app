@@ -364,7 +364,11 @@ export type ListenerApplication = {
   status: ListenerApplicationStatus;
   mentor_interest: boolean;
   created_at: string;
+  /** Always null from a T3.10 server (the poll no longer mints a console token); an
+   * older server still fills it. Use `console_active` for "is a live mentor". */
   console_url: string | null;
+  /** Approved AND the mentor profile is live. Optional: an older server omits it. */
+  console_active?: boolean;
   /** Declined only: when the server's 30-day cooldown lets them apply again (ISO time). */
   reapply_after?: string | null;
   /** Approved only: when this mentor asked the team to step their mentor side back. */
@@ -674,6 +678,14 @@ export const api = {
 
   getListenerApplication: () => request<ListenerApplication | null>('/listener-applications/me', {}, true),
 
+  /** A one-time web-console link (T3.10): ten minutes, single use. 403 `not_approved`
+   * unless the application and the mentor profile are both approved. */
+  consoleCode: () =>
+    request<{ code: string; console_url: string; expires_at: string }>(
+      '/listener-applications/me/console-code',
+      { method: 'POST' },
+      true,
+    ),
   consoleSession: () =>
     request<ConsoleSession>('/listener-applications/me/console-session', { method: 'POST' }, true),
 

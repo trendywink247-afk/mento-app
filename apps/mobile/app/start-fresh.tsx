@@ -75,7 +75,8 @@ export default function StartFreshSheet() {
     void api
       .getListenerApplication()
       .then((a) => {
-        if (active && a?.status === 'approved' && a.console_url) {
+        // console_active from a T3.10 server; console_url is the same signal from an older one.
+        if (active && a?.status === 'approved' && (a.console_active ?? Boolean(a.console_url))) {
           setMentorActive(true);
           if (a.step_back_requested_at) setStepBack('told');
         }

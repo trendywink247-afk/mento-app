@@ -32,6 +32,10 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   conversation opens from the Safety panel only after a stated reason (8+ chars, sent to
   the server and kept in the audit trail); the API refuses no reason (422) and a chat with
   no open flag/report (403 `no_open_case`). Normal + reduced-motion, 0 page errors.
+- console-code.e2e.js — REQUIRES ADMIN_TOKEN. One-time mentor console links (WS3 T3.10):
+  the status poll carries no token; an approved mentor's `#code=` link opens the web
+  console once (fragment stripped) and the same link again shows "expired or was already
+  used". Normal + reduced-motion, 0 page errors.
 - notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
   notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.
 - connecting-busy.e2e.js — flips every seeded listener to away (docker exec), drives

@@ -21,10 +21,10 @@ from app.models.enums import ApplicationStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.schemas import ConsoleSessionOut, ListenerApplicationIn, ListenerApplicationOut
-from app.schemas.applications import StepBackIn, StepBackOut
+from app.schemas.applications import ConsoleCodeOut, StepBackIn, StepBackOut
 from app.security import current_user_id, issue_listener_token
-from app.services import categories, locks, moderation, stream
-from app.services.links import mentor_console_link
+from app.services import categories, console_codes, locks, moderation, stream
+from app.services.links import mentor_console_code_link
 from app.services.paths_data import COMMUNITIES
 
 router = APIRouter(prefix="/listener-applications", tags=["listener-applications"])
@@ -33,16 +33,15 @@ REAPPLY_COOLDOWN = timedelta(days=30)
 
 
 def _out(db: Session, a: ListenerApplication) -> ListenerApplicationOut:
-    console_url = None
+    # T3.10: polling status never mints a console token (it used to, on every poll —
+    # a 30-day credential in every response). A live mentor asks for a one-time code.
+    console_active = False
     step_back_requested_at = None
     if a.status == ApplicationStatus.approved and a.listener_id:
-        # Mirror the admin console-link endpoint: a listener suspended after
-        # approval must never be handed a fresh console token (T&S #9 —
-        # suspension revokes access instantly).
+        # A listener suspended after approval is not active (T&S #9).
         listener = db.get(ListenerProfile, a.listener_id)
         if listener is not None and listener.vetting_status == VettingStatus.approved:
-            token = issue_listener_token(a.listener_id)
-            console_url = mentor_console_link(token)
+            console_active = True
             if listener.step_back_requested_at is not None:
                 step_back_requested_at = listener.step_back_requested_at.isoformat()
     reapply_after = None
@@ -53,7 +52,8 @@ def _out(db: Session, a: ListenerApplication) -> ListenerApplicationOut:
         status=a.status.value,
         mentor_interest=a.mentor_interest,
         created_at=a.created_at.isoformat(),
-        console_url=console_url,
+        console_url=None,
+        console_active=console_active,
         reapply_after=reapply_after,
         step_back_requested_at=step_back_requested_at,
     )
@@ -63,6 +63,17 @@ def _declined_at(a: ListenerApplication) -> datetime:
     """The cooldown's anchor — the row's last write (see the note in `apply`)."""
     at = a.updated_at
     return at.replace(tzinfo=UTC) if at.tzinfo is None else at
+
+
+def _live_listener(db: Session, user_id: str) -> ListenerProfile:
+    """The caller's approved, live mentor profile — or 403 `not_approved`."""
+    latest = _latest(db, user_id)
+    if latest is None or latest.status != ApplicationStatus.approved or not latest.listener_id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not_approved")
+    listener = db.get(ListenerProfile, latest.listener_id)
+    if listener is None or listener.vetting_status != VettingStatus.approved:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "not_approved")
+    return listener
 
 
 def _latest(db: Session, user_id: str) -> ListenerApplication | None:
@@ -158,12 +169,7 @@ def console_session(
         3600,
         detail="Too many console sign-ins — please try again in an hour.",
     )
-    latest = _latest(db, user_id)
-    if latest is None or latest.status != ApplicationStatus.approved or not latest.listener_id:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "not_approved")
-    listener = db.get(ListenerProfile, latest.listener_id)
-    if listener is None or listener.vetting_status != VettingStatus.approved:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "not_approved")
+    listener = _live_listener(db, user_id)
     # Idempotent and best-effort: heals a mentor whose Stream user never landed at
     # approval time, so their first channel can be created.
     stream.ensure_user(listener.id, listener.persona_name, listener.persona_avatar)
@@ -175,6 +181,30 @@ def console_session(
         persona_avatar=listener.persona_avatar,
         stream_token=stream.user_token(listener.id),
         expires_at=(datetime.now(UTC) + ttl).isoformat(),
+    )
+
+
+@router.post("/me/console-code", response_model=ConsoleCodeOut)
+def console_code(
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ConsoleCodeOut:
+    """A one-time console link for the WEB console (T3.10): the code lives ten minutes
+    and is traded once for a listener session (POST /listener/session/exchange). Only
+    an approved, live mentor gets one (403 `not_approved` otherwise)."""
+    ratelimit.enforce(
+        f"console-code:{user_id}",
+        10,
+        3600,
+        detail="Too many console links — please try again in an hour.",
+    )
+    listener = _live_listener(db, user_id)
+    code, expires_at = console_codes.mint(db, listener.id)
+    db.commit()
+    return ConsoleCodeOut(
+        code=code,
+        console_url=mentor_console_code_link(code),
+        expires_at=expires_at.isoformat(),
     )
 
 

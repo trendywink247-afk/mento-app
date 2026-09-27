@@ -215,6 +215,7 @@ def test_suspended_listener_gets_no_console_url(client):
     body = client.get("/api/v1/listener-applications/me", headers=_auth(uid)).json()
     assert body["status"] == "approved"
     assert body["console_url"] is None
+    assert body["console_active"] is False
 
 
 def test_requires_auth(client):
@@ -247,10 +248,12 @@ def test_admin_queue_approve_creates_listener(client, admin_headers):
         assert li.vetting_status == VettingStatus.approved
         assert "listener.application_approved" in [a.action for a in s.query(AdminAuditLog).all()]
 
-    # The member now sees an approved card with a working console link.
+    # The member now sees an approved card. The poll no longer mints a console token
+    # (T3.10) — a one-time code does that on request (tests/test_console_codes.py).
     me = client.get("/api/v1/listener-applications/me", headers=_auth(uid)).json()
     assert me["status"] == "approved"
-    assert me["console_url"] and "/listener#token=" in me["console_url"]
+    assert me["console_active"] is True
+    assert me["console_url"] is None
 
     # Approving again is a conflict.
     assert (

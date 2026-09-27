@@ -28,8 +28,12 @@ class ListenerApplicationOut(BaseModel):
     status: str
     mentor_interest: bool
     created_at: str
-    # Present only when approved: the applicant's private console link.
+    # Always null since T3.10 (the poll no longer mints a console token); kept so
+    # older builds parse. Ask POST /listener-applications/me/console-code instead.
     console_url: str | None = None
+    # True while the application is approved AND the mentor profile is live — the
+    # signal older builds read from `console_url` (Start fresh's mentor check).
+    console_active: bool = False
     # Declined only: when the server's 30-day cooldown lets them apply again (ISO time).
     # Additive; older builds ignore it.
     reapply_after: str | None = None
@@ -61,3 +65,21 @@ class StepBackIn(BaseModel):
 class StepBackOut(BaseModel):
     status: Literal["requested"] = "requested"
     requested_at: str
+
+
+class ConsoleCodeOut(BaseModel):
+    """A one-time console code (T3.10): 10 minutes, single use."""
+
+    code: str
+    console_url: str
+    expires_at: str
+
+
+class ConsoleExchangeIn(BaseModel):
+    code: str = Field(max_length=128)
+
+
+class ConsoleExchangeOut(BaseModel):
+    listener_token: str
+    listener_id: str
+    expires_at: str

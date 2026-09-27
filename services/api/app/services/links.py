@@ -17,6 +17,12 @@ def mentor_console_link(token: str, settings: Settings | None = None) -> str:
     return f"{s.resolved_app_base_url}/listener#token={token}"
 
 
+def mentor_console_code_link(code: str, settings: Settings | None = None) -> str:
+    """A one-time console link (T3.10): the console trades the code for a session."""
+    s = settings or get_settings()
+    return f"{s.resolved_app_base_url}/listener#code={code}"
+
+
 def admin_link(token: str, settings: Settings | None = None) -> str:
     s = settings or get_settings()
     return f"{s.resolved_admin_base_url}/admin#token={token}"

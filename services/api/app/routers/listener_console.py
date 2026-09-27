@@ -11,7 +11,7 @@ and none of the member's privacy controls (lock/mask/PIN are the member's).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import and_, case, func, select
@@ -53,10 +53,12 @@ from app.schemas import (
     RequestOut,
     SnoozeOut,
 )
+from app.schemas.applications import ConsoleExchangeIn, ConsoleExchangeOut
 from app.security import current_listener_id, issue_listener_token
 from app.services import (
     care_prompts,
     categories,
+    console_codes,
     conversations,
     in_touch,
     mentor_face,
@@ -121,6 +123,46 @@ def _me_out(li: ListenerProfile) -> ListenerMeOut:
 def _require_dev() -> None:
     if not get_settings().is_dev:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
+
+
+@router.post(
+    "/session/exchange",
+    response_model=ConsoleExchangeOut,
+    dependencies=[
+        # Unauthenticated. Codes are 192 random bits, so guessing is hopeless anyway;
+        # this bounds the noise, and fails closed like every secret-guarding limit.
+        Depends(
+            ratelimit.by_ip(
+                "console-exchange",
+                20,
+                600,
+                detail="Too many tries — please wait a little.",
+                fail_closed=True,
+            )
+        )
+    ],
+)
+def exchange_console_code(
+    payload: ConsoleExchangeIn, db: Session = Depends(get_db)
+) -> ConsoleExchangeOut:
+    """Trade a one-time console code (T3.10) for a listener session. Unknown, expired
+    or already-used codes are 401; a mentor suspended since the code was issued is
+    403 — suspension is honoured at the trade, as on every console request."""
+    listener_id = console_codes.redeem(db, payload.code)
+    if listener_id is None:
+        db.rollback()
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "this console link has expired")
+    listener = db.get(ListenerProfile, listener_id)
+    if listener is None or listener.vetting_status != VettingStatus.approved:
+        db.commit()  # the code stays spent
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "listener access revoked")
+    db.commit()
+    ttl = timedelta(days=get_settings().listener_jwt_ttl_days)
+    return ConsoleExchangeOut(
+        listener_token=issue_listener_token(listener.id),
+        listener_id=listener.id,
+        expires_at=(datetime.now(UTC) + ttl).isoformat(),
+    )
 
 
 @router.get(
