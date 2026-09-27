@@ -11,4 +11,3 @@ docker-compose.yml
 README.md
 requirements-dev.txt
 pytest.ini
-scripts/
