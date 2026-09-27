@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-09-27 (session 44) — WS2 data hygiene: T2.1, T2.2, T2.3, T2.5, T2.7, T2.8 ✅ (on `claude/pensive-mayer-hl3kn5`, not merged)
+
+**Context:** Cloud session for WS2 of `docs/superpowers/plans/2026-09-20-mento-program-plan.md`. T2.4 and T2.9 skipped (need T4.1 Procrastinate, parallel session). T2.6 skipped (needs T5.5 Stream removal). WS3 is running in its own session.
+
+**Done** (one commit per card; full API suite **543 passed**, `alembic check` clean, ruff + black clean, from a freshly created DB):
+- **T2.8** `39b226c` — dead-token cleanup now deletes by token **and owner kind**, so a dual-role phone's mentor row survives a dead member token. Test in `test_push.py`.
+- **T2.7** `ab3095a` — `data_requests` register (kind / status / opened / due / closed). It has no identity column by design, and a test pins that.
+- **T2.1** `0714648` — real FKs: conversations → users/listeners **RESTRICT** (the row is the only handle on the Stream channel, so only erasure may remove it); requests, journals, contributions, applications and reflections **CASCADE**; request/link → conversation and application → listener **SET NULL**. Polymorphic `push_tokens.owner_*` and `moderation_events.reporter_*` get a deferred constraint trigger plus parent-delete triggers (Postgres only). `tests/test_foreign_keys.py` covers 17 orphan cases and every delete rule. The migration was proven on dirty data: orphans are cleaned per rule, and an **orphan conversation aborts the migration** (a Stream channel may still hold message bodies). `deploy.sh` then keeps the old container serving.
+- **T2.2** `fad83ab` — 4 composite indexes. `test_indexes.py` checks `pg_indexes` + EXPLAIN. The test is deterministic: it drops the competing single-column index inside a rolled-back txn, because the first version flaked once autovacuum analyzed the tables.
+- **T2.5** `44c0095` — `GET /me/export` (attachment, no-store, 10/h). It follows the new `erasure.MEMBER_TABLES`, and two tests keep erasure and export in step.
+- **T2.3** `b35a1fc` — `GET /listeners` and `GET /listener/me/requests` take `limit` (50/200) + a keyset `cursor`. The body is still a plain list; the next cursor comes back in `X-Next-Cursor` (CORS-exposed). The directory ordering moved into SQL. The inbox GET no longer writes; stamping moved to `POST /listener/me/requests/seen`. `/in-touch` reads only the newest conversation per mentor. Mobile: `apiRequestPage`/`collectPages` walk ≤4 pages, and the console POSTs seen for what it loaded. `tsc` is clean, and the 4 node unit scripts pass. e2e: `connecting-busy.e2e.js` passes in normal + reduced motion with 0 page errors (reaches Browse). The served bundle carries the new code. `mentor-console.e2e.js` reached the console + inbox (3× 200), then stalled on `chat-ready` — **no Stream creds in the cloud container**, so no chat spec can run here. **The seen round-trip is proven by API tests only, not in a browser.**
+
+**Deviations from the task cards (founder veto welcome):**
+- **`safety_flags.user_id` got NO foreign key.** The card asked for SET NULL → users, but the column is the crisis-scan *sender*, which is a mentor id when a mentor writes. `scan_and_flag` reads `IntegrityError` as a lost dedupe race, so the FK **silently dropped mentor crisis flags** (caught by `test_stream_webhook`). The SET NULL half comes from the parent-delete triggers. `test_a_mentors_crisis_message_is_still_flagged` pins it.
+- **`mentor_links(user_id, status)` not added.** The partial unique index `uq_mentor_links_live_pair` already serves every live-link query, so the new index would only add write cost.
+- **`/in-touch` takes no cursor.** Its rows are capped by `in_touch_limit` (2); the unbounded part was the conversation read, which is fixed.
+
+**Open (founder):**
+- Export contents: Mentor Notes (a mentor's words the member saved to their own journal) **are included**. Crisis flags and mentors' reports about the member **are excluded** (held for others' protection); reports the member filed are included. The privacy policy (T10.6) should say so.
+- An installed app older than this build no longer lights "Seen" (the GET stopped stamping). Web and OTA builds are fine.
+- Browse/inbox still load ≤200 rows in one screen; true infinite scroll is not built.
+
+**Next:** Review + merge the PR. Then T2.4/T2.9 after T4.1 lands, and T2.6 after T5.5.
+
+**How to resume:** No new commands. New gotcha, also in CLAUDE.md: deleting a member/listener directly is refused while they have conversations (RESTRICT). Go through `services/erasure.py`.
+
+---
+
 ## 2026-09-27 (session 43) — first real deploy.sh run on prod (129.121.122.28, legacy stack)
 
 Every WS1 session since 39 flagged the same gap: the new `deploy.sh` had only ever run in a sandbox harness, never for real. Closed it.
