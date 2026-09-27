@@ -19,6 +19,7 @@ import json
 import logging
 from collections import defaultdict
 
+import redis
 from fastapi import WebSocket
 from redis import asyncio as aioredis
 from redis.exceptions import RedisError
@@ -38,6 +39,7 @@ class Hub:
         self._sockets: dict[str, dict[WebSocket, str]] = defaultdict(dict)
         self._redis: aioredis.Redis | None = None
         self._task: asyncio.Task | None = None
+        self._sync: redis.Redis | None = None
 
     # ---- lifecycle -------------------------------------------------------------
     async def start(self) -> None:
@@ -134,6 +136,18 @@ class Hub:
             except RedisError as exc:
                 logger.warning("chat hub publish failed (%s) — local fan-out", type(exc).__name__)
         await self._deliver(conversation_id, event)
+
+    def publish_sync(self, conversation_id: str, event: dict) -> bool:
+        """Publish from code with no event loop (a job, a script): straight to Valkey,
+        where every worker's subscriber picks it up. False if it did not go out."""
+        try:
+            if self._sync is None:
+                self._sync = redis.Redis.from_url(get_settings().redis_url)
+            self._sync.publish(f"{_PREFIX}{conversation_id}", json.dumps(event))
+            return True
+        except RedisError as exc:
+            logger.warning("chat hub sync publish failed (%s)", type(exc).__name__)
+            return False
 
     async def _deliver(self, conversation_id: str, event: dict) -> None:
         room = self._sockets.get(conversation_id)

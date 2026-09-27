@@ -211,3 +211,20 @@ def test_an_ended_conversation_takes_no_more_messages(client, chat):
         ws.send_json({"t": "hello", "token": chat["member"]})
         with pytest.raises(Exception):  # noqa: B017 — closed 4403
             ws.receive_json()
+
+
+def test_a_suspended_member_is_told_why_and_nothing_is_stored(client, chat):
+    """T5.2: the standing check is the send path's first stage; the socket says why."""
+    from app.models.enums import MemberStatus
+    from app.models.user import User
+
+    mws, member, _ = _open(client, chat, "member")
+    with TestSession() as s:
+        s.get(User, chat["member_id"]).status = MemberStatus.suspended
+        s.commit()
+    member.send_json({"t": "send", "client_id": "z1", "text": "hello?"})
+    err = _next(member, "error")
+    assert (err["code"], err["client_id"]) == ("member_suspended", "z1")
+    mws.__exit__(None, None, None)
+    with TestSession() as s:
+        assert s.execute(select(func.count()).select_from(ChatMessage)).scalar_one() == 0

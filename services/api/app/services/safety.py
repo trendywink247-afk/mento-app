@@ -42,20 +42,51 @@ def scan_and_flag(
     lexicon defaults are its signal as the category and a hard 1.0 score; later lanes
     pass their own. None of the three may carry text from the message.
     """
+    _check_lane(source, risk_score)
+    result = crisis.scan(text)
+    if not result.triggered:
+        return result
+    record_flag(
+        db,
+        result,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        stream_message_id=stream_message_id,
+        source=source,
+        category=category,
+        risk_score=risk_score,
+    )
+    return result
+
+
+def _check_lane(source: str, risk_score: float | None) -> None:
     if source not in FLAG_SOURCES:
         raise ValueError(f"unknown flag source {source!r}")
     if risk_score is not None and not 0.0 <= risk_score <= 1.0:
         raise ValueError("risk_score must be within 0..1")
-    result = crisis.scan(text)
-    if not result.triggered:
-        return result
 
+
+def record_flag(
+    db: Session,
+    result: CrisisResult,
+    *,
+    user_id: str,
+    conversation_id: str | None = None,
+    stream_message_id: str | None = None,
+    source: str = "lexicon",
+    category: str | None = None,
+    risk_score: float | None = None,
+) -> None:
+    """Persist (deduped, committed) the SIGNAL of a triggered scan — never the text.
+    The write half of `scan_and_flag`, for a caller that ran the scan itself (the
+    own-chat write path, services/chat.py)."""
+    _check_lane(source, risk_score)
     if stream_message_id is not None:
         already = db.execute(
             select(SafetyFlag.id).where(SafetyFlag.stream_message_id == stream_message_id)
         ).first()
         if already:
-            return result
+            return
 
     db.add(
         SafetyFlag(
@@ -78,4 +109,3 @@ def scan_and_flag(
         # The sync before-send hook and the async message.new net raced on the same
         # message — the unique index makes the dedupe real; losing the race is fine.
         db.rollback()
-    return result

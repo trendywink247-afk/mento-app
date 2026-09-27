@@ -36,12 +36,12 @@ T = TypeVar("T")
 _HELLO_TIMEOUT_S = 5.0
 
 
-async def _db(fn: Callable[..., T], *args) -> T:
+async def _db(fn: Callable[..., T], *args, **kwargs) -> T:
     """Run a sync, Session-based service call on a worker thread."""
 
     def _run() -> T:
         with SessionLocal() as db:
-            return fn(db, *args)
+            return fn(db, *args, **kwargs)
 
     return await anyio.to_thread.run_sync(_run)
 
@@ -129,31 +129,19 @@ async def chat_ws(ws: WebSocket, conversation_id: str) -> None:
 
 
 async def _on_send(ws: WebSocket, conversation_id: str, me: str, frame: dict) -> None:
+    """Hand the frame to the one write path. `chat.send` publishes the stored message
+    to the room itself (this socket included); only the answers meant for the sender
+    alone — held, a retried send's ack, a refusal — are sent from here."""
     client_id = str(frame.get("client_id") or "")[:64]
-    if not client_id:
-        await ws.send_json({"t": "error", "code": "client_id_required"})
-        return
-
-    def _send(db):
-        convo = db.get(Conversation, conversation_id)
-        if convo is None or not chat.is_open(convo):
-            return None
-        return chat.send(db, convo, me, str(frame.get("text") or ""), client_id)
-
+    body = frame.get("text")
     try:
-        sent = await _db(_send)
-    except ValueError:
-        await ws.send_json({"t": "error", "code": "empty", "client_id": client_id})
-        return
-    if sent is None:
-        await ws.send_json({"t": "error", "code": "ended", "client_id": client_id})
+        sent = await _db(chat.send, me, conversation_id, client_id=client_id, body=str(body or ""))
+    except chat.NotAllowed as refused:
+        await ws.send_json({"t": "error", "code": refused.code, "client_id": client_id})
         return
     if sent.held is not None:
         await ws.send_json({"t": "held", "client_id": client_id, "allowance": sent.held})
-        return
-    if not sent.duplicate:  # a retried send is acked to the retrier only, not re-broadcast
-        await hub.publish(conversation_id, {"t": "message", "message": sent.message})
-    else:
+    elif sent.duplicate:  # a retried send is acked to the retrier only, not re-broadcast
         await ws.send_json({"t": "message", "message": sent.message})
 
 
