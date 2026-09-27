@@ -13,7 +13,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.safety import SafetyFlag
+from app.models.safety import FLAG_SOURCES, SafetyFlag
 from app.services import crisis
 from app.services.crisis import CrisisResult
 
@@ -32,8 +32,20 @@ def scan_and_flag(
     user_id: str,
     conversation_id: str | None = None,
     stream_message_id: str | None = None,
+    source: str = "lexicon",
+    category: str | None = None,
+    risk_score: float | None = None,
 ) -> CrisisResult:
-    """Scan text; on a crisis signal, persist a (deduped) SafetyFlag. Returns the result."""
+    """Scan text; on a crisis signal, persist a (deduped) SafetyFlag. Returns the result.
+
+    `source` / `category` / `risk_score` describe the lane that fired (T8.5). The
+    lexicon defaults are its signal as the category and a hard 1.0 score; later lanes
+    pass their own. None of the three may carry text from the message.
+    """
+    if source not in FLAG_SOURCES:
+        raise ValueError(f"unknown flag source {source!r}")
+    if risk_score is not None and not 0.0 <= risk_score <= 1.0:
+        raise ValueError("risk_score must be within 0..1")
     result = crisis.scan(text)
     if not result.triggered:
         return result
@@ -55,6 +67,9 @@ def scan_and_flag(
             # a human reviewer needs to triage.
             matched_terms=result.signal.value,
             stream_message_id=stream_message_id,
+            source=source,
+            category=category or result.signal.value,
+            risk_score=1.0 if risk_score is None and source == "lexicon" else risk_score,
         )
     )
     try:
