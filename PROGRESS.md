@@ -4,7 +4,7 @@
 
 ---
 
-## 2026-09-27 (session 44) — WS3 auth & abuse: T3.1–T3.3, T3.5, T3.7–T3.12 on `claude/determined-ride-4ah0wd` (not merged, not deployed)
+## 2026-09-27 (session 45) — WS3 auth & abuse: T3.1–T3.3, T3.5, T3.7–T3.12 on `claude/determined-ride-4ah0wd` (not merged, not deployed)
 
 **Context:** cloud session 3, WS3 of `docs/superpowers/plans/2026-09-20-mento-program-plan.md`. Skipped by instruction: T3.4 (needs H3, Google Cloud) and T3.6 (needs T6.2).
 
@@ -20,11 +20,11 @@
 - **T3.9** `266b400` — `terms_accepted_at` + `terms_version`; signup `terms_accepted`, `POST /me/terms`; `TERMS_GATE_ENFORCED` (default OFF) → match + Personal request 409 `terms_required`. App: clickwrap line on both age steps + house-rules sheet (`app/terms.tsx`, EN+HI); existing members asked once on the tabs when `terms_required`. `e2e/onboarding-terms.e2e.js` (part B run with the gate on too).
 - **T3.5** `d620876` — recovery code: 28 Crockford chars (8-char selector in clear + argon2id of the rest), `POST /me/recovery` (shown once), `POST /onboarding/recover` (revokes all families, starts one; per-IP + per-code limits, fail closed). Profile `RecoveryCard` ("Mento will never ask you for this"), `/recover` screen, landing link. `e2e/recovery-code.e2e.js`.
 
-**Verify (literal, this container):** pytest `573 passed` (was 496) on an isolated `mento_test` DB · `alembic check` clean · ruff/black clean · `tsc --noEmit` clean · node unit tests PASS ×3 · e2e ALL PASS: session-refresh, recovery-code, onboarding-terms, age-gate-friction, console-code, admin-read-scope, apply, age-gate, listener-apply.
+**Verify (literal, this container):** pytest `573 passed` (was 496); `589 passed` after merging origin/master (WS4 + T0.7) on an isolated `mento_test` DB · `alembic check` clean · ruff/black clean · `tsc --noEmit` clean · node unit tests PASS ×3 · e2e ALL PASS: session-refresh, recovery-code, onboarding-terms, age-gate-friction, console-code, admin-read-scope, apply, age-gate, listener-apply.
 **NOT verified here:** `member-screens.e2e.js` and `role-fork.e2e.js` (the plan's T3.2 accept specs). No Stream creds in this container → `chat-ready` never renders; role-fork also dies on the landing film (this Chromium has no H.264: `canPlayType('video/mp4; avc1')` = "", video error 4). `admin-dashboard.e2e.js` needs `docker exec mento-postgres`. **Run those three on the founder's machine before merging.**
 
 **Open decisions (founder veto)**
-- **Deploy prerequisites (boot will refuse otherwise):** set `LISTENER_JWT_SECRET` (new, distinct) and `TRUSTED_PROXY_HOPS=1` in prod env BEFORE deploying. If the deploy lands after 2026-11-02, set `LEGACY_CLAIMS_ACCEPTED_UNTIL` = deploy date + 90 days. Five additive migrations: `e3a2sess0001 → e3a10code0001 → e3a7stat0001 → e3a9term0001 → e3a5recv0001` (backup first).
+- **Deploy prerequisites (boot will refuse otherwise):** set `LISTENER_JWT_SECRET` (new, distinct) and `TRUSTED_PROXY_HOPS=1` in prod env BEFORE deploying. If the deploy lands after 2026-11-02, set `LEGACY_CLAIMS_ACCEPTED_UNTIL` = deploy date + 90 days. Five additive migrations, chained after WS4's `e4a1jobs0001`: `e3a2sess0001 → e3a10code0001 → e3a7stat0001 → e3a9term0001 → e3a5recv0001` (backup first).
 - Refresh reuse detection is strict (plan's test): two tabs racing an old token would sign the member out. Mitigated client-side (single-flight, Web Lock, storage re-read); a small server reuse leeway is the alternative if it bites.
 - Suspension/ban keep sessions alive (see T3.7) — deliberate.
 - Terms: clickwrap on the age step instead of a separate TermsStep (a new step breaks 30 onboarding specs); enforcement OFF until the terms text (T10.5/H6) exists and the updated app is out. House-rules copy is a draft for review.
@@ -36,6 +36,30 @@
 - Existing landing footer "Mentors are real people, not therapists." violates plan invariant 6 (pre-existing, untouched).
 
 **How to resume:** review/merge the PR for this branch; run member-screens / role-fork / admin-dashboard locally with Stream; then provision the two env vars and deploy (founder-approved). Remaining WS3: T3.4 (after H3), T3.6 (after T6.2), and deleting the legacy branches after the cutoffs.
+## 2026-09-27 (session 44) — T0.7 bump + WS4 job queue (T4.1–T4.4), on `feat/ws4-job-queue` (PR open, not merged)
+
+**Context:** founder briefing — WS4 first, with T0.7 (its dependency) done before T4.1.
+
+**Done** (one commit each; every one: `pytest` green, `alembic check` clean, `ruff check` + `black --check` clean)
+- **T0.7** `28c360a` — FastAPI 0.115.6 → **0.141.1**, SQLAlchemy 2.0.36 → **2.0.54**, Starlette now pinned **1.7.0** (FastAPI only floors it, and 1.x rewrote routing). Two real breaks, both fixed so behaviour is unchanged: (1) a missing `Authorization` header became **401** instead of 403 — the member app reads 401 as "session dead" and re-onboards, so `security._Bearer` keeps 403 via FastAPI's documented `make_not_authenticated_error` override (bad tokens stay 401); (2) `scope["route"].path` lost the `include_router` prefix, so the access log dropped `/api/v1` **and the 30 s healthcheck silently came back into prod logs** (quiet-list miss) — `observability._route_template` rebuilds the full template from public route attributes; new test pins the healthcheck case. Sentry verified live with a DSN on Starlette 1.7.
+- **T4.1** `dd4108b` — Procrastinate 3.10.0 on our own Postgres. `app/jobs.enqueue(db, task, …)` writes the job on the SQLAlchemy session's own connection inside its transaction (SAVEPOINT, so a failed insert never costs the caller's write): the job exists only if the caller commits, runs after, survives restarts. Worker `python -m app.jobs.worker` (concurrency 4; succeeded jobs deleted, failed kept). Revision `e4a1jobs0001` installs the schema from **vendored** SQL (`migrations/sql/procrastinate_3.10.0_schema.sql`); `alembic check` ignores `procrastinate_*`; downgrade round-trip verified. `worker` service added to compose.base/local/prod **and to the legacy `docker-compose.prod.yml` that is live today**; `deploy.sh` moves it onto the new image after the swap and on `--rollback`. `test-parity.sh` passes (7 services).
+- **T4.2** `ea81034` — pushes are jobs: request created / admin accept enqueue in the same transaction as their row; console accept right after the matcher's commit; `message.new` after the scan, off the event loop, never costing the webhook its 200. `_send` tries once; a transport failure becomes `push.deliver` (4/16/64 s backoff, then `failed`). The blocking `time.sleep` is gone. Decision jobs never retry (a re-run would trip its own burst window). `push_tasks.py` deleted.
+- **T4.3** `e512005` — periodic: `maintenance.capacity` `*/5` (reconcile, which includes the presence sweep; the matcher's inline self-heal stays), `maintenance.mentor_names` `30 22 * * *` UTC = 04:00 IST (lazy pass stays; its Stream sync is a deduplicated job), `maintenance.prune_jobs` daily (failed jobs after 30 quiet days). `snooze.end_on_mentor_reply` is a retried job, queued only when that mentor has a snooze on that channel. Every job proven idempotent. **Bug caught by the test:** the deprecated `App.with_connector` left the periodic scheduler deferring through an unopened connector — no periodic job would ever have run in prod; the worker uses `replace_connector`.
+- **T4.4** `cb3c355` — `/admin/health/deep` → `jobs`: queued / scheduled (backoff) / running, failed in 24 h **by task name**, oldest due job's age, worker heartbeat age + `worker_alive`. Never a job's arguments (test asserts no id leaks).
+- Docs: CLAUDE.md (Jobs stack row, Push row, run command, "no worker, no pushes" gotcha), `docs/DEPLOYMENT_VPS.md` (deploy step 4, rollback).
+
+**Verify:** `pytest` **512 passed** (496 at session start); `alembic check` clean; `ruff` + `black --check` clean; `deploy/test-parity.sh` pass. Process-level: real worker drained a job queued while it was down, scheduled + ran `maintenance.capacity`, picked a new job up in 0.05 s (LISTEN/NOTIFY), heartbeat visible in Health, SIGTERM → clean stop and unregister. Worker boots on `python:3.12-slim` from `requirements.txt` alone (image build itself blocked by this sandbox's TLS proxy, not by the code). Web e2e (this branch's API, Expo web, 390×844): **age-gate, desktop-frame, apply PASS, 0 page errors (normal + reduced-motion)**. **connecting-experience, path-communities, analytics-dark FAIL here on `chat-ready`** — the sandbox has no Stream credentials and its proxy blocks the CDNs; every API call in those runs was 200, and connecting-experience fails **identically against master's API (FastAPI 0.115.6)** (caveat: that worktree used the stale local `master` ref, not `origin/master` — same FastAPI, same Stream-less failure). **role-fork FAILS on its `<video>`-plays check** (client-only; headless Chromium codec). So T0.7's "web specs pass unchanged" is proven only for the specs that can run without Stream — **run `gate.sh fast` on a machine with Stream creds before merging.** Real traffic also showed unauthenticated `/listener-applications/me` → 403, i.e. the T0.7 403-preservation is on a live path, not just in a test.
+
+**Open decisions**
+- **Crisis-exempt tally stays a BackgroundTask** (plan listed it under T4.3). Moving it to a job adds a DB write to the crisis path (before the helpline card, or right after it) for no durability gain — it is one counter increment. Veto if you want it queued anyway.
+- **Snooze had nothing periodic to do** — expiry is computed on read everywhere. Only its background task moved (retried job).
+- **The admin dashboard UI does not show `jobs` yet** — the API reports it; the Health panel (`components/admin/panels/`) needs a row. Not done (no mobile change this session).
+- **Procrastinate logs job args at INFO in the worker log** — ids and persona-template push bodies only (never message text); local container logs, not a third party. Fine by T&S #10 as I read it; flag if not.
+- `68ef68f` (session 43's log) was on this session's starting branch but not on `origin/master`; it rides this PR.
+
+**Next:** merge the PR, then deploy: `deploy.sh` runs `e4a1jobs0001` and starts `mento-worker-prod` on the legacy stack; confirm Admin → Health → `jobs.worker_alive: true`. Then WS4's dependents (T2.4, T8.4) are unblocked; T5.1 still needs T1.2 on the live box.
+
+**How to resume:** a second terminal now runs `python -m app.jobs.worker` (CLAUDE.md run block). Tests run jobs with `app.jobs.worker.drain(queues=[...])`; `procrastinate_jobs` is in conftest's TRUNCATE. Upgrading Procrastinate = a NEW revision applying that release's `sql/migrations/` files — never edit `e4a1jobs0001` or its vendored SQL.
 
 ---
 

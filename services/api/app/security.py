@@ -34,7 +34,22 @@ from app.models.enums import MemberStatus
 from app.models.user import User
 
 _ALGO = "HS256"
-_bearer = HTTPBearer(auto_error=True)
+
+
+class _Bearer(HTTPBearer):
+    """HTTPBearer that keeps the pre-0.12x answer for a MISSING header: 403.
+
+    FastAPI now says 401 there. Clients treat 401 as "your session is dead" (the
+    member app clears it and re-onboards), so a dependency bump must not change
+    which of the two a request gets. A bad or expired token is still 401 from
+    `_decode`. This override is the one FastAPI documents for keeping 403.
+    """
+
+    def make_not_authenticated_error(self) -> HTTPException:
+        return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authenticated")
+
+
+_bearer = _Bearer(auto_error=True)
 
 ISSUER = "mento-api"
 AUDIENCES = {"user": "mento:member", "listener": "mento:listener", "admin": "mento:admin"}

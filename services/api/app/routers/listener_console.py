@@ -13,14 +13,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import and_, case, func, select
 from sqlalchemy.orm import Session
 
-from app import ratelimit
+from app import jobs, ratelimit
 from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
+from app.jobs import tasks
 from app.models.conversation import Conversation
 from app.models.enums import (
     ConversationEndedBy,
@@ -65,7 +66,6 @@ from app.services import (
     mentor_names,
     paths,
     push,
-    push_tasks,
     snooze,
     stream,
 )
@@ -394,7 +394,6 @@ def my_pending_requests(
 @router.post("/me/requests/{request_id}/accept", response_model=RequestOut)
 def accept(
     request_id: str,
-    background: BackgroundTasks,
     listener: ListenerProfile = Depends(current_listener),
     db: Session = Depends(get_db),
 ) -> RequestOut:
@@ -405,7 +404,9 @@ def accept(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "pending request not found") from None
     except ListenerAtCapacity:
         raise HTTPException(status.HTTP_409_CONFLICT, "you're at capacity right now") from None
-    background.add_task(push_tasks.notify_request_accepted_safe, req.id)
+    # The accept committed inside the matcher; the push job is its own small write.
+    jobs.enqueue(db, tasks.push_request_accepted, best_effort=True, request_id=req.id)
+    db.commit()
     return RequestOut(
         id=req.id,
         status=req.status.value,

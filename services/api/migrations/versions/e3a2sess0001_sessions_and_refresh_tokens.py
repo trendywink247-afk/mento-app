@@ -4,7 +4,7 @@ Additive: one new table, safe under a running app. Rows cascade with their membe
 (erasure deletes the user row, so every session of theirs goes with it).
 
 Revision ID: e3a2sess0001
-Revises: c13a0seen001
+Revises: e4a1jobs0001
 Create Date: 2026-09-27 12:00:00.000000
 """
 
@@ -17,7 +17,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "e3a2sess0001"
-down_revision: str | None = "c13a0seen001"
+down_revision: str | None = "e4a1jobs0001"  # re-chained after WS4 (job queue) at merge
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

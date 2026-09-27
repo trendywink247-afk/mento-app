@@ -25,6 +25,14 @@ config.set_main_option("sqlalchemy.url", get_settings().database_url)
 target_metadata = Base.metadata
 
 
+def include_name(name, type_, parent_names) -> bool:
+    """The job queue's tables are Procrastinate's, installed from vendored SQL
+    (revision e4a1jobs0001) — not our models, so autogenerate must not see them."""
+    if type_ == "table" and name and name.startswith("procrastinate_"):
+        return False
+    return True
+
+
 def run_migrations_offline() -> None:
     """Emit SQL to script output without a live DB connection."""
     context.configure(
@@ -57,6 +65,7 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
+            include_name=include_name,
         )
         with context.begin_transaction():
             context.run_migrations()

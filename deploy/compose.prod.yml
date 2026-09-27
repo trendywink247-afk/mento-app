@@ -75,6 +75,12 @@ services:
     env_file: ["${MENTO_ENV_FILE:?exported by deploy.sh}"]
     environment: *api-env
 
+  worker:
+    <<: *api-common
+    env_file: ["${MENTO_ENV_FILE:?exported by deploy.sh}"]
+    environment: *api-env
+    mem_limit: 256m
+
   caddy:
     <<: *logging
     # Hostnames come only from deploy/domains.env.
