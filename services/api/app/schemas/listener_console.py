@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -130,6 +130,12 @@ class ListenerRequestItem(BaseModel):
     requester_companion_animal: str | None = None
     requester_companion_colour: str | None = None
     issue_category_label: str | None = None
+
+
+class RequestsSeenIn(BaseModel):
+    """The inbox rows the console just showed (T2.3: stamping moved off the GET)."""
+
+    request_ids: list[Annotated[str, Field(max_length=64)]] = Field(max_length=200)
 
 
 class ListenerReportIn(BaseModel):

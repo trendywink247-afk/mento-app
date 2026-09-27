@@ -83,6 +83,7 @@ from app.schemas.listener_console import (
     ListenerRequestItem,
     ListenerStatusIn,
     MemberBriefOut,
+    RequestsSeenIn,
     SnoozeOut,
 )
 from app.schemas.listeners import (
@@ -169,6 +170,7 @@ __all__ = [
     "ListenerProfileOut",
     "ListenerReportIn",
     "ListenerRequestItem",
+    "RequestsSeenIn",
     "ListenerStatusIn",
     "SnoozeOut",
     "LockRequest",

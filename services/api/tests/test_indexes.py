@@ -65,10 +65,25 @@ def test_index_exists_with_the_right_columns(name):
     assert definition.endswith(cols), definition
 
 
+# The older single-column index on the same leading column. With tiny test tables the
+# planner may prefer it plus a sort, depending on whether autovacuum has analyzed yet —
+# so, inside a rolled-back transaction, it is dropped and sorts are switched off: the
+# test then asks exactly "can this index answer this query shape", deterministically.
+COMPETING = {
+    "ix_conversations_user_created": "ix_conversations_user_id",
+    "ix_conversations_listener_status": "ix_conversations_listener_id",
+    "ix_journal_entries_user_created": "ix_journal_entries_user_id",
+    "uq_mentor_links_live_pair": "ix_mentor_links_user_id",
+}
+
+
 @pytest.mark.parametrize("name", QUERIES)
 def test_planner_uses_the_index_for_the_real_query(name):
     with test_engine.connect() as conn:
-        conn.execute(text("SET LOCAL enable_seqscan = off"))
+        for setting in ("enable_seqscan", "enable_sort", "enable_bitmapscan"):
+            conn.execute(text(f"SET LOCAL {setting} = off"))
+        if name in COMPETING:
+            conn.execute(text(f"DROP INDEX {COMPETING[name]}"))
         plan = "\n".join(conn.execute(text(f"EXPLAIN {QUERIES[name]}")).scalars().all())
         conn.rollback()
     assert name in plan, plan
