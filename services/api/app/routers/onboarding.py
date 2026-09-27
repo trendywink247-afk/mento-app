@@ -31,10 +31,16 @@ def _age_on(dob: date, today: date) -> int:
     status_code=status.HTTP_201_CREATED,
     dependencies=[
         # Unauthenticated + each call inserts a user and hits Stream: the app's
-        # cheapest flooding target. Generous for humans, ruinous for loops.
+        # cheapest flooding target. Generous for humans, ruinous for loops. Fails
+        # CLOSED (503) when Redis is down — a blind limiter here means unbounded
+        # accounts (T3.11); people already talking are unaffected.
         Depends(
             ratelimit.by_ip(
-                "onboarding", 10, 3600, detail="Too many new sessions — please wait a bit."
+                "onboarding",
+                10,
+                3600,
+                detail="Too many new sessions — please wait a bit.",
+                fail_closed=True,
             )
         )
     ],
