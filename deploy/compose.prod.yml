@@ -89,3 +89,61 @@ services:
       - "80:80"
       - "443:443"
       - "443:443/udp" # HTTP/3
+
+  # T1.7: error tracker, MIT-licensed, self-hosted. Its own database inside the
+  # existing Postgres (glitchtip-init-db creates it once — Postgres only
+  # auto-creates the DB named by POSTGRES_DB) and its own Valkey db index (1 —
+  # the API uses 0). Not on Caddy: staff reach it over an SSH tunnel
+  # (docs/DEPLOYMENT_VPS.md), not a public host — deploy/domains.env stays the
+  # only place a public hostname is written. SERVER_ROLE=all_in_one runs web +
+  # worker + migrations in one container; right-sized for a 4 GB box.
+  glitchtip-init-db:
+    image: postgres:16-alpine
+    profiles: ["tools"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:?exported by deploy.sh}
+    entrypoint: ["sh", "-c"]
+    command:
+      - >
+        psql -h postgres -U mento -d mento -tc "SELECT 1 FROM pg_database WHERE datname = 'glitchtip'"
+        | grep -q 1 || psql -h postgres -U mento -d mento -c "CREATE DATABASE glitchtip"
+
+  glitchtip:
+    <<: *logging
+    image: glitchtip/glitchtip:6
+    container_name: mento-glitchtip
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://mento:${POSTGRES_PASSWORD:?exported by deploy.sh}@postgres:5432/glitchtip
+      VALKEY_URL: redis://valkey:6379/1
+      SECRET_KEY: ${GLITCHTIP_SECRET_KEY:?exported by deploy.sh — openssl rand -hex 32}
+      EMAIL_URL: consolemail://
+      GLITCHTIP_DOMAIN: http://localhost:8000 # SSH-tunnel only; not a real public host
+      DEFAULT_FROM_EMAIL: ops@mento.chat
+      SERVER_ROLE: all_in_one
+      ENABLE_ADMIN: "False"
+      ENABLE_USER_REGISTRATION: "False" # closed from the start — see docs/DEPLOYMENT_VPS.md
+      ALLOWED_HOSTS: localhost,127.0.0.1 # only ever reached over the SSH tunnel
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/_health/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s # migrations run on this container's own first boot
+    mem_limit: 512m
+    ports:
+      - "127.0.0.1:8010:8000" # ssh -L 8010:localhost:8010 — see docs/DEPLOYMENT_VPS.md
+    volumes:
+      - glitchtip_uploads:/code/uploads
+
+volumes:
+  glitchtip_uploads:
