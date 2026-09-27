@@ -3,7 +3,7 @@
 A new table only: safe under a running app.
 
 Revision ID: bed9ccc9474a
-Revises: c13a0seen001
+Revises: e4a1jobs0001
 Create Date: 2026-09-27
 """
 
@@ -16,7 +16,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "bed9ccc9474a"
-down_revision: str | None = "c13a0seen001"
+down_revision: str | None = "e4a1jobs0001"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -290,6 +290,58 @@ def test_health_deep_shape(client, db_session):
 
 
 @requires_postgres
+def test_health_deep_reports_the_job_queue_without_its_arguments(client, db_session):
+    """WS4 T4.4: backlog, backoff, failures by task and the worker's pulse — task names
+    and counts only; a job's arguments (ids) never leave the database."""
+    from sqlalchemy import text
+
+    from app import jobs
+    from app.jobs import tasks
+
+    admin_id = _admin(db_session)
+    db_session.commit()
+    with TestSession() as s:
+        jobs.enqueue(s, tasks.push_request_created, request_id="secret-id-due")
+        jobs.enqueue(s, tasks.push_request_accepted, request_id="secret-id-later")
+        jobs.enqueue(s, tasks.push_message, channel_id="secret-channel", sender_id="x")
+        s.execute(
+            text(
+                "UPDATE procrastinate_jobs SET scheduled_at = now() + interval '1 minute' "
+                "WHERE task_name = 'push.request_accepted'"
+            )
+        )
+        s.execute(
+            text("UPDATE procrastinate_jobs SET status = 'failed' WHERE task_name = 'push.message'")
+        )
+        s.execute(
+            text(
+                "UPDATE procrastinate_events SET at = now() - interval '2 minutes' "
+                "WHERE job_id = (SELECT id FROM procrastinate_jobs "
+                "WHERE task_name = 'push.request_created')"
+            )
+        )
+        s.execute(text("DELETE FROM procrastinate_workers"))
+        s.commit()
+
+    r = client.get("/api/v1/admin/health/deep", headers=_auth(admin_id))
+    assert r.status_code == 200
+    q = r.json()["jobs"]
+    assert q["available"] is True
+    assert (q["queued"], q["scheduled"], q["running"]) == (1, 1, 0)
+    assert q["failed_24h"] == {"push.message": 1}
+    assert 110 <= q["oldest_queued_seconds"] <= 300
+    assert q["worker_last_heartbeat_seconds"] is None
+    assert q["worker_alive"] is False
+    assert "secret" not in r.text
+
+    with TestSession() as s:
+        s.execute(text("INSERT INTO procrastinate_workers DEFAULT VALUES"))
+        s.commit()
+    q = client.get("/api/v1/admin/health/deep", headers=_auth(admin_id)).json()["jobs"]
+    assert q["worker_alive"] is True and q["worker_last_heartbeat_seconds"] < 60
+
+
+@requires_postgres
 def test_contributions_empty_stub(client, db_session):
     admin_id = _admin(db_session)
     db_session.commit()

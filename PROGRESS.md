@@ -4,11 +4,11 @@
 
 ---
 
-## 2026-09-27 (session 44) — WS2 data hygiene: T2.1, T2.2, T2.3, T2.5, T2.7, T2.8 ✅ (on `claude/pensive-mayer-hl3kn5`, not merged)
+## 2026-09-27 (session 45) — WS2 data hygiene: T2.1, T2.2, T2.3, T2.5, T2.7, T2.8 ✅ (on `claude/pensive-mayer-hl3kn5`, not merged)
 
 **Context:** Cloud session for WS2 of `docs/superpowers/plans/2026-09-20-mento-program-plan.md`. T2.4 and T2.9 skipped (need T4.1 Procrastinate, parallel session). T2.6 skipped (needs T5.5 Stream removal). WS3 is running in its own session.
 
-**Done** (one commit per card; full API suite **543 passed**, `alembic check` clean, ruff + black clean, from a freshly created DB):
+**Done** (one commit per card; full API suite **543 passed** (559 after merging master's WS4), `alembic check` clean, ruff + black clean, from a freshly created DB):
 - **T2.8** `39b226c` — dead-token cleanup now deletes by token **and owner kind**, so a dual-role phone's mentor row survives a dead member token. Test in `test_push.py`.
 - **T2.7** `ab3095a` — `data_requests` register (kind / status / opened / due / closed). It has no identity column by design, and a test pins that.
 - **T2.1** `0714648` — real FKs: conversations → users/listeners **RESTRICT** (the row is the only handle on the Stream channel, so only erasure may remove it); requests, journals, contributions, applications and reflections **CASCADE**; request/link → conversation and application → listener **SET NULL**. Polymorphic `push_tokens.owner_*` and `moderation_events.reporter_*` get a deferred constraint trigger plus parent-delete triggers (Postgres only). `tests/test_foreign_keys.py` covers 17 orphan cases and every delete rule. The migration was proven on dirty data: orphans are cleaned per rule, and an **orphan conversation aborts the migration** (a Stream channel may still hold message bodies). `deploy.sh` then keeps the old container serving.
@@ -26,9 +26,36 @@
 - An installed app older than this build no longer lights "Seen" (the GET stopped stamping). Web and OTA builds are fine.
 - Browse/inbox still load ≤200 rows in one screen; true infinite scroll is not built.
 
-**Next:** Review + merge the PR. Then T2.4/T2.9 after T4.1 lands, and T2.6 after T5.5.
+**Next:** Review + merge the PR. T4.1 has now landed on master (merged into this branch — my first migration re-parented onto `e4a1jobs0001`, and T2.8's by-kind cleanup re-applied inside WS4's job-based `_forget_dead_tokens`), so T2.4/T2.9 are unblocked. T2.6 still waits on T5.5.
 
 **How to resume:** No new commands. New gotcha, also in CLAUDE.md: deleting a member/listener directly is refused while they have conversations (RESTRICT). Go through `services/erasure.py`.
+
+---
+
+## 2026-09-27 (session 44) — T0.7 bump + WS4 job queue (T4.1–T4.4), on `feat/ws4-job-queue` (PR open, not merged)
+
+**Context:** founder briefing — WS4 first, with T0.7 (its dependency) done before T4.1.
+
+**Done** (one commit each; every one: `pytest` green, `alembic check` clean, `ruff check` + `black --check` clean)
+- **T0.7** `28c360a` — FastAPI 0.115.6 → **0.141.1**, SQLAlchemy 2.0.36 → **2.0.54**, Starlette now pinned **1.7.0** (FastAPI only floors it, and 1.x rewrote routing). Two real breaks, both fixed so behaviour is unchanged: (1) a missing `Authorization` header became **401** instead of 403 — the member app reads 401 as "session dead" and re-onboards, so `security._Bearer` keeps 403 via FastAPI's documented `make_not_authenticated_error` override (bad tokens stay 401); (2) `scope["route"].path` lost the `include_router` prefix, so the access log dropped `/api/v1` **and the 30 s healthcheck silently came back into prod logs** (quiet-list miss) — `observability._route_template` rebuilds the full template from public route attributes; new test pins the healthcheck case. Sentry verified live with a DSN on Starlette 1.7.
+- **T4.1** `dd4108b` — Procrastinate 3.10.0 on our own Postgres. `app/jobs.enqueue(db, task, …)` writes the job on the SQLAlchemy session's own connection inside its transaction (SAVEPOINT, so a failed insert never costs the caller's write): the job exists only if the caller commits, runs after, survives restarts. Worker `python -m app.jobs.worker` (concurrency 4; succeeded jobs deleted, failed kept). Revision `e4a1jobs0001` installs the schema from **vendored** SQL (`migrations/sql/procrastinate_3.10.0_schema.sql`); `alembic check` ignores `procrastinate_*`; downgrade round-trip verified. `worker` service added to compose.base/local/prod **and to the legacy `docker-compose.prod.yml` that is live today**; `deploy.sh` moves it onto the new image after the swap and on `--rollback`. `test-parity.sh` passes (7 services).
+- **T4.2** `ea81034` — pushes are jobs: request created / admin accept enqueue in the same transaction as their row; console accept right after the matcher's commit; `message.new` after the scan, off the event loop, never costing the webhook its 200. `_send` tries once; a transport failure becomes `push.deliver` (4/16/64 s backoff, then `failed`). The blocking `time.sleep` is gone. Decision jobs never retry (a re-run would trip its own burst window). `push_tasks.py` deleted.
+- **T4.3** `e512005` — periodic: `maintenance.capacity` `*/5` (reconcile, which includes the presence sweep; the matcher's inline self-heal stays), `maintenance.mentor_names` `30 22 * * *` UTC = 04:00 IST (lazy pass stays; its Stream sync is a deduplicated job), `maintenance.prune_jobs` daily (failed jobs after 30 quiet days). `snooze.end_on_mentor_reply` is a retried job, queued only when that mentor has a snooze on that channel. Every job proven idempotent. **Bug caught by the test:** the deprecated `App.with_connector` left the periodic scheduler deferring through an unopened connector — no periodic job would ever have run in prod; the worker uses `replace_connector`.
+- **T4.4** `cb3c355` — `/admin/health/deep` → `jobs`: queued / scheduled (backoff) / running, failed in 24 h **by task name**, oldest due job's age, worker heartbeat age + `worker_alive`. Never a job's arguments (test asserts no id leaks).
+- Docs: CLAUDE.md (Jobs stack row, Push row, run command, "no worker, no pushes" gotcha), `docs/DEPLOYMENT_VPS.md` (deploy step 4, rollback).
+
+**Verify:** `pytest` **512 passed** (496 at session start); `alembic check` clean; `ruff` + `black --check` clean; `deploy/test-parity.sh` pass. Process-level: real worker drained a job queued while it was down, scheduled + ran `maintenance.capacity`, picked a new job up in 0.05 s (LISTEN/NOTIFY), heartbeat visible in Health, SIGTERM → clean stop and unregister. Worker boots on `python:3.12-slim` from `requirements.txt` alone (image build itself blocked by this sandbox's TLS proxy, not by the code). Web e2e (this branch's API, Expo web, 390×844): **age-gate, desktop-frame, apply PASS, 0 page errors (normal + reduced-motion)**. **connecting-experience, path-communities, analytics-dark FAIL here on `chat-ready`** — the sandbox has no Stream credentials and its proxy blocks the CDNs; every API call in those runs was 200, and connecting-experience fails **identically against master's API (FastAPI 0.115.6)** (caveat: that worktree used the stale local `master` ref, not `origin/master` — same FastAPI, same Stream-less failure). **role-fork FAILS on its `<video>`-plays check** (client-only; headless Chromium codec). So T0.7's "web specs pass unchanged" is proven only for the specs that can run without Stream — **run `gate.sh fast` on a machine with Stream creds before merging.** Real traffic also showed unauthenticated `/listener-applications/me` → 403, i.e. the T0.7 403-preservation is on a live path, not just in a test.
+
+**Open decisions**
+- **Crisis-exempt tally stays a BackgroundTask** (plan listed it under T4.3). Moving it to a job adds a DB write to the crisis path (before the helpline card, or right after it) for no durability gain — it is one counter increment. Veto if you want it queued anyway.
+- **Snooze had nothing periodic to do** — expiry is computed on read everywhere. Only its background task moved (retried job).
+- **The admin dashboard UI does not show `jobs` yet** — the API reports it; the Health panel (`components/admin/panels/`) needs a row. Not done (no mobile change this session).
+- **Procrastinate logs job args at INFO in the worker log** — ids and persona-template push bodies only (never message text); local container logs, not a third party. Fine by T&S #10 as I read it; flag if not.
+- `68ef68f` (session 43's log) was on this session's starting branch but not on `origin/master`; it rides this PR.
+
+**Next:** merge the PR, then deploy: `deploy.sh` runs `e4a1jobs0001` and starts `mento-worker-prod` on the legacy stack; confirm Admin → Health → `jobs.worker_alive: true`. Then WS4's dependents (T2.4, T8.4) are unblocked; T5.1 still needs T1.2 on the live box.
+
+**How to resume:** a second terminal now runs `python -m app.jobs.worker` (CLAUDE.md run block). Tests run jobs with `app.jobs.worker.drain(queues=[...])`; `procrastinate_jobs` is in conftest's TRUNCATE. Upgrading Procrastinate = a NEW revision applying that release's `sql/migrations/` files — never edit `e4a1jobs0001` or its vendored SQL.
 
 ---
 

@@ -13,8 +13,9 @@ purpose: "per day" should mean the calendar day.)
 
 How
 ---
-There is no scheduler in this API (the capacity and presence sweeps are inline too), so
-rotation is LAZY: the surfaces that show mentor names call `ensure_fresh` first. One
+A periodic job (`maintenance.mentor_names`, 04:00 IST, app/jobs/tasks.py) runs the pass
+the moment the day turns; rotation is ALSO lazy — the surfaces that show mentor names
+call `ensure_fresh` first — so a worker that is down never leaves a stale name on show. One
 mentor per transaction, row taken with SKIP LOCKED — the matcher never waits on a
 rename. A transaction-scoped advisory lock serialises name picking across workers, so
 two mentors can never be handed the same new name.
@@ -46,7 +47,7 @@ import time
 from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta, timezone
 
-from fastapi import BackgroundTasks, Depends
+from fastapi import Depends
 from sqlalchemy import or_, select, text
 from sqlalchemy.orm import Session
 
@@ -248,8 +249,9 @@ def ensure_fresh(db: Session, now: datetime | None = None, *, force: bool = Fals
 
 
 def sync_stream_names() -> None:
-    """Push renamed mentors' names to Stream. Runs AFTER the response (background
-    task), own session, never holds a transaction across the HTTP call."""
+    """Push renamed mentors' names to Stream. Runs in the worker (the
+    `mentor_names.sync_stream` job, or after the periodic pass), own session, never
+    holds a transaction across the HTTP call."""
     try:
         with SessionLocal() as db:
             rows = db.execute(
@@ -270,10 +272,24 @@ def sync_stream_names() -> None:
         logger.warning("mentor name sync to Stream failed (%s)", type(exc).__name__)
 
 
-def fresh_names(background: BackgroundTasks, db: Session = Depends(get_db)) -> None:
+def run_pass() -> None:
+    """The periodic job's body: the pass, forced past the once-a-minute memo, then the
+    Stream catch-up. Idempotent — a second run on the same rotation day renames no one."""
+    with SessionLocal() as db:
+        owed = ensure_fresh(db, force=True)
+    if owed:
+        sync_stream_names()
+
+
+def fresh_names(db: Session = Depends(get_db)) -> None:
     """Router dependency for every surface that shows a mentor's name."""
     if ensure_fresh(db):
-        background.add_task(sync_stream_names)
+        from app import jobs
+        from app.jobs import tasks
+
+        # One catch-up waiting is enough, however many reads notice it.
+        jobs.enqueue(db, tasks.mentor_names_sync_stream, best_effort=True)
+        db.commit()
 
 
 # --- reading history -------------------------------------------------------------

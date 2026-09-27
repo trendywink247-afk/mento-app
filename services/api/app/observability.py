@@ -93,6 +93,29 @@ error_logger = logging.getLogger("mento.errors")
 GENERIC_500 = "Something went wrong on our side. Please try again in a moment."
 
 
+def _route_template(scope: Scope) -> str:
+    """The matched route's FULL template (`/api/v1/conversations/{convo_id}`).
+
+    Since FastAPI 0.13x, `scope["route"]` is the router's own route, whose path no
+    longer carries the `include_router(prefix=...)` part. Rebuild it from public
+    attributes: the prefix is whatever the raw path holds before the route's own
+    regex matches. Our include prefixes are literal (`/api/v1`), so this never puts
+    an id in the log line.
+    """
+    route = scope.get("route")
+    template = getattr(route, "path", None)
+    if not template:
+        return "unmatched"
+    regex = getattr(route, "path_regex", None)
+    raw = scope.get("path", "")
+    if regex is None or regex.match(raw):
+        return template
+    for i, ch in enumerate(raw):
+        if ch == "/" and i and regex.match(raw[i:]):
+            return raw[:i] + template
+    return template
+
+
 def current_request_id() -> str:
     return _REQUEST_ID.get()
 
@@ -181,8 +204,7 @@ class RequestContextMiddleware:
             )
             await send({"type": "http.response.body", "body": body})
         finally:
-            route = scope.get("route")
-            path = getattr(route, "path", None) or "unmatched"
+            path = _route_template(scope)
             if path not in _QUIET_PATHS:
                 access_logger.info(
                     "%s %s -> %d in %dms",

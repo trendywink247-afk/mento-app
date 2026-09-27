@@ -9,13 +9,14 @@ real and testable today without a mentor app.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, case, exists, select, tuple_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import pagination, ratelimit
+from app import jobs, pagination, ratelimit
 from app.db import get_db
+from app.jobs import tasks
 from app.models.admin import AdminAccount
 from app.models.enums import (
     LinkStatus,
@@ -39,7 +40,6 @@ from app.services import (
     mentor_face,
     mentor_names,
     open_question,
-    push_tasks,
 )
 from app.services.matching import (
     ListenerAtCapacity,
@@ -228,7 +228,6 @@ def unfavourite_listener(
 def create_personal_request(
     listener_id: str,
     payload: PersonalRequestIn,
-    background: BackgroundTasks,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
 ) -> RequestOut:
@@ -275,9 +274,11 @@ def create_personal_request(
         intro_message=payload.intro_message,
     )
     db.add(req)
+    db.flush()
+    # Same transaction as the request row: the mentor is paged only if it commits.
+    jobs.enqueue(db, tasks.push_request_created, best_effort=True, request_id=req.id)
     db.commit()
     db.refresh(req)
-    background.add_task(push_tasks.notify_request_created_safe, req.id)
     return _request_out(req, db)
 
 
@@ -326,7 +327,6 @@ def withdraw_my_request(
 @router.post("/requests/{request_id}/accept", response_model=RequestOut)
 def accept_request(
     request_id: str,
-    background: BackgroundTasks,
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> RequestOut:
@@ -343,8 +343,8 @@ def accept_request(
     audit.record(
         db, admin, "personal_request.accept", subject_type="request", subject_id=request_id
     )
+    jobs.enqueue(db, tasks.push_request_accepted, best_effort=True, request_id=request_id)
     db.commit()
-    background.add_task(push_tasks.notify_request_accepted_safe, request_id)
     return _request_out(req, db)
 
 
