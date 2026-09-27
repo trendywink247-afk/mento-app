@@ -84,6 +84,8 @@ class MeOut(BaseModel):
     # they have not — the app then asks before any chat starts. Additive.
     terms_accepted: bool = False
     terms_required: bool = False
+    # A recovery code exists (T3.5); the code itself is never readable again.
+    has_recovery: bool = False
 
 
 class CompanionUpdateIn(BaseModel):
@@ -111,3 +113,14 @@ class CompanionUpdateIn(BaseModel):
         if not self.model_fields_set:
             raise ValueError("send companion_animal, companion_colour and/or companion_name")
         return self
+
+
+class RecoveryOut(BaseModel):
+    """A fresh recovery code (T3.5) — returned once, never stored in the clear."""
+
+    phrase: str
+
+
+class RecoverIn(BaseModel):
+    phrase: str = Field(max_length=64)
+    device_id: str | None = Field(default=None, max_length=64)

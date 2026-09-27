@@ -1433,5 +1433,25 @@
     "failed": "That didn't save. Please try again.",
     "notice": "By continuing, you agree to Mento's house rules.",
     "noticeLink": "Read them"
+  },
+  "recovery": {
+    "title": "Recovery code",
+    "bodyNone": "A private code that brings this account back on a new phone. There is no email or password here, so this is your way back.",
+    "bodyHas": "You have a recovery code. Making a new one replaces it.",
+    "make": "Make a recovery code",
+    "makeNew": "Make a new code",
+    "neverAsk": "Mento will never ask you for this.",
+    "keep": "Write it down or save it somewhere only you can see. We can't show it again.",
+    "copy": "Copy code",
+    "copied": "Copied",
+    "done": "I've saved it",
+    "failed": "That didn't work. Please try again in a moment.",
+    "enterTitle": "Come back with your code",
+    "enterSub": "Type the recovery code you saved. This signs you back in on this device and signs out everywhere else.",
+    "enterA11y": "Recovery code",
+    "submit": "Sign back in",
+    "wrong": "That code did not work. Check it and try again.",
+    "tooMany": "Too many tries. Please wait a little and try again.",
+    "landingLink": "I have a recovery code"
   }
 }

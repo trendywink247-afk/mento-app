@@ -107,6 +107,8 @@ from app.schemas.onboarding import (
     OnboardingResult,
     OnboardingStart,
     PersonaOut,
+    RecoverIn,
+    RecoveryOut,
 )
 from app.schemas.paths import (
     PathChoice,
@@ -126,6 +128,8 @@ from app.schemas.safety import (
 )
 
 __all__ = [
+    "RecoveryOut",
+    "RecoverIn",
     "RefreshIn",
     "SessionPairOut",
     "UpgradeIn",

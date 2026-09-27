@@ -53,3 +53,8 @@ class User(UUIDMixin, TimestampMixin, Base):
         DateTime(timezone=True), nullable=True
     )
     terms_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+
+    # Recovery code (T3.5, services/recovery.py): the lookup half in the clear (it only
+    # FINDS the row), the secret half as an argon2id hash. Neither can sign anyone in.
+    recovery_selector: Mapped[str | None] = mapped_column(String(8), nullable=True, unique=True)
+    recovery_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)

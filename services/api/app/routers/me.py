@@ -13,9 +13,9 @@ from app import ratelimit
 from app.db import get_db
 from app.errors import ApiProblem
 from app.models.user import User
-from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut, OkResult
+from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut, OkResult, RecoveryOut
 from app.security import current_user_id, current_user_id_any_standing
-from app.services import allowance, companions, erasure, member_status, terms
+from app.services import allowance, companions, erasure, member_status, recovery, terms
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -39,6 +39,7 @@ def _out(user: User) -> MeOut:
         status_until=now.until.isoformat() if now.until else None,
         terms_accepted=terms.accepted(user),
         terms_required=terms.required(user),
+        has_recovery=user.recovery_hash is not None,
         id=user.id,
         persona_name=user.persona_name,
         persona_avatar=user.persona_avatar,
@@ -68,6 +69,25 @@ def accept_terms(user: User = Depends(current_user), db: Session = Depends(get_d
     db.commit()
     db.refresh(user)
     return _out(user)
+
+
+@router.post("/recovery", response_model=RecoveryOut)
+def make_recovery_code(
+    user: User = Depends(current_user), db: Session = Depends(get_db)
+) -> RecoveryOut:
+    """A recovery code (T3.5), shown ONCE — the app says "Mento will never ask you for
+    this". A new one replaces the old. Rate-limited and fail-closed (a 503 beats an
+    unthrottled secret mint)."""
+    ratelimit.enforce(
+        f"recovery-issue:{user.id}",
+        5,
+        3600,
+        detail="Too many new codes — please try again in an hour.",
+        fail_closed=True,
+    )
+    phrase = recovery.issue(user)
+    db.commit()
+    return RecoveryOut(phrase=phrase)
 
 
 @router.get("/allowance", response_model=AllowanceOut)

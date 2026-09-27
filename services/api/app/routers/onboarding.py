@@ -15,9 +15,9 @@ from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
 from app.models.user import User
-from app.schemas import OnboardingResult, OnboardingStart, PersonaOut
+from app.schemas import OnboardingResult, OnboardingStart, PersonaOut, RecoverIn
 from app.security import issue_session_token
-from app.services import member_status, sessions, stream, terms
+from app.services import member_status, recovery, sessions, stream, terms
 from app.services.persona import generate_persona
 
 logger = logging.getLogger("mento.onboarding")
@@ -183,4 +183,47 @@ def start(
         session_token=issue_session_token(user.id),
         stream_token=stream.user_token(user.id),
         user=persona_out,
+    )
+
+
+@router.post("/recover", response_model=OnboardingResult)
+def recover(
+    payload: RecoverIn, request: Request, db: Session = Depends(get_db)
+) -> OnboardingResult:
+    """Sign this device in with a recovery code (T3.5). Every refresh family the member
+    had is revoked and a new one starts here. Guesses are limited per address and per
+    code (the code's lookup half), both FAIL CLOSED: an outage answers 503, never
+    unlimited guessing. Wrong, unknown and malformed codes are all the same 401."""
+    ratelimit.enforce(
+        f"recover-ip:{ratelimit.client_ip(request)}",
+        recovery.ATTEMPTS_PER_IP,
+        900,
+        detail="Too many tries — please wait a little and try again.",
+        fail_closed=True,
+    )
+    selector = recovery.selector_of(payload.phrase)
+    if selector is not None:
+        ratelimit.enforce(
+            f"recover-code:{selector}",
+            recovery.ATTEMPTS_PER_CODE,
+            3600,
+            detail="Too many tries for this code — please try again in an hour.",
+            fail_closed=True,
+        )
+    user = recovery.find(db, payload.phrase)
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "that code did not work")
+    sessions.revoke_all(db, user.id)
+    pair = sessions.start(db, user.id, device_id=payload.device_id)
+    db.commit()
+    # Best-effort: heals a member whose Stream user went missing, so chats open.
+    stream.ensure_user(user.id, user.persona_name, user.persona_avatar)
+    return OnboardingResult(
+        session_token=pair.access_token,
+        stream_token=stream.user_token(user.id),
+        user=PersonaOut(
+            id=user.id, persona_name=user.persona_name, persona_avatar=user.persona_avatar
+        ),
+        refresh_token=pair.refresh_token,
+        expires_in=pair.expires_in,
     )

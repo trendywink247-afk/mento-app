@@ -130,6 +130,8 @@ def test_me_returns_persona_and_companion_and_nothing_private(client, db_session
         # Terms (T3.9): the gate ships off, so nothing is required.
         "terms_accepted": False,
         "terms_required": False,
+        # Only THAT a recovery code exists (T3.5) — never the code.
+        "has_recovery": False,
     }
 
 

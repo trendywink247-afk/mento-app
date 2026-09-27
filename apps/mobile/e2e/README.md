@@ -48,6 +48,11 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   runs with TERMS_GATE_ENFORCED=true; otherwise printed as SKIP): a member who joined
   without accepting is asked once on the tabs; match is 409 before, allowed after.
   Normal + reduced-motion, 0 page errors.
+- recovery-code.e2e.js — the recovery code (WS3 T3.5): Profile makes a code, shows it once
+  with "Mento will never ask you for this", then hides it; a fresh browser → landing → "I
+  have a recovery code" → a wrong code is a still line → the right one (lower case, spaces)
+  signs in as the same member; the first device's refresh token is dead. Normal +
+  reduced-motion, 0 page errors.
 - notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
   notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.
 - connecting-busy.e2e.js — flips every seeded listener to away (docker exec), drives

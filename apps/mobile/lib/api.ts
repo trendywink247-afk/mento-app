@@ -39,6 +39,8 @@ export type Me = Persona & {
    * (only ever true while the server enforces the gate). Optional: older servers omit. */
   terms_accepted?: boolean;
   terms_required?: boolean;
+  /** A recovery code exists (WS3 T3.5) — the code itself is never readable again. */
+  has_recovery?: boolean;
 };
 
 /** `PUT /me/companion`: an omitted field is left as it is, `null` clears it. */
@@ -574,6 +576,15 @@ export const api = {
 
   // --- The member's own record (companion saved on the account, not just the device) ---
   me: () => request<Me>('/me', {}, true),
+  /** A fresh recovery code (WS3 T3.5), returned ONCE; a new one replaces the old. */
+  makeRecoveryCode: () => request<{ phrase: string }>('/me/recovery', { method: 'POST' }, true),
+  /** Sign this device in with a recovery code: 401 for a wrong code, 429 after too many
+   * tries. Every other session of that member is signed out. */
+  recover: (phrase: string) =>
+    request<OnboardingResult>('/onboarding/recover', {
+      method: 'POST',
+      body: JSON.stringify({ phrase }),
+    }),
   /** Accept the current terms (WS3 T3.9); answers the updated `Me`. */
   acceptTerms: () => request<Me>('/me/terms', { method: 'POST' }, true),
   saveCompanion: (body: CompanionUpdate) =>
