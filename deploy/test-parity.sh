@@ -20,7 +20,8 @@ render() {  # render <override> <out.json>
         config --format json > "$2"
 }
 render compose.local.yml "$TMP/local.json"
-MENTO_ENV_FILE="$TMP/api.env" POSTGRES_PASSWORD=parity-check render compose.prod.yml "$TMP/prod.json"
+MENTO_ENV_FILE="$TMP/api.env" POSTGRES_PASSWORD=parity-check GLITCHTIP_SECRET_KEY=parity-check \
+    render compose.prod.yml "$TMP/prod.json"
 
 python3 - "$TMP/local.json" "$TMP/prod.json" <<'EOF'
 import json, sys
@@ -32,11 +33,21 @@ import json, sys
 # volumes' container paths, profiles, restart policy) must still match exactly.
 ALLOWED = {"environment", "env_file", "ports", "mem_limit", "mem_reservation",
            "memswap_limit", "logging", "command", "ulimits"}
+# GlitchTip (T1.7): a prod-only ops tool, not part of the app under test, no
+# local equivalent by design — excluded from the comparison entirely, same
+# reasoning as the allowed set above, just at the service/volume level instead
+# of the key level.
+PROD_ONLY_SERVICES = {"glitchtip", "glitchtip-init-db"}
+PROD_ONLY_VOLUMES = {"glitchtip_uploads"}
 
 def normalise(path):
     cfg = json.load(open(path))
     # x-* blocks are YAML anchors for reuse, not configuration.
     cfg = {k: v for k, v in cfg.items() if not k.startswith("x-")}
+    for name in PROD_ONLY_SERVICES:
+        cfg.get("services", {}).pop(name, None)
+    for name in PROD_ONLY_VOLUMES:
+        cfg.get("volumes", {}).pop(name, None)
     for svc in cfg.get("services", {}).values():
         for key in ALLOWED:
             svc.pop(key, None)
