@@ -6,16 +6,16 @@ not profile), and nothing here is visible to anyone but the caller.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.db import get_db
 from app.errors import ApiProblem
 from app.models.user import User
-from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut, OkResult
+from app.schemas import AllowanceOut, CompanionUpdateIn, ExportOut, MeOut, OkResult
 from app.security import current_user_id
-from app.services import allowance, companions, erasure
+from app.services import allowance, companions, erasure, export
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -56,6 +56,24 @@ def my_allowance(user: User = Depends(current_user), db: Session = Depends(get_d
     no conversation yet — the first-question builder's "1 of your 10" meter.
     `in_a_row` is always 0 here; ask `GET /conversations/{id}/allowance` inside a chat."""
     return allowance.to_out(allowance.state_for(db, user.id, None))
+
+
+@router.get("/export", response_model=ExportOut)
+def export_me(
+    response: Response,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> ExportOut:
+    """Everything this member's account holds, as one JSON document (T2.5) — the same
+    inventory Start fresh erases (see `services/export.py` for what is left out and why:
+    chat text lives on Stream; other people's data, secrets and safety records held
+    about the member are never included). Sent as a download; never cached."""
+    ratelimit.enforce(
+        f"export:{user.id}", 10, 3600, detail="Too many exports — please try again in a bit."
+    )
+    response.headers["Content-Disposition"] = 'attachment; filename="mento-export.json"'
+    response.headers["Cache-Control"] = "no-store"
+    return export.build(db, user)
 
 
 @router.put("/companion", response_model=MeOut)
