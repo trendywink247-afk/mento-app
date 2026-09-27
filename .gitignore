@@ -60,3 +60,4 @@ mento-crisis-card.png
 
 # Claude Code session worktrees (isolated checkouts, never commit)
 .claude/worktrees/
+*.rdb
