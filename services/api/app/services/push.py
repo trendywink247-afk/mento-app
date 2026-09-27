@@ -172,7 +172,9 @@ def _post_expo(messages: list[dict]) -> list[dict]:
     return list((resp.json() or {}).get("data") or [])
 
 
-def _send(db: Session, tokens: list[str], body: str, data: dict) -> None:
+def _send(db: Session, kind: PushOwnerKind, tokens: list[str], body: str, data: dict) -> None:
+    """`kind` is the recipient's role: a token Expo calls dead is removed for THAT role
+    only — a dual-role phone's other registration is cleaned by its own sends (T2.8)."""
     if not tokens or not _enabled():
         return
     messages = [
@@ -194,7 +196,11 @@ def _send(db: Session, tokens: list[str], body: str, data: dict) -> None:
         and (ticket.get("details") or {}).get("error") == "DeviceNotRegistered"
     ]
     if dead:
-        for row in db.scalars(select(PushToken).where(PushToken.expo_push_token.in_(dead))).all():
+        for row in db.scalars(
+            select(PushToken).where(
+                PushToken.expo_push_token.in_(dead), PushToken.owner_kind == kind
+            )
+        ).all():
             db.delete(row)
         db.commit()
     logger.info("push sent=%d dead=%d", len(tickets), len(dead))
@@ -259,6 +265,7 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
         return
     _send(
         db,
+        recipient_kind,
         tokens,
         body,
         {
@@ -284,7 +291,13 @@ def notify_request_created(db: Session, *, request_id: str) -> None:
     if not tokens:
         _suppressed("no_token")
         return
-    _send(db, tokens, TEMPLATES["request"], {"kind": "request", "request_id": req.id})
+    _send(
+        db,
+        PushOwnerKind.listener,
+        tokens,
+        TEMPLATES["request"],
+        {"kind": "request", "request_id": req.id},
+    )
 
 
 def notify_request_accepted(db: Session, *, request_id: str) -> None:
@@ -304,6 +317,7 @@ def notify_request_accepted(db: Session, *, request_id: str) -> None:
         return
     _send(
         db,
+        PushOwnerKind.member,
         tokens,
         TEMPLATES["accepted"] % {"persona": li.persona_name},
         {

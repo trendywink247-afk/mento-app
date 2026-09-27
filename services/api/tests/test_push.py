@@ -527,3 +527,31 @@ def test_listener_delete_removes_only_own_listener_row(client):
     assert r.status_code == 200 and r.json()["status"] == "ok"
     with TestSession() as s:
         assert [t.owner_kind for t in s.scalars(select(PushToken)).all()] == [PushOwnerKind.member]
+
+
+def test_dead_member_token_leaves_the_same_devices_listener_row(monkeypatch):
+    """T2.8: a dual-role phone holds one row per role (unique per token + kind). Expo
+    reporting the token dead on a MEMBER send removes the member row only — the mentor
+    row belongs to a different registration and is cleaned by its own sends."""
+    with TestSession() as s:
+        uid = _user(s)
+        lid = _listener(s)
+        cid = _convo(s, uid, lid)
+        _token(s, PushOwnerKind.member, uid, "ExponentPushToken[shared-phone]")
+        _token(s, PushOwnerKind.listener, lid, "ExponentPushToken[shared-phone]")
+        s.commit()
+    monkeypatch.setattr(push, "ENABLED", True)
+    monkeypatch.setattr(push, "_is_watching", lambda c, u: False)
+    monkeypatch.setattr(
+        push,
+        "_post_expo",
+        lambda msgs: [
+            {"status": "error", "details": {"error": "DeviceNotRegistered"}} for _ in msgs
+        ],
+    )
+    with TestSession() as s:
+        # The mentor writes → the MEMBER is pushed → Expo says the token is dead.
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
+    with TestSession() as s:
+        rows = s.scalars(select(PushToken)).all()
+        assert [(r.owner_kind, r.owner_id) for r in rows] == [(PushOwnerKind.listener, lid)]
