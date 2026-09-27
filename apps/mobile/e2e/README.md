@@ -23,6 +23,11 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   onboards → sends a Personal request. Mentor: accept → chat → mentor rail → reply;
   member sees it; Report sheet files; End frees the seat (row shows Ended).
   Reduced-motion pass reopens the console. 0 page errors in every context.
+- session-refresh.e2e.js — refreshing sessions (WS3 T3.2), on Journals so it needs no
+  Stream: (A) a pre-refresh install (long-lived token only) loads and upgrades silently,
+  its old token still valid; (B) a stale access token is refreshed and the call retried;
+  (C) /auth/refresh unreachable → still signed in, tokens untouched; (D) a dead refresh
+  family → the old sign-out to the landing. Normal + reduced-motion, 0 page errors.
 - notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
   notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.
 - connecting-busy.e2e.js — flips every seeded listener to away (docker exec), drives
