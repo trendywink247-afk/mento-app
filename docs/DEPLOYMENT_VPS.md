@@ -292,6 +292,44 @@ Rotating `STREAM_API_SECRET` invalidates webhook signatures — re-run
 
 ---
 
+## The Balanced stack (Compose + Caddy) — staged, not live
+
+**Status:** committed (WS1 T1.1, T1.3) and proven locally; prod still runs
+`deploy/docker-compose.prod.yml` behind host Nginx until the server move (T1.10).
+
+- `deploy/caddy/Caddyfile` — one edge config for local and prod, hosts from the
+  environment (`deploy/domains.env` in prod). Proof: `bash deploy/test-caddy.sh`
+  (same host map as `test-nginx.sh`, plus a WebSocket upgrade through `api.`).
+- `deploy/compose.base.yml` + `compose.local.yml` / `compose.prod.yml` — see the
+  header of `compose.base.yml`. Parity proof: `bash deploy/test-parity.sh`.
+
+### Local hostnames
+
+The local stack serves `app.mento.localhost`, `api.mento.localhost` and
+`admin.mento.localhost`. Chrome, Firefox and systemd-resolved already send
+`*.localhost` to 127.0.0.1; Windows tools (curl, PowerShell, Node) need three lines
+in `C:\Windows\System32\drivers\etc\hosts` (edit as Administrator):
+
+```
+127.0.0.1 app.mento.localhost
+127.0.0.1 api.mento.localhost
+127.0.0.1 admin.mento.localhost
+```
+
+By default the local Caddy uses its own internal CA (`CADDY_TLS=internal`): works
+with no setup, but browsers warn. For browser-trusted certificates, once:
+
+```powershell
+mkcert -install
+mkdir deploy/caddy/certs
+mkcert -cert-file deploy/caddy/certs/cert.pem -key-file deploy/caddy/certs/key.pem `
+  mento.localhost app.mento.localhost api.mento.localhost admin.mento.localhost
+```
+
+then start the stack with `CADDY_TLS=mkcert` (the `.pem` files are gitignored).
+
+---
+
 ## Secrets (SOPS + age)
 
 **Status:** tooling committed (WS1 T1.8); **not yet adopted on prod.** Until
