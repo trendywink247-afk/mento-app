@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     # keeps minting claim-less 90-day tokens until then. 2027-01-31 covers a deploy
     # on or before 2026-11-02; set LEGACY_CLAIMS_ACCEPTED_UNTIL if it ships later.
     legacy_claims_accepted_until: date = date(2027, 1, 31)
+    # Refresh-token sessions (T3.2): short access tokens, rotating refresh tokens.
+    # The refresh window slides — every rotation starts a new one.
+    access_token_minutes: int = 15
+    refresh_token_ttl_days: int = 90
     min_age: int = 18
 
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"

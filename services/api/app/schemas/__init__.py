@@ -37,6 +37,11 @@ from app.schemas.applications import (
     ListenerApplicationIn,
     ListenerApplicationOut,
 )
+from app.schemas.auth import (
+    RefreshIn,
+    SessionPairOut,
+    UpgradeIn,
+)
 from app.schemas.common import (
     OkResult,
 )
@@ -120,6 +125,9 @@ from app.schemas.safety import (
 )
 
 __all__ = [
+    "RefreshIn",
+    "SessionPairOut",
+    "UpgradeIn",
     "AdminAccountItem",
     "AdminAllowanceDay",
     "AdminAllowanceOut",

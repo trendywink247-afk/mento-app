@@ -15,6 +15,7 @@ from app.models.push_token import PushToken
 from app.models.reflection import ConversationReflection
 from app.models.request import ConversationRequest
 from app.models.safety import SafetyFlag
+from app.models.session import Session
 from app.models.user import User
 
 __all__ = [
@@ -35,5 +36,6 @@ __all__ = [
     "ProductFeedback",
     "PushToken",
     "SafetyFlag",
+    "Session",
     "User",
 ]

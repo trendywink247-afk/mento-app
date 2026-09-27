@@ -46,7 +46,7 @@ export function AgeGateStep({ onBack, onPassed }: { onBack: () => void; onPassed
     setStartError(null);
     try {
       const result = await api.startOnboarding({ dob: dobToISO(dob) });
-      await saveSession(result.session_token, result.stream_token, result.user);
+      await saveSession(result.session_token, result.stream_token, result.user, result.refresh_token);
       onPassed();
     } catch (e) {
       setStartError(e instanceof ApiError ? e.message : t('mentorApply.error'));

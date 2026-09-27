@@ -3,7 +3,12 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
 import { screenCache } from './screenCache';
-import { clearSession, getSessionToken } from './session';
+import {
+  clearSession,
+  getRefreshToken,
+  getSessionToken,
+  saveTokenPair,
+} from './session';
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
@@ -39,6 +44,19 @@ export type OnboardingResult = {
   session_token: string;
   stream_token: string;
   user: Persona;
+  /** Present when the server supports refresh (we always ask); pass it to saveSession.
+   * An older server omits it and the session stays a long-lived token. */
+  refresh_token?: string | null;
+  expires_in?: number | null;
+};
+
+/** `POST /auth/upgrade` / `POST /auth/refresh` (T3.2). */
+export type SessionPair = {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_expires_at: string;
 };
 
 export type MatchResult = {
@@ -393,13 +411,131 @@ async function handleUserUnauthorized(): Promise<void> {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
+// --- Refreshing sessions (T3.2) ---
+// A refresh-capable session holds a 15-minute access token + a rotating refresh token.
+// The server treats a refresh token presented twice as theft and revokes the whole
+// family, so this client must NEVER race itself: one refresh at a time per process
+// (the in-flight promise) and, on web, per browser (a Web Lock across tabs), and it
+// re-reads storage before spending a refresh token that someone else may already
+// have rotated. Anything short of a definite 401 from /auth/refresh (offline, 5xx,
+// timeout) keeps the session: a network blip must never sign a member out.
+
+type RefreshOutcome = 'refreshed' | 'dead' | 'unavailable';
+
+const EXPIRY_MARGIN_MS = 30_000;
+
+/** The `exp` of a JWT in ms, or null when it can't be read (then: just try it). */
+function tokenExpiry(token: string): number | null {
   try {
-    return await apiRequest<T>(path, init, auth ? getSessionToken : undefined);
-  } catch (e) {
-    if (auth && e instanceof ApiError && e.status === 401) {
-      await handleUserUnauthorized();
+    const part = token.split('.')[1];
+    if (!part || typeof globalThis.atob !== 'function') return null;
+    const json = globalThis.atob(part.replace(/-/g, '+').replace(/_/g, '/'));
+    const exp = (JSON.parse(json) as { exp?: unknown }).exp;
+    return typeof exp === 'number' ? exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function expiringSoon(token: string): boolean {
+  const exp = tokenExpiry(token);
+  return exp !== null && exp - Date.now() < EXPIRY_MARGIN_MS;
+}
+
+type LockManager = { request<R>(name: string, cb: () => Promise<R>): Promise<R> };
+
+/** Serialize across browser tabs where the platform offers it (web); no-op on native. */
+function withRefreshLock<R>(cb: () => Promise<R>): Promise<R> {
+  const locks = (globalThis.navigator as { locks?: LockManager } | undefined)?.locks;
+  return locks?.request ? locks.request('mento.refresh', cb) : cb();
+}
+
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
+
+/** Rotate the refresh token. `staleToken` = the access token that just failed (or is
+ * about to expire): if storage already holds a different, live one, another request
+ * or tab refreshed first and there is nothing to spend. */
+function refreshSession(staleToken: string | null): Promise<RefreshOutcome> {
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = withRefreshLock(async (): Promise<RefreshOutcome> => {
+    const current = await getSessionToken();
+    if (current && current !== staleToken && !expiringSoon(current)) return 'refreshed';
+    const refresh = await getRefreshToken();
+    if (!refresh) return 'dead';
+    try {
+      const pair = await apiRequest<SessionPair>('/auth/refresh', {
+        method: 'POST',
+        body: JSON.stringify({ refresh_token: refresh }),
+      });
+      await saveTokenPair(pair.access_token, pair.refresh_token);
+      return 'refreshed';
+    } catch (e) {
+      return e instanceof ApiError && e.status === 401 ? 'dead' : 'unavailable';
     }
+  }).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+// Installs from before refresh hold a long-lived token and no refresh token. Swap it
+// once, quietly, in the background (the old token keeps working meanwhile and is not
+// revoked by the swap). Each token is tried once per launch; failure changes nothing.
+const upgradeTried = new Set<string>();
+
+async function upgradeLegacySession(): Promise<void> {
+  if (await getRefreshToken()) return;
+  const token = await getSessionToken();
+  if (!token || upgradeTried.has(token)) return;
+  upgradeTried.add(token);
+  try {
+    const pair = await apiRequest<SessionPair>(
+      '/auth/upgrade',
+      { method: 'POST', body: JSON.stringify({}) },
+      async () => token,
+    );
+    // Only if the identity did not change while the call was out.
+    if ((await getSessionToken()) === token) {
+      await saveTokenPair(pair.access_token, pair.refresh_token);
+    }
+  } catch {
+    /* older server, offline, or 409 already_upgraded — keep what we have */
+  }
+}
+
+/** The member bearer to send now — refreshed first when it is about to lapse. */
+async function currentMemberToken(): Promise<string | null> {
+  const token = await getSessionToken();
+  if (token && expiringSoon(token) && (await getRefreshToken())) {
+    await refreshSession(token);
+    return getSessionToken();
+  }
+  return token;
+}
+
+async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
+  if (!auth) return apiRequest<T>(path, init);
+  void upgradeLegacySession();
+  const token = await currentMemberToken();
+  try {
+    return await apiRequest<T>(path, init, async () => token);
+  } catch (e) {
+    if (!(e instanceof ApiError && e.status === 401)) throw e;
+    // A 401 is refused before the handler runs, so one retry is safe even for a POST.
+    const outcome = await refreshSession(token);
+    if (outcome === 'refreshed') {
+      const next = await getSessionToken();
+      try {
+        return await apiRequest<T>(path, init, async () => next);
+      } catch (retryError) {
+        if (retryError instanceof ApiError && retryError.status === 401) {
+          await handleUserUnauthorized();
+        }
+        throw retryError;
+      }
+    }
+    // No refresh token (a pre-refresh install) or a dead family: the old behaviour.
+    if (outcome === 'dead') await handleUserUnauthorized();
     throw e;
   }
 }
@@ -411,7 +547,12 @@ export const api = {
     companion_animal?: string | null;
     companion_colour?: string | null;
     companion_name?: string | null;
-  }) => request<OnboardingResult>('/onboarding/start', { method: 'POST', body: JSON.stringify(body) }),
+  }) =>
+    request<OnboardingResult>('/onboarding/start', {
+      method: 'POST',
+      // Always ask for a refreshing session; an older server ignores the flag.
+      body: JSON.stringify({ ...body, refresh: true }),
+    }),
 
   // --- The member's own record (companion saved on the account, not just the device) ---
   me: () => request<Me>('/me', {}, true),

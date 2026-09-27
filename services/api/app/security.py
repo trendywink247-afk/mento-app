@@ -93,6 +93,22 @@ def issue_session_token(user_id: str) -> str:
     return _mint(user_id, "user", timedelta(days=get_settings().jwt_ttl_days))
 
 
+def issue_access_token(user_id: str, session_family_id: str) -> str:
+    """Mint a short (access_token_minutes) member access token bound to a refresh
+    family via `sid`. Renewed with POST /auth/refresh (services/sessions.py)."""
+    ttl = timedelta(minutes=get_settings().access_token_minutes)
+    return _mint(user_id, "user", ttl, sid=session_family_id)
+
+
+def user_token_claims(creds: HTTPAuthorizationCredentials = Depends(_bearer)) -> dict:
+    """The verified member token's claims — for the few endpoints that care which
+    KIND of member token it is (POST /auth/upgrade)."""
+    payload = _decode(creds, "user")
+    if not _member_role_ok(payload.get("role")) or not payload.get("sub"):
+        raise _unauthorized("not a user session")
+    return payload
+
+
 def issue_listener_token(listener_id: str) -> str:
     """Mint a listener-console JWT (role claim distinguishes it from user sessions;
     revocation is the per-request vetting_status check, not the token itself)."""

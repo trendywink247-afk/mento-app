@@ -14,7 +14,7 @@ from app.db import get_db
 from app.models.user import User
 from app.schemas import OnboardingResult, OnboardingStart, PersonaOut
 from app.security import issue_session_token
-from app.services import stream
+from app.services import sessions, stream
 from app.services.persona import generate_persona
 
 logger = logging.getLogger("mento.onboarding")
@@ -89,10 +89,21 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
             "We couldn't set things up just now. Please try again in a moment.",
         ) from None
 
+    persona_out = PersonaOut(
+        id=user.id, persona_name=user.persona_name, persona_avatar=user.persona_avatar
+    )
+    if payload.refresh:
+        pair = sessions.start(db, user.id, device_id=payload.device_id)
+        db.commit()
+        return OnboardingResult(
+            session_token=pair.access_token,
+            stream_token=stream.user_token(user.id),
+            user=persona_out,
+            refresh_token=pair.refresh_token,
+            expires_in=pair.expires_in,
+        )
     return OnboardingResult(
         session_token=issue_session_token(user.id),
         stream_token=stream.user_token(user.id),
-        user=PersonaOut(
-            id=user.id, persona_name=user.persona_name, persona_avatar=user.persona_avatar
-        ),
+        user=persona_out,
     )

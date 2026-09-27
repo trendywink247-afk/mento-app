@@ -19,6 +19,10 @@ class OnboardingStart(BaseModel):
     # The member's own name for the companion — same never-reject rule: a name that
     # fails services/companions.clean_name is dropped, never a reason to refuse.
     companion_name: str | None = None
+    # T3.2: a refresh-capable client asks for a short access token + refresh token
+    # pair. Older clients omit it and keep getting the long-lived session token.
+    refresh: bool = False
+    device_id: str | None = Field(default=None, max_length=64)
 
     @field_validator("companion_animal")
     @classmethod
@@ -43,9 +47,12 @@ class PersonaOut(BaseModel):
 
 
 class OnboardingResult(BaseModel):
-    session_token: str  # Mento anonymous JWT
+    session_token: str  # Mento anonymous JWT (the access token when refresh was asked)
     stream_token: str  # Stream Chat client token
     user: PersonaOut
+    # Only when the client asked for `refresh` (T3.2).
+    refresh_token: str | None = None
+    expires_in: int | None = None
 
 
 class MeOut(BaseModel):

@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.db import init_db
 from app.routers import (
     admin_console,
+    auth,
     conversation,
     feedback,
     health,
@@ -140,6 +141,7 @@ app.add_middleware(
 API = "/api/v1"
 app.include_router(health.router, prefix=API)
 app.include_router(onboarding.router, prefix=API)
+app.include_router(auth.router, prefix=API)
 app.include_router(me.router, prefix=API)
 app.include_router(match.router, prefix=API)
 app.include_router(paths.router, prefix=API)
