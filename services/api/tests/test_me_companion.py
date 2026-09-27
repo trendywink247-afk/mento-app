@@ -124,6 +124,9 @@ def test_me_returns_persona_and_companion_and_nothing_private(client, db_session
         "has_dob": True,
         "member_setup_complete": True,
         "companion_name": None,
+        # The member's own standing (T3.7) — theirs to read, never anyone else's.
+        "status": "active",
+        "status_until": None,
     }
 
 

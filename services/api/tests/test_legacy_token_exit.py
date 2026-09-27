@@ -44,7 +44,7 @@ def test_roleless_window_is_the_documented_date():
 
 def test_roleless_member_token_accepted_until_the_last_second(monkeypatch):
     _at(monkeypatch, _midnight(date(2026, 10, 17)) - timedelta(seconds=1))
-    assert security.current_user_id(_creds(_raw({"sub": "u-old"}))) == "u-old"
+    assert security.user_id_from_token(_creds(_raw({"sub": "u-old"}))) == "u-old"
     assert security.current_member_or_listener(_creds(_raw({"sub": "u-old"}))) == (
         "member",
         "u-old",
@@ -54,7 +54,7 @@ def test_roleless_member_token_accepted_until_the_last_second(monkeypatch):
 @pytest.mark.parametrize("day", [date(2026, 10, 17), date(2026, 12, 1)])
 def test_roleless_member_token_refused_from_the_date(monkeypatch, day):
     _at(monkeypatch, _midnight(day))
-    for dep in (security.current_user_id, security.current_member_or_listener):
+    for dep in (security.user_id_from_token, security.current_member_or_listener):
         with pytest.raises(HTTPException) as exc:
             dep(_creds(_raw({"sub": "u-old"})))
         assert exc.value.status_code == 401
@@ -64,14 +64,14 @@ def test_role_claimed_legacy_token_outlives_the_roleless_date(monkeypatch):
     # role:"user" but no iss/aud/jti (minted 2026-07-19 … T3.1): the claims window
     # governs it, not the role-less one.
     _at(monkeypatch, _midnight(date(2026, 11, 1)))
-    assert security.current_user_id(_creds(_raw({"sub": "u", "role": "user"}))) == "u"
+    assert security.user_id_from_token(_creds(_raw({"sub": "u", "role": "user"}))) == "u"
 
 
 @pytest.mark.parametrize("role", ["user", "listener", "admin"])
 def test_claimless_tokens_refused_from_the_claims_cutoff(monkeypatch, role):
     cutoff = _midnight(get_settings().legacy_claims_accepted_until)
     dep = {
-        "user": security.current_user_id,
+        "user": security.user_id_from_token,
         "listener": security.current_listener_id,
         "admin": security.current_admin_id,
     }[role]
@@ -86,4 +86,4 @@ def test_claimless_tokens_refused_from_the_claims_cutoff(monkeypatch, role):
 def test_new_tokens_are_untouched_by_either_cutoff(monkeypatch):
     token = security.issue_session_token("u-new")
     _at(monkeypatch, _midnight(date(2027, 6, 1)))
-    assert security.current_user_id(_creds(token)) == "u-new"
+    assert security.user_id_from_token(_creds(token)) == "u-new"

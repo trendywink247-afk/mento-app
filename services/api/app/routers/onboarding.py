@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from datetime import UTC, date, datetime
 
@@ -14,11 +15,18 @@ from app.db import get_db
 from app.models.user import User
 from app.schemas import OnboardingResult, OnboardingStart, PersonaOut
 from app.security import issue_session_token
-from app.services import sessions, stream
+from app.services import member_status, sessions, stream
 from app.services.persona import generate_persona
 
 logger = logging.getLogger("mento.onboarding")
 router = APIRouter(prefix="/onboarding", tags=["onboarding"])
+
+
+def _install_hash(install_id: str | None) -> str | None:
+    """Only a SHA-256 of the app's random per-install id is ever stored."""
+    if not install_id:
+        return None
+    return hashlib.sha256(install_id.encode()).hexdigest()
 
 
 def _age_on(dob: date, today: date) -> int:
@@ -72,6 +80,7 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
         companion_animal=payload.companion_animal,
         companion_colour=payload.companion_colour,
         companion_name=payload.companion_name,
+        install_hash=_install_hash(payload.install_id),
     )
     db.add(user)
     db.commit()
@@ -94,6 +103,11 @@ def start(payload: OnboardingStart, db: Session = Depends(get_db)) -> Onboarding
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "We couldn't set things up just now. Please try again in a moment.",
         ) from None
+
+    # A new account from a blocked member's install is flagged for review (T3.7) —
+    # after the Stream upsert, so a rolled-back signup leaves no flag behind.
+    if member_status.flag_rejoin(db, user):
+        db.commit()
 
     persona_out = PersonaOut(
         id=user.id, persona_name=user.persona_name, persona_avatar=user.persona_avatar

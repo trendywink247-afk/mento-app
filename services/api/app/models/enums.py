@@ -94,6 +94,16 @@ class ConversationEndedBy(str, enum.Enum):
 class ReporterKind(str, enum.Enum):
     member = "member"
     listener = "listener"
+    system = "system"  # raised by the server itself (a re-join from a banned install)
+
+
+class MemberStatus(str, enum.Enum):
+    """A member's standing (T3.7). Suspended/banned members are refused by every member
+    route except GET /me; `users.banned_until` bounds either (NULL = until lifted)."""
+
+    active = "active"
+    suspended = "suspended"
+    banned = "banned"
 
 
 class ListenerReportReason(str, enum.Enum):

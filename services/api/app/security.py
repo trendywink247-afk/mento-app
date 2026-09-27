@@ -24,8 +24,14 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWTError as JWTError
+from sqlalchemy import select
+from sqlalchemy.orm import Session as DbSession
 
 from app.config import get_settings
+from app.db import get_db
+from app.errors import ApiProblem
+from app.models.enums import MemberStatus
+from app.models.user import User
 
 _ALGO = "HS256"
 _bearer = HTTPBearer(auto_error=True)
@@ -173,10 +179,8 @@ def _member_role_ok(role: str | None) -> bool:
     return role == "user" or (role is None and _before(ROLELESS_ACCEPTED_UNTIL))
 
 
-def current_user_id(
-    creds: HTTPAuthorizationCredentials = Depends(_bearer),
-) -> str:
-    """FastAPI dependency: resolve the anonymous user id from the bearer token.
+def user_id_from_token(creds: HTTPAuthorizationCredentials) -> str:
+    """The member id a bearer token proves — the token alone, no standing check.
     Rejects listener/admin tokens — roles must never cross endpoints."""
     payload = _decode(creds, "user")
     if not _member_role_ok(payload.get("role")):
@@ -184,6 +188,42 @@ def current_user_id(
     user_id = payload.get("sub")
     if not user_id:
         raise _unauthorized("malformed session")
+    return user_id
+
+
+def current_user_id_any_standing(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+) -> str:
+    """For the one place a suspended or banned member may still read: their own
+    account (GET /me), so the app can say why and until when."""
+    return user_id_from_token(creds)
+
+
+def current_user_id(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+    db: DbSession = Depends(get_db),
+) -> str:
+    """FastAPI dependency for every member route: the member id, refused with 403
+    `member_suspended` / `member_banned` while a suspension or ban is in force (T3.7).
+    A token for a member row that no longer exists passes — routes answer that
+    themselves (401 unknown session). Shares the request's DB session."""
+    from app.services.member_status import standing  # reason: services import security
+
+    user_id = user_id_from_token(creds)
+    row = db.execute(select(User.status, User.banned_until).where(User.id == user_id)).first()
+    if row is not None:
+        now = standing(row[0], row[1])
+        if now.status != MemberStatus.active:
+            raise ApiProblem(
+                status.HTTP_403_FORBIDDEN,
+                f"member_{now.status.value}",
+                (
+                    "Your account is paused by the Mento team."
+                    if now.status == MemberStatus.suspended
+                    else "Your account has been closed by the Mento team."
+                ),
+                until=now.until.isoformat() if now.until else None,
+            )
     return user_id
 
 

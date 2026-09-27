@@ -23,6 +23,9 @@ class OnboardingStart(BaseModel):
     # pair. Older clients omit it and keep getting the long-lived session token.
     refresh: bool = False
     device_id: str | None = Field(default=None, max_length=64)
+    # The app's random per-install id (T3.7/T3.8). Stored only as a SHA-256; a
+    # re-join and age-gate signal, never an identity. Older builds omit it.
+    install_id: str | None = Field(default=None, max_length=128)
 
     @field_validator("companion_animal")
     @classmethod
@@ -71,6 +74,10 @@ class MeOut(BaseModel):
     member_setup_complete: bool = False
     # Only ever returned to the member themself (never in a mentor or admin payload).
     companion_name: str | None = None
+    # Standing (T3.7): "active" | "suspended" | "banned"; `status_until` bounds a
+    # suspension or ban (null = until lifted). Additive; older builds ignore them.
+    status: str = "active"
+    status_until: str | None = None
 
 
 class CompanionUpdateIn(BaseModel):

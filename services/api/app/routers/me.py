@@ -14,8 +14,8 @@ from app.db import get_db
 from app.errors import ApiProblem
 from app.models.user import User
 from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut, OkResult
-from app.security import current_user_id
-from app.services import allowance, companions, erasure
+from app.security import current_user_id, current_user_id_any_standing
+from app.services import allowance, companions, erasure, member_status
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -33,7 +33,10 @@ def current_user(
 
 
 def _out(user: User) -> MeOut:
+    now = member_status.standing(user.status, user.banned_until)
     return MeOut(
+        status=now.status.value,
+        status_until=now.until.isoformat() if now.until else None,
         id=user.id,
         persona_name=user.persona_name,
         persona_avatar=user.persona_avatar,
@@ -46,8 +49,13 @@ def _out(user: User) -> MeOut:
 
 
 @router.get("", response_model=MeOut)
-def me(user: User = Depends(current_user)) -> MeOut:
-    return _out(user)
+def me(
+    user_id: str = Depends(current_user_id_any_standing),
+    db: Session = Depends(get_db),
+) -> MeOut:
+    """Reachable while suspended or banned (T3.7) — the one read that lets the app say
+    why the rest answers 403, and until when."""
+    return _out(current_user(user_id, db))
 
 
 @router.get("/allowance", response_model=AllowanceOut)

@@ -21,6 +21,8 @@ from app.models.enums import (
     ApplicationStatus,
     ConversationStatus,
     ListenerStatus,
+    ModerationLevel,
+    ReporterKind,
     SafetySignal,
     VettingStatus,
 )
@@ -56,10 +58,19 @@ from app.schemas import (
     AdminReconcileOut,
     AttentionItem,
     ModerationItem,
+    ModerationResolveIn,
     OkResult,
 )
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
-from app.services import allowance, audit, conversations, in_touch, mentor_face, stream
+from app.services import (
+    allowance,
+    audit,
+    conversations,
+    in_touch,
+    member_status,
+    mentor_face,
+    stream,
+)
 from app.services.categories import availability_note, ordered_times
 from app.services.links import admin_link, mentor_console_link
 from app.services.matching import reconcile_listener_capacity
@@ -336,18 +347,45 @@ def moderation_queue(
 @router.post("/moderation/{event_id}/resolve", response_model=OkResult)
 def resolve_event(
     event_id: str,
+    payload: ModerationResolveIn | None = None,
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> OkResult:
+    """Resolve a report. With an `action` (T3.7) the reported MEMBER is suspended or
+    banned in the same transaction — `ModerationLevel.suspension` / `ban` now act:
+    their chats end and are sealed, every member route refuses them. Only for
+    reports whose subject is a member (filed by a mentor or by the system); 409
+    `not_a_member_report` otherwise."""
     event = db.get(ModerationEvent, event_id)
     if event is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "event not found")
+    ended: list[str | None] = []
+    if payload is not None:
+        if event.reporter_kind == ReporterKind.member or not event.subject_id:
+            raise ApiProblem(
+                status.HTTP_409_CONFLICT,
+                "not_a_member_report",
+                "This report is not about a member.",
+            )
+        act = member_status.ban if payload.action == "ban" else member_status.suspend
+        try:
+            ended = act(db, admin, event.subject_id, reason=payload.reason, until=payload.until)
+        except member_status.MemberNotFound:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "member not found") from None
+        event.level = ModerationLevel.ban if payload.action == "ban" else ModerationLevel.suspension
     event.reviewed = True
     event.reviewed_by = admin.name
     audit.record(
-        db, admin, "moderation.resolved", subject_type="moderation_event", subject_id=event_id
+        db,
+        admin,
+        "moderation.resolved",
+        subject_type="moderation_event",
+        subject_id=event_id,
+        meta={"action": payload.action} if payload is not None else {},
     )
     db.commit()
+    for channel_id in ended:
+        conversations.seal(channel_id)
     return OkResult(status="resolved")
 
 

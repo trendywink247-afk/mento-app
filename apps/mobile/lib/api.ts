@@ -2,6 +2,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
+import { getInstallId } from './installId';
 import { screenCache } from './screenCache';
 import {
   clearSession,
@@ -30,6 +31,10 @@ export type Me = Persona & {
   member_setup_complete?: boolean;
   /** The member's own name for the companion — only ever shown back to them. */
   companion_name?: string | null;
+  /** Standing (WS3 T3.7). While not 'active' every other member call answers 403
+   * `member_suspended` / `member_banned`. Optional: an older server omits it. */
+  status?: 'active' | 'suspended' | 'banned';
+  status_until?: string | null;
 };
 
 /** `PUT /me/companion`: an omitted field is left as it is, `null` clears it. */
@@ -552,11 +557,14 @@ export const api = {
     companion_colour?: string | null;
     companion_name?: string | null;
   }) =>
-    request<OnboardingResult>('/onboarding/start', {
-      method: 'POST',
-      // Always ask for a refreshing session; an older server ignores the flag.
-      body: JSON.stringify({ ...body, refresh: true }),
-    }),
+    getInstallId().then((install_id) =>
+      request<OnboardingResult>('/onboarding/start', {
+        method: 'POST',
+        // Always ask for a refreshing session; the install id is a re-join / age-gate
+        // signal only (lib/installId.ts). An older server ignores both.
+        body: JSON.stringify({ ...body, refresh: true, install_id }),
+      }),
+    ),
 
   // --- The member's own record (companion saved on the account, not just the device) ---
   me: () => request<Me>('/me', {}, true),

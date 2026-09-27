@@ -25,6 +25,7 @@ from app.schemas.admin import (
     AdminReconcileOut,
     AttentionItem,
     ModerationItem,
+    ModerationResolveIn,
 )
 from app.schemas.allowance import (
     AdminAllowanceDay,
@@ -185,6 +186,7 @@ __all__ = [
     "MemberBriefOut",
     "MentorNoteIn",
     "ModerationItem",
+    "ModerationResolveIn",
     "OkResult",
     "OnboardingResult",
     "OnboardingStart",

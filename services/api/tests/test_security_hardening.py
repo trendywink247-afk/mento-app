@@ -242,7 +242,7 @@ def _raw_token(payload: dict, secret: str) -> str:
 def test_user_token_carries_explicit_role_and_resolves():
     token = issue_session_token("u-role")
     assert jwt.decode(token, options={"verify_signature": False})["role"] == "user"
-    assert security.current_user_id(_creds(token)) == "u-role"
+    assert security.user_id_from_token(_creds(token)) == "u-role"
 
 
 def _pin_clock(monkeypatch, day) -> None:
@@ -256,13 +256,13 @@ def test_legacy_roleless_token_remains_valid_user_session(monkeypatch):
     # keep working until one TTL cycle passes (see current_user_id).
     _pin_clock(monkeypatch, date(2026, 10, 16))
     token = _raw_token({"sub": "u-legacy"}, get_settings().jwt_secret)
-    assert security.current_user_id(_creds(token)) == "u-legacy"
+    assert security.user_id_from_token(_creds(token)) == "u-legacy"
 
 
 def test_listener_and_admin_tokens_rejected_as_user_session():
     for token in (issue_listener_token("l-cross"), issue_admin_token("a-cross")):
         with pytest.raises(HTTPException) as exc:
-            security.current_user_id(_creds(token))
+            security.user_id_from_token(_creds(token))
         assert exc.value.status_code == 401
 
 
@@ -374,16 +374,16 @@ def test_legacy_listener_token_on_member_secret_lives_until_cutoff(monkeypatch):
 def test_legacy_user_token_without_claims_lives_until_cutoff(monkeypatch):
     _pin_clock(monkeypatch, date(2026, 10, 1))
     legacy = _raw_token({"sub": "u-old", "role": "user"}, get_settings().jwt_secret)
-    assert security.current_user_id(_creds(legacy)) == "u-old"
+    assert security.user_id_from_token(_creds(legacy)) == "u-old"
     after = datetime.combine(get_settings().legacy_claims_accepted_until, datetime.min.time(), UTC)
     monkeypatch.setattr(security, "_now", lambda: after + timedelta(seconds=1))
     with pytest.raises(HTTPException):
-        security.current_user_id(_creds(legacy))
+        security.user_id_from_token(_creds(legacy))
     # a claimed token is unaffected by the cutoff
     monkeypatch.setattr(security, "_now", lambda: datetime.now(UTC))
     fresh = issue_session_token("u-new")
     monkeypatch.setattr(security, "_now", lambda: after + timedelta(seconds=1))
-    assert security.current_user_id(_creds(fresh)) == "u-new"
+    assert security.user_id_from_token(_creds(fresh)) == "u-new"
 
 
 def test_wrong_audience_or_issuer_is_refused(monkeypatch):
@@ -398,10 +398,10 @@ def test_wrong_audience_or_issuer_is_refused(monkeypatch):
         {**base, "role": "user", "aud": security.AUDIENCES["user"], "iss": "evil"}, secret
     )
     with pytest.raises(HTTPException):
-        security.current_user_id(_creds(wrong_iss))
+        security.user_id_from_token(_creds(wrong_iss))
     half = _raw_token({"sub": "x", "role": "user", "iss": security.ISSUER}, secret)  # iss, no aud
     with pytest.raises(HTTPException):
-        security.current_user_id(_creds(half))
+        security.user_id_from_token(_creds(half))
 
 
 def test_member_or_listener_resolves_new_listener_tokens(monkeypatch):
