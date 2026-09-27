@@ -122,3 +122,18 @@ class LinkEndedBy(str, enum.Enum):
     member = "member"
     listener = "listener"
     system = "system"  # block, report or suspension
+
+
+class DataRequestKind(str, enum.Enum):
+    """What a member asked the team for (DPDP-style rights + the grievance channel)."""
+
+    access = "access"  # a copy of their data (the app's own export covers most of it)
+    correction = "correction"
+    erasure = "erasure"
+    grievance = "grievance"
+
+
+class DataRequestStatus(str, enum.Enum):
+    open = "open"
+    in_progress = "in_progress"
+    closed = "closed"

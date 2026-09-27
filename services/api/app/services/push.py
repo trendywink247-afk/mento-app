@@ -216,7 +216,7 @@ def _send(
         )
         db.commit()
         return
-    _forget_dead_tokens(db, tokens, tickets)
+    _forget_dead_tokens(db, kind, tokens, tickets)
 
 
 def deliver(db: Session, *, recipient_kind: str, recipient_id: str, body: str, data: dict) -> None:
@@ -229,10 +229,15 @@ def deliver(db: Session, *, recipient_kind: str, recipient_id: str, body: str, d
     if not tokens:
         _suppressed("no_token")
         return
-    _forget_dead_tokens(db, tokens, _post_or_raise(tokens, body, data))
+    kind = PushOwnerKind(recipient_kind)
+    _forget_dead_tokens(db, kind, tokens, _post_or_raise(tokens, body, data))
 
 
-def _forget_dead_tokens(db: Session, tokens: list[str], tickets: list[dict]) -> None:
+def _forget_dead_tokens(
+    db: Session, kind: PushOwnerKind, tokens: list[str], tickets: list[dict]
+) -> None:
+    """A token Expo calls dead is removed for the RECIPIENT's role only — a dual-role
+    phone's other registration is cleaned by its own sends (T2.8)."""
     dead = [
         t
         for t, ticket in zip(tokens, tickets)
@@ -240,7 +245,11 @@ def _forget_dead_tokens(db: Session, tokens: list[str], tickets: list[dict]) -> 
         and (ticket.get("details") or {}).get("error") == "DeviceNotRegistered"
     ]
     if dead:
-        for row in db.scalars(select(PushToken).where(PushToken.expo_push_token.in_(dead))).all():
+        for row in db.scalars(
+            select(PushToken).where(
+                PushToken.expo_push_token.in_(dead), PushToken.owner_kind == kind
+            )
+        ).all():
             db.delete(row)
         db.commit()
     logger.info("push sent=%d dead=%d", len(tickets), len(dead))

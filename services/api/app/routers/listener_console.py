@@ -13,11 +13,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import and_, case, func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import and_, case, func, select, tuple_, update
 from sqlalchemy.orm import Session
 
-from app import jobs, ratelimit
+from app import jobs, pagination, ratelimit
 from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
@@ -52,6 +52,7 @@ from app.schemas import (
     PushTokenDeleteIn,
     PushTokenIn,
     RequestOut,
+    RequestsSeenIn,
     SnoozeOut,
 )
 from app.security import current_listener_id, issue_listener_token
@@ -309,31 +310,46 @@ def my_conversations(
     ]
 
 
+def _inbox_after(after: list | None) -> tuple[datetime, str] | None:
+    if after is None:
+        return None
+    try:
+        return datetime.fromisoformat(str(after[0])), str(after[1])
+    except ValueError:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "invalid cursor") from None
+
+
 @router.get("/me/requests", response_model=list[ListenerRequestItem])
 def my_pending_requests(
+    response: Response,
     listener: ListenerProfile = Depends(current_listener),
     db: Session = Depends(get_db),
+    page: pagination.Page = Depends(pagination.page_params(2)),
 ) -> list[ListenerRequestItem]:
-    rows = db.execute(
+    """This mentor's pending Personal requests, oldest first. Paged (T2.3): `limit` +
+    `cursor`, next cursor in `X-Next-Cursor`. Read-only — the console marks what it
+    showed with POST /me/requests/seen."""
+    after = _inbox_after(page.after)
+    stmt = (
         select(ConversationRequest, User)
         .join(User, User.id == ConversationRequest.requester_id)
         .where(
             ConversationRequest.target_listener_id == listener.id,
             ConversationRequest.status == RequestStatus.pending,
         )
-        .order_by(ConversationRequest.created_at.asc())
+    )
+    if after is not None:
+        stmt = stmt.where(
+            tuple_(ConversationRequest.created_at, ConversationRequest.id) > tuple_(*after)
+        )
+    rows = db.execute(
+        stmt.order_by(ConversationRequest.created_at.asc(), ConversationRequest.id.asc()).limit(
+            page.limit + 1
+        )
     ).all()
-    # The member's letter lights "Seen" from here and nowhere else (board A04): the
-    # question is in front of the mentor who was asked. Stamped once, on this mentor's own
-    # pending requests, and never moved afterwards.
-    now = datetime.now(UTC)
-    stamped = False
-    for req, _user in rows:
-        if req.seen_at is None:
-            req.seen_at = now
-            stamped = True
-    if stamped:
-        db.commit()
+    rows = pagination.set_next(
+        response, list(rows), page, lambda r: [r[0].created_at.isoformat(), r[0].id]
+    )
     return [
         ListenerRequestItem(
             id=req.id,
@@ -347,6 +363,36 @@ def my_pending_requests(
         )
         for req, user in rows
     ]
+
+
+@router.post("/me/requests/seen", response_model=OkResult)
+def mark_requests_seen(
+    payload: RequestsSeenIn,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """The member's letter lights "Seen" from here and nowhere else (board A04): the
+    question was in front of the mentor who was asked. Stamped once, only on THIS
+    mentor's own PENDING requests among the ids — anything else is silently ignored
+    (an opaque no-op, like the other ownership checks) — and never moved afterwards.
+    Moved off the inbox GET (T2.3) so a prefetch or retry can never mark a question
+    seen that nobody looked at."""
+    ratelimit.enforce(
+        f"requests-seen:{listener.id}", 120, 600, detail="Too many requests — please slow down."
+    )
+    if payload.request_ids:
+        db.execute(
+            update(ConversationRequest)
+            .where(
+                ConversationRequest.id.in_(payload.request_ids),
+                ConversationRequest.target_listener_id == listener.id,
+                ConversationRequest.status == RequestStatus.pending,
+                ConversationRequest.seen_at.is_(None),
+            )
+            .values(seen_at=datetime.now(UTC))
+        )
+        db.commit()
+    return OkResult(status="ok")
 
 
 @router.post("/me/requests/{request_id}/accept", response_model=RequestOut)

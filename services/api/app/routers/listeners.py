@@ -9,22 +9,25 @@ real and testable today without a mentor app.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from sqlalchemy import and_, case, exists, select, tuple_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import jobs, ratelimit
+from app import jobs, pagination, ratelimit
 from app.db import get_db
 from app.jobs import tasks
 from app.models.admin import AdminAccount
 from app.models.enums import (
+    LinkStatus,
+    ListenerStatus,
     RequestKind,
     RequestStatus,
     VettingStatus,
 )
 from app.models.favourite import FavouriteListener
 from app.models.listener import ListenerProfile
+from app.models.mentor_link import MentorLink
 from app.models.request import ConversationRequest
 from app.routers.admin_console import current_admin
 from app.schemas import ListenerOut, ListenerProfileOut, OkResult, PersonalRequestIn, RequestOut
@@ -69,34 +72,80 @@ def _request_out(r: ConversationRequest, db: Session) -> RequestOut:
 
 @router.get("", response_model=list[ListenerOut], dependencies=[Depends(mentor_names.fresh_names)])
 def list_listeners(
+    response: Response,
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
+    page: pagination.Page = Depends(pagination.page_params(5)),
 ) -> list[ListenerOut]:
     """Approved listeners (minus anyone this user blocked — and minus the user's
     own listener profile, if their application was approved). Ordered IN TOUCH first
     (DECISIONS §L.7 — the consented link that replaces the favourite), then the
-    deprecated favourites, then available, then rank (spec 2026-09-06 §3.4) — each a
-    stable sort over the previous so rank order survives within every group."""
+    deprecated favourites, then available, then rank (spec 2026-09-06 §3.4), then id.
+
+    Paged (T2.3): `limit` + `cursor`, next cursor in `X-Next-Cursor`. The order is
+    built IN SQL so a page is a keyset slice of it. `available` can change between two
+    page reads — a mentor going away may then appear twice or not at all across pages,
+    the accepted price of a live directory (a refresh starts over)."""
     excluded = blocked_listener_ids(db, user_id) | own_listener_ids(db, user_id)
-    listeners = db.scalars(
-        select(ListenerProfile)
-        .where(ListenerProfile.vetting_status == VettingStatus.approved)
-        .order_by(ListenerProfile.rank.desc())
-    ).all()
+    li_id = ListenerProfile.id
+    # Each group key is 0 for "comes first", 1 otherwise; rank is negated so the whole
+    # key sorts ascending and one row comparison can resume after the cursor.
+    touch = case(
+        (
+            exists().where(
+                MentorLink.user_id == user_id,
+                MentorLink.listener_id == li_id,
+                MentorLink.status == LinkStatus.accepted,
+            ),
+            0,
+        ),
+        else_=1,
+    )
+    fav = case(
+        (
+            exists().where(
+                FavouriteListener.user_id == user_id, FavouriteListener.listener_id == li_id
+            ),
+            0,
+        ),
+        else_=1,
+    )
+    avail = case(
+        (
+            and_(
+                ListenerProfile.status == ListenerStatus.online,
+                ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
+            ),
+            0,
+        ),
+        else_=1,
+    )
+    neg_rank = -ListenerProfile.rank
+    key = (touch, fav, avail, neg_rank, li_id)
+    labelled = [k.label(f"k{i}") for i, k in enumerate(key)]
+    stmt = select(ListenerProfile, *labelled).where(
+        ListenerProfile.vetting_status == VettingStatus.approved
+    )
+    if excluded:
+        stmt = stmt.where(li_id.notin_(excluded))
+    if page.after is not None:
+        stmt = stmt.where(tuple_(*key) > tuple_(*page.after))
+    rows = db.execute(stmt.order_by(*key).limit(page.limit + 1)).all()
+    rows = pagination.set_next(response, list(rows), page, lambda r: list(r[1:]))
+
+    page_ids = [r[0].id for r in rows]
     favourite_ids = set(
         db.scalars(
-            select(FavouriteListener.listener_id).where(FavouriteListener.user_id == user_id)
+            select(FavouriteListener.listener_id).where(
+                FavouriteListener.user_id == user_id, FavouriteListener.listener_id.in_(page_ids)
+            )
         ).all()
     )
     links = in_touch.in_touch_listener_ids(db, user_id)
-    out = [
-        listener_profiles.card(li, is_favourite=li.id in favourite_ids, link=links.get(li.id))
-        for li in listeners
-        if li.id not in excluded
+    return [
+        listener_profiles.card(r[0], is_favourite=r[0].id in favourite_ids, link=links.get(r[0].id))
+        for r in rows
     ]
-    out = sorted(out, key=lambda x: not x.available)
-    out = sorted(out, key=lambda x: not x.is_favourite)
-    return sorted(out, key=lambda x: not x.in_touch)
 
 
 def _visible_approved_listener(db: Session, listener_id: str, user_id: str) -> ListenerProfile:

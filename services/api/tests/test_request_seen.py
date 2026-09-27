@@ -2,6 +2,9 @@
 
 `seen_at` is stamped the first time a question appears in the mentor's OWN console inbox,
 never by anyone else's read and never moved afterwards; `replying` is their yes.
+
+Since T2.3 the inbox GET only reads; the console stamps what it showed with
+POST /listener/me/requests/seen (`_open_inbox` below does both, like the app).
 """
 
 from __future__ import annotations
@@ -74,6 +77,18 @@ def _ask(client: TestClient, uid: str, lid: str, text: str = "can we talk about 
     return res.json()
 
 
+def _open_inbox(client: TestClient, lid: str) -> list[dict]:
+    """What the console does: read the inbox, then mark what it showed as seen."""
+    rows = client.get("/api/v1/listener/me/requests", headers=_listener_auth(lid)).json()
+    res = client.post(
+        "/api/v1/listener/me/requests/seen",
+        headers=_listener_auth(lid),
+        json={"request_ids": [r["id"] for r in rows]},
+    )
+    assert res.status_code == 200, res.text
+    return rows
+
+
 def _mine(client: TestClient, uid: str, request_id: str) -> dict:
     rows = client.get("/api/v1/listeners/requests/mine", headers=_user_auth(uid)).json()
     return next(r for r in rows if r["id"] == request_id)
@@ -91,19 +106,26 @@ def test_seen_is_stamped_only_when_the_asked_mentor_opens_their_inbox(client):
     assert _mine(client, uid, sent["id"])["seen_at"] is None
 
     # Another mentor's inbox read must not mark this question seen.
-    assert (
-        client.get("/api/v1/listener/me/requests", headers=_listener_auth(someone_else)).json()
-        == []
-    )
+    assert _open_inbox(client, someone_else) == []
     assert _mine(client, uid, sent["id"])["seen_at"] is None
 
-    inbox = client.get("/api/v1/listener/me/requests", headers=_listener_auth(asked)).json()
+    # Reading alone never stamps (a GET has no side effects since T2.3).
+    client.get("/api/v1/listener/me/requests", headers=_listener_auth(asked))
+    assert _mine(client, uid, sent["id"])["seen_at"] is None
+    # Nor can another mentor stamp it by naming its id.
+    client.post(
+        "/api/v1/listener/me/requests/seen",
+        headers=_listener_auth(someone_else),
+        json={"request_ids": [sent["id"]]},
+    )
+    assert _mine(client, uid, sent["id"])["seen_at"] is None
+    inbox = _open_inbox(client, asked)
     assert [r["id"] for r in inbox] == [sent["id"]]
     first = _mine(client, uid, sent["id"])["seen_at"]
     assert first is not None
 
     # Seen happened once: a second read never moves it.
-    client.get("/api/v1/listener/me/requests", headers=_listener_auth(asked))
+    _open_inbox(client, asked)
     assert _mine(client, uid, sent["id"])["seen_at"] == first
 
 
@@ -114,7 +136,7 @@ def test_replying_is_the_mentors_yes(client):
         s.commit()
 
     sent = _ask(client, uid, lid)
-    client.get("/api/v1/listener/me/requests", headers=_listener_auth(lid))
+    _open_inbox(client, lid)
     seen = _mine(client, uid, sent["id"])
     assert seen["seen_at"] is not None and seen["replying"] is False
 
@@ -135,7 +157,7 @@ def test_a_declined_question_keeps_its_seen_and_never_says_replying(client):
         s.commit()
 
     sent = _ask(client, uid, lid)
-    client.get("/api/v1/listener/me/requests", headers=_listener_auth(lid))
+    _open_inbox(client, lid)
     client.post(f"/api/v1/listener/me/requests/{sent['id']}/decline", headers=_listener_auth(lid))
 
     row = _mine(client, uid, sent["id"])
