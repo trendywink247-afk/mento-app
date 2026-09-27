@@ -4,12 +4,17 @@ Best-effort, never blocking: a push failure can never delay or degrade a
 conversation, the crisis scan, or a request. Content is persona-only — no
 message text ever leaves the chat path. Sends go to Expo's push API (FCM/APNs
 relay) over httpx.
+
+Where it runs (WS4): every entry point below runs in the job WORKER (app/jobs/tasks.py),
+enqueued with the row that caused it — never inside a request. A notify_* job decides
+(suppression rules) and tries once; a transport failure hands the send to a
+`push.deliver` job that retries with backoff. The split matters: retrying the whole
+notify job would trip its own burst window and suppress the retry.
 """
 
 from __future__ import annotations
 
 import logging
-import time
 
 import httpx
 from sqlalchemy import select
@@ -172,21 +177,62 @@ def _post_expo(messages: list[dict]) -> list[dict]:
     return list((resp.json() or {}).get("data") or [])
 
 
-def _send(db: Session, tokens: list[str], body: str, data: dict) -> None:
-    if not tokens or not _enabled():
-        return
+class PushTransportError(Exception):
+    """Expo could not be reached or answered badly — worth retrying later."""
+
+
+def _post_or_raise(tokens: list[str], body: str, data: dict) -> list[dict]:
     messages = [
         {"to": t, "title": TITLE, "body": body, "sound": None, "data": data} for t in tokens
     ]
-    tickets: list[dict] = []
-    for attempt in (1, 2):
-        try:
-            tickets = _post_expo(messages)
-            break
-        except (httpx.HTTPError, ValueError) as exc:
-            logger.warning("push send failed (attempt %d): %s", attempt, type(exc).__name__)
-            if attempt == 1:
-                time.sleep(1.0)
+    try:
+        return _post_expo(messages)
+    except (httpx.HTTPError, ValueError) as exc:
+        raise PushTransportError(type(exc).__name__) from exc
+
+
+def _send(
+    db: Session, kind: PushOwnerKind, owner_id: str, tokens: list[str], body: str, data: dict
+) -> None:
+    """One attempt now. On a transport failure the send becomes a retrying
+    `push.deliver` job (committed here, best-effort) — never a sleep."""
+    if not tokens or not _enabled():
+        return
+    try:
+        tickets = _post_or_raise(tokens, body, data)
+    except PushTransportError as exc:
+        logger.warning("push send failed (%s) — queued for retry", exc)
+        from app import jobs
+        from app.jobs import tasks
+
+        jobs.enqueue(
+            db,
+            tasks.push_deliver,
+            best_effort=True,
+            recipient_kind=kind.value,
+            recipient_id=owner_id,
+            body=body,
+            data=data,
+        )
+        db.commit()
+        return
+    _forget_dead_tokens(db, tokens, tickets)
+
+
+def deliver(db: Session, *, recipient_kind: str, recipient_id: str, body: str, data: dict) -> None:
+    """The `push.deliver` retry job's body: re-read the recipient's CURRENT tokens (a
+    device may have re-registered meanwhile) and send. Raises PushTransportError so
+    the queue retries with backoff; the suppression rules already ran."""
+    if not _enabled():
+        return
+    tokens = tokens_for(db, PushOwnerKind(recipient_kind), recipient_id)
+    if not tokens:
+        _suppressed("no_token")
+        return
+    _forget_dead_tokens(db, tokens, _post_or_raise(tokens, body, data))
+
+
+def _forget_dead_tokens(db: Session, tokens: list[str], tickets: list[dict]) -> None:
     dead = [
         t
         for t, ticket in zip(tokens, tickets)
@@ -259,6 +305,8 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
         return
     _send(
         db,
+        recipient_kind,
+        recipient_id,
         tokens,
         body,
         {
@@ -284,7 +332,14 @@ def notify_request_created(db: Session, *, request_id: str) -> None:
     if not tokens:
         _suppressed("no_token")
         return
-    _send(db, tokens, TEMPLATES["request"], {"kind": "request", "request_id": req.id})
+    _send(
+        db,
+        PushOwnerKind.listener,
+        req.target_listener_id,
+        tokens,
+        TEMPLATES["request"],
+        {"kind": "request", "request_id": req.id},
+    )
 
 
 def notify_request_accepted(db: Session, *, request_id: str) -> None:
@@ -304,6 +359,8 @@ def notify_request_accepted(db: Session, *, request_id: str) -> None:
         return
     _send(
         db,
+        PushOwnerKind.member,
+        req.requester_id,
         tokens,
         TEMPLATES["accepted"] % {"persona": li.persona_name},
         {
@@ -314,19 +371,10 @@ def notify_request_accepted(db: Session, *, request_id: str) -> None:
     )
 
 
-def notify_message_safe(conversation_lookup_channel_id: str, sender_stream_user_id: str) -> None:
-    """BackgroundTask entry (own session): resolve channel → conversation, then notify.
-    Everything is caught — a push failure must never surface to the webhook."""
-    from app.db import SessionLocal
-
-    try:
-        with SessionLocal() as db:
-            cid = db.execute(
-                select(Conversation.id).where(
-                    Conversation.stream_channel_id == conversation_lookup_channel_id
-                )
-            ).scalar_one_or_none()
-            if cid:
-                notify_message(db, conversation_id=cid, sender_stream_user_id=sender_stream_user_id)
-    except Exception as exc:  # noqa: BLE001 — best-effort by design
-        logger.warning("push background task failed: %s", type(exc).__name__)
+def notify_message_for_channel(db: Session, *, channel_id: str, sender_stream_user_id: str) -> None:
+    """The `push.message` job's body: resolve channel → conversation, then notify."""
+    cid = db.execute(
+        select(Conversation.id).where(Conversation.stream_channel_id == channel_id)
+    ).scalar_one_or_none()
+    if cid:
+        notify_message(db, conversation_id=cid, sender_stream_user_id=sender_stream_user_id)

@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select, text
 
 from app import ratelimit
+from app.jobs import worker
 from app.main import app
 from app.models.conversation import Conversation
 from app.models.enums import ConversationStatus, ListenerStatus, PushOwnerKind, VettingStatus
@@ -30,7 +31,7 @@ def _clean():
         s.execute(
             text(
                 "TRUNCATE users, listener_profiles, conversations, conversation_requests, "
-                "push_tokens, safety_flags CASCADE"
+                "push_tokens, safety_flags, procrastinate_jobs, procrastinate_events CASCADE"
             )
         )
         s.commit()
@@ -63,6 +64,21 @@ def sent(monkeypatch):
 @pytest.fixture
 def client():
     return TestClient(app)
+
+
+def drain_push() -> None:
+    """Run every push job that is due (WS4: pushes are jobs, not BackgroundTasks)."""
+    worker.drain(queues=["push"])
+
+
+def _push_jobs() -> list[tuple[str, str, int]]:
+    with TestSession() as s:
+        return [
+            (r.task_name, r.status, r.attempts)
+            for r in s.execute(
+                text("SELECT task_name, status, attempts FROM procrastinate_jobs ORDER BY id")
+            )
+        ]
 
 
 def _user(s, name="Quiet Cove") -> str:
@@ -352,7 +368,9 @@ def test_device_not_registered_deletes_token(monkeypatch):
         assert s.scalars(select(PushToken)).all() == []
 
 
-def test_network_error_retried_once_then_dropped(monkeypatch):
+def test_a_failed_send_is_queued_for_retry_never_slept_on(monkeypatch):
+    """One inline attempt; a transport failure hands the send to a retrying job
+    instead of blocking the worker thread on a sleep."""
     with TestSession() as s:
         uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
     attempts = {"n": 0}
@@ -364,10 +382,42 @@ def test_network_error_retried_once_then_dropped(monkeypatch):
     monkeypatch.setattr(push, "ENABLED", True)
     monkeypatch.setattr(push, "_is_watching", lambda c, u: False)
     monkeypatch.setattr(push, "_post_expo", flaky)
-    monkeypatch.setattr(push.time, "sleep", lambda s: None)
+    assert not hasattr(push, "time")  # no blocking sleep left anywhere in push
     with TestSession() as s:
         push.notify_message(s, conversation_id=cid, sender_stream_user_id=uid)  # must not raise
-    assert attempts["n"] == 2
+    assert attempts["n"] == 1
+    assert _push_jobs() == [("push.deliver", "todo", 0)]
+
+    # Expo is back: the retry job delivers the same closed-template push.
+    sent: list[dict] = []
+    monkeypatch.setattr(push, "_post_expo", lambda msgs: sent.extend(msgs) or [{}] * len(msgs))
+    drain_push()
+    assert [m["body"] for m in sent] == ["Quiet Cove sent a message"]
+    assert _push_jobs() == []
+
+
+def test_the_retry_job_backs_off_instead_of_hammering(monkeypatch):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+
+    def down(msgs):
+        raise push.httpx.ConnectError("boom")
+
+    monkeypatch.setattr(push, "ENABLED", True)
+    monkeypatch.setattr(push, "_is_watching", lambda c, u: False)
+    monkeypatch.setattr(push, "_post_expo", down)
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=uid)
+    drain_push()
+    # Tried once by the worker, then rescheduled into the future — not failed yet.
+    assert _push_jobs() == [("push.deliver", "todo", 1)]
+    with TestSession() as s:
+        later = s.execute(
+            text(
+                "SELECT scheduled_at > now() FROM procrastinate_jobs WHERE task_name = 'push.deliver'"
+            )
+        ).scalar_one()
+    assert later is True
 
 
 def test_disabled_sends_nothing(monkeypatch):
@@ -396,6 +446,8 @@ def test_create_request_endpoint_pushes_target_listener(client, sent):
         headers=member_auth(uid),
     )
     assert r.status_code == 200, r.text
+    assert sent == []  # queued with the request row, sent by the worker
+    drain_push()
     assert len(sent) == 1 and sent[0]["data"]["kind"] == "request"
     # Idempotent re-post (existing pending) must NOT push again.
     client.post(
@@ -403,6 +455,7 @@ def test_create_request_endpoint_pushes_target_listener(client, sent):
         json={"intro_message": "hi", "issue_category": None},
         headers=member_auth(uid),
     )
+    drain_push()
     assert len(sent) == 1
 
 
@@ -416,6 +469,7 @@ def test_console_accept_pushes_requester(client, sent):
         rid = req.id
     r = client.post(f"/api/v1/listener/me/requests/{rid}/accept", headers=listener_auth(lid))
     assert r.status_code == 200, r.text
+    drain_push()
     assert len(sent) == 1 and sent[0]["data"]["kind"] == "accepted"
 
 
@@ -441,6 +495,7 @@ def test_admin_accept_pushes_requester(client, sent):
         headers={"Authorization": f"Bearer {issue_admin_token(admin_id)}"},
     )
     assert r.status_code == 200, r.text
+    drain_push()
     assert len(sent) == 1 and sent[0]["data"]["kind"] == "accepted"
 
 
@@ -459,14 +514,25 @@ def test_message_new_webhook_schedules_push_and_never_depends_on_it(client, sent
     }
     r = client.post("/api/v1/stream/webhook", json=event)
     assert r.status_code == 200
+    assert sent == []
+    drain_push()
     assert len(sent) == 1 and sent[0]["body"] == "Quiet Cove sent a message"
 
     def explode(*a, **k):
         raise RuntimeError("push exploded")
 
-    monkeypatch.setattr(stream_hooks.push, "notify_message", explode)
+    # A push that blows up in the worker is the worker's problem, never the webhook's.
+    monkeypatch.setattr(push, "notify_message", explode)
     r = client.post(
         "/api/v1/stream/webhook", json={**event, "message": {**event["message"], "id": "m2"}}
+    )
+    assert r.status_code == 200
+    drain_push()
+
+    # Nor can a queue that refuses the job (schema missing, Postgres hiccup).
+    monkeypatch.setattr(stream_hooks.jobs, "enqueue", explode)
+    r = client.post(
+        "/api/v1/stream/webhook", json={**event, "message": {**event["message"], "id": "m3"}}
     )
     assert r.status_code == 200
 

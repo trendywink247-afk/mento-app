@@ -41,11 +41,13 @@ import anyio.to_thread
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request, Response, status
 from sqlalchemy import select
 
+from app import jobs
 from app.config import get_settings
 from app.db import SessionLocal
+from app.jobs import tasks
 from app.models.conversation import Conversation
 from app.models.enums import SafetySignal
-from app.services import allowance, crisis, moderation, push, safety, snooze, stream
+from app.services import allowance, crisis, moderation, safety, snooze, stream
 from app.services.crisis import CrisisResult
 from app.services.moderation import RedactionResult
 
@@ -403,5 +405,21 @@ async def push_webhook(request: Request, background: BackgroundTasks) -> Respons
             # The mentor wrote: nothing is waiting on them now, so a snooze ends
             # (before the push task, which only ever pushes the OTHER party).
             background.add_task(snooze.end_on_mentor_reply, channel_id, sender_id)
-            background.add_task(push.notify_message_safe, channel_id, sender_id)
+            # AFTER the scan above, always. Its own thread: a slow Postgres must not
+            # hold the event loop, and the crisis scan has its own thread budget.
+            await anyio.to_thread.run_sync(_enqueue_message_push, channel_id, sender_id)
     return Response(status_code=status.HTTP_200_OK)
+
+
+def _enqueue_message_push(channel_id: str, sender_id: str) -> None:
+    """Queue the push to the other party (a `push.message` job, WS4). Never raises:
+    a queue that refuses the job costs one push, never the webhook's 200 — Stream
+    retries a non-200, and the retry would re-run everything above."""
+    try:
+        with SessionLocal() as db:
+            jobs.enqueue(
+                db, tasks.push_message, best_effort=True, channel_id=channel_id, sender_id=sender_id
+            )
+            db.commit()
+    except Exception as exc:  # noqa: BLE001 — best-effort by design
+        logger.warning("push not queued after a message: %s", type(exc).__name__)
