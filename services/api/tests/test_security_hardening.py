@@ -245,9 +245,16 @@ def test_user_token_carries_explicit_role_and_resolves():
     assert security.current_user_id(_creds(token)) == "u-role"
 
 
-def test_legacy_roleless_token_remains_valid_user_session():
+def _pin_clock(monkeypatch, day) -> None:
+    """Judge the legacy windows on `day` (noon UTC), not on whatever today is."""
+    at = datetime.combine(day, datetime.min.time(), UTC) + timedelta(hours=12)
+    monkeypatch.setattr(security, "_now", lambda: at)
+
+
+def test_legacy_roleless_token_remains_valid_user_session(monkeypatch):
     # Deployed clients hold 90-day role-less tokens (pre 2026-07-19); they must
     # keep working until one TTL cycle passes (see current_user_id).
+    _pin_clock(monkeypatch, date(2026, 10, 16))
     token = _raw_token({"sub": "u-legacy"}, get_settings().jwt_secret)
     assert security.current_user_id(_creds(token)) == "u-legacy"
 
@@ -353,6 +360,7 @@ def test_legacy_listener_token_on_member_secret_lives_until_cutoff(monkeypatch):
     # Console links and native console sessions minted before the split were signed
     # with JWT_SECRET and carry no iss/aud/jti; they keep working until the cutoff.
     monkeypatch.setattr(get_settings(), "listener_jwt_secret", "listener-only-secret")
+    _pin_clock(monkeypatch, date(2026, 10, 1))
     legacy = _raw_token({"sub": "l-legacy", "role": "listener"}, get_settings().jwt_secret)
     assert security.current_listener_id(_creds(legacy)) == "l-legacy"
     assert security.current_member_or_listener(_creds(legacy)) == ("mentor", "l-legacy")
@@ -364,6 +372,7 @@ def test_legacy_listener_token_on_member_secret_lives_until_cutoff(monkeypatch):
 
 
 def test_legacy_user_token_without_claims_lives_until_cutoff(monkeypatch):
+    _pin_clock(monkeypatch, date(2026, 10, 1))
     legacy = _raw_token({"sub": "u-old", "role": "user"}, get_settings().jwt_secret)
     assert security.current_user_id(_creds(legacy)) == "u-old"
     after = datetime.combine(get_settings().legacy_claims_accepted_until, datetime.min.time(), UTC)
