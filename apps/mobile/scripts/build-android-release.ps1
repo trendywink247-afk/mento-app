@@ -4,6 +4,8 @@
 # @expo/env loader merge .env.production over .env (see ANDROID_BUILD.md §8f) and
 # makes babel-preset-expo inline the resulting EXPO_PUBLIC_* values into the bundle.
 # The dev .env file is never read for a prod build and is never edited by this script.
+# Also sets APP_VARIANT=production, which app.config.ts reads to turn Android cleartext
+# (plain http://) traffic off — the prod API is https-only.
 #
 # Requires apps/mobile/.env.production to exist first (gitignored, prod values only —
 # see .env.example for the shape). Run from apps/mobile, or anywhere (path-safe).
@@ -20,9 +22,10 @@ if (-not (Test-Path ".env.production")) {
     exit 1
 }
 
-Write-Host "== Building release APK against .env.production (NODE_ENV=production) ==" -ForegroundColor Cyan
+Write-Host "== Building release APK against .env.production (NODE_ENV=production, APP_VARIANT=production) ==" -ForegroundColor Cyan
 
 $env:NODE_ENV = "production"
+$env:APP_VARIANT = "production"
 
 npx expo prebuild --platform android
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
