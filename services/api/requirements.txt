@@ -7,6 +7,7 @@ pydantic-settings==2.7.1
 sqlalchemy==2.0.54
 alembic==1.14.0
 psycopg[binary]==3.2.3
+procrastinate==3.10.0  # job queue on our own Postgres (WS4); its schema ships via Alembic
 redis==5.2.1
 PyJWT==2.15.0
 stream-chat==4.19.0

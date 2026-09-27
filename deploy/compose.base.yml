@@ -67,6 +67,15 @@ services:
     # Started only by deploy/bluegreen.sh; `up` alone brings up blue.
     profiles: ["green"]
 
+  # The job queue's worker (WS4, app/jobs/worker.py): same image, no port, not
+  # blue/green — deploy.sh recreates it on the new image once a colour is healthy.
+  # Jobs wait in Postgres while it restarts; nothing is lost.
+  worker:
+    <<: *api
+    command: ["python", "-m", "app.jobs.worker"]
+    healthcheck:
+      disable: true
+
   migrate:
     <<: *api
     profiles: ["tools"]

@@ -37,6 +37,9 @@ services:
   migrate:
     environment: *api-env
 
+  worker:
+    environment: *api-env
+
   # Dev convenience only (T1.4): seeds a few approved, online listeners so General
   # matching works against this stack. Never runs in prod (deploy/test-parity.sh
   # excludes it from the parity check on purpose).

@@ -137,6 +137,7 @@ main() {
 
     [ -n "$prev" ] && [ "$prev" != "$TAG" ] && echo "$prev" > "$STATE_DIR/api-tag.previous"
     echo "$TAG" > "$STATE_DIR/api-tag"
+    start_worker "$TAG"
     prune_images "$TAG" "$prev"
     log "healthy on $TAG"
 }
@@ -191,7 +192,18 @@ rollback() {
     fi
     mv -f "$STATE_DIR/api-tag" "$STATE_DIR/api-tag.previous" 2>/dev/null || true
     echo "$prev" > "$STATE_DIR/api-tag"
+    start_worker "$prev"
     log "healthy on $prev"
+}
+
+# The job worker (WS4) follows the API onto the image that is now serving. After
+# the swap, never before: its code must match the API that enqueues its jobs, and
+# jobs simply wait in Postgres while it restarts. A worker that will not start does
+# not undo a healthy API — it fails loudly so someone looks.
+start_worker() {
+    log "worker onto mento-api:$1"
+    API_TAG="$1" dc up -d --no-deps --no-build worker \
+        || die "api is healthy on $1 but the job WORKER failed to start — check: docker compose logs worker"
 }
 
 # Keep the live and previous images (the rollback target); drop older ones.
