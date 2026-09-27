@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 from collections.abc import Iterable
 from typing import Any
 
@@ -22,6 +23,14 @@ from app.config import get_settings
 from app.jobs import queue
 
 logger = logging.getLogger("mento.jobs")
+
+# psycopg's async mode cannot run on Windows' default ProactorEventLoop (raises
+# PoolTimeout with no useful message — the connector never connects). The worker
+# always runs in Docker (Linux) in prod, but pytest and `drain()` run wherever the
+# developer is, and the founder verifies from native Windows. Set once, at import,
+# before any asyncio.run() below can create the wrong loop.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # Succeeded jobs are deleted as they finish (a push job's row has nothing worth
 # keeping); failed ones stay for the admin health view until the retention job.
