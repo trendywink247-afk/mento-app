@@ -4,6 +4,30 @@
 
 ---
 
+## 2026-09-27 (session 43) — first real deploy.sh run on prod (129.121.122.28, legacy stack)
+
+Every WS1 session since 39 flagged the same gap: the new `deploy.sh` had only ever run in a sandbox harness, never for real. Closed it.
+
+**Context established first (the box's identity had drifted from what earlier sessions assumed):**
+- `129.121.122.28` (`mento-prod-1`) is the current, only live Mento box — 2 days old, Ubuntu 26.04, matches `deploy/domains.env`'s `VPS_SSH` exactly. `api.mento.chat` serves from here.
+- It was stuck on `c975452` (the WS0 merge) — every WS1 PR (T1.1–T1.9) was on `origin/master` but had never been shipped here. Confirmed via `git diff c975452..92b8f57 --stat` that nothing in `app/main.py` or `app/config.py` changed — no new boot invariants, so the box's existing `services/api/.env` needed no changes.
+- `72.61.253.224` is a separate box the founder is using for other work; unreachable from this session (SSH/80/443/a few alt SSH ports all time out — reads as a source-IP firewall allowlist, not "down"). Out of scope for this deploy; nothing here touched it.
+
+**Done**
+- Ran the real deploy path by hand (same sequence `ship.sh`'s prod step uses): `git fetch && git reset --hard 92b8f57 && ./deploy/deploy.sh --backup 92b8f57`, over SSH, full output watched live (not the `| tail -6` ship.sh normally uses — wanted to see everything on a first run).
+- Backup taken first (`/opt/mento-backups/mento-20260927-153057.sql.gz`, copied off-box). Image built with `scripts/` now included. No pending migrations (WS1 added none — confirmed by the empty "Running upgrade" output). First deploy under the new script: no recorded rollback tag existed yet, so it auto-tagged the previously-running image as `mento-api:pre-bluegreen` before swapping — exactly the fallback path built and harness-tested in session 39. Swap succeeded, new container healthy.
+- Confirmed externally: `https://api.mento.chat/api/v1/health` and `/health/ready` both 200. `docker ps` on the box shows `mento-api-prod` on `mento-api:92b8f57a5cd3`, healthy; postgres/redis untouched, 18h uptime.
+- Stack is still **legacy** (`docker-compose.prod.yml`, host nginx) — this run only proved the new deploy.sh against the stack already running, not a stack conversion. No Caddy, no Balanced compose files, on this box yet.
+
+**Not done — the rest of T1.10**
+- Converting this box from legacy → Balanced stack in place (install Caddy, bring up `compose.base.yml`+`compose.prod.yml`, migrate data across, provision `prod.env.sops.yaml` with real secrets including `GLITCHTIP_SECRET_KEY`, retire nginx).
+- The web deploy and phone OTA halves of `ship.sh` were not run — this was `deploy.sh` only, by design (narrower scope than a full ship).
+- `72.61.253.224`'s role in the founder's plans is still unclear to me; left untouched.
+
+**How to resume:** WS1's deploy pipeline is now proven on real production, not just in a sandbox. The remaining T1.10 work (legacy → Balanced conversion on this same box) is next, founder-paced. Meanwhile WS2/WS3/WS4 are unblocked and don't need any of this.
+
+---
+
 ## 2026-09-27 (session 42) — T1.7 error tracker (GlitchTip), on `feat/ws1-t1.7-error-tracker` (not merged)
 
 **Done**
