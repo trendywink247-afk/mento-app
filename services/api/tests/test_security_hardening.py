@@ -8,11 +8,12 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, date, datetime, timedelta
 
+import jwt
 import pytest
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from fastapi.testclient import TestClient
-from jose import JWTError, jwt
+from jwt import PyJWTError as JWTError
 from sqlalchemy import select
 
 from app import ratelimit, security
@@ -240,7 +241,7 @@ def _raw_token(payload: dict, secret: str) -> str:
 
 def test_user_token_carries_explicit_role_and_resolves():
     token = issue_session_token("u-role")
-    assert jwt.get_unverified_claims(token)["role"] == "user"
+    assert jwt.decode(token, options={"verify_signature": False})["role"] == "user"
     assert security.current_user_id(_creds(token)) == "u-role"
 
 

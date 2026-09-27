@@ -6,9 +6,10 @@ import hashlib
 import hmac
 from datetime import UTC, datetime, timedelta
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from jwt import PyJWTError as JWTError
 
 from app.config import get_settings
 
@@ -78,7 +79,14 @@ def issue_admin_token(admin_id: str) -> str:
 
 def _decode(creds: HTTPAuthorizationCredentials, role: str) -> dict:
     try:
-        return jwt.decode(creds.credentials, _signing_secret(role), algorithms=[_ALGO])
+        return jwt.decode(
+            creds.credentials,
+            _signing_secret(role),
+            algorithms=[_ALGO],
+            # Every token this API has ever minted carries all three; one without an
+            # expiry would never lapse.
+            options={"require": ["exp", "iat", "sub"]},
+        )
     except JWTError as exc:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid or expired session") from exc
 
