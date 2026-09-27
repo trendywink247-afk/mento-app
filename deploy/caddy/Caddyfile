@@ -1,0 +1,115 @@
+# Mento edge — one Caddyfile for local and prod (WS1 T1.3). It replaces the four
+# host-level Nginx sites in deploy/nginx/ at the server move (T1.10); until then
+# prod still runs Nginx and this file is exercised by deploy/test-caddy.sh and the
+# local stack (deploy/compose.base.yml + compose.local.yml).
+#
+# Hosts come from the environment, never literals: prod reads deploy/domains.env
+# (the ONLY place hostnames are written), local sets *.mento.localhost.
+# CADDY_TLS picks the certificate source per environment:
+#   auto      — public ACME certificates (prod; the default)
+#   internal  — Caddy's own local CA (local stack and tests; no network needed)
+#   mkcert    — a mkcert cert/key mounted at /certs (local, browser-trusted)
+#
+# The host map mirrors deploy/test-nginx.sh row for row; deploy/test-caddy.sh
+# asserts it. No access logs are configured on purpose: request logs would hold
+# member IP addresses (CLAUDE.md T&S #7). Caddy's error log still records the
+# client address of a request that FAILED (e.g. no upstream) — nothing else.
+#
+# deploy/deploy.sh reloads this file on every deploy (`caddy reload`, graceful);
+# an invalid file fails the deploy and the running config stays.
+{
+	log default {
+		# The idle blue/green colour fails its health check every 2 s by design.
+		exclude http.handlers.reverse_proxy.health_checker.active
+	}
+}
+
+(tls_auto) {
+}
+(tls_internal) {
+	tls internal
+}
+(tls_mkcert) {
+	tls /certs/cert.pem /certs/key.pem
+}
+
+# The API. Two colours for blue/green deploys (deploy/bluegreen.sh): traffic goes
+# to the FIRST healthy upstream, so the colour being replaced keeps serving until
+# it is stopped, and a request that finds it gone is retried on the other colour.
+{$API_HOST} {
+	import tls_{$CADDY_TLS:auto}
+	encode zstd gzip
+	request_body {
+		max_size 5MB
+	}
+	reverse_proxy api_blue:8000 api_green:8000 {
+		lb_policy first
+		lb_try_duration 10s
+		lb_try_interval 250ms
+		fail_duration 10s
+		health_uri /api/v1/health/ready
+		health_interval 2s
+		health_timeout 2s
+		transport http {
+			# WebSockets (own chat, WS5) hold a connection open for a long time.
+			read_timeout 3600s
+		}
+	}
+}
+
+# The web app — the whole SPA, never the staff dashboard.
+{$APP_HOST} {
+	import tls_{$CADDY_TLS:auto}
+	root * /srv/web/current
+	encode zstd gzip
+
+	# A missing static file is a real 404, never the SPA shell.
+	handle /_expo/* {
+		file_server
+	}
+	handle /assets/* {
+		file_server
+	}
+	# The dashboard has its own origin (its token must not share this localStorage).
+	handle /admin* {
+		respond 404
+	}
+	handle {
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+}
+
+# The staff dashboard — only /admin (+ the assets it needs) from the same build.
+{$ADMIN_HOST} {
+	import tls_{$CADDY_TLS:auto}
+	root * /srv/web/current
+	encode zstd gzip
+
+	redir / /admin 302
+	handle /admin* {
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+	handle /_expo/* {
+		file_server
+	}
+	handle /assets/* {
+		file_server
+	}
+	handle /favicon.ico {
+		file_server
+	}
+	# The member app is deliberately not reachable from the staff origin.
+	handle {
+		respond 404
+	}
+}
+
+# The bare domain redirects until it has a page of its own. A #fragment survives a
+# redirect whose Location has none, so old private links keep signing people in.
+{$ROOT_DOMAIN} {
+	import tls_{$CADDY_TLS:auto}
+	redir /admin* https://{$ADMIN_HOST}{uri} 302
+	redir https://{$APP_HOST}{uri} 302
+}

@@ -4,6 +4,31 @@
 
 ---
 
+## 2026-09-27 (session 39) — WS1 slice: T1.8, T1.3, T1.1, T1.9 on `claude/eloquent-curie-acsz2h` (not merged, not deployed)
+
+Branch restarted from master after the WS0 merge. Scope set by the founder: T1.8, T1.1, T1.3, T1.9 only. **Not done, on purpose:** T1.2, T1.4 (Docker-stack tuning/seeding), T1.5, T1.6 (already live differently — sftp backups, ntfy monitor), T1.7, T1.10.
+
+**Environment note:** this cloud container DOES run Docker — `dockerd` just isn't started by default (`nohup dockerd &`). Session 38's "no Docker daemon" was wrong: the daemon was never tried. Plain-HTTP apt and bridge-network builds are blocked here; image builds need `--network host --build-arg HTTPS_PROXY=$HTTPS_PROXY`, and Docker Hub rate-limits anonymous pulls (mirror.gcr.io works).
+
+**Done** (one commit each)
+- **T1.8** `6726944` — `.sops.yaml` (two placeholder recipients sops refuses), `deploy/decrypt-env.sh` (tmpfs only, mode 600, atomic, refuses plaintext and any `$` — compose rewrites `$` in env_file values), `deploy/test-secrets.sh` (13 assertions, throwaway keys), key custody + runbook in `docs/DEPLOYMENT_VPS.md`. **`prod.env.sops.yaml` not created** — needs the founder's + server's keys and real secrets.
+- **T1.3** `d755102` — `deploy/caddy/Caddyfile` (one file, hosts from env, `CADDY_TLS` auto/internal/mkcert, no access logs), `deploy/test-caddy.sh` (25 assertions = test-nginx.sh's host map + WebSocket 101; mutation-checked). Legacy redirect hosts not ported (LEGACY_HOSTS empty). Committed before T1.1 because compose mounts it.
+- **T1.1** `fb973c3` — `deploy/compose.{base,local,prod}.yml` (Postgres 16, Valkey 8 as `mento-redis`, `api_blue`/`api_green`, one-off `migrate`, Caddy), `deploy/test-parity.sh`. Local stack proven up and serving here.
+- **T1.9** `3bc5534` — migrations-first `deploy.sh` (one-off container, 3 s `lock_timeout`, legacy rollback by tag, `--rollback`, lock, `--from-ssh` forced command), `bluegreen.sh`, entrypoint no longer migrates, Dockerfile HEALTHCHECK on `/health/ready` (no apt/curl), `.github/workflows/api-deploy.yml` (inert until secrets + `API_AUTO_DEPLOY=true`), `ship.sh` (checkout to SHIP_SHA first; **fixed a pre-existing bug**: without pipefail a failed backup or deploy counted as success). `deploy/test-deploy.sh`: 41 assertions — blue/green 0 of 10750 requests failed; broken and lock-blocked migrations leave the old code serving; legacy rollback incl. the first run.
+
+**Verify:** all of the above proofs green here; pytest 496, alembic check, ruff, black, shellcheck (deploy/), actionlint. **Not verified:** anything on the real box; a GitHub-hosted run of api-deploy.yml; `deploy.sh`'s build step (images were pre-built — `docker compose build` has no network in this sandbox); legacy `--rollback` (balanced one proven).
+
+**Open decisions**
+- **Backups / monitoring (T1.5, T1.6) — keep what is live**, but two gaps are worth deciding: (a) off-site dumps on the old box are plain gzip — age-encrypt them with the T1.8 keys before real members' data lands there; (b) once own-chat puts message bodies in Postgres (WS5), dumps must exclude them or Clean Wipe stops being true (program-plan invariant 3) — revisit then, not now. Restic/Beszel/UptimeRobot not needed while sftp + ntfy + Uptime Kuma work.
+- `deploy/backup-postgres.sh` hard-codes `mento-postgres-prod`; on the Balanced stack (`mento-postgres`) `deploy.sh --backup` will refuse to deploy until that is parameterised (T1.10 checklist).
+- T1.2 will add prod-only Valkey/Postgres flags; `test-parity.sh` (per the plan's allowed list) rejects a prod-only `command:` — T1.2 must widen the allowed list deliberately or move the flags to env.
+- Legacy deploys still drop ~5 s of requests (single container recreated) — gone only with blue/green after the move.
+- Turn on CI deploys only after one `ship.sh` run has put the new `deploy.sh` on the box.
+
+**How to resume:** review/merge the branch; one `ship.sh` run is the first real test of the new `deploy.sh` (legacy path, backup first, auto-rollback armed). Next WS1 in scope for the founder: T1.2/T1.4 with a Docker stack, then T1.10.
+
+---
+
 ## 2026-09-27 (session 38) — Balanced-architecture Phase 0: WS0 T0.1–T0.6 on `claude/eloquent-curie-acsz2h` (not merged, not deployed)
 
 **Done** (one commit each, plan `docs/superpowers/plans/2026-09-20-mento-program-plan.md` §WS0)

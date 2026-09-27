@@ -1,0 +1,43 @@
+# Prod overrides for the Balanced stack. Run only through deploy/deploy.sh with
+# MENTO_STACK=balanced, which exports MENTO_ENV_FILE (the decrypted env on tmpfs —
+# deploy/decrypt-env.sh — or services/api/.env before SOPS is adopted) and
+# POSTGRES_PASSWORD read from it.
+# Allowed differences from local: env values, published ports, memory/log limits,
+# hostnames, host-side paths (deploy/test-parity.sh enforces this).
+# Memory/log limits and Postgres/Valkey tuning are T1.2 — not in this file yet.
+x-api-env: &api-env
+  DATABASE_URL: postgresql+psycopg://mento:${POSTGRES_PASSWORD:?exported by deploy.sh}@postgres:5432/mento
+  REDIS_URL: redis://valkey:6379/0
+
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: mento
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?exported by deploy.sh}
+      POSTGRES_DB: mento
+
+  api_blue:
+    env_file: ["${MENTO_ENV_FILE:?exported by deploy.sh}"]
+    environment: *api-env
+
+  api_green:
+    env_file: ["${MENTO_ENV_FILE:?exported by deploy.sh}"]
+    environment: *api-env
+
+  migrate:
+    env_file: ["${MENTO_ENV_FILE:?exported by deploy.sh}"]
+    environment: *api-env
+
+  caddy:
+    # Hostnames come only from deploy/domains.env.
+    env_file: ["./domains.env"]
+    environment:
+      CADDY_TLS: auto
+    volumes:
+      # deploy/deploy-web.sh swaps /opt/mento-console/current atomically; mounting
+      # the parent lets Caddy see the swap without a restart.
+      - /opt/mento-console:/srv/web:ro
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3

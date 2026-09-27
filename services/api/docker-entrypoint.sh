@@ -1,16 +1,16 @@
 #!/bin/sh
-# Migrations-on-deploy: bring the schema to head, then serve.
-# Fails hard (set -e) if migrations fail — never serve against a stale schema.
+# Serve only. Migrations are NOT run here: a serving container that migrates on boot
+# would race its sibling colour during a blue/green swap and could leave a half-
+# applied schema behind a container that is already taking traffic. deploy/deploy.sh
+# runs them first, as a one-off (`alembic upgrade head` through this same entrypoint's
+# one-off mode), and starts no new container unless they succeed.
 set -e
 
-# One-off mode: any args (e.g. deploy/do-app.yaml's PRE_DEPLOY migrate job or an
-# ad-hoc script) run INSTEAD of the migrate-then-serve default.
+# One-off mode: any args (deploy.sh's migration step, deploy/do-app.yaml's PRE_DEPLOY
+# migrate job, an ad-hoc script) run INSTEAD of serving.
 if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
-
-echo "[entrypoint] running alembic upgrade head..."
-alembic upgrade head
 
 WORKERS="${UVICORN_WORKERS:-2}"
 PORT="${PORT:-8000}"

@@ -75,6 +75,7 @@ E2E specs are plain Node scripts in `apps/mobile/e2e/` (not `@playwright/test` �
 
 ### Gotchas that look like bugs
 - Matching returns **503** ⇒ listeners table is empty (pytest truncated it) — re-seed, don't debug the matcher. In **prod** with listeners online it means every slot is held by live *or abandoned* chats: the matcher self-heals chats older than `conversation_max_age_hours` (24 h) inline (session 32); younger ones only free up via End / Clean Wipe or the admin Reconcile button.
+- **The API container never migrates on boot** (WS1 T1.9): `deploy/deploy.sh` runs `alembic upgrade head` in a one-off container first, with a 3 s `lock_timeout`, and swaps only if it succeeds. A bare `docker compose up` of a prod compose file serves whatever schema is there.
 - `test_matching_concurrency.py` needs Postgres; it auto-skips on the SQLite fallback — a skip there is not a pass.
 - Lottie on web: `lottie-react-native` delegates to dotlottie and ignores `style` — set **both** `style` and `webStyle`; unmount during route teardown crashes ("ImageData width 0") — guard with a `leaving` state (pattern: `app/index.tsx`).
 - Outside dev the API **refuses to boot** on default `JWT_SECRET` or missing Stream creds (`app/main.py` invariants) — that's deliberate, not a bug.
@@ -160,7 +161,10 @@ mento/
                             deploy-web.sh + render-nginx.sh + test-nginx.sh + backup-postgres.sh +
                             nginx/{mento-api,mento-app,mento-admin,mento-redirect}.conf.template (self-managed VPS —
                             LIVE since 2026-09-19: api.<root>, app.<root> (whole app), admin.<root> (/admin only);
-                            console.<root> 301s to them; runbook docs/DEPLOYMENT_VPS.md)
+                            console.<root> 301s to them; runbook docs/DEPLOYMENT_VPS.md) ·
+                            STAGED for the server move (WS1): compose.{base,local,prod}.yml + caddy/Caddyfile +
+                            bluegreen.sh · secrets/ (SOPS + age, decrypt-env.sh) · proofs test-{caddy,parity,
+                            secrets,deploy}.sh
   scripts/                  repo-root: sample_mockup_colors.py · theme_lottie.py (Lottie → Mento palette)
   docs/                     PRD.md · DECISIONS.md (WINS) · ALIGNMENT.md · MOCKUP_INVENTORY.md · MASCOT_ASSETS.md
                             · UX_REVIEW_2026-07-13.md · DEPLOYMENT.md (DO App Platform) · DEPLOYMENT_VPS.md

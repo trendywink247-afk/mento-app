@@ -260,14 +260,30 @@ Old hosts keep redirecting for as long as their DNS records and certs live.
 
 1. Do the work locally against Test, verify per `mento-verify` (pytest, `alembic
    check`, `tsc --noEmit`, e2e for touched flows).
-2. Commit, push to `master` on the GitHub remote (`origin` = `github.com/trendywink247-afk/mento-app`, private).
-3. `ssh mento-ops@<vps-ip> 'cd /opt/mento && ./deploy/deploy.sh'`
+2. Ship: `bash scripts/lanes/ship.sh "what changed"` (gate → push → box checkout to
+   that exact commit → `deploy.sh --backup <sha>` → web → OTA). By hand:
+   `ssh mento-ops@<vps-ip> 'cd /opt/mento && git fetch -q origin && git reset -q --hard <sha> && ./deploy/deploy.sh --backup <sha>'`
 
-`deploy.sh` hard-resets the VPS checkout to `origin/master`, rebuilds the API image,
-and brings the stack up — the container entrypoint runs `alembic upgrade head`
-automatically before serving, and refuses to serve if migrations fail. If a
-migration is destructive or backward-incompatible, run
-`./deploy/backup-postgres.sh` manually right before deploying that one.
+What `deploy.sh` does (WS1 T1.9; proof: `bash deploy/test-deploy.sh`):
+
+1. checks out the commit and builds `mento-api:<sha12>` (skipped if it exists);
+2. runs `alembic upgrade head` in a **one-off container** on the new image. The
+   serving container no longer migrates on boot. Each migration waits at most **3 s**
+   for a lock (`migrations/env.py`), so it can't queue live traffic behind it. **If
+   the migration fails, the deploy stops and the old container keeps serving;**
+3. swaps. On today's stack the one `api` container is recreated (a few seconds of
+   502s from Nginx — as before) and, if it never turns healthy on
+   `/api/v1/health/ready`, is **put back on the previous image tag** automatically.
+   On the Balanced stack (`MENTO_STACK=balanced`, after the server move) it is a
+   blue/green swap through Caddy with no failed requests (`deploy/bluegreen.sh`).
+
+One deploy at a time (a lock refuses a second). State (live tag, previous tag, live
+colour) lives in `~/.local/state/mento/` on the box. Env: the SOPS file when it
+exists (see "Secrets"), otherwise `services/api/.env`.
+
+**Migrations must be backward-compatible with the code still serving** (add a
+column, backfill, only then use it; drop in a later release). Blue/green and the
+automatic rollback both run the previous image against the new schema.
 
 **If the change touched anything in `apps/mobile`** (the web build serves the
 whole app), also run `./deploy/deploy-web.sh` (locally — see step 11) — the two
@@ -276,19 +292,166 @@ deploys are independent; `deploy.sh` only ships the API.
 ### Rollback
 
 ```bash
-git log --oneline -5          # find the last-good commit
-git reset --hard <sha>
-docker compose -f deploy/docker-compose.prod.yml up -d --build
+ssh mento-ops@<vps-ip> 'cd /opt/mento && ./deploy/deploy.sh --rollback'
 ```
 
-Rolling back past a migration that already ran requires an Alembic downgrade or a
-restore from `deploy/backup-postgres.sh`'s dump — forward-only migrations
-(CLAUDE.md) mean rollback is not free; plan destructive migrations accordingly.
+Puts the previous image back (no migrations run; the schema stays). Rolling back
+past a migration that already ran requires a new forward migration or a restore
+from `deploy/backup-postgres.sh`'s dump — forward-only migrations (CLAUDE.md) mean
+rollback is not free; plan destructive migrations accordingly.
+
+### CI deploys (`.github/workflows/api-deploy.yml`) — off until you turn them on
+
+After **API CI** passes on master, the workflow can SSH to the box with a deploy-only
+key that can run nothing but `deploy.sh --from-ssh` (backup, then deploy that exact
+commit). It is inert until all of this exists:
+
+```bash
+# On the laptop: a key used for nothing else.
+ssh-keygen -t ed25519 -N '' -C mento-ci-deploy -f mento-ci-deploy
+# On the box, as mento-ops: append ONE line to ~/.ssh/authorized_keys —
+#   restrict,command="/opt/mento/deploy/deploy.sh --from-ssh" <contents of mento-ci-deploy.pub>
+# `restrict` = no shell, no pty, no forwarding; the command ignores what the client asks
+# for except "deploy <40-hex sha>", and that sha must be on origin/master.
+# The box's host key line, for pinning (run from the laptop, check it against the box):
+ssh-keyscan -t ed25519 <vps-ip>
+```
+
+GitHub → Settings → Secrets and variables → Actions: secrets `API_DEPLOY_SSH_KEY`
+(private key file contents) and `API_DEPLOY_KNOWN_HOSTS` (the keyscan line); then the
+variable `API_AUTO_DEPLOY=true` to deploy after every green API CI on master. Manual
+runs (Actions → API Deploy → Run workflow) work without the variable. Optional:
+Settings → Environments → `production` → required reviewers, to approve each deploy.
+CI deploys do not ship the web build or the OTA — `ship.sh` still does.
+**Turn CI on only after one `ship.sh` run** has put this version of `deploy.sh` on the
+box: the forced command runs the `deploy.sh` already on disk, and the one before
+WS1 T1.9 knows nothing about `--from-ssh`.
 
 ### Rotation
 
 Rotating `STREAM_API_SECRET` invalidates webhook signatures — re-run
 `scripts.configure_stream` immediately after.
+
+---
+
+## The Balanced stack (Compose + Caddy) — staged, not live
+
+**Status:** committed (WS1 T1.1, T1.3) and proven locally; prod still runs
+`deploy/docker-compose.prod.yml` behind host Nginx until the server move (T1.10).
+
+- `deploy/caddy/Caddyfile` — one edge config for local and prod, hosts from the
+  environment (`deploy/domains.env` in prod). Proof: `bash deploy/test-caddy.sh`
+  (same host map as `test-nginx.sh`, plus a WebSocket upgrade through `api.`).
+- `deploy/compose.base.yml` + `compose.local.yml` / `compose.prod.yml` — see the
+  header of `compose.base.yml`. Parity proof: `bash deploy/test-parity.sh`.
+
+### Local hostnames
+
+The local stack serves `app.mento.localhost`, `api.mento.localhost` and
+`admin.mento.localhost`. Chrome, Firefox and systemd-resolved already send
+`*.localhost` to 127.0.0.1; Windows tools (curl, PowerShell, Node) need three lines
+in `C:\Windows\System32\drivers\etc\hosts` (edit as Administrator):
+
+```
+127.0.0.1 app.mento.localhost
+127.0.0.1 api.mento.localhost
+127.0.0.1 admin.mento.localhost
+```
+
+By default the local Caddy uses its own internal CA (`CADDY_TLS=internal`): works
+with no setup, but browsers warn. For browser-trusted certificates, once:
+
+```powershell
+mkcert -install
+mkdir deploy/caddy/certs
+mkcert -cert-file deploy/caddy/certs/cert.pem -key-file deploy/caddy/certs/key.pem `
+  mento.localhost app.mento.localhost api.mento.localhost admin.mento.localhost
+```
+
+then start the stack with `CADDY_TLS=mkcert` (the `.pem` files are gitignored).
+
+---
+
+## Secrets (SOPS + age)
+
+**Status:** tooling committed (WS1 T1.8); **not yet adopted on prod.** Until
+`deploy/secrets/prod.env.sops.yaml` exists, the box keeps reading the plaintext
+`services/api/.env` exactly as before. The steps below need the founder: only the
+founder creates keys and holds real secrets.
+
+**What it is.** The production env file is committed to git **encrypted**
+(`deploy/secrets/prod.env.sops.yaml`). At deploy time `deploy/decrypt-env.sh`
+decrypts it into the deploy user's tmpfs runtime dir (`/run/user/<uid>/mento/api.env`,
+mode 600, wiped at reboot) and compose reads that as `env_file`. Plaintext secrets
+never sit on the server's disk and never go through GitHub.
+
+### Key custody
+
+| Key | Where the private half lives | Who can decrypt with it |
+|---|---|---|
+| **Founder key** | Founder's laptop (`~/.config/sops/age/keys.txt`) **plus** a password-manager entry **plus** a printed paper copy in a safe place. Never on the server, never in GitHub, never in chat. | The founder, to edit secrets or recover. |
+| **Server key** | Generated **on** the prod box as `mento-ops`, at `~/.config/sops/age/keys.txt` (mode 600). Never copied off the box. | The box, at deploy time. |
+
+Every secret is encrypted to **both** public keys (`.sops.yaml`), so losing either
+one private key loses nothing. GitHub Actions never gets an age key: CI only SSHes
+in; the box decrypts.
+
+### One-time setup
+
+```bash
+# 1. Tools (laptop and box). age from the distro; sops as a pinned release binary.
+sudo apt-get install -y age
+SOPS_V=3.10.2
+curl -fsSLo /tmp/sops "https://github.com/getsops/sops/releases/download/v${SOPS_V}/sops-v${SOPS_V}.linux.amd64"
+curl -fsSLo /tmp/sops.sums "https://github.com/getsops/sops/releases/download/v${SOPS_V}/sops-v${SOPS_V}.checksums.txt"
+(cd /tmp && grep " sops-v${SOPS_V}.linux.amd64\$" sops.sums | sed "s| sops-v${SOPS_V}.linux.amd64| sops|" | sha256sum -c -)
+sudo install -m 755 /tmp/sops /usr/local/bin/sops
+
+# 2. Founder key (on the laptop). Back up the file it writes, then note the public key.
+mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/keys.txt
+age-keygen -y ~/.config/sops/age/keys.txt        # → age1… (founder public key)
+
+# 3. Server key (on the box, as mento-ops).
+mkdir -p ~/.config/sops/age && age-keygen -o ~/.config/sops/age/keys.txt && chmod 600 ~/.config/sops/age/keys.txt
+age-keygen -y ~/.config/sops/age/keys.txt        # → age1… (server public key)
+
+# 4. Laptop, repo root: put both PUBLIC keys into .sops.yaml (replace the two
+#    REPLACE_WITH_… placeholders), then encrypt the current prod .env. The copy of
+#    the prod .env comes off the box over ssh, straight into sops — never saved.
+ssh mento-ops@<box> 'cat /opt/mento/services/api/.env' \
+  | sops --encrypt --filename-override deploy/secrets/prod.env.sops.yaml \
+         --input-type dotenv --output-type yaml /dev/stdin > deploy/secrets/prod.env.sops.yaml
+git add .sops.yaml deploy/secrets/prod.env.sops.yaml && git commit -m "chore(deploy): encrypted prod env"
+
+# 5. Box, after pulling: prove the box can open it.
+./deploy/decrypt-env.sh && echo decrypted OK
+```
+
+`--filename-override` matters: sops picks the recipients by matching the rule's
+`path_regex` against the file name it is given, and the input here is stdin.
+
+### Everyday use
+
+- **Edit a secret:** `sops deploy/secrets/prod.env.sops.yaml` on the laptop (opens
+  `$EDITOR` on the decrypted text, re-encrypts on save). Commit, then deploy.
+- **No `$` in any value.** Compose rewrites `$` inside `env_file` values (`x$HOMEy`
+  arrives as `x`), so `decrypt-env.sh` refuses such a file and names the key. Generate
+  secrets from `[A-Za-z0-9_-]` (e.g. `openssl rand -hex 32`).
+- **Prove the tooling:** `bash deploy/test-secrets.sh` (throwaway keys, needs Docker).
+
+### Rotation and loss
+
+- **A secret leaked:** change it at its source (Stream, DB password, …), `sops` edit,
+  commit, deploy.
+- **Server key lost** (box rebuilt): new server key on the new box, replace its public
+  key in `.sops.yaml`, then on the laptop `sops updatekeys deploy/secrets/prod.env.sops.yaml`
+  (re-wraps the data key for the new recipient set), commit.
+- **Founder key lost:** restore it from the password manager or paper copy. If every
+  copy is gone, the server key still decrypts: have the box decrypt, make a new founder
+  key, `updatekeys` from a machine holding the server key. Never leave it at one key.
+- **A private key leaked:** treat every secret in the file as leaked. Rotate each at its
+  source, make a new key pair for the leaked holder, `updatekeys`, commit. Removing a
+  recipient does not un-leak old ciphertext already in git history.
 
 ---
 

@@ -1,0 +1,17 @@
+# SOPS creation rules — which age keys can open which encrypted file.
+# Key custody and the one-time setup: docs/DEPLOYMENT_VPS.md → "Secrets (SOPS + age)".
+#
+# Every production secret is encrypted to TWO recipients:
+#   1. the founder's personal age key (kept offline: password manager + paper backup),
+#      so a lost server never loses the secrets;
+#   2. the production server's own age key (~/.config/sops/age/keys.txt for mento-ops
+#      on the box, never copied anywhere), so the box can decrypt at deploy time.
+#
+# The two placeholders below are NOT keys. sops refuses to encrypt until they are
+# replaced with the real public keys (`age-keygen -y <keyfile>` prints one) — that
+# failure is deliberate: nothing gets encrypted to a key nobody holds.
+creation_rules:
+  - path_regex: deploy/secrets/prod\.env\.sops\.yaml$
+    age: >-
+      REPLACE_WITH_FOUNDER_AGE_PUBLIC_KEY,
+      REPLACE_WITH_SERVER_AGE_PUBLIC_KEY

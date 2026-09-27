@@ -1,0 +1,95 @@
+# Mento — the Balanced stack (WS1 T1.1). Everything that must be IDENTICAL between
+# the local stack and prod lives here; the two override files may differ only in
+# env values, published ports, memory/log limits, hostnames and host-side paths —
+# deploy/test-parity.sh fails on anything else.
+#
+#   local:  docker compose -f deploy/compose.base.yml -f deploy/compose.local.yml up -d --wait
+#   prod:   deploy/deploy.sh (MENTO_STACK=balanced) — never by hand on the box
+#
+# Prod runs deploy/docker-compose.prod.yml behind host Nginx until the server move
+# (T1.10); this stack replaces it there.
+#
+# The API runs as two colours for blue/green deploys (deploy/bluegreen.sh). Normally
+# one is up; Caddy sends traffic to the first healthy one (deploy/caddy/Caddyfile).
+# Migrations never run inside a serving container: `migrate` is a one-off service
+# that deploy.sh runs before any colour starts on a new image.
+#
+# Container names mento-postgres and mento-redis are fixed on purpose: the gate
+# (scripts/lanes/gate.sh) and several e2e specs `docker exec` into them.
+name: mento
+
+x-api: &api
+  build:
+    context: ../services/api
+  image: mento-api:${API_TAG:-local}
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    valkey:
+      condition: service_healthy
+  healthcheck:
+    # Python, not curl: the image carries no curl (no apt layer).
+    test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=3)"]
+    interval: 5s
+    timeout: 3s
+    retries: 3
+    start_period: 30s
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mento-postgres
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mento -d mento"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: mento-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api_blue:
+    <<: *api
+
+  api_green:
+    <<: *api
+    # Started only by deploy/bluegreen.sh; `up` alone brings up blue.
+    profiles: ["green"]
+
+  migrate:
+    <<: *api
+    profiles: ["tools"]
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
+    healthcheck:
+      disable: true
+
+  caddy:
+    image: caddy:2.11-alpine
+    container_name: mento-caddy
+    restart: unless-stopped
+    # api_* are not hard dependencies: Caddy retries until a colour is healthy.
+    volumes:
+      # The directory, not the file: `git reset` replaces the Caddyfile with a new
+      # inode, and a single-file bind mount would keep showing Caddy the old one.
+      - ./caddy:/etc/caddy:ro
+      - ${WEB_ROOT:-./web-root}:/srv/web:ro
+      - ${CADDY_CERTS:-./caddy/certs}:/certs:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
