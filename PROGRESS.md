@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-09-28 (session 48) — WS6 T6.1: Maestro native flows, the Expo upgrade's safety net
+
+Done directly in this session (not a cloud session this time — small enough, and full tool access was faster than the round-trip).
+
+**Done**
+- `apps/mobile/e2e/maestro/{onboarding-first-message,two-party-chat,crisis-card}.yaml`, `mentor-bot.mjs`, `README.md`, `.github/workflows/maestro.yml`. Commit `57bed5d` on `feat/ws6-t6.1-maestro-flows`.
+- `mentor-bot.mjs` verified end to end against a live local API + real Stream creds — not just written: onboarded a member, matched a listener, minted its console token, sent a member message, ran the bot, then independently re-read the Stream channel and confirmed both messages actually landed. Also confirmed the clean-failure path (exits 1 with a reason when no message arrives, doesn't hang).
+- All three YAML flows validated with `maestro check-syntax` against a real Maestro 2.10.0 install — caught and fixed a real error (`assertVisible` doesn't take `timeout` directly; needed `extendedWaitUntil`).
+- Installed Maestro CLI locally and found a genuine Windows gap: the official installer ships `lib/*.jar` but no working `bin/maestro`, and is missing the `jna`/`jna-platform` dependency jars entirely (v2.10.0). Fixed by fetching both from Maven Central and invoking the jar directly (`java -cp "*" maestro.cli.AppKt`); documented in the README as Windows-specific, not something to "fix" back to the official installer.
+- `.github/workflows/maestro.yml` is actionlint + shellcheck clean (one real warning fixed, not silenced — an unused loop variable).
+
+**Not done — said plainly, not implied otherwise**
+- The three flows have never run against a real Android emulator. This machine has a full Android SDK (`ANDROID_HOME` set, platforms/build-tools present) but no AVD/system image configured, and standing one up plus a full `expo prebuild` + Gradle build was out of scope for this pass.
+- The CI workflow has never run start to finish — every piece was verified independently (actionlint, the build path matches `docs/ANDROID_BUILD.md`, the token-minting step tested standalone script-by-script) but not as one sequence.
+- **The plan's own accept bar for T6.1 — "the three flows pass on an emulator against SDK 52" — is NOT met yet.** Run the workflow for real (push this branch, or provision a local AVD) before T6.2 (the Expo upgrade) starts relying on this as its safety net.
+
+**How to resume:** review/merge the PR, then either provision an AVD locally or push and watch the CI workflow run for real. Once that's green, T6.2 (Expo 52→57, five gated steps) can start — its own dependency rule requires this first.
+
+---
+
 ## 2026-09-28 (session 47) — T1.10 prep: real secrets adopted, cutover runbook written
 
 **Done**
