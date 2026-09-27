@@ -1,0 +1,145 @@
+name: Maestro (native e2e)
+
+# The safety net for the Expo 52->57 upgrade (T6.2's own dependency rule: these
+# flows must exist and pass BEFORE that upgrade starts, and after every one of
+# its five steps). Runs against SDK 52 today — do not bump the emulator image
+# here as part of an unrelated change; T6.2 does that deliberately, one step
+# at a time, and re-runs this workflow after each one.
+#
+# Builds a debug APK (expo prebuild + gradlew assembleDebug, the same path
+# docs/ANDROID_BUILD.md documents for local builds — nothing new invented
+# here), brings up the same Postgres/Redis api-ci.yml uses, seeds listeners,
+# and runs the three flows against a real emulator via
+# reactivecircus/android-emulator-runner.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "apps/mobile/**"
+      - "services/api/**"
+      - ".github/workflows/maestro.yml"
+  pull_request:
+    paths:
+      - "apps/mobile/**"
+      - "services/api/**"
+      - ".github/workflows/maestro.yml"
+  workflow_dispatch: {}
+
+jobs:
+  maestro:
+    # KVM-accelerated emulators need a real (not container) Linux runner.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: postgresql+psycopg://mento:mento@localhost:5432/mento
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: ci-secret-at-least-32-bytes-long-000000
+      ENV: dev
+      STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
+      STREAM_API_SECRET: ${{ secrets.STREAM_API_SECRET }}
+      EXPO_PUBLIC_STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
+      EXPO_PUBLIC_API_URL: http://10.0.2.2:8000/api/v1 # the emulator's host-loopback address
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail fast if Stream isn't configured
+        run: |
+          if [ -z "$STREAM_API_KEY" ] || [ -z "$STREAM_API_SECRET" ]; then
+            echo "::error::STREAM_API_KEY/STREAM_API_SECRET repo secrets are not set — onboarding-first-message.yaml and two-party-chat.yaml both need a real Stream project to match and chat against. crisis-card.yaml would also silently pass its send-still-works assertion without ever proving the crisis card, which is worse than failing loudly."
+            exit 1
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/api/requirements-dev.txt
+
+      - name: Start Postgres + Redis
+        working-directory: services/api
+        run: docker compose up -d --wait
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Migrate + seed listeners
+        working-directory: services/api
+        run: |
+          python -m alembic upgrade head
+          python -m scripts.seed_listeners
+
+      - name: Start the API (background)
+        working-directory: services/api
+        run: |
+          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:8000/api/v1/health && exit 0; echo "waiting ($i/30)..."; sleep 1; done
+          echo "::error::API never became healthy" && cat api.log && exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm ci
+
+      - name: Prebuild + assemble debug APK
+        working-directory: apps/mobile
+        run: |
+          npx expo prebuild --platform android --no-install
+          cd android && ./gradlew assembleDebug
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Mint a listener console token for mentor-bot.mjs
+        working-directory: services/api
+        run: |
+          NAME=$(python -c "
+          from app.db import SessionLocal
+          from app.models.listener import ListenerProfile
+          db = SessionLocal()
+          print(db.query(ListenerProfile).first().persona_name)
+          db.close()")
+          LINK=$(python -m scripts.issue_listener_token --name "$NAME" | grep 'Console link')
+          echo "LISTENER_TOKEN=${LINK##*token=}" >> "$GITHUB_ENV"
+
+      - name: Run the three flows on a real emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33 # SDK 52's target — do not bump here; T6.2 owns emulator-version changes
+          arch: x86_64
+          profile: pixel_6
+          script: |
+            adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+
+            maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml
+
+            ( node apps/mobile/e2e/maestro/mentor-bot.mjs \
+                --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 60 \
+                > mentor-bot.log 2>&1 &
+              echo $! > mentor-bot.pid )
+            maestro test apps/mobile/e2e/maestro/two-party-chat.yaml
+            wait "$(cat mentor-bot.pid)" || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
+
+            maestro test apps/mobile/e2e/maestro/crisis-card.yaml
+
+      - name: API log (always, for debugging)
+        if: always()
+        working-directory: services/api
+        run: cat api.log || true
+
+      - name: Tear down
+        if: always()
+        working-directory: services/api
+        run: docker compose down -v

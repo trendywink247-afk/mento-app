@@ -1,0 +1,53 @@
+# T6.1 — a member and a mentor in the same conversation, message flowing both
+# directions. Maestro only drives ONE native app instance, so the mentor side
+# is not a second phone here — it's mentor-bot.mjs, a separate process that
+# answers through the same API/Stream path the real mentor console uses.
+# Start it BEFORE this flow, watching for the member's message:
+#
+#   node e2e/maestro/mentor-bot.mjs --token <listener-token> \
+#     --api http://localhost:8000/api/v1 --timeout 60
+#
+# Full setup in README.md — seeding a listener, minting its token, starting
+# the bot, then running this flow. If the bot never sees a message (this flow
+# never got as far as sending one) it exits 1 after --timeout; check both
+# exit codes, not just this flow's.
+appId: com.mento.app
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "start"
+- tapOn:
+    id: "role-talk"
+- tapOn:
+    id: "continue"
+- tapOn:
+    id: "skip"
+- tapOn:
+    id: "animal-panda"
+- tapOn:
+    id: "colour-terracotta"
+- tapOn:
+    id: "continue"
+- tapOn:
+    id: "enter"
+- extendedWaitUntil:
+    visible:
+      id: "composer-input"
+    timeout: 20000
+
+- tapOn:
+    id: "composer-input"
+- inputText: "hi, thanks for being here"
+- tapOn:
+    id: "composer-send"
+
+# mentor-bot.mjs is watching for exactly this message; give it real time to
+# see it, accept if needed, connect to Stream and reply — this is a live round
+# trip over the network, not a local state change. Text must match
+# mentor-bot.mjs's default --reply exactly (README documents overriding both
+# together if you change one).
+- extendedWaitUntil:
+    visible:
+      text: "I'm here — tell me more when you're ready."
+    timeout: 45000

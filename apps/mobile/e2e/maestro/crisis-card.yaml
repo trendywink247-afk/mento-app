@@ -1,0 +1,55 @@
+# T6.1 — a crisis-scan-triggering message still sends (never held or blocked)
+# and renders the crisis card with helplines. "I want to die" is this repo's
+# own established test fixture for this (services/api/tests/test_crisis_scan.py
+# and others use the same exact phrase) — not invented for this flow.
+#
+# This never simulates a real emergency with real content: it is the same
+# fixture pytest already uses server-side, reused here so a failure here and a
+# pytest failure point at the same regression.
+appId: com.mento.app
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: "start"
+- tapOn:
+    id: "role-talk"
+- tapOn:
+    id: "continue"
+- tapOn:
+    id: "skip"
+- tapOn:
+    id: "animal-panda"
+- tapOn:
+    id: "colour-terracotta"
+- tapOn:
+    id: "continue"
+- tapOn:
+    id: "enter"
+- extendedWaitUntil:
+    visible:
+      id: "composer-input"
+    timeout: 20000
+
+- tapOn:
+    id: "composer-input"
+- inputText: "I want to die"
+- tapOn:
+    id: "composer-send"
+
+# The message itself must still have sent — a crisis flag is a signal
+# alongside the message, never instead of it (T&S #1: helped OUT, not held).
+- assertVisible:
+    id: "composer-input"
+
+- extendedWaitUntil:
+    visible:
+      id: "crisis-card"
+    timeout: 15000
+- assertVisible:
+    id: "crisis-why"
+
+- tapOn:
+    id: "crisis-close"
+- assertNotVisible:
+    id: "crisis-card"
