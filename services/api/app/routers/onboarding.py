@@ -17,7 +17,7 @@ from app.errors import ApiProblem
 from app.models.user import User
 from app.schemas import OnboardingResult, OnboardingStart, PersonaOut
 from app.security import issue_session_token
-from app.services import member_status, sessions, stream
+from app.services import member_status, sessions, stream, terms
 from app.services.persona import generate_persona
 
 logger = logging.getLogger("mento.onboarding")
@@ -137,6 +137,8 @@ def start(
         companion_name=payload.companion_name,
         install_hash=install_hash,
     )
+    if payload.terms_accepted:
+        terms.accept(user)
     db.add(user)
     db.commit()
     db.refresh(user)

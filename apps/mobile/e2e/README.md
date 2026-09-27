@@ -42,6 +42,12 @@ Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js
   the refused line and is remembered. Needs rate limits ON. Spends 2 under-age refusals per
   run from your address — 3 in a day cool the ADDRESS down too: clear `agegate:*` in Redis
   between runs. Normal + reduced-motion, 0 page errors.
+- onboarding-terms.e2e.js — the terms gate (WS3 T3.9). A: the age step carries the house-
+  rules line, "Read them" opens and closes the sheet, the signup sends terms_accepted and
+  the account records it (stops at the signup — no Stream needed). B (only when the API
+  runs with TERMS_GATE_ENFORCED=true; otherwise printed as SKIP): a member who joined
+  without accepting is asked once on the tabs; match is 409 before, allowed after.
+  Normal + reduced-motion, 0 page errors.
 - notifications-route.test.mjs — NOT a browser spec: a Node unit test of the pure
   notification-tap router (`lib/notificationRoute.ts`). Run `npm run test:route`.
 - connecting-busy.e2e.js — flips every seeded listener to away (docker exec), drives

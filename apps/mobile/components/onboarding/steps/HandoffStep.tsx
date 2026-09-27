@@ -88,7 +88,11 @@ export function HandoffStep({
     }
     try {
       if (!(await getSessionToken())) {
-        const onboarding = await api.startOnboarding({ dob: draft.dob, email: draft.email ?? null });
+        const onboarding = await api.startOnboarding({
+          dob: draft.dob,
+          email: draft.email ?? null,
+          terms_accepted: draft.termsAccepted ?? false,
+        });
         await saveSession(
           onboarding.session_token,
           onboarding.stream_token,

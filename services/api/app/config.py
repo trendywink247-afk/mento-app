@@ -48,6 +48,12 @@ class Settings(BaseSettings):
     access_token_minutes: int = 15
     refresh_token_ttl_days: int = 90
     min_age: int = 18
+    # Terms gate (T3.9). `terms_version` is what a member accepts (bump it when the text
+    # changes — an older acceptance then no longer counts). Enforcement ships OFF: no
+    # terms text exists yet (T10.5 / H6) and older app builds cannot ask; flip it once
+    # both are true. Off, acceptance is still recorded.
+    terms_version: str = "2026-09-27"
+    terms_gate_enforced: bool = False
 
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"
     # Sized for a single process: workers × (pool_size + max_overflow) must stay

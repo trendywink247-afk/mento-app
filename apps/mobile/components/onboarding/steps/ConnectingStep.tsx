@@ -140,6 +140,7 @@ export function ConnectingStep({
           companion_animal: draft.companionAnimal ?? null,
           companion_colour: draft.companionColour ?? null,
           companion_name: draft.companionName ?? null,
+          terms_accepted: draft.termsAccepted ?? false,
         });
         await saveSession(
           onboarding.session_token,

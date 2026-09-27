@@ -1412,5 +1412,26 @@
     "lastTitle": "The next reading is being ",
     "lastAccent": "written",
     "lastBody": "This was the first reading. The next ones — hard moments, the craft of a conversation, the exam year season by season, and looking after yourself — are still being written. They will appear in Mentor Home when they are ready. Until then, this one stays here to read again whenever you want it."
+  },
+  "terms": {
+    "title": "Mento's house rules",
+    "sub": "Five things we ask of everyone here.",
+    "adultsLead": "18 and over.",
+    "adultsRest": "Mento is for adults.",
+    "peersLead": "Mentors are peers.",
+    "peersRest": "They listen and share what helped them. They are not medical professionals.",
+    "anonLead": "Stay anonymous.",
+    "anonRest": "Don't share your name, number or where you live, and don't ask others for theirs.",
+    "kindLead": "Be kind.",
+    "kindRest": "Harassment, threats or spam end the chat and can close your account.",
+    "safetyLead": "Safety comes first.",
+    "safetyRest": "If you may be in danger, Mento shows you helplines, and our safety team may read that conversation.",
+    "draft": "The full terms are being finalised. If anything important changes, we will ask you again.",
+    "agree": "I agree",
+    "close": "Close",
+    "closeA11y": "Close the house rules",
+    "failed": "That didn't save. Please try again.",
+    "notice": "By continuing, you agree to Mento's house rules.",
+    "noticeLink": "Read them"
   }
 }

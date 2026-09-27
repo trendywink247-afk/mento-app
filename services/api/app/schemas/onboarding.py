@@ -26,6 +26,8 @@ class OnboardingStart(BaseModel):
     # The app's random per-install id (T3.7/T3.8). Stored only as a SHA-256; a
     # re-join and age-gate signal, never an identity. Older builds omit it.
     install_id: str | None = Field(default=None, max_length=128)
+    # T3.9: the member agreed to the current terms on the way in (the age step).
+    terms_accepted: bool = False
 
     @field_validator("companion_animal")
     @classmethod
@@ -78,6 +80,10 @@ class MeOut(BaseModel):
     # suspension or ban (null = until lifted). Additive; older builds ignore them.
     status: str = "active"
     status_until: str | None = None
+    # Terms (T3.9): accepted the CURRENT version; `terms_required` = the gate is on and
+    # they have not — the app then asks before any chat starts. Additive.
+    terms_accepted: bool = False
+    terms_required: bool = False
 
 
 class CompanionUpdateIn(BaseModel):

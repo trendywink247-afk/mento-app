@@ -127,6 +127,9 @@ def test_me_returns_persona_and_companion_and_nothing_private(client, db_session
         # The member's own standing (T3.7) — theirs to read, never anyone else's.
         "status": "active",
         "status_until": None,
+        # Terms (T3.9): the gate ships off, so nothing is required.
+        "terms_accepted": False,
+        "terms_required": False,
     }
 
 

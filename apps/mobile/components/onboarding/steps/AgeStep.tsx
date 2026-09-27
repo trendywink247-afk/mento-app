@@ -10,6 +10,7 @@ import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { Entrance } from '@/components/motion/Entrance';
 import { useBreathing } from '@/components/motion/useBreathing';
+import { TermsNotice } from '@/components/onboarding/TermsNotice';
 import { StepScaffold } from '@/components/onboarding/StepScaffold';
 import { capture } from '@/lib/analytics';
 import { haptic } from '@/lib/haptics';
@@ -65,7 +66,8 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
 
   const onContinue = () => {
     if (!canContinue) return;
-    setDraft({ dob: dobToISO(dob) });
+    // Continuing under the house-rules line is agreeing to them (TermsNotice, WS3 T3.9).
+    setDraft({ dob: dobToISO(dob), termsAccepted: true });
     capture('onboarding_age_passed');
     onNext();
   };
@@ -97,6 +99,7 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
             disabled={!canContinue}
             testID="continue"
           />
+          <TermsNotice />
         </>
       }
     >

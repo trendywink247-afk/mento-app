@@ -37,6 +37,7 @@ from app.services import (
     mentor_names,
     open_question,
     push_tasks,
+    terms,
 )
 from app.services.matching import (
     ListenerAtCapacity,
@@ -192,6 +193,8 @@ def create_personal_request(
         3600,
         detail="You've sent several requests — please give mentors a little time to reply.",
     )
+    # No chat starts before the terms are accepted, while the gate is on (T3.9).
+    terms.require(db, user_id)
     listener = db.get(ListenerProfile, listener_id)
     if listener is None or listener.vetting_status != VettingStatus.approved:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "listener not found")

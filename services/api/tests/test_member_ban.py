@@ -43,7 +43,9 @@ API = "/api/v1"
 def _stub_stream(monkeypatch):
     monkeypatch.setattr(stream, "upsert_user", lambda *a, **k: None)
     monkeypatch.setattr(stream, "user_token", lambda uid: f"stub::{uid}")
-    monkeypatch.setattr(stream, "create_dm_channel", lambda cid, uid, lid: cid)
+    monkeypatch.setattr(
+        stream, "create_dm_channel", lambda channel_id, user_id, listener_id: channel_id
+    )
 
 
 @pytest.fixture

@@ -47,3 +47,9 @@ class User(UUIDMixin, TimestampMixin, Base):
     # from a blocked member's install is flagged for review, never refused). Not a
     # hardware id, never shown to anyone, never sent to analytics.
     install_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+
+    # Terms acceptance (T3.9, services/terms.py): when, and which version.
+    terms_accepted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    terms_version: Mapped[str | None] = mapped_column(String(32), nullable=True)

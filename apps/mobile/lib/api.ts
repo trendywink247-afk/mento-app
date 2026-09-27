@@ -35,6 +35,10 @@ export type Me = Persona & {
    * `member_suspended` / `member_banned`. Optional: an older server omits it. */
   status?: 'active' | 'suspended' | 'banned';
   status_until?: string | null;
+  /** Terms (WS3 T3.9): accepted the current version / must accept before a chat starts
+   * (only ever true while the server enforces the gate). Optional: older servers omit. */
+  terms_accepted?: boolean;
+  terms_required?: boolean;
 };
 
 /** `PUT /me/companion`: an omitted field is left as it is, `null` clears it. */
@@ -556,6 +560,8 @@ export const api = {
     companion_animal?: string | null;
     companion_colour?: string | null;
     companion_name?: string | null;
+    /** The member agreed on the age step (clickwrap, WS3 T3.9). */
+    terms_accepted?: boolean;
   }) =>
     getInstallId().then((install_id) =>
       request<OnboardingResult>('/onboarding/start', {
@@ -568,6 +574,8 @@ export const api = {
 
   // --- The member's own record (companion saved on the account, not just the device) ---
   me: () => request<Me>('/me', {}, true),
+  /** Accept the current terms (WS3 T3.9); answers the updated `Me`. */
+  acceptTerms: () => request<Me>('/me/terms', { method: 'POST' }, true),
   saveCompanion: (body: CompanionUpdate) =>
     request<Me>('/me/companion', { method: 'PUT', body: JSON.stringify(body) }, true),
 

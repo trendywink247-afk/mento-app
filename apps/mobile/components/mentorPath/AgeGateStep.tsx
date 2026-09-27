@@ -5,6 +5,7 @@ import { dobToISO, type Dob } from '@/components/DobPicker';
 import { DobWheels } from '@/components/DobWheels';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { MentorPageHeader } from '@/components/mentor/MentorPageHeader';
+import { TermsNotice } from '@/components/onboarding/TermsNotice';
 import { Entrance } from '@/components/motion/Entrance';
 import { ageRefusalActive, rememberAgeRefusal } from '@/lib/ageGateMemory';
 import { ApiError, api } from '@/lib/api';
@@ -66,7 +67,8 @@ export function AgeGateStep({ onBack, onPassed }: { onBack: () => void; onPassed
     setStarting(true);
     setStartError(null);
     try {
-      const result = await api.startOnboarding({ dob: dobToISO(dob) });
+      // Continuing under the house-rules line is agreeing to them (WS3 T3.9).
+      const result = await api.startOnboarding({ dob: dobToISO(dob), terms_accepted: true });
       await saveSession(result.session_token, result.stream_token, result.user, result.refresh_token);
       onPassed();
     } catch (e) {
@@ -117,6 +119,7 @@ export function AgeGateStep({ onBack, onPassed }: { onBack: () => void; onPassed
             testID="apply-dob-continue"
           />
         </Entrance>
+        <TermsNotice />
       </View>
     </ScrollView>
   );

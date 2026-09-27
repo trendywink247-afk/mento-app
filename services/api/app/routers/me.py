@@ -15,7 +15,7 @@ from app.errors import ApiProblem
 from app.models.user import User
 from app.schemas import AllowanceOut, CompanionUpdateIn, MeOut, OkResult
 from app.security import current_user_id, current_user_id_any_standing
-from app.services import allowance, companions, erasure, member_status
+from app.services import allowance, companions, erasure, member_status, terms
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -37,6 +37,8 @@ def _out(user: User) -> MeOut:
     return MeOut(
         status=now.status.value,
         status_until=now.until.isoformat() if now.until else None,
+        terms_accepted=terms.accepted(user),
+        terms_required=terms.required(user),
         id=user.id,
         persona_name=user.persona_name,
         persona_avatar=user.persona_avatar,
@@ -56,6 +58,16 @@ def me(
     """Reachable while suspended or banned (T3.7) — the one read that lets the app say
     why the rest answers 403, and until when."""
     return _out(current_user(user_id, db))
+
+
+@router.post("/terms", response_model=MeOut)
+def accept_terms(user: User = Depends(current_user), db: Session = Depends(get_db)) -> MeOut:
+    """Accept the current terms (T3.9) — for members who joined before the app asked,
+    or after the version changed. Idempotent: re-accepting moves the time forward."""
+    terms.accept(user)
+    db.commit()
+    db.refresh(user)
+    return _out(user)
 
 
 @router.get("/allowance", response_model=AllowanceOut)
