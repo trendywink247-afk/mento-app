@@ -151,6 +151,18 @@ jobs:
           LINK=$(python -m scripts.issue_listener_token --name "$NAME" | grep 'Console link')
           echo "LISTENER_TOKEN=${LINK##*token=}" >> "$GITHUB_ENV"
 
+      # Third real failure (session 48): without this, /dev/kvm exists but this runner
+      # user can't open it, so the emulator falls back to pure-software CPU emulation
+      # (TCG) — its own CPU thread hung and QEMU crashed ~2 minutes into boot. This is
+      # reactivecircus/android-emulator-runner's own documented required step for
+      # GitHub-hosted Linux runners (its README's every example includes it) — it was
+      # simply missing here, not a config choice.
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Run the three flows on a real emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
