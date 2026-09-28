@@ -193,7 +193,16 @@ jobs:
             # survives the emulator's teardown). This trap dumps both into the git
             # workspace on ANY exit (pass or fail, via bash -e), so the next step can
             # upload them as a real artifact instead of guessing again.
-            trap 'adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; cp -r "$HOME/.maestro/tests" "$GITHUB_WORKSPACE/maestro-debug" 2>/dev/null; true' EXIT
+            trap 'adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; ls -la "$HOME/.maestro/tests" > "$GITHUB_WORKSPACE/maestro-tests-listing.txt" 2>&1; cp -r "$HOME/.maestro/tests" "$GITHUB_WORKSPACE/maestro-debug" 2>/dev/null; true' EXIT
+
+            # Run 8's first capture attempt caught nothing useful: boot alone logs
+            # hundreds of lines/second (seccomp/minijail policy noise, ActivityManager
+            # contention warnings...), so the default ring buffer had already rotated
+            # past app install/launch by the time the trap's `logcat -d` ran. Clear it
+            # right before install (drop the boot noise) and grow it (16M) so it can't
+            # rotate away the actual failure before the trap gets a chance to read it.
+            adb logcat -c
+            adb logcat -G 16M
 
             adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 
@@ -215,6 +224,7 @@ jobs:
           name: maestro-failure-diagnostics
           path: |
             logcat.txt
+            maestro-tests-listing.txt
             maestro-debug/
           if-no-files-found: warn
           retention-days: 7
