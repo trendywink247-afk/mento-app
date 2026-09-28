@@ -39,6 +39,29 @@
 
 ---
 
+## 2026-09-28 (session 48, cont'd) — WS5 PR #9: reviewed, one real bug found and fixed (a Clean Wipe race), not by me the first time
+
+**First pass** found no production defects — wrong. The founder caught what I missed and pushed back with specifics; re-verified all three of their points against the code before touching anything (see PR #9 comment thread):
+
+1. **Confirmed, and it's the real one: a message could be stored after Clean Wipe.** `chat.send`'s `check_standing` ran once, pre-lock; `persist_message` took the conversation's row lock but never re-checked status or standing. A wipe's own lock releases (commits) before a stalled sender's `persist_message` acquires it, so the insert went through into an already-wiped conversation — breaking invariant 3 on the exact path meant to guarantee it. I'd read `persist_message`'s "exactly-once guarantee" docstring and conflated "exactly once" with "still open" without checking the second one.
+2. **Confirmed and sharper than my own finding:** `conftest.py`'s autouse `sealed_channels` fixture stubs `freeze_channel`/`rename_user` specifically because local `.env` may carry real Stream creds — but not `wipe_channel`, which is why the wipe test hit a real Stream 404 in review, not (only) the forward-looking T5.10 landmine I'd flagged.
+3. **Confirmed:** the flaky typing/pong test asserted an ordering the hub never promises — a peer's own presence-online event round-trips through Valkey pub/sub with no ordering guarantee relative to another peer's ping on a different socket.
+
+**Fixed, all four, in this session** (commit `2b09d59`):
+- `persist_message` now re-runs `check_standing` under the lock; `_lock_conversation` fetches (not just executes) a `populate_existing` row so the re-check sees the committed wipe instead of the stale pre-lock object still in the identity map — the first attempt at this fix silently no-opped because the query result was never consumed, so `populate_existing` had nothing to populate. New regression test `test_a_wipe_between_the_standing_check_and_the_insert_wins` reproduces the race deterministically (a monkeypatched stage opens a second session, wipes, and commits before `persist_message`'s lock) and proves no row lands.
+- `routers/conversation.py`'s old wipe endpoint now calls `stream.erase_channel` (tolerates 404) instead of `stream.wipe_channel` (raised hard); `conftest.py` stubs `wipe_channel` in the autouse fixture too.
+- The flaky test now drains to the pong and asserts no `typing` echo landed first, instead of asserting presence can never interleave.
+- `test_there_is_exactly_one_place_that_writes_a_chat_message` uses `.as_posix()`.
+- Re-verified: `alembic check` clean, full pytest **707/708** (only the local-`pg_dump`-missing gap left, same as before), the flaky test run 5x standalone with zero failures.
+
+**Not done**
+- CI never picked up either of today's two pushes to this branch (`2b09d59`, and the WS5-only content before it) — no workflow run appears at all, not even queued, for reasons I couldn't diagnose in reasonable time (workflows are enabled repo-wide, PR is open and not a fork, path filters match). Not chasing further; local verification is the authoritative bar per this repo's own Verify section, and it's thorough.
+- Still not merged — that's yours to decide now that both findings are actually fixed, not just described.
+
+**How to resume:** re-review the diff since `f94cd66` (or trust this entry — it's the same rigor as every other PR reviewed this session) and merge PR #9 when ready. This unblocks T5.10 (cutover) planning; T6.1 (Maestro flows, PR #8) still shouldn't get Stream CI secrets until T5.10's timing is clearer, since those flows drive Stream directly via `mentor-bot.mjs` and need a rewrite pass once it's gone.
+
+---
+
 ## 2026-09-28 (session 47) — T1.10 prep: real secrets adopted, cutover runbook written
 
 **Done**
