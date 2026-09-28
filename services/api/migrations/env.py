@@ -29,9 +29,14 @@ target_metadata = Base.metadata
 
 
 def include_name(name, type_, parent_names) -> bool:
-    """The job queue's tables are Procrastinate's, installed from vendored SQL
-    (revision e4a1jobs0001) — not our models, so autogenerate must not see them."""
+    """Tables that are not our models, so autogenerate must not see them: the job
+    queue's (Procrastinate's, installed from vendored SQL, revision e4a1jobs0001) and
+    chat_messages' partitions."""
     if type_ == "table" and name and name.startswith("procrastinate_"):
+        return False
+    # chat_messages' monthly partitions (and their default) are created and dropped at
+    # run time by app/jobs/retention.py; the partitioned parent is the model.
+    if type_ == "table" and name and name.startswith("chat_messages_"):
         return False
     return True
 

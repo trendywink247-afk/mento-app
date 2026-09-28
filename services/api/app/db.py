@@ -54,3 +54,9 @@ def init_db() -> None:
     from app import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(bind=engine)
+    if engine.dialect.name == "postgresql":
+        # A partitioned parent takes no rows until its partitions exist (WS5 T5.6).
+        from app.jobs.retention import ensure_partitions  # reason: jobs import db
+
+        with engine.begin() as conn:
+            ensure_partitions(conn)

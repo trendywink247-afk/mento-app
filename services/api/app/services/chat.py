@@ -52,6 +52,7 @@ from app.services import (
     chat_events,
     crisis,
     member_status,
+    message_crypto,
     moderation,
     safety,
     snooze,
@@ -101,15 +102,20 @@ class Duplicate:
     message: dict
 
 
-def message_out(m: ChatMessage) -> dict:
+def message_out(m: ChatMessage, text: str | None = None) -> dict:
     """The wire shape. `crisis` mirrors the object the Stream hook attached, so the
-    existing CrisisCard renders unchanged."""
+    existing CrisisCard renders unchanged. The body is decrypted here unless the caller
+    already holds the plaintext (the write path, which just encrypted it)."""
+    if text is None:
+        text = message_crypto.decrypt(
+            m.body, m.key_id, message_id=m.id, conversation_id=m.conversation_id
+        )
     out: dict = {
         "id": m.id,
         "seq": m.seq,
         "sender": m.sender_id,
         "sender_kind": m.sender_kind,
-        "text": m.body,
+        "text": text,
         "ts": m.created_at.isoformat(),
         "client_id": m.client_id,
     }
@@ -293,14 +299,22 @@ def persist_message(
     redacted: bool,
 ) -> dict | Duplicate:
     """THE insert. Under the conversation's row lock: re-check the client_id (a twin
-    may have landed since `send` looked), allocate the next seq, insert, commit — one
-    commit for the message and the allowance count `send` left in the transaction."""
+    may have landed since `send` looked), allocate the next seq, encrypt the body
+    (services/message_crypto.py — never stored in the clear), insert, commit — one
+    commit for the message and the allowance count `send` left in the transaction.
+
+    The lock is the exactly-once guarantee: the table is partitioned, so it cannot
+    carry a unique constraint on (conversation, seq) or (conversation, sender,
+    client_id). A missing MESSAGE_KEY outside dev raises here, before any write."""
     _lock_conversation(db, conversation_id)
     prior = _prior(db, conversation_id, sender_id, client_id)
     if prior is not None:
         out = message_out(prior)
         db.rollback()  # release the lock; this send's allowance count goes with it
         return Duplicate(out)
+    sealed, key_id = message_crypto.encrypt(
+        body, message_id=message_id, conversation_id=conversation_id
+    )
     row = ChatMessage(
         id=message_id,
         conversation_id=conversation_id,
@@ -308,7 +322,8 @@ def persist_message(
         sender_id=sender_id,
         seq=_top_seq(db, conversation_id) + 1,
         client_id=client_id,
-        body=body,
+        body=sealed,
+        key_id=key_id,
         crisis_signal=crisis_signal,
         redacted=redacted,
     )
@@ -322,7 +337,7 @@ def persist_message(
         if winner is None:
             raise
         return Duplicate(message_out(winner))
-    return message_out(row)
+    return message_out(row, text=body)
 
 
 def publish(conversation_id: str, event: dict) -> None:

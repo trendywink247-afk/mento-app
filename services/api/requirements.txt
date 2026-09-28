@@ -11,6 +11,7 @@ procrastinate==3.10.0  # job queue on our own Postgres (WS4); its schema ships v
 redis==5.2.1
 PyJWT==2.15.0
 argon2-cffi==25.1.0
+cryptography==46.0.3  # own-chat message bodies: AES-256-GCM at rest (WS5 T5.6)
 stream-chat==4.19.0
 httpx==0.28.1
 sentry-sdk[fastapi]==2.66.1

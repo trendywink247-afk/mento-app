@@ -9,8 +9,9 @@ import logging
 from procrastinate import RetryStrategy
 from sqlalchemy import text
 
+from app.config import get_settings
 from app.db import SessionLocal
-from app.jobs import queue
+from app.jobs import queue, retention
 from app.services import matching, mentor_names, push, snooze
 
 logger = logging.getLogger("mento.jobs")
@@ -122,3 +123,27 @@ def maintenance_prune_jobs(timestamp: int) -> int:
         )
         db.commit()
     return result.rowcount
+
+
+# --- own-chat message partitions (WS5 T5.6) --------------------------------------------
+
+
+@queue.periodic(cron="41 2 * * *", periodic_id="chat-partitions")
+@queue.task(
+    name="maintenance.chat_partitions", queue="maintenance", queueing_lock="maint-chat-parts"
+)
+def maintenance_chat_partitions(timestamp: int) -> dict[str, list[str]]:
+    """Keep next months' partitions ready and drop the expired ones. With no retention
+    decided (message_retention_days unset, founder decision H13) nothing is dropped."""
+    with SessionLocal() as db:
+        ready = retention.ensure_partitions(db)
+        dropped = retention.drop_expired(db, get_settings().message_retention_days)
+        stray = retention.default_partition_rows(db)
+        db.commit()
+    if stray:
+        logger.error(
+            "chat_messages_default holds %d row(s) — a monthly partition was missing when "
+            "they were written; that month's partition cannot be created until they move",
+            stray,
+        )
+    return {"ready": ready, "dropped": dropped}
