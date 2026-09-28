@@ -136,6 +136,15 @@ jobs:
 
       - name: Prebuild + assemble release APK
         working-directory: apps/mobile
+        env:
+          # Run 13 (session 48): assembleRelease alone isn't enough — Sentry's Android
+          # Gradle plugin only runs its source-map upload task for release variants
+          # (never triggered by any of the 12 prior debug-build attempts), and it needs
+          # an org/project + auth token this repo has never configured for CI: "error:
+          # An organization ID or slug is required (provide with --org)". Verified in
+          # sentry-react-native's own sentry.gradle.kts (shouldSentryAutoUploadGeneral)
+          # that this env var is the real, intended way to skip it, not a guess.
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           npx expo prebuild --platform android --no-install
           # Run 11 (session 48): a debug build never leaves expo-dev-client's launcher
