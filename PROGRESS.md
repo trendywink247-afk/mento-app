@@ -4,6 +4,48 @@
 
 ---
 
+## 2026-09-29 (session 48, cont'd) — WS6 T6.1: flow 1 proven on real CI, flow 2 handed off
+
+**Context:** continuing straight from session 48's earlier T6.1 entries (local AVD
+findings) — this is the CI-side follow-through: PR #8, branch `feat/ws6-t6.1-maestro-flows`.
+
+**Done — 18 real CI iterations, each on actual evidence (logs, screenshots, source code
+read directly), not guesses:**
+- **Flow 1 (`onboarding-first-message.yaml`) passes completely on a real GitHub-hosted
+  Linux emulator** — the plan's own accept bar, met for the first time. Real cold launch,
+  real onboarding, real chat, a real message sent and delivered.
+- Six real, evidence-backed infrastructure bugs found and fixed (full detail + commit list
+  in the handoff brief below): two separate disk-exhaustion failures (the Gradle build, then
+  the emulator-runner's own SDK download), missing KVM permissions (the action's own
+  documented requirement, simply absent), a `free-disk-space` swap removal that broke
+  under real load, `expo-dev-client`'s launcher requiring `assembleRelease` (its whole
+  implementation lives in an Android debug source set — confirmed by reading
+  `expo-dev-launcher`'s own source, not guessed), Sentry's release-only source-map upload
+  needing `SENTRY_DISABLE_AUTO_UPLOAD`, and a full rewrite of the emulator script once
+  `reactivecircus/android-emulator-runner`'s own TypeScript source proved it runs every
+  YAML line as an independent process (verified, not assumed) — this had silently broken
+  both the diagnostic trap and mentor-bot's original backgrounding/`wait` the whole time.
+
+**Not done — handed off, not abandoned:**
+- **Flow 2 (`two-party-chat.yaml`) still fails**, waiting for the mentor's reply to render.
+  Proven NOT a timing issue: `mentor-bot.mjs`'s own log shows a clean success every time
+  (connects, finds the match, sends the reply, exits 0) and the member's message shows a
+  "Read" receipt — but the reply text never appears, even at 150s, with a screenshot
+  showing empty unobstructed space where it should render. Three timeout increases (45→90→
+  150s) were the wrong lever each time. Full evidence, ruled-out hypotheses, and prioritized
+  next diagnostic steps: `docs/superpowers/plans/2026-09-29-t6.1-flow2-handoff-brief.md`.
+- Flow 3 (`crisis-card.yaml`) has never been reached — flow 2 blocks it.
+- **Founder call: hand this off to a fresh session** rather than keep iterating blind on
+  CI — the next step is reading `apps/mobile/components/chat/ChatScreen.tsx`'s real-time
+  subscription logic, not another CI round-trip.
+
+**How to resume:** read `docs/superpowers/plans/2026-09-29-t6.1-flow2-handoff-brief.md`
+first — it has the full timeline, the exact commits, the screenshot evidence, and the
+prioritized hypothesis list. Don't re-run CI blind before reading it; establishing the
+"not a timing issue" finding alone cost 3 of the 18 iterations.
+
+---
+
 ## 2026-09-28 (session 48) — WS6 T6.1: Maestro native flows, the Expo upgrade's safety net
 
 Done directly in this session (not a cloud session this time — small enough, and full tool access was faster than the round-trip).
