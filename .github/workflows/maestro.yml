@@ -186,52 +186,30 @@ jobs:
           # warning: Number of SMP cpus requested (4) exceeds the recommended cpus
           # supported by KVM (2)" — this runner's actual KVM only supports 2. Reverted;
           # the swap-storage fix above is the real next attempt at the same failure.
+          # Run 10 (session 48) found the real constraint governing this WHOLE script
+          # block: the action's own script-parser.ts splits it on newlines and runs
+          # EACH line as its own separate `sh -c` process (main.ts: `for (script of
+          # scripts) await exec.exec('sh', ['-c', script])`) — never one continuous
+          # multi-line shell session. No shell state (variables, traps, background
+          # jobs, `wait`) survives across lines. The multi-line trap two runs ago was
+          # split mid-string (line 1 = `trap '` alone, an unterminated quote — the
+          # sub-0.2s "exit code 2" syntax error). It also means EVERY line below must
+          # be independently complete, and that the mentor-bot background/wait pair
+          # was ALWAYS broken the same way — just never reached yet, since every run
+          # so far has failed on the first maestro test line. Fixed both here: each
+          # maestro test call captures diagnostics inline via `||` (same process, so
+          # $GITHUB_WORKSPACE/$HOME are still valid) instead of a trap; mentor-bot
+          # runs under nohup with its exit code written to a file a LATER line polls
+          # for, instead of `wait`ing on a PID from a process that already exited.
           script: |
-            # Run 7 (session 48) failed blind: the app launched, but "start" never
-            # became visible even after a 60s extendedWaitUntil — genuinely stuck, not
-            # just slow, and there was no way to see WHY (no device log, no screenshot
-            # survives the emulator's teardown). This trap dumps both into the git
-            # workspace on ANY exit (pass or fail, via bash -e), so the next step can
-            # upload them as a real artifact instead of guessing again.
-            trap '
-              adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null
-              mkdir -p "$GITHUB_WORKSPACE/maestro-debug"
-              find "$HOME" -maxdepth 6 -type d -regextype posix-extended \
-                  -regex ".*/[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}" \
-                  > "$GITHUB_WORKSPACE/maestro-debug/find-session-dirs.txt" 2>&1
-              while read -r d; do
-                [ -d "$d" ] && cp -r "$d" "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null
-              done < "$GITHUB_WORKSPACE/maestro-debug/find-session-dirs.txt"
-              true
-            ' EXIT
-
-            # Run 8: the default ring buffer had already rotated past app install/launch
-            # by the time the trap read it (boot alone logs hundreds of lines/second).
-            # Run 9: growing it with `adb logcat -G 16M` made it WORSE, not better — the
-            # capture stopped dead within ~1s of that command, strongly suggesting the
-            # resize broke this emulator's logd rather than helping (never proven, but
-            # the timing correlation is exact). Clear only; no resize.
-            #
-            # Also run 9: maestro-debug/ came back empty because Maestro's default
-            # output path follows XDG_STATE_HOME (maestro-cli's EnvUtils.xdgStateHome:
-            # $XDG_STATE_HOME/maestro if set, else ~/.maestro) — this runner may set
-            # XDG_STATE_HOME, unlike the Windows machine T6.1 was authored on, so the
-            # hardcoded ~/.maestro/tests guess was wrong here. `find` instead of a
-            # hardcoded path avoids guessing again.
             adb logcat -c
-
             adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
-
-            maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml
-
-            ( node apps/mobile/e2e/maestro/mentor-bot.mjs \
-                --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 60 \
-                > mentor-bot.log 2>&1 &
-              echo $! > mentor-bot.pid )
-            maestro test apps/mobile/e2e/maestro/two-party-chat.yaml
-            wait "$(cat mentor-bot.pid)" || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
-
-            maestro test apps/mobile/e2e/maestro/crisis-card.yaml
+            maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; exit 1; }
+            nohup sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 60; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 &
+            maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; exit 1; }
+            i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 70 ]; do sleep 1; i=$((i + 1)); done
+            [ -f mentor-bot.exitcode ] && [ "$(cat mentor-bot.exitcode)" = "0" ] || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
+            maestro test apps/mobile/e2e/maestro/crisis-card.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; exit 1; }
 
       - name: Upload failure diagnostics (logcat + Maestro screenshots/hierarchy)
         if: failure()
