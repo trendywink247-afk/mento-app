@@ -169,6 +169,13 @@ jobs:
           api-level: 33 # SDK 52's target — do not bump here; T6.2 owns emulator-version changes
           arch: x86_64
           profile: pixel_6
+          # ubuntu-latest gives 4 vCPUs; the action's own default (2) is what it warned
+          # about ("will run more smoothly with 4 CPU cores") in the run where the boot
+          # never finished (session 48, run 4 — KVM was working by then, no crash, but
+          # boot didn't complete inside the step before something reaped the emulator
+          # as an orphan process; root cause less certain than the disk/KVM fixes, this
+          # is the best-supported lead, not a confirmed diagnosis).
+          cores: 4
           script: |
             adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 
