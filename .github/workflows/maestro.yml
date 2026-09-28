@@ -80,6 +80,17 @@ jobs:
         with:
           android: false
           tool-cache: false
+          # Kept, unlike its default: run 4/5 (session 48) showed a NEW failure shape
+          # once KVM was genuinely active — boot-polling goes silent, then the whole
+          # job is cut short a few minutes later with the emulator reaped as an orphan
+          # process (no clean in-script error or timeout line — something outside the
+          # script killed it). Combined RAM for Postgres+Redis+API+Node+a real
+          # KVM-backed emulator may be hitting actual limits; this action's default
+          # removes the runner's swap to free disk, which may have removed exactly the
+          # safety net that would otherwise degrade gracefully instead of dying
+          # silently. Reasoned hypothesis, not a confirmed root cause — worth ruling
+          # out before chasing anything less specific.
+          swap-storage: false
 
       - uses: actions/setup-python@v5
         with:
@@ -169,13 +180,12 @@ jobs:
           api-level: 33 # SDK 52's target — do not bump here; T6.2 owns emulator-version changes
           arch: x86_64
           profile: pixel_6
-          # ubuntu-latest gives 4 vCPUs; the action's own default (2) is what it warned
-          # about ("will run more smoothly with 4 CPU cores") in the run where the boot
-          # never finished (session 48, run 4 — KVM was working by then, no crash, but
-          # boot didn't complete inside the step before something reaped the emulator
-          # as an orphan process; root cause less certain than the disk/KVM fixes, this
-          # is the best-supported lead, not a confirmed diagnosis).
-          cores: 4
+          # NOT cores: 4 — tried that (session 48, run 4) on the strength of the
+          # action's own "will run more smoothly with 4 CPU cores" warning, but run 5's
+          # log showed why that was the wrong lead: "qemu-system-x86_64-headless:
+          # warning: Number of SMP cpus requested (4) exceeds the recommended cpus
+          # supported by KVM (2)" — this runner's actual KVM only supports 2. Reverted;
+          # the swap-storage fix above is the real next attempt at the same failure.
           script: |
             adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 
