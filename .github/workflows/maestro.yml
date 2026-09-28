@@ -26,7 +26,35 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  check-secrets:
+    # A job-level `if:` can't read `secrets` directly (actionlint: "context secrets is
+    # not allowed here") — only `needs`/`vars`/`inputs`/`github`. Publish it as an
+    # output from a step instead, where `secrets` IS readable, and gate `maestro` on
+    # that output.
+    runs-on: ubuntu-latest
+    outputs:
+      has-stream: ${{ steps.check.outputs.has-stream }}
+    steps:
+      - id: check
+        run: |
+          if [ -n "$STREAM_API_KEY" ] && [ -n "$STREAM_API_SECRET" ]; then
+            echo "has-stream=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-stream=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
+          STREAM_API_SECRET: ${{ secrets.STREAM_API_SECRET }}
+
   maestro:
+    needs: check-secrets
+    # Skips visibly (shown as "skipped", not "failed") when the repo has no Stream
+    # project wired up yet — onboarding-first-message.yaml and two-party-chat.yaml
+    # both need a real Stream project to match and chat against, and crisis-card.yaml
+    # would silently pass its send-still-works assertion without ever proving the
+    # crisis card, which is worse than not running at all. Also the natural behavior
+    # for a pull_request from a fork, which never receives repo secrets.
+    if: needs.check-secrets.outputs.has-stream == 'true'
     # KVM-accelerated emulators need a real (not container) Linux runner.
     runs-on: ubuntu-latest
     timeout-minutes: 45
@@ -41,13 +69,6 @@ jobs:
       EXPO_PUBLIC_API_URL: http://10.0.2.2:8000/api/v1 # the emulator's host-loopback address
     steps:
       - uses: actions/checkout@v4
-
-      - name: Fail fast if Stream isn't configured
-        run: |
-          if [ -z "$STREAM_API_KEY" ] || [ -z "$STREAM_API_SECRET" ]; then
-            echo "::error::STREAM_API_KEY/STREAM_API_SECRET repo secrets are not set — onboarding-first-message.yaml and two-party-chat.yaml both need a real Stream project to match and chat against. crisis-card.yaml would also silently pass its send-still-works assertion without ever proving the crisis card, which is worse than failing loudly."
-            exit 1
-          fi
 
       - uses: actions/setup-python@v5
         with:
