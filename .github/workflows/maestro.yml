@@ -187,6 +187,14 @@ jobs:
           # supported by KVM (2)" — this runner's actual KVM only supports 2. Reverted;
           # the swap-storage fix above is the real next attempt at the same failure.
           script: |
+            # Run 7 (session 48) failed blind: the app launched, but "start" never
+            # became visible even after a 60s extendedWaitUntil — genuinely stuck, not
+            # just slow, and there was no way to see WHY (no device log, no screenshot
+            # survives the emulator's teardown). This trap dumps both into the git
+            # workspace on ANY exit (pass or fail, via bash -e), so the next step can
+            # upload them as a real artifact instead of guessing again.
+            trap 'adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; cp -r "$HOME/.maestro/tests" "$GITHUB_WORKSPACE/maestro-debug" 2>/dev/null; true' EXIT
+
             adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 
             maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml
@@ -199,6 +207,17 @@ jobs:
             wait "$(cat mentor-bot.pid)" || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
 
             maestro test apps/mobile/e2e/maestro/crisis-card.yaml
+
+      - name: Upload failure diagnostics (logcat + Maestro screenshots/hierarchy)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-failure-diagnostics
+          path: |
+            logcat.txt
+            maestro-debug/
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: API log (always, for debugging)
         if: always()
