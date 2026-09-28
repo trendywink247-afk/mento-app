@@ -107,12 +107,49 @@ need them.
   reason) when no message ever arrives, rather than hanging.
 - **Proven for real:** all three YAML flows' syntax, via `maestro
   check-syntax` against a real Maestro 2.10.0 install (not eyeballed).
-- **Not proven:** the three flows have not run against a real emulator end to
-  end. This machine's Android SDK has no AVD/system image set up, and
-  provisioning one plus a full `expo prebuild` + Gradle build was out of scope
-  for this pass. The CI workflow is believed correct (actionlint clean, each
-  step's command verified independently — the build path matches
-  `docs/ANDROID_BUILD.md`, the token-minting step tested standalone) but has
-  never actually run. **Run it for real (locally or by pushing this branch)
-  before trusting "the three flows pass on an emulator against SDK 52" as
-  true** — that's the plan's own accept bar, and it isn't met yet.
+- **Proven for real (session 48, local AVD):** everything up to Maestro's own
+  driver connection. Provisioned a real AVD (`mento_test`, API 33
+  `google_apis` x86_64, HAXM-accelerated), ran `expo prebuild` +
+  `assembleDebug` (ABI restricted to `x86_64` and build output junctioned to a
+  drive with space — this machine's `C:` was at 97%, unrelated to Maestro),
+  installed the resulting debug APK, booted it against a real local API
+  (`10.0.2.2` NAT, reseeded listeners, flushed Redis) — the app itself runs
+  fine on-device.
+- **Blocked, root cause identified (session 48) — Maestro's Windows driver
+  does not connect on this AVD.** `maestro test` hangs indefinitely at
+  "Getting device info" (confirmed via `~/.maestro/tests/<run>/maestro.log`:
+  zero progress for 9.5+ minutes, not just slow). Cross-referencing device
+  `logcat` for the driver process (`dev.mobile.maestro`) shows why:
+  ```
+  E .mobile.maestro: No implementation found for int
+    io.grpc.netty.shaded.io.netty.channel.epoll.Native.offsetofEpollData()
+  W grpc-nio-boss-E: avc: denied { read } for name="somaxconn" ...
+    scontext=u:r:untrusted_app:s0 tcontext=u:object_r:proc_net:s0
+  ```
+  The on-device driver's gRPC server can't bind: its native epoll transport
+  is missing a symbol, the NIO fallback then gets blocked by SELinux from
+  reading `/proc`'s `somaxconn`, so the driver's listener never opens.
+  `adb forward --list` on the host stays empty the whole time — the host
+  never gets a socket to connect to, and the "Getting device info" step has
+  no timeout, so it hangs forever. (A separate, unrelated Windows bug —
+  `SessionStore.heartbeat()` spamming `IOException: The process cannot
+  access the file because another process has locked a portion of the
+  file` every 5s via `KeyValueStore`'s file lock — is cosmetic noise in the
+  same logs, not the cause; ruled out via `CI=true` which avoids one lock
+  path but still hangs at the same step.) Already on the plain `google_apis`
+  image (not `google_apis_playstore`), so that variable's ruled out too.
+  This looks like a native-library ABI mismatch inside the Maestro driver
+  APK's bundled Netty build rather than an Android-API-version SELinux
+  change, so a different API level is a low-confidence fix, not a known one
+  — not attempted, to avoid another ~1GB download for uncertain payoff.
+  **Conclusion: treat this as a Windows-local-emulator limitation of
+  Maestro 2.10.0, not a bug in these flows.** The flows' syntax is verified
+  (`maestro check-syntax`) and `mentor-bot.mjs` is proven end to end against
+  live infra (above) — what's unverified is specifically Maestro's own
+  driver-connection step on this OS/emulator combination. **The real
+  verification venue is `.github/workflows/maestro.yml` on
+  `reactivecircus/android-emulator-runner`'s Linux runners**, where this
+  native-epoll/SELinux interaction is not expected to reproduce (Linux
+  runners don't hit the same driver-APK code path issue) — push this branch
+  or open the PR to get a real CI run before trusting "the three flows pass"
+  as true, since that CI run has also not happened yet.
