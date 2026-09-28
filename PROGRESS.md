@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-09-28 (session 48, cont'd) — WS5 own-chat PR #9: reviewed for real, held for two fixes
+
+**Done**
+- Full review of the WS5 cloud session's PR #9 (`claude/brave-babbage-i3zpln`, T8.5 + T5.1–T5.4 + T5.6): read the entire diff (chat.py write path, message_crypto.py, chat_hub.py, chat_events.py, routers/chat.py, jobs/retention.py, three migrations, and the conversations.py/allowance.py/safety.py/main.py/config.py/db.py diffs) — no defects in the production code, careful and well-documented throughout.
+- Actually ran it: `alembic upgrade head` + `alembic check` clean, full pytest **703/707 passed**. Individually diagnosed all 4 failures rather than assuming they're noise (details on PR #9's review comment): 2 are Windows-only environment artifacts (a path-separator string compare, missing local `pg_dump`) that will pass on Linux CI. 2 are real:
+  - `test_typing_on_and_off_reach_only_the_other_side` is genuinely flaky — reran standalone 3x (fail, fail, pass). Mentor's socket gets an unexpected `presence` frame before the expected `pong`. Traced the skip-filtering and connect sequence but didn't pin the exact race.
+  - `test_clean_wipe_deletes_the_bodies_and_tells_both_sides` caught a real forward-looking landmine, not a fixture mistake: the test's `stream_channel_id = conversation.id` matches `chat.py`'s own documented post-cutover shape, and it exposes that `routers/conversation.py::wipe_conversation` (the OLD endpoint) unconditionally calls `stream.wipe_channel()` — which will 500 on every Clean Wipe once `matching.py` stops creating real Stream channels (T5.10). Not live today (chat still runs on Stream pre-cutover), but will bite T5.10 unless fixed then. `services/stream.py::erase_channel` already has the 404-tolerance pattern (`_is_not_found`) this endpoint needs but doesn't use.
+- Posted both findings as a PR comment: https://github.com/trendywink247-afk/mento-app/pull/9#issuecomment-5868079036 (couldn't use a formal "request changes" review — GitHub refuses that on your own PR).
+
+**Not done**
+- **PR #9 is NOT merged.** Founder call: hold it, send the two real findings back to a fresh cloud session to fix and re-verify, rather than merge with known gaps or fix them here myself.
+- T5.10 (the actual Stream cutover) is not scoped in this PR at all — the wipe-endpoint landmine is real but dormant until then.
+
+**How to resume:** start a new cloud session against PR #9 / branch `claude/brave-babbage-i3zpln` pointed at the review comment above; once both fixes are in and green, merge. This is a hard dependency for T5.10 (cutover) and soft context for WS6 T6.1 (Maestro flows, on unmerged branch `feat/ws6-t6.1-maestro-flows`/PR #8 — those flows currently drive Stream directly via `mentor-bot.mjs`, and will need a rewrite pass whenever WS5's cutover actually lands, so it isn't worth wiring Stream CI secrets for T6.1 until that timing is clearer).
+
+---
+
 ## 2026-09-28 (session 47) — T1.10 prep: real secrets adopted, cutover runbook written
 
 **Done**
