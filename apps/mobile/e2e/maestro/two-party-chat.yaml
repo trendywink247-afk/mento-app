@@ -62,10 +62,14 @@ appId: com.mento.app
 # flow's own onboarding creates, then connects to Stream, watches the channel,
 # and replies — a genuine multi-hop round trip, not a local check. Proven via
 # the bot's own log that it DOES complete this and exit 0 every time; it was
-# only ever a margin problem; 90s gives real headroom without masking an
-# actual hang (mentor-bot's own --timeout 150 in the CI workflow still bounds
-# the outer wait).
+# only ever a margin problem. 90s (run 17) still came up short — measured
+# 91.7s send-to-reply, just over — so this is a real, fairly consistent
+# latency floor (very likely the match itself landing async, off WS4's job
+# queue, not something to fight lower), not jitter to nudge past one retry
+# at a time. 150s gives real margin above the observed ceiling; mentor-bot's
+# own --timeout 150 in the CI workflow still bounds the outer wait if it
+# ever truly hangs.
 - extendedWaitUntil:
     visible:
       text: "I'm here — tell me more when you're ready."
-    timeout: 90000
+    timeout: 150000
