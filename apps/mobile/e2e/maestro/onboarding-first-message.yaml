@@ -14,6 +14,15 @@ appId: com.mento.app
 ---
 - launchApp:
     clearState: true
+# Cold launch's first paint (aurora/Skia canvas mount, CLAUDE.md) is the slowest in
+# the whole flow, and dramatically more so under this CI emulator's software-rendered
+# SwiftShader graphics than on real hardware — session 48, run 6: 22+s between launch
+# and a bare tapOn timing out on the very first real emulator run these flows ever got.
+# Every later screen transition already gets this treatment; this was the one gap.
+- extendedWaitUntil:
+    visible:
+      id: "start"
+    timeout: 60000
 - tapOn:
     id: "start"
 
