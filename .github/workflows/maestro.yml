@@ -227,7 +227,7 @@ jobs:
           script: |
             adb logcat -c
             adb install apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-            maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; exit 1; }
+            maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
             # Run 14 (session 48) is the payoff: flow 1 completed ENTIRELY for the first
             # time ever (real onboarding, real chat, real message send), and flow 2 got
             # all the way to sending its own message too. It failed waiting for the
@@ -240,10 +240,10 @@ jobs:
             # the poll loop below is bumped to match so it doesn't give up on the bot
             # before the bot's own longer timeout would.
             nohup sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 150; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 &
-            maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; exit 1; }
+            maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
             i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 180 ]; do sleep 1; i=$((i + 1)); done
             [ -f mentor-bot.exitcode ] && [ "$(cat mentor-bot.exitcode)" = "0" ] || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
-            maestro test apps/mobile/e2e/maestro/crisis-card.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; exit 1; }
+            maestro test apps/mobile/e2e/maestro/crisis-card.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
 
       - name: Upload failure diagnostics (logcat + Maestro screenshots/hierarchy)
         if: failure()
