@@ -138,3 +138,22 @@ def test_a_message_crosses_from_one_worker_to_another(db_session, two_workers):
     finally:
         member.close()
         mentor.close()
+
+
+def test_presence_goes_offline_across_workers_when_a_socket_closes(db_session, two_workers):
+    """T5.4 on a real server: the mentor's socket closes on one worker and the member,
+    on the other, hears "offline". (The starlette TestClient cancels the app task on
+    exit instead of delivering a disconnect, so this half is proven here.)"""
+    with TestSession() as s:
+        chat = seed_chat(s)
+    port_a, port_b = two_workers
+    member = _hello(port_a, chat.cid, chat.member)
+    mentor = _hello(port_b, chat.cid, chat.mentor)
+    try:
+        came = _frames_until(member, "presence")
+        assert (came["user"], came["online"]) == (chat.mentor_id, True)
+        mentor.close()
+        went = _frames_until(member, "presence")
+        assert (went["user"], went["online"]) == (chat.mentor_id, False)
+    finally:
+        member.close()

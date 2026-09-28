@@ -30,8 +30,9 @@ from app.chat_hub import Peer, hub
 from app.config import get_settings
 from app.db import SessionLocal
 from app.models.conversation import Conversation
+from app.models.enums import ConversationEndedBy
 from app.security import current_member_or_listener
-from app.services import chat
+from app.services import chat, conversations
 
 logger = logging.getLogger("mento.chat.router")
 router = APIRouter(tags=["chat"])
@@ -215,18 +216,16 @@ def messages(conversation_id: str, after: int = 0, who=Depends(current_member_or
 
 
 @router.post("/chat/{conversation_id}/wipe")
-async def wipe(conversation_id: str, who=Depends(current_member_or_listener)) -> dict:
+def wipe(conversation_id: str, who=Depends(current_member_or_listener)) -> dict:
+    """Clean Wipe for an own-chat conversation — the same service as
+    POST /conversations/{id}/wipe (services/conversations.clean_wipe): bodies deleted,
+    the chat ended, the sockets told `wiped` then `ended` once it commits."""
     if who[0] != "member":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "members only")
-
-    def _wipe(db):
-        convo = db.get(Conversation, conversation_id)
+    with SessionLocal() as db:
+        convo = conversations.lock(db, conversation_id)
         if convo is None or convo.user_id != who[1]:
-            return None
-        return chat.wipe(db, conversation_id)
-
-    deleted = await _db(_wipe)
-    if deleted is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such conversation")
-    await hub.publish(conversation_id, {"t": "wiped"})
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "no such conversation")
+        deleted = conversations.clean_wipe(db, convo, ConversationEndedBy.member)
+        db.commit()
     return {"deleted": deleted}

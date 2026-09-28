@@ -47,6 +47,7 @@ SEND_QUEUE = 64  # frames buffered per socket before it is dropped as too slow
 SOCKETS_PER_USER = 3  # per conversation; the oldest goes when a fourth arrives
 CLOSE_TOO_SLOW = 1013  # "try again later": the client reconnects with its last seq
 CLOSE_REPLACED = 4409  # a newer socket of the same person took this one's place
+CLOSE_ENDED = 4410  # the conversation ended (or was wiped): don't reconnect
 _CLOSE_TIMEOUT_S = 2.0
 
 
@@ -160,6 +161,13 @@ class Hub:
         try:
             while True:
                 frame = await peer.queue.get()
+                if "_close" in frame:
+                    peer.closed = True
+                    with contextlib.suppress(Exception):
+                        await asyncio.wait_for(
+                            peer.ws.close(code=frame["_close"]), _CLOSE_TIMEOUT_S
+                        )
+                    return
                 if frame.get("t") == "message" and _seq(frame) <= peer.replayed_to:
                     continue  # the replay already carried it
                 await peer.ws.send_json(frame)
@@ -253,10 +261,13 @@ class Hub:
             return
         skip = event.get("_skip")  # typing echo suppression: don't tell the typist
         payload = {k: v for k, v in event.items() if k != "_skip"}
+        closing = payload.get("t") == "ended"
         for peer in list(room.values()):
             if skip and peer.user_id == skip:
                 continue
             self._offer(peer, payload, conversation_id=conversation_id)
+            if closing:  # after the event itself, so the client reads why
+                self._offer(peer, {"_close": CLOSE_ENDED}, conversation_id=conversation_id)
 
 
 def _seq(frame: dict) -> int:

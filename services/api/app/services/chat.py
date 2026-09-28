@@ -35,13 +35,11 @@ import logging
 import uuid
 from dataclasses import dataclass
 
-import anyio.from_thread
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import jobs
-from app.chat_hub import hub
 from app.config import get_settings
 from app.jobs import tasks
 from app.models.chat_message import ChatMessage, ChatReadMarker
@@ -49,7 +47,15 @@ from app.models.conversation import Conversation
 from app.models.enums import ConversationStatus, MemberStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.user import User
-from app.services import allowance, crisis, member_status, moderation, safety, snooze
+from app.services import (
+    allowance,
+    chat_events,
+    crisis,
+    member_status,
+    moderation,
+    safety,
+    snooze,
+)
 from app.services.crisis import CrisisResult
 
 logger = logging.getLogger("mento.chat")
@@ -320,18 +326,8 @@ def persist_message(
 
 
 def publish(conversation_id: str, event: dict) -> None:
-    """Fan an event out to every socket of the conversation, on every worker. Called
-    from a worker thread (the WebSocket layer runs `send` in one): hops onto the event
-    loop that owns the sockets. Outside one (a job, a script) it publishes straight to
-    Valkey. Lossy by design — Postgres is the truth and clients catch up by seq — but
-    never silent."""
-    try:
-        anyio.from_thread.run(hub.publish, conversation_id, event)
-        return
-    except RuntimeError:
-        pass  # not on an anyio worker thread
-    if not hub.publish_sync(conversation_id, event):
-        logger.warning("chat event not published — the other side catches up by seq")
+    """Stage 6: fan out to every socket of the conversation (services/chat_events.py)."""
+    chat_events.publish(conversation_id, event)
 
 
 def enqueue_after_send(
@@ -468,17 +464,6 @@ def read_markers(db: Session, conversation_id: str) -> dict[str, int]:
         select(ChatReadMarker).where(ChatReadMarker.conversation_id == conversation_id)
     ).scalars()
     return {r.reader_id: r.last_read_seq for r in rows}
-
-
-def wipe(db: Session, conversation_id: str) -> int:
-    """Clean Wipe: the bodies are deleted from OUR database, for real. Safety flags keep
-    the signal only (never a body), exactly as before."""
-    n = db.execute(
-        delete(ChatMessage).where(ChatMessage.conversation_id == conversation_id)
-    ).rowcount
-    db.execute(delete(ChatReadMarker).where(ChatReadMarker.conversation_id == conversation_id))
-    db.commit()
-    return n
 
 
 def is_open(convo: Conversation) -> bool:
