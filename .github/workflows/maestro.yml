@@ -193,16 +193,32 @@ jobs:
             # survives the emulator's teardown). This trap dumps both into the git
             # workspace on ANY exit (pass or fail, via bash -e), so the next step can
             # upload them as a real artifact instead of guessing again.
-            trap 'adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; ls -la "$HOME/.maestro/tests" > "$GITHUB_WORKSPACE/maestro-tests-listing.txt" 2>&1; cp -r "$HOME/.maestro/tests" "$GITHUB_WORKSPACE/maestro-debug" 2>/dev/null; true' EXIT
+            trap '
+              adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null
+              mkdir -p "$GITHUB_WORKSPACE/maestro-debug"
+              find "$HOME" -maxdepth 6 -type d -regextype posix-extended \
+                  -regex ".*/[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{6}" \
+                  > "$GITHUB_WORKSPACE/maestro-debug/find-session-dirs.txt" 2>&1
+              while read -r d; do
+                [ -d "$d" ] && cp -r "$d" "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null
+              done < "$GITHUB_WORKSPACE/maestro-debug/find-session-dirs.txt"
+              true
+            ' EXIT
 
-            # Run 8's first capture attempt caught nothing useful: boot alone logs
-            # hundreds of lines/second (seccomp/minijail policy noise, ActivityManager
-            # contention warnings...), so the default ring buffer had already rotated
-            # past app install/launch by the time the trap's `logcat -d` ran. Clear it
-            # right before install (drop the boot noise) and grow it (16M) so it can't
-            # rotate away the actual failure before the trap gets a chance to read it.
+            # Run 8: the default ring buffer had already rotated past app install/launch
+            # by the time the trap read it (boot alone logs hundreds of lines/second).
+            # Run 9: growing it with `adb logcat -G 16M` made it WORSE, not better — the
+            # capture stopped dead within ~1s of that command, strongly suggesting the
+            # resize broke this emulator's logd rather than helping (never proven, but
+            # the timing correlation is exact). Clear only; no resize.
+            #
+            # Also run 9: maestro-debug/ came back empty because Maestro's default
+            # output path follows XDG_STATE_HOME (maestro-cli's EnvUtils.xdgStateHome:
+            # $XDG_STATE_HOME/maestro if set, else ~/.maestro) — this runner may set
+            # XDG_STATE_HOME, unlike the Windows machine T6.1 was authored on, so the
+            # hardcoded ~/.maestro/tests guess was wrong here. `find` instead of a
+            # hardcoded path avoids guessing again.
             adb logcat -c
-            adb logcat -G 16M
 
             adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 
@@ -224,7 +240,6 @@ jobs:
           name: maestro-failure-diagnostics
           path: |
             logcat.txt
-            maestro-tests-listing.txt
             maestro-debug/
           if-no-files-found: warn
           retention-days: 7
