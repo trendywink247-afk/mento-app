@@ -298,15 +298,19 @@ def persist_message(
     crisis_signal: str | None,
     redacted: bool,
 ) -> dict | Duplicate:
-    """THE insert. Under the conversation's row lock: re-check the client_id (a twin
-    may have landed since `send` looked), allocate the next seq, encrypt the body
-    (services/message_crypto.py — never stored in the clear), insert, commit — one
-    commit for the message and the allowance count `send` left in the transaction.
+    """THE insert. Under the conversation's row lock: re-check standing (a wipe, an End,
+    a ban or a suspension can land in the gap between `send`'s pre-lock check and here —
+    closing that window is what makes Clean Wipe true, not just the client_id dedupe
+    below), re-check the client_id (a twin may have landed since `send` looked), allocate
+    the next seq, encrypt the body (services/message_crypto.py — never stored in the
+    clear), insert, commit — one commit for the message and the allowance count `send`
+    left in the transaction.
 
     The lock is the exactly-once guarantee: the table is partitioned, so it cannot
     carry a unique constraint on (conversation, seq) or (conversation, sender,
     client_id). A missing MESSAGE_KEY outside dev raises here, before any write."""
     _lock_conversation(db, conversation_id)
+    check_standing(db, conversation_id, sender_id)  # NotAllowed if it changed under us
     prior = _prior(db, conversation_id, sender_id, client_id)
     if prior is not None:
         out = message_out(prior)
@@ -389,7 +393,18 @@ def _prior(db: Session, conversation_id: str, sender_id: str, client_id: str):
 
 def _lock_conversation(db: Session, conversation_id: str) -> None:
     # The conversation row lock serialises senders in ONE conversation only.
-    db.execute(select(Conversation.id).where(Conversation.id == conversation_id).with_for_update())
+    # populate_existing + .scalar_one(): `send`'s pre-lock check_standing already loaded
+    # this row into the session's identity map. populate_existing only refreshes that
+    # cached object when the ORM actually hydrates a row from the result — an
+    # unconsumed execute() never does, so this must be fetched, not just executed, or
+    # the re-check below silently reads the same stale pre-lock object back out of the
+    # map instead of the row we just locked.
+    db.execute(
+        select(Conversation)
+        .where(Conversation.id == conversation_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).scalar_one()
 
 
 def _top_seq(db: Session, conversation_id: str) -> int:

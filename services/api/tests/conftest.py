@@ -130,6 +130,12 @@ def sealed_channels(monkeypatch):
     monkeypatch.setattr(stream, "freeze_channel", _record)
     # Same for the rename a name rotation pushes to Stream (tests that care replace it).
     monkeypatch.setattr(stream, "rename_user", lambda user_id, persona_name: True)
+    # Same for Clean Wipe / erasure's channel delete — a seeded own-chat conversation's
+    # stream_channel_id is never a real Stream channel (session 48: this is what made
+    # the wipe test hit a real 404 against this machine's real Stream creds). Tests that
+    # care about the call still replace it themselves (matches the existing per-test
+    # monkeypatches this fixture doesn't override — the last patch in a test wins).
+    monkeypatch.setattr(stream, "wipe_channel", lambda channel_id: None)
     return calls
 
 

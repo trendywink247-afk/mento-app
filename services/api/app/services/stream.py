@@ -135,10 +135,11 @@ def _is_not_found(exc: Exception) -> bool:
 
 
 def erase_channel(channel_id: str) -> None:
-    """Member erasure (DELETE /me): the same hard delete as Clean Wipe, but a channel that
-    is already gone on Stream counts as done — erasure must converge on a retry, not fail
-    forever. Any other failure RAISES: the caller must not claim a deletion that did not
-    happen."""
+    """The tolerant hard delete: used by both member erasure (DELETE /me) and Clean
+    Wipe. A channel that is already gone on Stream — or, for an own-chat conversation,
+    was never created there at all (session 48) — counts as done; erasure must converge
+    on a retry, not fail forever. Any other failure RAISES: the caller must not claim a
+    deletion that did not happen."""
     try:
         wipe_channel(channel_id)
     except Exception as exc:  # noqa: BLE001 — classified here, re-raised unless "gone"

@@ -335,7 +335,10 @@ def wipe_conversation(
     listener's slot (it was already released when the chat ended)."""
     convo = _owned(db, convo_id, user_id, lock=True)
     if convo.stream_channel_id:
-        stream.wipe_channel(convo.stream_channel_id)
+        # erase_channel, not wipe_channel: an own-chat conversation's stream_channel_id
+        # is a channel-key alias (chat.channel_key), never a real Stream channel once
+        # T5.10 lands — that 404 must count as already-wiped, not fail the whole request.
+        stream.erase_channel(convo.stream_channel_id)
     conversations.clean_wipe(db, convo, ConversationEndedBy.member)
     db.commit()
     return {"status": "wiped", "deleted_from": ["device", "servers"]}

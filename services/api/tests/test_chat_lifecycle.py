@@ -161,9 +161,19 @@ def test_typing_on_and_off_reach_only_the_other_side(client, room):
     mentor.send_json({"t": "typing", "on": True})
     mentor.send_json({"t": "typing", "on": False})
     assert [_next(member, "typing")["on"] for _ in range(2)] == [True, False]
-    # The typist never hears itself: its next frame is the pong, not a typing echo.
+    # The typist never hears itself: no `typing` frame reaches mentor before the pong.
+    # A `presence` frame CAN land in between — member's own connect-presence publish
+    # round-trips through Valkey pub/sub (chat_hub.py) with no ordering guarantee
+    # relative to a ping on a different socket (session 48) — that's not the invariant
+    # this test is proving, so it's not asserted away.
     mentor.send_json({"t": "ping"})
-    assert mentor.receive_json()["t"] == "pong"
+    for _ in range(15):
+        frame = mentor.receive_json()
+        assert frame["t"] != "typing"
+        if frame["t"] == "pong":
+            break
+    else:
+        raise AssertionError("no pong")
     mcm.__exit__(None, None, None)
     lcm.__exit__(None, None, None)
 
