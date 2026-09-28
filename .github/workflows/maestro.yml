@@ -6,10 +6,15 @@ name: Maestro (native e2e)
 # here as part of an unrelated change; T6.2 does that deliberately, one step
 # at a time, and re-runs this workflow after each one.
 #
-# Builds a debug APK (expo prebuild + gradlew assembleDebug, the same path
-# docs/ANDROID_BUILD.md documents for local builds — nothing new invented
-# here), brings up the same Postgres/Redis api-ci.yml uses, seeds listeners,
-# and runs the three flows against a real emulator via
+# Builds a RELEASE APK (expo prebuild + gradlew assembleRelease — session 48,
+# run 12: a debug build never leaves expo-dev-client's own launcher screen in
+# CI, since its entire implementation lives in an Android "debug" source set
+# and isn't compiled into a release build at all; no debug-build config can
+# skip it). Signed with the project's own auto-generated debug keystore, same
+# as debug builds — Expo's default scaffold already wires
+# `release { signingConfig signingConfigs.debug }`, so this needs no new
+# keystore or secret. Brings up the same Postgres/Redis api-ci.yml uses,
+# seeds listeners, and runs the three flows against a real emulator via
 # reactivecircus/android-emulator-runner.
 on:
   push:
@@ -129,29 +134,25 @@ jobs:
         working-directory: apps/mobile
         run: npm ci
 
-      - name: Prebuild + assemble debug APK
+      - name: Prebuild + assemble release APK
         working-directory: apps/mobile
         run: |
           npx expo prebuild --platform android --no-install
-          # Run 11 (session 48): with a plain debug build, the app never loads at all
-          # in CI — expo-dev-client's launcher just sits on its "Development servers /
-          # npx expo start" screen forever, since no Metro server is running (confirmed
-          # by an actual screenshot of that exact screen). debuggableVariants defaults
-          # to ['debug'] in RN's Gradle plugin, meaning debug builds are deliberately
-          # NOT given an embedded JS bundle. Emptying it makes the debug-signed build
-          # embed the bundle like a release build would, without needing release
-          # signing / a keystore secret. CI-only: local dev explicitly wants the
-          # dev-client launcher for live reload, so this isn't touching app.json/a
-          # config plugin — android/app/build.gradle isn't committed (expo prebuild
-          # regenerates it fresh every run), so this patch has to happen here, every
-          # time, right after prebuild, not once by hand.
-          sed -i '/^react {/a\    debuggableVariants = []' android/app/build.gradle
+          # Run 11 (session 48): a debug build never leaves expo-dev-client's launcher
+          # screen in CI (confirmed by an actual screenshot — "Development servers /
+          # npx expo start", waiting for a Metro connection nothing provides). Run 12
+          # tried debuggableVariants = [] (embed the JS bundle in the debug build,
+          # RN Gradle plugin's bundleInDebug equivalent) — didn't work: dev-launcher's
+          # entire implementation lives in an Android "debug" source set
+          # (expo-dev-launcher/android/src/debug/...), so it's simply absent from a
+          # release build's compiled classpath — no debug-build config can skip it,
+          # only building release actually omits the code. assembleRelease it is.
           # x86_64 only: the emulator below never runs the other three ABIs, and
           # building all four exhausted ubuntu-latest's disk mid-build (session 48 —
           # the same fix a local Windows build needed for the same reason). Also cuts
           # this step's native-module compile time roughly 4x, which matters against
           # the job's 45-minute timeout.
-          cd android && ./gradlew assembleDebug -PreactNativeArchitectures=x86_64
+          cd android && ./gradlew assembleRelease -PreactNativeArchitectures=x86_64
 
       - uses: actions/setup-java@v4
         with:
@@ -216,7 +217,7 @@ jobs:
           # for, instead of `wait`ing on a PID from a process that already exited.
           script: |
             adb logcat -c
-            adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            adb install apps/mobile/android/app/build/outputs/apk/release/app-release.apk
             maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; exit 1; }
             nohup sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 60; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 &
             maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; exit 1; }
