@@ -133,6 +133,19 @@ jobs:
         working-directory: apps/mobile
         run: |
           npx expo prebuild --platform android --no-install
+          # Run 11 (session 48): with a plain debug build, the app never loads at all
+          # in CI — expo-dev-client's launcher just sits on its "Development servers /
+          # npx expo start" screen forever, since no Metro server is running (confirmed
+          # by an actual screenshot of that exact screen). debuggableVariants defaults
+          # to ['debug'] in RN's Gradle plugin, meaning debug builds are deliberately
+          # NOT given an embedded JS bundle. Emptying it makes the debug-signed build
+          # embed the bundle like a release build would, without needing release
+          # signing / a keystore secret. CI-only: local dev explicitly wants the
+          # dev-client launcher for live reload, so this isn't touching app.json/a
+          # config plugin — android/app/build.gradle isn't committed (expo prebuild
+          # regenerates it fresh every run), so this patch has to happen here, every
+          # time, right after prebuild, not once by hand.
+          sed -i '/^react {/a\    debuggableVariants = []' android/app/build.gradle
           # x86_64 only: the emulator below never runs the other three ABIs, and
           # building all four exhausted ubuntu-latest's disk mid-build (session 48 —
           # the same fix a local Windows build needed for the same reason). Also cuts
