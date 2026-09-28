@@ -17,7 +17,10 @@ from app.db import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Keep loggers that already exist: the test suite migrates in-process, and the
+    # default would silently disable every app logger imported before it (e.g.
+    # mento.chat's fail-open ERROR lines).
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Source the URL from app settings rather than alembic.ini.
 config.set_main_option("sqlalchemy.url", get_settings().database_url)
@@ -26,9 +29,14 @@ target_metadata = Base.metadata
 
 
 def include_name(name, type_, parent_names) -> bool:
-    """The job queue's tables are Procrastinate's, installed from vendored SQL
-    (revision e4a1jobs0001) — not our models, so autogenerate must not see them."""
+    """Tables that are not our models, so autogenerate must not see them: the job
+    queue's (Procrastinate's, installed from vendored SQL, revision e4a1jobs0001) and
+    chat_messages' partitions."""
     if type_ == "table" and name and name.startswith("procrastinate_"):
+        return False
+    # chat_messages' monthly partitions (and their default) are created and dropped at
+    # run time by app/jobs/retention.py; the partitioned parent is the model.
+    if type_ == "table" and name and name.startswith("chat_messages_"):
         return False
     return True
 

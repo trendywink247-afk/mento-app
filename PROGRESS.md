@@ -4,20 +4,61 @@
 
 ---
 
-## 2026-09-28 (session 48, cont'd) — WS5 own-chat PR #9: reviewed for real, held for two fixes
+## 2026-09-28 (session 48) — WS5 own-chat server groundwork: T8.5, T5.1–T5.4, T5.6 on `claude/brave-babbage-i3zpln` (not merged, not deployed)
 
-**Done**
-- Full review of the WS5 cloud session's PR #9 (`claude/brave-babbage-i3zpln`, T8.5 + T5.1–T5.4 + T5.6): read the entire diff (chat.py write path, message_crypto.py, chat_hub.py, chat_events.py, routers/chat.py, jobs/retention.py, three migrations, and the conversations.py/allowance.py/safety.py/main.py/config.py/db.py diffs) — no defects in the production code, careful and well-documented throughout.
-- Actually ran it: `alembic upgrade head` + `alembic check` clean, full pytest **703/707 passed**. Individually diagnosed all 4 failures rather than assuming they're noise (details on PR #9's review comment): 2 are Windows-only environment artifacts (a path-separator string compare, missing local `pg_dump`) that will pass on Linux CI. 2 are real:
-  - `test_typing_on_and_off_reach_only_the_other_side` is genuinely flaky — reran standalone 3x (fail, fail, pass). Mentor's socket gets an unexpected `presence` frame before the expected `pong`. Traced the skip-filtering and connect sequence but didn't pin the exact race.
-  - `test_clean_wipe_deletes_the_bodies_and_tells_both_sides` caught a real forward-looking landmine, not a fixture mistake: the test's `stream_channel_id = conversation.id` matches `chat.py`'s own documented post-cutover shape, and it exposes that `routers/conversation.py::wipe_conversation` (the OLD endpoint) unconditionally calls `stream.wipe_channel()` — which will 500 on every Clean Wipe once `matching.py` stops creating real Stream channels (T5.10). Not live today (chat still runs on Stream pre-cutover), but will bite T5.10 unless fixed then. `services/stream.py::erase_channel` already has the 404-tolerance pattern (`_is_not_found`) this endpoint needs but doesn't use.
-- Posted both findings as a PR comment: https://github.com/trendywink247-afk/mento-app/pull/9#issuecomment-5868079036 (couldn't use a formal "request changes" review — GitHub refuses that on your own PR).
+**Context:** cloud session for the unblocked part of WS5 (`docs/superpowers/plans/2026-09-20-mento-program-plan.md`). Skipped by instruction: T5.5 (Stream removal — needs T5.9 + T11.3 on the real server), T5.7 (push via hub — needs T7.1), T5.8 (admin window — needs T9.2), T5.9 (k6 — needs T1.10), T5.10 (cutover — needs T6.3/T6.4). **Nothing user-facing changed: chat still runs on Stream.** The new own-chat server exists beside it, unused by any client.
+
+**Done** (one commit per card, each proven before the next)
+- **T8.5** `4f277fa` — `safety_flags.source` (lexicon / phrase_bank / guard / staff) + `category` + `risk_score` (0..1, CHECK); `scan_and_flag` takes them; old rows backfilled as lexicon (checked on real rows). A test walks every string column of a flag: no message fragment anywhere.
+- **T5.1** `e77dcc6` — `spike/own-chat` (fac1ba2, pushed by the founder mid-session) brought onto master + `sender_kind`. Adapted: WebSocket auth goes through `security.current_member_or_listener` (the spike used `jose` and private helpers that no longer exist). **Not brought over:** the dev-only session seeder and demo page (they mint tokens) and the bench script. The spike's ten tests pass on master (`tests/test_chat_ws.py`). **Cross-worker proof:** `tests/test_chat_workers.py` starts two real uvicorn processes and proves message, presence (on and off) and typing cross over Valkey; mutation-checked (local-only publish → fails).
+- **T5.2** `cf99ed5` — `chat.send(db, sender_id, conversation_id, *, client_id, body)`: standing → crisis scan → allowance (never for a flagged message) → redaction → insert+seq → commit → publish → enqueue jobs. An AST walk of app/ proves `persist_message` is the only site that builds a ChatMessage. Message ids are uuid5(conversation, sender, client_id), so a retried crisis send can't make a second flag. Fail-open, never silent (ERROR logs). The plan's two tests are in `tests/test_chat_write_path.py`, plus order, crisis-never-counted (mutation-checked), standing, exactly-once, ids-only jobs.
+- **T5.3** `873f766` — per-person frame rate `chat:{user}`; 16 KB frames (`--ws-max-size 16384` in docker-entrypoint.sh + an app check); 75 s idle deadline; per-socket bounded queue + writer (a stuck client is dropped 1013, the room never waits); 3 sockets per person (oldest retired); `statement_timeout` 5 s on the app pool (`DB_STATEMENT_TIMEOUT_MS`), pool 10+10; hello = 1 DB round; allowance count rides the message's commit (mutation-checked).
+- **T5.4** `98d6a40` — `services/chat_events.after_commit`: every end path (`conversations.end`) sends `ended` (sockets then closed 4410) and Clean Wipe (`conversations.clean_wipe`, both wipe routes) deletes bodies + read markers and sends `wiped` — only after the ROOT transaction commits. Reconnect replays exactly the messages after its seq, including a message landing mid-hello (mutation-checked). `tests/test_chat_lifecycle.py`.
+- **T5.6** `fb42af2` — AES-256-GCM bodies (`services/message_crypto.py`, `MESSAGE_KEY` + `MESSAGE_KEY_PREVIOUS` for rotation, row ids as associated data); `chat_messages` range-partitioned by month + default (revision e5a6part0001, refuses to run over plaintext rows — checked by hand); `app/jobs/retention.py` + daily `maintenance.chat_partitions`. A real `pg_dump` of the partitions shows no message text. **Retention number not set** (see Open).
+
+**Verify (literal, this container):** pytest **707 passed** (was 636) on an isolated `mento_test` DB · `alembic check` clean (also from an empty DB) · ruff + black clean · `sh -n docker-entrypoint.sh`. No mobile code touched → no tsc/e2e needed.
+
+**Gotchas found (also in CLAUDE.md):**
+- `migrations/env.py` `fileConfig` defaulted to `disable_existing_loggers=True`; the suite migrates in-process, so every app logger imported before it was **silently disabled** (caplog saw nothing). Fixed (`disable_existing_loggers=False`).
+- starlette 1.x TestClient: a bare `websocket_connect` gets its own event loop per socket — two sockets on one hub hang. Enter the client (`with TestClient(app) as c`). And its exit cancels the app task instead of sending a disconnect, so "went offline" must be proven on real uvicorn.
+- Session `after_commit` fires on SAVEPOINT release too — check `session.in_nested_transaction()`.
+- A partitioned table can't carry a unique constraint without the partition key: the conversation row lock is now the exactly-once guarantee for seq and client_id.
+
+**Open (founder)**
+- **H13 / D1 — message retention days.** `MESSAGE_RETENTION_DAYS` is unset, so nothing is dropped (the job logs a warning each day). Whole months are dropped, so bodies live up to ~1 month past the number.
+- **Backups vs Clean Wipe (invariant 3).** Dumps now include `chat_messages` (ciphertext). Before any real message is stored (T5.10), `deploy/backup-postgres.sh` must exclude the table, or keep it short-lived per D1 — otherwise a wiped chat survives in a backup (encrypted, but the key is on the same box).
+- **`MESSAGE_KEY`** must be provisioned in the prod SOPS env before T5.10. It is deliberately NOT a boot invariant yet (it would block every deploy today); without it own chat refuses to store. Make it one at cutover.
+- Own-chat `/chat/{id}/wipe` now ENDS the chat as well as deleting it (same service as the product's Clean Wipe); the spike only deleted.
+- `GET /me/export` does not include own-chat messages yet (none exist). Decide at cutover.
+- The push job enqueued by `chat.send` still uses Stream's `_is_watching` (T5.7) — irrelevant until clients use own chat.
+- Chat limits chosen by me: 40 frames/10 s per person, 64-frame queue, 3 sockets per person, 75 s idle, 4000-char body (refused, not truncated). Veto welcome.
+
+**Next:** review/merge this branch (PR not opened — say if you want one). Then T5.7 after T7.1, T5.8 after T9.2, and T6.3/T6.4 (clients) before T5.9/T5.10.
+
+**How to resume:** `services/api`: pytest against its own DB (`DATABASE_URL=…/mento_test`), Valkey/Redis must be up (`test_chat_workers.py` fails loudly without it). A dev DB that ever ran the unmerged T5.1 revision with rows must `TRUNCATE chat_messages` before e5a6part0001.
+
+---
+
+## 2026-09-28 (session 48, cont'd) — WS5 PR #9: reviewed, one real bug found and fixed (a Clean Wipe race), not by me the first time
+
+**First pass** found no production defects — wrong. The founder caught what I missed and pushed back with specifics; re-verified all three of their points against the code before touching anything (see PR #9 comment thread):
+
+1. **Confirmed, and it's the real one: a message could be stored after Clean Wipe.** `chat.send`'s `check_standing` ran once, pre-lock; `persist_message` took the conversation's row lock but never re-checked status or standing. A wipe's own lock releases (commits) before a stalled sender's `persist_message` acquires it, so the insert went through into an already-wiped conversation — breaking invariant 3 on the exact path meant to guarantee it. I'd read `persist_message`'s "exactly-once guarantee" docstring and conflated "exactly once" with "still open" without checking the second one.
+2. **Confirmed and sharper than my own finding:** `conftest.py`'s autouse `sealed_channels` fixture stubs `freeze_channel`/`rename_user` specifically because local `.env` may carry real Stream creds — but not `wipe_channel`, which is why the wipe test hit a real Stream 404 in review, not (only) the forward-looking T5.10 landmine I'd flagged.
+3. **Confirmed:** the flaky typing/pong test asserted an ordering the hub never promises — a peer's own presence-online event round-trips through Valkey pub/sub with no ordering guarantee relative to another peer's ping on a different socket.
+
+**Fixed, all four, in this session** (commit `2b09d59`):
+- `persist_message` now re-runs `check_standing` under the lock; `_lock_conversation` fetches (not just executes) a `populate_existing` row so the re-check sees the committed wipe instead of the stale pre-lock object still in the identity map — the first attempt at this fix silently no-opped because the query result was never consumed, so `populate_existing` had nothing to populate. New regression test `test_a_wipe_between_the_standing_check_and_the_insert_wins` reproduces the race deterministically (a monkeypatched stage opens a second session, wipes, and commits before `persist_message`'s lock) and proves no row lands.
+- `routers/conversation.py`'s old wipe endpoint now calls `stream.erase_channel` (tolerates 404) instead of `stream.wipe_channel` (raised hard); `conftest.py` stubs `wipe_channel` in the autouse fixture too.
+- The flaky test now drains to the pong and asserts no `typing` echo landed first, instead of asserting presence can never interleave.
+- `test_there_is_exactly_one_place_that_writes_a_chat_message` uses `.as_posix()`.
+- Re-verified: `alembic check` clean, full pytest **707/708** (only the local-`pg_dump`-missing gap left, same as before), the flaky test run 5x standalone with zero failures.
 
 **Not done**
-- **PR #9 is NOT merged.** Founder call: hold it, send the two real findings back to a fresh cloud session to fix and re-verify, rather than merge with known gaps or fix them here myself.
-- T5.10 (the actual Stream cutover) is not scoped in this PR at all — the wipe-endpoint landmine is real but dormant until then.
+- CI never picked up either of today's two pushes to this branch (`2b09d59`, and the WS5-only content before it) — no workflow run appears at all, not even queued, for reasons I couldn't diagnose in reasonable time (workflows are enabled repo-wide, PR is open and not a fork, path filters match). Not chasing further; local verification is the authoritative bar per this repo's own Verify section, and it's thorough.
+- Still not merged — that's yours to decide now that both findings are actually fixed, not just described.
 
-**How to resume:** start a new cloud session against PR #9 / branch `claude/brave-babbage-i3zpln` pointed at the review comment above; once both fixes are in and green, merge. This is a hard dependency for T5.10 (cutover) and soft context for WS6 T6.1 (Maestro flows, on unmerged branch `feat/ws6-t6.1-maestro-flows`/PR #8 — those flows currently drive Stream directly via `mentor-bot.mjs`, and will need a rewrite pass whenever WS5's cutover actually lands, so it isn't worth wiring Stream CI secrets for T6.1 until that timing is clearer).
+**How to resume:** re-review the diff since `f94cd66` (or trust this entry — it's the same rigor as every other PR reviewed this session) and merge PR #9 when ready. This unblocks T5.10 (cutover) planning; T6.1 (Maestro flows, PR #8) still shouldn't get Stream CI secrets until T5.10's timing is clearer, since those flows drive Stream directly via `mentor-bot.mjs` and need a rewrite pass once it's gone.
 
 ---
 

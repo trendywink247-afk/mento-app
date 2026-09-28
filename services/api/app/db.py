@@ -13,7 +13,12 @@ _settings = get_settings()
 
 
 def engine_kwargs(settings: Settings) -> dict:
+    connect_args: dict = {}
+    if settings.database_url.startswith("postgresql"):
+        # Server-side cap on every statement from this pool (T5.3).
+        connect_args["options"] = f"-c statement_timeout={settings.db_statement_timeout_ms}"
     return {
+        "connect_args": connect_args,
         "pool_pre_ping": True,
         "pool_size": settings.db_pool_size,
         "max_overflow": settings.db_max_overflow,
@@ -49,3 +54,9 @@ def init_db() -> None:
     from app import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(bind=engine)
+    if engine.dialect.name == "postgresql":
+        # A partitioned parent takes no rows until its partitions exist (WS5 T5.6).
+        from app.jobs.retention import ensure_partitions  # reason: jobs import db
+
+        with engine.begin() as conn:
+            ensure_partitions(conn)

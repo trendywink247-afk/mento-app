@@ -15,4 +15,6 @@ fi
 WORKERS="${UVICORN_WORKERS:-2}"
 PORT="${PORT:-8000}"
 echo "[entrypoint] starting uvicorn with ${WORKERS} worker(s) on :${PORT}"
-exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT}" --workers "${WORKERS}" --proxy-headers
+# --ws-max-size: own-chat frames are capped at 16 KB (WS5 T5.3); the app checks it too.
+exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT}" --workers "${WORKERS}" --proxy-headers \
+  --ws-max-size 16384

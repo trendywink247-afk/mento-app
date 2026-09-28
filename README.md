@@ -107,7 +107,7 @@ Never commit real secrets. `.env` files are gitignored; each package ships an `.
 | Var | Purpose |
 |---|---|
 | `DATABASE_URL` | Postgres (defaults to the compose instance `postgresql+psycopg://mento:mento@localhost:5432/mento`) |
-| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` / `DB_POOL_TIMEOUT` / `DB_POOL_RECYCLE` | Connection pool tuning (defaults 20/20/5s/1800s; per-process — keep workers × (size+overflow) under Postgres `max_connections`) |
+| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` / `DB_POOL_TIMEOUT` / `DB_POOL_RECYCLE` / `DB_STATEMENT_TIMEOUT_MS` | Connection pool tuning (defaults 10/10/5s/1800s/5000ms; per-process — keep workers × (size+overflow) under Postgres `max_connections`; every statement is cut off server-side after the timeout) |
 | `REDIS_URL` | Redis — backs the rate limiter (`app/ratelimit.py`); defaults to compose |
 | `RATE_LIMIT_ENABLED` | Default `true`; limiter fails open (with a warning) if Redis is down |
 | `JWT_SECRET` | Anonymous session + listener tokens (HS256). **Outside dev the API refuses to boot with the default value.** |

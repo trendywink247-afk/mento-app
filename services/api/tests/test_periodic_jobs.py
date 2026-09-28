@@ -59,6 +59,8 @@ def test_the_schedule():
         # Cron runs in UTC: 22:30 UTC is 04:00 IST, the rotation hour.
         "maintenance.mentor_names": "30 22 * * *",
         "maintenance.prune_jobs": "17 3 * * *",
+        # Own-chat partitions (WS5 T5.6): ready ahead, expired ones dropped.
+        "maintenance.chat_partitions": "41 2 * * *",
     }
     rotation = datetime(2026, 3, 1, 22, 30, tzinfo=UTC).astimezone(mentor_names.IST)
     assert (rotation.hour, rotation.minute) == (mentor_names.ROTATION_HOUR_IST, 0)
@@ -174,3 +176,14 @@ def test_the_mentor_reply_job_ends_the_snooze_and_is_idempotent(db_session, runs
         tasks.snooze_end_on_mentor_reply(channel_id=convo.stream_channel_id, sender_id=lid)
     with TestSession() as s:
         assert s.get(Conversation, convo.id).snoozed_until is None
+
+
+def test_the_chat_partition_job_keeps_months_ready_and_drops_nothing_undecided(db_session):
+    """No retention decided (founder, H13): the job only makes sure next months exist."""
+    from app.jobs import retention
+
+    before = {n for n, _ in retention.monthly_partitions(db_session)}
+    result = tasks.maintenance_chat_partitions(timestamp=0)
+    assert result["dropped"] == []
+    assert set(result["ready"]) <= {n for n, _ in retention.monthly_partitions(db_session)}
+    assert before <= {n for n, _ in retention.monthly_partitions(db_session)}

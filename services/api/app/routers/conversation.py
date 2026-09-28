@@ -8,8 +8,6 @@ from ever being re-matched to this user (see services/matching).
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
@@ -337,14 +335,11 @@ def wipe_conversation(
     listener's slot (it was already released when the chat ended)."""
     convo = _owned(db, convo_id, user_id, lock=True)
     if convo.stream_channel_id:
-        stream.wipe_channel(convo.stream_channel_id)
-    # Releases the slot only on the active → ended transition; an already-ended
-    # chat keeps its original ended_at / ended_by.
-    conversations.end(db, convo, ConversationEndedBy.member)
-    if convo.ended_at is None:
-        convo.ended_at = datetime.now(UTC)
-        convo.ended_by = ConversationEndedBy.member
-    convo.status = ConversationStatus.wiped
+        # erase_channel, not wipe_channel: an own-chat conversation's stream_channel_id
+        # is a channel-key alias (chat.channel_key), never a real Stream channel once
+        # T5.10 lands — that 404 must count as already-wiped, not fail the whole request.
+        stream.erase_channel(convo.stream_channel_id)
+    conversations.clean_wipe(db, convo, ConversationEndedBy.member)
     db.commit()
     return {"status": "wiped", "deleted_from": ["device", "servers"]}
 
