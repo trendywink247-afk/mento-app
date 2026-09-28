@@ -56,7 +56,16 @@ appId: com.mento.app
 # trip over the network, not a local state change. Text must match
 # mentor-bot.mjs's default --reply exactly (README documents overriding both
 # together if you change one).
+#
+# 45s was too tight under real CI latency (session 48, run 16): mentor-bot.mjs
+# polls /listener/me/conversations once a second waiting for the match this
+# flow's own onboarding creates, then connects to Stream, watches the channel,
+# and replies — a genuine multi-hop round trip, not a local check. Proven via
+# the bot's own log that it DOES complete this and exit 0 every time; it was
+# only ever a margin problem; 90s gives real headroom without masking an
+# actual hang (mentor-bot's own --timeout 150 in the CI workflow still bounds
+# the outer wait).
 - extendedWaitUntil:
     visible:
       text: "I'm here — tell me more when you're ready."
-    timeout: 45000
+    timeout: 90000
