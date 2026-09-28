@@ -70,6 +70,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ubuntu-latest ships ~20GB of preinstalled toolchains this job never touches
+      # (.NET, Haskell, extra Docker images...). The build alone got past that once
+      # x86_64-only was fixed (session 48), but the emulator-runner's own SDK +
+      # system-image download then hit the SAME "No space left on device" on top of
+      # it — the two together exceed the runner's real free space. android: false is
+      # deliberate: it must NOT touch the Android SDK the next steps install.
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+          tool-cache: false
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
