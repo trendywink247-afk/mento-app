@@ -10,11 +10,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app import errors, observability
+from app.chat_hub import hub
 from app.config import get_settings
 from app.db import init_db
 from app.routers import (
     admin_console,
     auth,
+    chat,
     conversation,
     feedback,
     health,
@@ -105,7 +107,11 @@ async def lifespan(app: FastAPI):
     # Dev convenience: create tables from models. Staging/prod use Alembic migrations.
     if settings.is_dev:
         init_db()
-    yield
+    await hub.start()
+    try:
+        yield
+    finally:
+        await hub.stop()
 
 
 app = FastAPI(title="Mento API", version="0.1.0", lifespan=lifespan)
@@ -149,6 +155,7 @@ app.include_router(match.router, prefix=API)
 app.include_router(paths.router, prefix=API)
 app.include_router(safety.router, prefix=API)
 app.include_router(conversation.router, prefix=API)
+app.include_router(chat.router, prefix=API)
 app.include_router(stream_hooks.router, prefix=API)
 app.include_router(journals.router, prefix=API)
 app.include_router(listener_applications.router, prefix=API)

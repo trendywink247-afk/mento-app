@@ -59,8 +59,11 @@ class Settings(BaseSettings):
     # Sized for a single process: workers × (pool_size + max_overflow) must stay
     # under Postgres max_connections (default 100). pool_timeout fails fast — a
     # 5s 500 beats a 30s hang on a support app.
-    db_pool_size: int = 20
-    db_max_overflow: int = 20
+    # Per worker process (T5.3): 10 kept + 10 burst. Every statement is capped at
+    # db_statement_timeout_ms, so one stuck query cannot hold a connection for long.
+    db_pool_size: int = 10
+    db_max_overflow: int = 10
+    db_statement_timeout_ms: int = 5000
     db_pool_timeout: int = 5
     db_pool_recycle: int = 1800
 
@@ -102,6 +105,22 @@ class Settings(BaseSettings):
     # always on (the composer meter and the admin numbers work), holding starts when
     # this is true — flip it once the app renders the A22 note. Fail-open: a slow or
     # unreachable database delivers the message (budget below).
+    # Own chat (WS5 T5.3): frames a person may send per window across their sockets
+    # (send, typing, read — pings are free), and how long a silent socket lives
+    # (clients ping every ~30 s; two missed pings plus slack).
+    # Own-chat message bodies at rest (WS5 T5.6, services/message_crypto.py):
+    # "<key id>:<base64 32 bytes>". PREVIOUS = comma-separated retired keys that still
+    # decrypt older rows. Unset in dev = a public dev key; unset elsewhere = own-chat
+    # refuses to store (never in the clear).
+    message_key: str = ""
+    message_key_previous: str = ""
+    # How long own-chat message bodies are kept, in days. FOUNDER DECISION (H13 / D1),
+    # not made yet: unset (None) means the retention job drops nothing and says so.
+    # Deleted a whole monthly partition at a time, so bodies live up to ~a month longer.
+    message_retention_days: int | None = None
+    chat_frames_per_window: int = 40
+    chat_frames_window_s: int = 10
+    chat_idle_deadline_s: float = 75.0
     allowance_enabled: bool = True
     allowance_enforced: bool = False
     allowance_in_a_row: int = 3
