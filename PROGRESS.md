@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-09-28 (session 48) — WS5 own-chat server groundwork: T8.5, T5.1–T5.4, T5.6 on `claude/brave-babbage-i3zpln` (not merged, not deployed)
+
+**Context:** cloud session for the unblocked part of WS5 (`docs/superpowers/plans/2026-09-20-mento-program-plan.md`). Skipped by instruction: T5.5 (Stream removal — needs T5.9 + T11.3 on the real server), T5.7 (push via hub — needs T7.1), T5.8 (admin window — needs T9.2), T5.9 (k6 — needs T1.10), T5.10 (cutover — needs T6.3/T6.4). **Nothing user-facing changed: chat still runs on Stream.** The new own-chat server exists beside it, unused by any client.
+
+**Done** (one commit per card, each proven before the next)
+- **T8.5** `4f277fa` — `safety_flags.source` (lexicon / phrase_bank / guard / staff) + `category` + `risk_score` (0..1, CHECK); `scan_and_flag` takes them; old rows backfilled as lexicon (checked on real rows). A test walks every string column of a flag: no message fragment anywhere.
+- **T5.1** `e77dcc6` — `spike/own-chat` (fac1ba2, pushed by the founder mid-session) brought onto master + `sender_kind`. Adapted: WebSocket auth goes through `security.current_member_or_listener` (the spike used `jose` and private helpers that no longer exist). **Not brought over:** the dev-only session seeder and demo page (they mint tokens) and the bench script. The spike's ten tests pass on master (`tests/test_chat_ws.py`). **Cross-worker proof:** `tests/test_chat_workers.py` starts two real uvicorn processes and proves message, presence (on and off) and typing cross over Valkey; mutation-checked (local-only publish → fails).
+- **T5.2** `cf99ed5` — `chat.send(db, sender_id, conversation_id, *, client_id, body)`: standing → crisis scan → allowance (never for a flagged message) → redaction → insert+seq → commit → publish → enqueue jobs. An AST walk of app/ proves `persist_message` is the only site that builds a ChatMessage. Message ids are uuid5(conversation, sender, client_id), so a retried crisis send can't make a second flag. Fail-open, never silent (ERROR logs). The plan's two tests are in `tests/test_chat_write_path.py`, plus order, crisis-never-counted (mutation-checked), standing, exactly-once, ids-only jobs.
+- **T5.3** `873f766` — per-person frame rate `chat:{user}`; 16 KB frames (`--ws-max-size 16384` in docker-entrypoint.sh + an app check); 75 s idle deadline; per-socket bounded queue + writer (a stuck client is dropped 1013, the room never waits); 3 sockets per person (oldest retired); `statement_timeout` 5 s on the app pool (`DB_STATEMENT_TIMEOUT_MS`), pool 10+10; hello = 1 DB round; allowance count rides the message's commit (mutation-checked).
+- **T5.4** `98d6a40` — `services/chat_events.after_commit`: every end path (`conversations.end`) sends `ended` (sockets then closed 4410) and Clean Wipe (`conversations.clean_wipe`, both wipe routes) deletes bodies + read markers and sends `wiped` — only after the ROOT transaction commits. Reconnect replays exactly the messages after its seq, including a message landing mid-hello (mutation-checked). `tests/test_chat_lifecycle.py`.
+- **T5.6** `fb42af2` — AES-256-GCM bodies (`services/message_crypto.py`, `MESSAGE_KEY` + `MESSAGE_KEY_PREVIOUS` for rotation, row ids as associated data); `chat_messages` range-partitioned by month + default (revision e5a6part0001, refuses to run over plaintext rows — checked by hand); `app/jobs/retention.py` + daily `maintenance.chat_partitions`. A real `pg_dump` of the partitions shows no message text. **Retention number not set** (see Open).
+
+**Verify (literal, this container):** pytest **707 passed** (was 636) on an isolated `mento_test` DB · `alembic check` clean (also from an empty DB) · ruff + black clean · `sh -n docker-entrypoint.sh`. No mobile code touched → no tsc/e2e needed.
+
+**Gotchas found (also in CLAUDE.md):**
+- `migrations/env.py` `fileConfig` defaulted to `disable_existing_loggers=True`; the suite migrates in-process, so every app logger imported before it was **silently disabled** (caplog saw nothing). Fixed (`disable_existing_loggers=False`).
+- starlette 1.x TestClient: a bare `websocket_connect` gets its own event loop per socket — two sockets on one hub hang. Enter the client (`with TestClient(app) as c`). And its exit cancels the app task instead of sending a disconnect, so "went offline" must be proven on real uvicorn.
+- Session `after_commit` fires on SAVEPOINT release too — check `session.in_nested_transaction()`.
+- A partitioned table can't carry a unique constraint without the partition key: the conversation row lock is now the exactly-once guarantee for seq and client_id.
+
+**Open (founder)**
+- **H13 / D1 — message retention days.** `MESSAGE_RETENTION_DAYS` is unset, so nothing is dropped (the job logs a warning each day). Whole months are dropped, so bodies live up to ~1 month past the number.
+- **Backups vs Clean Wipe (invariant 3).** Dumps now include `chat_messages` (ciphertext). Before any real message is stored (T5.10), `deploy/backup-postgres.sh` must exclude the table, or keep it short-lived per D1 — otherwise a wiped chat survives in a backup (encrypted, but the key is on the same box).
+- **`MESSAGE_KEY`** must be provisioned in the prod SOPS env before T5.10. It is deliberately NOT a boot invariant yet (it would block every deploy today); without it own chat refuses to store. Make it one at cutover.
+- Own-chat `/chat/{id}/wipe` now ENDS the chat as well as deleting it (same service as the product's Clean Wipe); the spike only deleted.
+- `GET /me/export` does not include own-chat messages yet (none exist). Decide at cutover.
+- The push job enqueued by `chat.send` still uses Stream's `_is_watching` (T5.7) — irrelevant until clients use own chat.
+- Chat limits chosen by me: 40 frames/10 s per person, 64-frame queue, 3 sockets per person, 75 s idle, 4000-char body (refused, not truncated). Veto welcome.
+
+**Next:** review/merge this branch (PR not opened — say if you want one). Then T5.7 after T7.1, T5.8 after T9.2, and T6.3/T6.4 (clients) before T5.9/T5.10.
+
+**How to resume:** `services/api`: pytest against its own DB (`DATABASE_URL=…/mento_test`), Valkey/Redis must be up (`test_chat_workers.py` fails loudly without it). A dev DB that ever ran the unmerged T5.1 revision with rows must `TRUNCATE chat_messages` before e5a6part0001.
+
+---
+
 ## 2026-09-28 (session 47) — T1.10 prep: real secrets adopted, cutover runbook written
 
 **Done**
