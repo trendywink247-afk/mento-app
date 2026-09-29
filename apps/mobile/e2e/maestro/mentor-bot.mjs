@@ -102,10 +102,20 @@ async function main() {
     await api(args.api, `/listener/me/requests/${oldest.id}/accept`, args.token, { method: 'POST' });
   }
 
+  // Only a conversation that did NOT exist when this script started counts. Earlier
+  // flows in the same CI run leave their own conversations active (each flow onboards a
+  // fresh member); without this the bot latched onto flow 1's chat, found flow 1's
+  // message already there, replied into it, and exited 0 — while flow 2's member waited
+  // forever in a different channel (T6.1 run 22: API log shows the listener calls landing
+  // ~50s BEFORE flow 2 even onboarded).
+  const before = await api(args.api, '/listener/me/conversations', args.token);
+  const stale = new Set(before.map((c) => c.id));
+  console.log(`mentor-bot: ignoring ${stale.size} conversation(s) that predate this run`);
+
   const convo = await waitFor(
     async () => {
       const rows = await api(args.api, '/listener/me/conversations', args.token);
-      return rows.find((c) => c.status === 'active' && c.stream_channel_id);
+      return rows.find((c) => !stale.has(c.id) && c.status === 'active' && c.stream_channel_id);
     },
     timeoutMs,
     'an active conversation with a Stream channel',

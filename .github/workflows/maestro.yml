@@ -173,16 +173,27 @@ jobs:
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
-      - name: Mint a listener console token for mentor-bot.mjs
+      # The matcher sends each new member to the LEAST-loaded online listener, so with the
+      # seeded roster flow 1 lands on one listener, flow 2 on a different one — and
+      # mentor-bot only ever watches one. Make exactly one listener matchable (everyone
+      # else offline) and give it room for all three flows' conversations (default cap 3).
+      - name: Pin matching to the one listener mentor-bot plays
         working-directory: services/api
         run: |
-          NAME=$(python -c "
+          LID=$(python -c "
           from app.db import SessionLocal
+          from app.models.enums import ListenerStatus
           from app.models.listener import ListenerProfile
           db = SessionLocal()
-          print(db.query(ListenerProfile).first().persona_name)
+          rows = db.query(ListenerProfile).order_by(ListenerProfile.id).all()
+          for r in rows[1:]:
+              r.status = ListenerStatus.offline
+          rows[0].max_concurrent = 10
+          db.commit()
+          print(rows[0].id)
           db.close()")
-          LINK=$(python -m scripts.issue_listener_token --name "$NAME" | grep 'Console link')
+          echo "bot listener: $LID"
+          LINK=$(python -m scripts.issue_listener_token --listener-id "$LID" | grep 'Console link')
           echo "LISTENER_TOKEN=${LINK##*token=}" >> "$GITHUB_ENV"
 
       # Third real failure (session 48): without this, /dev/kvm exists but this runner

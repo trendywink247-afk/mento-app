@@ -51,25 +51,16 @@ appId: com.mento.app
 - tapOn:
     id: "composer-send"
 
-# mentor-bot.mjs is watching for exactly this message; give it real time to
-# see it, accept if needed, connect to Stream and reply — this is a live round
-# trip over the network, not a local state change. Text must match
-# mentor-bot.mjs's default --reply exactly (README documents overriding both
-# together if you change one).
+# mentor-bot.mjs is watching for exactly this message and replies over Stream. Text
+# must match its default --reply exactly (README documents overriding both together).
 #
-# 45s was too tight under real CI latency (session 48, run 16): mentor-bot.mjs
-# polls /listener/me/conversations once a second waiting for the match this
-# flow's own onboarding creates, then connects to Stream, watches the channel,
-# and replies — a genuine multi-hop round trip, not a local check. Proven via
-# the bot's own log that it DOES complete this and exit 0 every time; it was
-# only ever a margin problem. 90s (run 17) still came up short — measured
-# 91.7s send-to-reply, just over — so this is a real, fairly consistent
-# latency floor (very likely the match itself landing async, off WS4's job
-# queue, not something to fight lower), not jitter to nudge past one retry
-# at a time. 150s gives real margin above the observed ceiling; mentor-bot's
-# own --timeout 150 in the CI workflow still bounds the outer wait if it
-# ever truly hangs.
+# History, so nobody tunes this again: this wait was raised 45s -> 90s -> 150s over runs
+# 16-20 and never helped, because the bot was replying into FLOW 1's conversation, not
+# this one (it took the first active conversation, and flow 1's was still open; the
+# matcher also sent this member to a different listener than the bot's). Both fixed —
+# the bot now ignores conversations that predate it and CI pins matching to its one
+# listener. With those, the round trip is a few seconds; 90s is generous headroom.
 - extendedWaitUntil:
     visible:
       text: "I'm here — tell me more when you're ready."
-    timeout: 150000
+    timeout: 90000
