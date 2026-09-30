@@ -145,6 +145,14 @@ jobs:
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           npx expo prebuild --platform android --no-install
+          # T6.2 step 3 (SDK 55): the default generated org.gradle.jvmargs
+          # (-Xmx2048m -XX:MaxMetaspaceSize=512m) ran the release build's
+          # :react-native-community_netinfo:lintVitalAnalyzeRelease worker out of
+          # Metaspace and failed the build — a resource ceiling, not a code
+          # regression (reproduced: same failure locally, fixed by raising this).
+          # SDK 55's larger dependency graph pushed it over; ubuntu-latest has
+          # headroom for this before the emulator (a separate, later step) starts.
+          sed -i 's/org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m/' android/gradle.properties
           # Run 11 (session 48): a debug build never leaves expo-dev-client's launcher
           # screen in CI (confirmed by an actual screenshot — "Development servers /
           # npx expo start", waiting for a Metro connection nothing provides). Run 12
