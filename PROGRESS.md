@@ -4,6 +4,85 @@
 
 ---
 
+## 2026-10-01 (session 49) — WS6 T6.2: Expo upgrade chain, steps 2 and 3 (of 5)
+
+**Context:** continuing straight through T6.2 per the founder's "go go go" /
+"move to step 2" instructions — no check-ins between steps, each one gated the
+same way step 1 was (expo-doctor, tsc, a real browser e2e run, commit, PR,
+wait on Maestro CI) before starting the next.
+
+**Done:**
+- **Step 2 (SDK 53→54)**, PR #11, branch `feat/ws6-t6.2-step2-expo54`: cascaded
+  every native module via `expo install --fix`; added `react-native-worklets`
+  (Reanimated 4's new required peer — Reanimated 4 itself already arrived at
+  this step, not step 5 as the plan sketch assumed); fixed Sentry 7's renamed
+  init option (`autoSessionTracking` → `enableAutoSessionTracking`); widened
+  the `react-native-safe-area-context` npm override to `~5.6.0` (was pinned
+  stale at `5.4.0`, causing `EOVERRIDE`); deleted a stray untracked `android/`
+  prebuild folder left over from earlier local AVD testing (this repo is CNG —
+  no native folders committed — and its presence was failing expo-doctor's
+  config-sync check).
+- **Step 3 (SDK 54→55)**, PR #12 (stacked on #11), branch
+  `feat/ws6-t6.2-step3-expo55`: same cascade; removed the now-obsolete
+  `newArchEnabled` app.json flag (mandatory as of this SDK); fixed
+  expo-video's renamed `VideoView` prop (`allowsFullscreen` →
+  `fullscreenOptions.enable`); added `@expo/config-plugins` as an explicit
+  devDependency — without it npm nested it only under `expo`'s/`@expo/cli`'s
+  own `node_modules` instead of hoisting to root, and Sentry's
+  `app.plugin.js` bare-`require`s it, so `expo config`/expo-doctor/prebuild
+  all hard-failed with `MODULE_NOT_FOUND` (upstream bug on Sentry's side;
+  expo-doctor's own advice says the override is fine to keep).
+- **Real regression caught and fixed, step 3**: Reanimated 4.2.1 + RN 0.83
+  has a confirmed upstream bug
+  ([reanimated#8854](https://github.com/software-mansion/react-native-reanimated/issues/8854),
+  an RN 0.78→0.83 regression) — every `Animated.View` on web threw
+  `"[Reanimated] Perhaps you are trying to pass an animated style to a
+  non-animated component"` the instant `ConnectOrbs`' shared-value styles
+  mounted on the connecting screen. `connecting-experience.e2e.js` caught it
+  (16 page errors). Bumped `react-native-reanimated` → 4.6.0 and
+  `react-native-worklets` → 0.12.0 (peer range 0.83-0.87 still covers our RN
+  0.83.10) — confirmed clean. Both pinned exactly and added to
+  `expo.install.exclude` so a future `expo install --fix` doesn't silently
+  drag them back down onto the broken SDK-55-blessed pin.
+- **CI infra fix (both PRs)**: PR #11's Maestro run failed —
+  `:react-native-community_netinfo:lintVitalAnalyzeRelease` ran the default
+  generated `org.gradle.jvmargs` (`-Xmx2048m`/512m metaspace) out of
+  Metaspace under SDK 54/55's larger dependency graph. Reproduced locally
+  against the same generated `android/gradle.properties`; fixed by raising
+  it to `-Xmx4096m`/1024m right after `expo prebuild`, before `gradlew` runs
+  (`.github/workflows/maestro.yml`). Cherry-picked onto PR #11; native on
+  PR #12.
+- Each step verified: `expo-doctor`, `tsc --noEmit`, and real browser e2e runs
+  (`connecting-experience`, `path-communities`, and `two-party-chat` against
+  real Stream, both directions) — all 0 page errors. Backend untouched:
+  pytest 707/708 (1 pre-existing local-env gap, `pg_dump` not on this
+  machine's PATH — unrelated to this work), `alembic check` clean.
+
+**In-progress:** waiting on Maestro CI for PR #11 (re-run after the Gradle
+fix) and PR #12 (first run) — both queued, not yet merged.
+
+**Next:** once both are green, merge #11 then #12 into master, and continue
+T6.2 step 4 (SDK 55→56: icons to `@react-native-vector-icons/ionicons`,
+expo-router codemod) the same way, then step 5 (SDK 56→57: Reanimated
+4/Skia 2/Lottie 7.5/Sentry 8 — **this is where the reanimated/worklets
+override above should be reconciled for real**, not carried forward again).
+
+**Open decisions (founder veto welcome, not blocking):**
+- The Reanimated 4.6.0 / worklets 0.12.0 override (above) deviates from
+  expo's SDK-55-blessed pin (4.2.1/0.7.4). Peer ranges still cover our RN
+  version and the upstream bug is confirmed, so this was implemented rather
+  than blocked on — but it should be revisited at step 5 rather than carried
+  indefinitely.
+- `@expo/config-plugins` is now a direct devDependency solely to work around
+  Sentry's outdated plugin import. Drop it once `@sentry/react-native` ships
+  a fixed `app.plugin.js` (check on step 5's Sentry 8 bump).
+
+**How to resume:** `git fetch`, check PR #11 and #12 CI status
+(`gh pr checks 11/12 --repo trendywink247-afk/mento-app`); if both green,
+merge in order (11 then 12) and start step 4 on a new branch off master.
+
+---
+
 ## 2026-09-29 (session 48, cont'd) — WS6 T6.1: flow 1 proven on real CI, flow 2 handed off
 
 **Context:** continuing straight from session 48's earlier T6.1 entries (local AVD
