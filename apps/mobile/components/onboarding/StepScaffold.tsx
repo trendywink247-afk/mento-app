@@ -55,7 +55,7 @@ type Props = {
   footerDistance?: number;
   /** The step's scroll view, for a step that reveals its last part once the required
    * choices are made (the companion pick's optional name). */
-  scrollRef?: RefObject<ScrollView>;
+  scrollRef?: RefObject<ScrollView | null>;
   /** A part of the step that stays put above the scrolling body (the companion pick's
    * headline and hero): when the body has to scroll, it slides under this, so a companion
    * standing in the header is never cut by the scroll edge. */

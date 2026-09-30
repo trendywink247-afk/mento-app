@@ -25,6 +25,8 @@ export function installNotificationHandler(): void {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({
       shouldShowAlert: true,
+      shouldShowBanner: true,
+      shouldShowList: true,
       shouldPlaySound: false, // no audio anywhere (T&S #11)
       shouldSetBadge: false,
     }),
