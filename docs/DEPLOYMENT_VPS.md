@@ -235,12 +235,17 @@ ssh "$VPS_SSH" 'sudo cp /tmp/mento-app.conf /etc/nginx/sites-available/ \
 every site into a throwaway `nginx:1.22` and asserts the host map), re-render,
 copy, `nginx -t`, reload. Back up the installed file first; never hand-edit it.
 
-**Auto-deploy on push (`.github/workflows/console-deploy.yml`, not yet activated):**
-runs `deploy-web.sh` on pushes to `master` touching `apps/mobile/**`. Needs two repo
-secrets before it runs (deliberately not created by an agent — live credentials):
+**Auto-deploy on push (`.github/workflows/console-deploy.yml`, active):** runs
+`deploy-web.sh` on pushes to `master` touching `apps/mobile/**`. Needs two repo secrets:
 `MOBILE_ENV_PRODUCTION` (full contents of `apps/mobile/.env.production`) and
 `CONSOLE_DEPLOY_SSH_KEY` (a **dedicated** ed25519 private key whose `.pub` is in
 `~mento-ops/.ssh/authorized_keys`). Until both exist the workflow fails loudly.
+`CONSOLE_DEPLOY_SSH_KEY` was rotated 2026-10-01: the T1.10 cutover's rebuilt box
+(`129.121.122.28`) never had the old key's `.pub` in its `authorized_keys` (only the
+interactive `mento_prod_agent` key did), so every push-triggered deploy since the cutover
+had been failing with `Permission denied`. New dedicated keypair generated, `.pub`
+appended to `~mento-ops/.ssh/authorized_keys` (now 2 entries: the interactive key + this
+one), private half set as the secret, verified with a real rerun.
 
 ### 12. Changing the domain
 
