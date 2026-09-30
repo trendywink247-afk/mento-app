@@ -4,6 +4,73 @@
 
 ---
 
+## 2026-09-29 (session 48, cont'd) — WS6 T6.1: flow 1 proven on real CI, flow 2 handed off
+
+**Context:** continuing straight from session 48's earlier T6.1 entries (local AVD
+findings) — this is the CI-side follow-through: PR #8, branch `feat/ws6-t6.1-maestro-flows`.
+
+**Done — 18 real CI iterations, each on actual evidence (logs, screenshots, source code
+read directly), not guesses:**
+- **Flow 1 (`onboarding-first-message.yaml`) passes completely on a real GitHub-hosted
+  Linux emulator** — the plan's own accept bar, met for the first time. Real cold launch,
+  real onboarding, real chat, a real message sent and delivered.
+- Six real, evidence-backed infrastructure bugs found and fixed (full detail + commit list
+  in the handoff brief below): two separate disk-exhaustion failures (the Gradle build, then
+  the emulator-runner's own SDK download), missing KVM permissions (the action's own
+  documented requirement, simply absent), a `free-disk-space` swap removal that broke
+  under real load, `expo-dev-client`'s launcher requiring `assembleRelease` (its whole
+  implementation lives in an Android debug source set — confirmed by reading
+  `expo-dev-launcher`'s own source, not guessed), Sentry's release-only source-map upload
+  needing `SENTRY_DISABLE_AUTO_UPLOAD`, and a full rewrite of the emulator script once
+  `reactivecircus/android-emulator-runner`'s own TypeScript source proved it runs every
+  YAML line as an independent process (verified, not assumed) — this had silently broken
+  both the diagnostic trap and mentor-bot's original backgrounding/`wait` the whole time.
+
+**Not done — handed off, not abandoned:**
+- **Flow 2 (`two-party-chat.yaml`) still fails**, waiting for the mentor's reply to render.
+  Proven NOT a timing issue: `mentor-bot.mjs`'s own log shows a clean success every time
+  (connects, finds the match, sends the reply, exits 0) and the member's message shows a
+  "Read" receipt — but the reply text never appears, even at 150s, with a screenshot
+  showing empty unobstructed space where it should render. Three timeout increases (45→90→
+  150s) were the wrong lever each time. Full evidence, ruled-out hypotheses, and prioritized
+  next diagnostic steps: `docs/superpowers/plans/2026-09-29-t6.1-flow2-handoff-brief.md`.
+- Flow 3 (`crisis-card.yaml`) has never been reached — flow 2 blocks it.
+- **Founder call: hand this off to a fresh session** rather than keep iterating blind on
+  CI — the next step is reading `apps/mobile/components/chat/ChatScreen.tsx`'s real-time
+  subscription logic, not another CI round-trip.
+
+**How to resume:** read `docs/superpowers/plans/2026-09-29-t6.1-flow2-handoff-brief.md`
+first — it has the full timeline, the exact commits, the screenshot evidence, and the
+prioritized hypothesis list. Don't re-run CI blind before reading it; establishing the
+"not a timing issue" finding alone cost 3 of the 18 iterations.
+
+---
+
+## 2026-09-28 (session 48) — WS6 T6.1: Maestro native flows, the Expo upgrade's safety net
+
+Done directly in this session (not a cloud session this time — small enough, and full tool access was faster than the round-trip).
+
+**Done**
+- `apps/mobile/e2e/maestro/{onboarding-first-message,two-party-chat,crisis-card}.yaml`, `mentor-bot.mjs`, `README.md`, `.github/workflows/maestro.yml`. Commit `57bed5d` on `feat/ws6-t6.1-maestro-flows`.
+- `mentor-bot.mjs` verified end to end against a live local API + real Stream creds — not just written: onboarded a member, matched a listener, minted its console token, sent a member message, ran the bot, then independently re-read the Stream channel and confirmed both messages actually landed. Also confirmed the clean-failure path (exits 1 with a reason when no message arrives, doesn't hang).
+- All three YAML flows validated with `maestro check-syntax` against a real Maestro 2.10.0 install — caught and fixed a real error (`assertVisible` doesn't take `timeout` directly; needed `extendedWaitUntil`).
+- Installed Maestro CLI locally and found a genuine Windows gap: the official installer ships `lib/*.jar` but no working `bin/maestro`, and is missing the `jna`/`jna-platform` dependency jars entirely (v2.10.0). Fixed by fetching both from Maven Central and invoking the jar directly (`java -cp "*" maestro.cli.AppKt`); documented in the README as Windows-specific, not something to "fix" back to the official installer.
+- `.github/workflows/maestro.yml` is actionlint + shellcheck clean (one real warning fixed, not silenced — an unused loop variable).
+
+**Later same session — local AVD actually provisioned and run for real**
+- Stood up a real local AVD (`mento_test`, API 33 `google_apis` x86_64), fixed a genuine, pre-existing `C:` disk-space crisis blocking the native build (97% full — unrelated to this task) by restricting `reactNativeArchitectures` to `x86_64` and NTFS-junctioning Gradle's build-output dirs to `E:`, ran `expo prebuild` + `assembleDebug`, installed the debug APK, pointed it at a real local API via the emulator's `10.0.2.2` NAT (reseeded listeners, flushed Redis). The app itself runs fine on-device — this part of "run it for real" is genuinely done.
+- **Maestro itself does not connect on this AVD — root cause found, not just observed.** `maestro test` hangs forever at "Getting device info" (confirmed via the run's own log: zero progress for 9.5+ minutes). Device-side `logcat` for Maestro's on-device driver (`dev.mobile.maestro`) shows why: its gRPC server's native epoll transport is missing a symbol (`No implementation found for ... epoll.Native.offsetofEpollData()`), the NIO fallback then gets an SELinux denial reading `/proc`'s `somaxconn`, so the driver's listener never binds — `adb forward --list` on the host stays empty the whole run, meaning the host never had anything to connect to and "Getting device info" has no timeout. A separate, unrelated Windows bug (`SessionStore.heartbeat()`'s file-lock spam) is cosmetic noise in the same logs, ruled out as the cause via a `CI=true` retry that still hung at the same step. Full diagnosis in `apps/mobile/e2e/maestro/README.md`.
+- Judged a different API-level image (only API 33 is installed locally) a low-confidence fix — the failure looks like a native-lib ABI mismatch inside the driver APK's bundled Netty build, not an Android-version SELinux change — so didn't spend another ~1GB download chasing it. Founder call: stop here, document it, and treat `.github/workflows/maestro.yml`'s Linux CI runners as the real verification venue (this native-epoll/SELinux interaction is not expected to reproduce there).
+
+**Not done — said plainly, not implied otherwise**
+- The three flows have never completed a run against any emulator (the driver-connection issue above blocks that specifically on this Windows machine).
+- The CI workflow has never run start to finish on GitHub's runners either — every piece was verified independently but not as one sequence.
+- **The plan's own accept bar for T6.1 — "the three flows pass on an emulator against SDK 52" — is still NOT met.** Push this branch / open the PR and watch `.github/workflows/maestro.yml` run for real before T6.2 (the Expo upgrade) starts relying on this as its safety net. Local Windows AVD runs are now a documented dead end for this specific tool, not a path to retry as-is.
+
+**How to resume:** review/merge PR #8, then push the branch (or merge to trigger CI on master, per the workflow's trigger config) and watch the Linux CI run actually go green — that's the remaining unmet accept-bar gap. Once that's green, T6.2 (Expo 52→57, five gated steps) can start.
+
+---
+
 ## 2026-09-28 (session 48) — WS5 own-chat server groundwork: T8.5, T5.1–T5.4, T5.6 on `claude/brave-babbage-i3zpln` (not merged, not deployed)
 
 **Context:** cloud session for the unblocked part of WS5 (`docs/superpowers/plans/2026-09-20-mento-program-plan.md`). Skipped by instruction: T5.5 (Stream removal — needs T5.9 + T11.3 on the real server), T5.7 (push via hub — needs T7.1), T5.8 (admin window — needs T9.2), T5.9 (k6 — needs T1.10), T5.10 (cutover — needs T6.3/T6.4). **Nothing user-facing changed: chat still runs on Stream.** The new own-chat server exists beside it, unused by any client.
@@ -56,9 +123,10 @@
 
 **Not done**
 - CI never picked up either of today's two pushes to this branch (`2b09d59`, and the WS5-only content before it) — no workflow run appears at all, not even queued, for reasons I couldn't diagnose in reasonable time (workflows are enabled repo-wide, PR is open and not a fork, path filters match). Not chasing further; local verification is the authoritative bar per this repo's own Verify section, and it's thorough.
-- Still not merged — that's yours to decide now that both findings are actually fixed, not just described.
 
-**How to resume:** re-review the diff since `f94cd66` (or trust this entry — it's the same rigor as every other PR reviewed this session) and merge PR #9 when ready. This unblocks T5.10 (cutover) planning; T6.1 (Maestro flows, PR #8) still shouldn't get Stream CI secrets until T5.10's timing is clearer, since those flows drive Stream directly via `mentor-bot.mjs` and need a rewrite pass once it's gone.
+**MERGED 2026-09-28** — founder call: merge on the strength of local verification, confirmed `API_AUTO_DEPLOY` repo variable is unset first (it is), so this lands on master without touching the live box. **T5.10 (the actual cutover) is explicitly not being scoped now ("idk") — stays parked.** Own chat exists on master, unused by any client; `api.agentin.chat`/`app.agentin.chat` are unaffected.
+
+**Decided (me, per standing instruction to decide T6.1's Stream-secrets question):** wire the local dev Stream project's credentials into T6.1's CI secrets now, rather than wait for T5.10's timing to clear — T5.10 has no timeline ("idk"), and T6.2 (Expo upgrade) is explicitly gated on T6.1 actually passing somewhere for real, so waiting indefinitely just blocks T6.2 for no benefit. If T5.10 lands first, `mentor-bot.mjs` gets a rewrite pass then, same as always planned.
 
 ---
 

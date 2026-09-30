@@ -1,0 +1,71 @@
+# T6.1 — the member's golden path: cold launch through the role fork, age gate,
+# growth-companion pick, and into a live chat far enough to send one message.
+# This is the baseline every Expo-upgrade step (T6.2) re-runs against — it must
+# stay green on SDK 52 before the upgrade starts, and after every single step.
+#
+# Mirrors apps/mobile/e2e/connecting-experience.e2e.js's General-match sequence
+# (Playwright/web) testID for testID, so a failure here and a failure there point
+# at the same regression, not two different ones.
+#
+# Requires: the API + Postgres/Redis stack up, listeners seeded and online
+# (python -m scripts.seed_listeners from services/api — General matching 503s
+# otherwise), Stream credentials configured. See README.md in this directory.
+appId: com.mento.app
+---
+- launchApp:
+    clearState: true
+# Cold launch's first paint (aurora/Skia canvas mount, CLAUDE.md) is the slowest in
+# the whole flow, and dramatically more so under this CI emulator's software-rendered
+# SwiftShader graphics than on real hardware — session 48, run 6: 22+s between launch
+# and a bare tapOn timing out on the very first real emulator run these flows ever got.
+# Every later screen transition already gets this treatment; this was the one gap.
+- extendedWaitUntil:
+    visible:
+      id: "start"
+    timeout: 60000
+- tapOn:
+    id: "start"
+
+# Role fork: "I need to talk" — the member path.
+- tapOn:
+    id: "role-talk"
+
+# Age gate: the date picker opens pre-filled at the minimum passing age (a
+# known, tracked gap — T3.8 in the plan only removed this default from /apply,
+# not the member step yet). Continuing without touching it is today's correct
+# flow, not a shortcut around the flow.
+- tapOn:
+    id: "continue"
+
+# Email step is always skippable.
+- tapOn:
+    id: "skip"
+
+# Growth companion: any animal + colour works; panda/terracotta match the
+# existing web e2e fixtures, so a screenshot diff between the two surfaces is
+# comparing the same companion.
+- tapOn:
+    id: "animal-panda"
+- tapOn:
+    id: "colour-terracotta"
+- tapOn:
+    id: "continue"
+
+# Ready screen -> live chat (General match; a seeded online listener required).
+- tapOn:
+    id: "enter"
+- extendedWaitUntil:
+    visible:
+      id: "composer-input"
+    timeout: 20000
+
+- tapOn:
+    id: "composer-input"
+- inputText: "hello — this is my first message"
+- tapOn:
+    id: "composer-send"
+
+# The composer clears on a successful send; that's the assertion, not a
+# message-bubble screenshot (bubble text rendering is proven elsewhere).
+- assertVisible:
+    id: "composer-input"

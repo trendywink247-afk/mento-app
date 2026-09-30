@@ -1,0 +1,283 @@
+name: Maestro (native e2e)
+
+# The safety net for the Expo 52->57 upgrade (T6.2's own dependency rule: these
+# flows must exist and pass BEFORE that upgrade starts, and after every one of
+# its five steps). Runs against SDK 52 today — do not bump the emulator image
+# here as part of an unrelated change; T6.2 does that deliberately, one step
+# at a time, and re-runs this workflow after each one.
+#
+# Builds a RELEASE APK (expo prebuild + gradlew assembleRelease — session 48,
+# run 12: a debug build never leaves expo-dev-client's own launcher screen in
+# CI, since its entire implementation lives in an Android "debug" source set
+# and isn't compiled into a release build at all; no debug-build config can
+# skip it). Signed with the project's own auto-generated debug keystore, same
+# as debug builds — Expo's default scaffold already wires
+# `release { signingConfig signingConfigs.debug }`, so this needs no new
+# keystore or secret. Brings up the same Postgres/Redis api-ci.yml uses,
+# seeds listeners, and runs the two CI flows (crisis-card is manual, see below) against a real emulator via
+# reactivecircus/android-emulator-runner.
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "apps/mobile/**"
+      - "services/api/**"
+      - ".github/workflows/maestro.yml"
+  pull_request:
+    paths:
+      - "apps/mobile/**"
+      - "services/api/**"
+      - ".github/workflows/maestro.yml"
+  workflow_dispatch: {}
+
+jobs:
+  check-secrets:
+    # A job-level `if:` can't read `secrets` directly (actionlint: "context secrets is
+    # not allowed here") — only `needs`/`vars`/`inputs`/`github`. Publish it as an
+    # output from a step instead, where `secrets` IS readable, and gate `maestro` on
+    # that output.
+    runs-on: ubuntu-latest
+    outputs:
+      has-stream: ${{ steps.check.outputs.has-stream }}
+    steps:
+      - id: check
+        run: |
+          if [ -n "$STREAM_API_KEY" ] && [ -n "$STREAM_API_SECRET" ]; then
+            echo "has-stream=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-stream=false" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
+          STREAM_API_SECRET: ${{ secrets.STREAM_API_SECRET }}
+
+  maestro:
+    needs: check-secrets
+    # Skips visibly (shown as "skipped", not "failed") when the repo has no Stream
+    # project wired up yet — onboarding-first-message.yaml and two-party-chat.yaml
+    # both need a real Stream project to match and chat against. Also the natural behavior
+    # for a pull_request from a fork, which never receives repo secrets.
+    if: needs.check-secrets.outputs.has-stream == 'true'
+    # KVM-accelerated emulators need a real (not container) Linux runner.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: postgresql+psycopg://mento:mento@localhost:5432/mento
+      REDIS_URL: redis://localhost:6379/0
+      JWT_SECRET: ci-secret-at-least-32-bytes-long-000000
+      ENV: dev
+      STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
+      STREAM_API_SECRET: ${{ secrets.STREAM_API_SECRET }}
+      EXPO_PUBLIC_STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
+      EXPO_PUBLIC_API_URL: http://10.0.2.2:8000/api/v1 # the emulator's host-loopback address
+    steps:
+      - uses: actions/checkout@v4
+
+      # ubuntu-latest ships ~20GB of preinstalled toolchains this job never touches
+      # (.NET, Haskell, extra Docker images...). The build alone got past that once
+      # x86_64-only was fixed (session 48), but the emulator-runner's own SDK +
+      # system-image download then hit the SAME "No space left on device" on top of
+      # it — the two together exceed the runner's real free space. android: false is
+      # deliberate: it must NOT touch the Android SDK the next steps install.
+      - uses: jlumbroso/free-disk-space@v1.3.1
+        with:
+          android: false
+          tool-cache: false
+          # Kept, unlike its default: run 4/5 (session 48) showed a NEW failure shape
+          # once KVM was genuinely active — boot-polling goes silent, then the whole
+          # job is cut short a few minutes later with the emulator reaped as an orphan
+          # process (no clean in-script error or timeout line — something outside the
+          # script killed it). Combined RAM for Postgres+Redis+API+Node+a real
+          # KVM-backed emulator may be hitting actual limits; this action's default
+          # removes the runner's swap to free disk, which may have removed exactly the
+          # safety net that would otherwise degrade gracefully instead of dying
+          # silently. Reasoned hypothesis, not a confirmed root cause — worth ruling
+          # out before chasing anything less specific.
+          swap-storage: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: services/api/requirements-dev.txt
+
+      - name: Start Postgres + Redis
+        working-directory: services/api
+        run: docker compose up -d --wait
+
+      - name: Install API dependencies
+        working-directory: services/api
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Migrate + seed listeners
+        working-directory: services/api
+        run: |
+          python -m alembic upgrade head
+          python -m scripts.seed_listeners
+
+      - name: Start the API (background)
+        working-directory: services/api
+        run: |
+          nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > api.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:8000/api/v1/health && exit 0; echo "waiting ($i/30)..."; sleep 1; done
+          echo "::error::API never became healthy" && cat api.log && exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install mobile dependencies
+        working-directory: apps/mobile
+        run: npm ci
+
+      - name: Prebuild + assemble release APK
+        working-directory: apps/mobile
+        env:
+          # Run 13 (session 48): assembleRelease alone isn't enough — Sentry's Android
+          # Gradle plugin only runs its source-map upload task for release variants
+          # (never triggered by any of the 12 prior debug-build attempts), and it needs
+          # an org/project + auth token this repo has never configured for CI: "error:
+          # An organization ID or slug is required (provide with --org)". Verified in
+          # sentry-react-native's own sentry.gradle.kts (shouldSentryAutoUploadGeneral)
+          # that this env var is the real, intended way to skip it, not a guess.
+          SENTRY_DISABLE_AUTO_UPLOAD: "true"
+        run: |
+          npx expo prebuild --platform android --no-install
+          # Run 11 (session 48): a debug build never leaves expo-dev-client's launcher
+          # screen in CI (confirmed by an actual screenshot — "Development servers /
+          # npx expo start", waiting for a Metro connection nothing provides). Run 12
+          # tried debuggableVariants = [] (embed the JS bundle in the debug build,
+          # RN Gradle plugin's bundleInDebug equivalent) — didn't work: dev-launcher's
+          # entire implementation lives in an Android "debug" source set
+          # (expo-dev-launcher/android/src/debug/...), so it's simply absent from a
+          # release build's compiled classpath — no debug-build config can skip it,
+          # only building release actually omits the code. assembleRelease it is.
+          # x86_64 only: the emulator below never runs the other three ABIs, and
+          # building all four exhausted ubuntu-latest's disk mid-build (session 48 —
+          # the same fix a local Windows build needed for the same reason). Also cuts
+          # this step's native-module compile time roughly 4x, which matters against
+          # the job's 45-minute timeout.
+          cd android && ./gradlew assembleRelease -PreactNativeArchitectures=x86_64
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Maestro CLI
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      # The matcher sends each new member to the LEAST-loaded online listener, so with the
+      # seeded roster flow 1 lands on one listener, flow 2 on a different one — and
+      # mentor-bot only ever watches one. Make exactly one listener matchable (everyone
+      # else offline) and give it room for the flows' conversations (default cap 3).
+      - name: Pin matching to the one listener mentor-bot plays
+        working-directory: services/api
+        run: |
+          LID=$(python -c "
+          from app.db import SessionLocal
+          from app.models.enums import ListenerStatus
+          from app.models.listener import ListenerProfile
+          db = SessionLocal()
+          rows = db.query(ListenerProfile).order_by(ListenerProfile.id).all()
+          for r in rows[1:]:
+              r.status = ListenerStatus.offline
+          rows[0].max_concurrent = 10
+          db.commit()
+          print(rows[0].id)
+          db.close()")
+          echo "bot listener: $LID"
+          LINK=$(python -m scripts.issue_listener_token --listener-id "$LID" | grep 'Console link')
+          echo "LISTENER_TOKEN=${LINK##*token=}" >> "$GITHUB_ENV"
+
+      # Third real failure (session 48): without this, /dev/kvm exists but this runner
+      # user can't open it, so the emulator falls back to pure-software CPU emulation
+      # (TCG) — its own CPU thread hung and QEMU crashed ~2 minutes into boot. This is
+      # reactivecircus/android-emulator-runner's own documented required step for
+      # GitHub-hosted Linux runners (its README's every example includes it) — it was
+      # simply missing here, not a config choice.
+      - name: Enable KVM group perms
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the two flows on a real emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33 # SDK 52's target — do not bump here; T6.2 owns emulator-version changes
+          arch: x86_64
+          profile: pixel_6
+          # NOT cores: 4 — tried that (session 48, run 4) on the strength of the
+          # action's own "will run more smoothly with 4 CPU cores" warning, but run 5's
+          # log showed why that was the wrong lead: "qemu-system-x86_64-headless:
+          # warning: Number of SMP cpus requested (4) exceeds the recommended cpus
+          # supported by KVM (2)" — this runner's actual KVM only supports 2. Reverted;
+          # the swap-storage fix above is the real next attempt at the same failure.
+          # Run 10 (session 48) found the real constraint governing this WHOLE script
+          # block: the action's own script-parser.ts splits it on newlines and runs
+          # EACH line as its own separate `sh -c` process (main.ts: `for (script of
+          # scripts) await exec.exec('sh', ['-c', script])`) — never one continuous
+          # multi-line shell session. No shell state (variables, traps, background
+          # jobs, `wait`) survives across lines. The multi-line trap two runs ago was
+          # split mid-string (line 1 = `trap '` alone, an unterminated quote — the
+          # sub-0.2s "exit code 2" syntax error). It also means EVERY line below must
+          # be independently complete, and that the mentor-bot background/wait pair
+          # was ALWAYS broken the same way — just never reached yet, since every run
+          # so far has failed on the first maestro test line. Fixed both here: each
+          # maestro test call captures diagnostics inline via `||` (same process, so
+          # $GITHUB_WORKSPACE/$HOME are still valid) instead of a trap; mentor-bot
+          # runs under nohup with its exit code written to a file a LATER line polls
+          # for, instead of `wait`ing on a PID from a process that already exited.
+          script: |
+            adb logcat -c
+            adb install apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
+            # Run 14 (session 48) is the payoff: flow 1 completed ENTIRELY for the first
+            # time ever (real onboarding, real chat, real message send), and flow 2 got
+            # all the way to sending its own message too. It failed waiting for the
+            # mentor's reply — a real timing bug, evidenced from the run's own logs:
+            # mentor-bot starts here (right after flow 1 finishes) with --timeout 60,
+            # but flow 2 needs its own ~70-90s onboarding runway before it can send a
+            # message for the bot to react to — the bot's 60s window had already
+            # expired and it had exited 32s before flow 2 actually sent anything.
+            # 150s comfortably covers the observed ~92s gap with margin for CI jitter;
+            # the poll loop below is bumped to match so it doesn't give up on the bot
+            # before the bot's own longer timeout would.
+            nohup sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 150; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 &
+            maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
+            i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 180 ]; do sleep 1; i=$((i + 1)); done
+            [ -f mentor-bot.exitcode ] && [ "$(cat mentor-bot.exitcode)" = "0" ] || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
+            # crisis-card.yaml is deliberately NOT run here. The crisis card is drawn from a
+            # `crisis` payload that the server's Stream before-message-send hook adds, and
+            # Stream's cloud can only call that hook at a public URL. This job's API is on
+            # localhost, so the hook never fires (run 23: zero /stream/* requests in the API
+            # log) and the card can never appear. Making it fire needs a dedicated Stream app
+            # for CI plus a tunnel + scripts.configure_stream — NOT the shared app, because
+            # configure_stream repoints the app-wide hooks and would break crisis scanning
+            # for whoever else uses those keys. Until then the flow is run by hand (README).
+
+      - name: Upload failure diagnostics (logcat + Maestro screenshots/hierarchy)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-failure-diagnostics
+          path: |
+            logcat.txt
+            maestro-debug/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: API log (always, for debugging)
+        if: always()
+        working-directory: services/api
+        run: cat api.log || true
+
+      - name: Tear down
+        if: always()
+        working-directory: services/api
+        run: docker compose down -v
