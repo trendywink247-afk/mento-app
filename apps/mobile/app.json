@@ -28,6 +28,7 @@
       "output": "single"
     },
     "plugins": [
+      "expo-asset",
       "expo-router",
       "expo-secure-store",
       "expo-video",
