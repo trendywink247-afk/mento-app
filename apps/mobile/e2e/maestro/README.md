@@ -6,17 +6,17 @@ surface: those drive the web build, these drive the compiled native app.
 
 **Why this exists:** the safety net for the Expo 52→57 upgrade (`T6.2` in
 `docs/superpowers/plans/2026-09-20-mento-program-plan.md`). The plan's own
-dependency rule: these three flows must pass on SDK 52 **before** the upgrade
+dependency rule: the two CI flows (below) must pass on SDK 52 **before** the upgrade
 starts, and are re-run after every one of the upgrade's five steps. If a step
 breaks something, this is what catches it before the next step compounds it.
 
-## The three flows
+## The three flows (two run in CI)
 
 | File | What it proves |
 |---|---|
 | `onboarding-first-message.yaml` | Cold launch → role fork → age gate → companion pick → live chat → one message sent. The golden path every upgrade step re-checks. |
 | `two-party-chat.yaml` | A member and a mentor in the same conversation, both directions. Needs `mentor-bot.mjs` running alongside it (below) — Maestro only drives one app instance. |
-| `crisis-card.yaml` | A crisis-scan-triggering message ("I want to die" — this repo's own existing pytest fixture, not invented here) still sends, and the crisis card with helplines renders. Never held or blocked (T&S #1). |
+| `crisis-card.yaml` | A crisis-scan-triggering message ("I want to die" — this repo's own existing pytest fixture, not invented here) still sends, and the crisis card with helplines renders. Never held or blocked (T&S #1). **Manual only — not in CI:** the card needs Stream's before-send hook to reach the API, which needs a public URL (tunnel + `scripts.configure_stream`) and a Stream app that isn't shared with anything real, since that script repoints the app-wide hooks. |
 
 All three reuse the same `testID`s the existing Playwright web specs already
 select on (React Native Web converts `testID` → `data-testid` automatically),

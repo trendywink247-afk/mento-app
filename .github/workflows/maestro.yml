@@ -14,7 +14,7 @@ name: Maestro (native e2e)
 # as debug builds — Expo's default scaffold already wires
 # `release { signingConfig signingConfigs.debug }`, so this needs no new
 # keystore or secret. Brings up the same Postgres/Redis api-ci.yml uses,
-# seeds listeners, and runs the three flows against a real emulator via
+# seeds listeners, and runs the two CI flows (crisis-card is manual, see below) against a real emulator via
 # reactivecircus/android-emulator-runner.
 on:
   push:
@@ -55,9 +55,7 @@ jobs:
     needs: check-secrets
     # Skips visibly (shown as "skipped", not "failed") when the repo has no Stream
     # project wired up yet — onboarding-first-message.yaml and two-party-chat.yaml
-    # both need a real Stream project to match and chat against, and crisis-card.yaml
-    # would silently pass its send-still-works assertion without ever proving the
-    # crisis card, which is worse than not running at all. Also the natural behavior
+    # both need a real Stream project to match and chat against. Also the natural behavior
     # for a pull_request from a fork, which never receives repo secrets.
     if: needs.check-secrets.outputs.has-stream == 'true'
     # KVM-accelerated emulators need a real (not container) Linux runner.
@@ -176,7 +174,7 @@ jobs:
       # The matcher sends each new member to the LEAST-loaded online listener, so with the
       # seeded roster flow 1 lands on one listener, flow 2 on a different one — and
       # mentor-bot only ever watches one. Make exactly one listener matchable (everyone
-      # else offline) and give it room for all three flows' conversations (default cap 3).
+      # else offline) and give it room for the flows' conversations (default cap 3).
       - name: Pin matching to the one listener mentor-bot plays
         working-directory: services/api
         run: |
@@ -208,7 +206,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Run the three flows on a real emulator
+      - name: Run the two flows on a real emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 33 # SDK 52's target — do not bump here; T6.2 owns emulator-version changes
@@ -254,7 +252,14 @@ jobs:
             maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
             i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 180 ]; do sleep 1; i=$((i + 1)); done
             [ -f mentor-bot.exitcode ] && [ "$(cat mentor-bot.exitcode)" = "0" ] || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
-            maestro test apps/mobile/e2e/maestro/crisis-card.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
+            # crisis-card.yaml is deliberately NOT run here. The crisis card is drawn from a
+            # `crisis` payload that the server's Stream before-message-send hook adds, and
+            # Stream's cloud can only call that hook at a public URL. This job's API is on
+            # localhost, so the hook never fires (run 23: zero /stream/* requests in the API
+            # log) and the card can never appear. Making it fire needs a dedicated Stream app
+            # for CI plus a tunnel + scripts.configure_stream — NOT the shared app, because
+            # configure_stream repoints the app-wide hooks and would break crisis scanning
+            # for whoever else uses those keys. Until then the flow is run by hand (README).
 
       - name: Upload failure diagnostics (logcat + Maestro screenshots/hierarchy)
         if: failure()

@@ -6,6 +6,10 @@
 # This never simulates a real emergency with real content: it is the same
 # fixture pytest already uses server-side, reused here so a failure here and a
 # pytest failure point at the same regression.
+# NOT run in CI (.github/workflows/maestro.yml): the crisis card only renders when the
+# API's Stream before-message-send hook is reachable from Stream's cloud, which needs a
+# tunnel and a dedicated Stream app. Run it by hand against a tunnelled stack
+# (mento-crisis-webhook skill); it fails by design without one.
 appId: com.mento.app
 ---
 - launchApp:
