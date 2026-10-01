@@ -40,10 +40,12 @@ wait on Maestro CI) before starting the next.
   non-animated component"` the instant `ConnectOrbs`' shared-value styles
   mounted on the connecting screen. `connecting-experience.e2e.js` caught it
   (16 page errors). Bumped `react-native-reanimated` → 4.6.0 and
-  `react-native-worklets` → 0.12.0 (peer range 0.83-0.87 still covers our RN
-  0.83.10) — confirmed clean. Both pinned exactly and added to
+  `react-native-worklets` → 0.12.2 (peer range 0.83-0.87 still covers our RN
+  0.83.10) — confirmed clean on web. Both pinned exactly and added to
   `expo.install.exclude` so a future `expo install --fix` doesn't silently
-  drag them back down onto the broken SDK-55-blessed pin.
+  drag them back down onto the broken SDK-55-blessed pin. (worklets 0.12.0
+  itself turned out to have a second, separate bug — see below — caught by
+  the native build, not web.)
 - **CI infra fix (both PRs)**: PR #11's Maestro run failed —
   `:react-native-community_netinfo:lintVitalAnalyzeRelease` ran the default
   generated `org.gradle.jvmargs` (`-Xmx2048m`/512m metaspace) out of
@@ -54,32 +56,105 @@ wait on Maestro CI) before starting the next.
   PR #12.
 - Each step verified: `expo-doctor`, `tsc --noEmit`, and real browser e2e runs
   (`connecting-experience`, `path-communities`, and `two-party-chat` against
-  real Stream, both directions) — all 0 page errors. Backend untouched:
-  pytest 707/708 (1 pre-existing local-env gap, `pg_dump` not on this
-  machine's PATH — unrelated to this work), `alembic check` clean.
+  real Stream, both directions) — all 0 page errors on web. Backend
+  untouched: pytest 707/708 (1 pre-existing local-env gap, `pg_dump` not on
+  this machine's PATH — unrelated to this work), `alembic check` clean.
+- **Second real bug found by CI, not local testing**: `react-native-worklets@0.12.0`'s
+  own native header (`Compat/StableApi.h`) still defined
+  `WORKLETS_STABLE_API_VERSION` as `"0.9.0"` — its npm version was bumped
+  without regenerating that file — while reanimated 4.6.0's header hard
+  `static_assert`s it must read `"0.12.1"`. A real C++ compile failure on
+  PR #12's native build (`react-native-reanimated:buildCMakeRelWithDebInfo`),
+  invisible to every local/web check. Fixed: worklets → 0.12.2 (grepped both
+  headers directly to confirm the literal strings now match before pushing
+  again, not just trusting npm semver ranges a second time).
+- **CI infra, two more real findings (both silent — the job just died or
+  hung with nothing logged, not an in-script error)**:
+  1. The emulator step crashed outright (segfault inside the crashpad
+     handler itself) on the very first post-metaspace-fix run — reproducible
+     once, not again after a retry; most likely a stock GH-runner/swiftshader
+     flake, left unresolved since it didn't recur.
+  2. PR #11's *second* run then died silently ~2 minutes into emulator boot
+     with zero error text, just "Complete job" firing early — root-caused by
+     diffing it against the first (pre-metaspace-fix) failure: a Gradle
+     **daemon** stays resident after `assembleRelease` returns, and at the
+     `-Xmx4096m`/1024m the metaspace fix had just set, an idle daemon left
+     too little free RAM once the emulator (~2GB) also launched, so the
+     runner VM itself died rather than Gradle or the emulator logging
+     anything. Fixed with `./gradlew --stop` right after the build.
+     Confirmed: the next run completed the whole step properly (ran to
+     teardown, uploaded diagnostics, etc.) for the first time since step 2
+     started — this was real, not a guess.
 
-**In-progress:** waiting on Maestro CI for PR #11 (re-run after the Gradle
-fix) and PR #12 (first run) — both queued, not yet merged.
+**Blocked — not merged, not silently decided:** with the two infra fixes
+above landed, flow 1 (`onboarding-first-message`) now passes cleanly and
+reliably on both PRs' real-device CI runs — proves the upgrade itself
+(install, boot, full onboarding, live chat navigation, a real device send)
+is sound. **Flow 2 (`two-party-chat`, the mentor-bot reply) has failed
+identically 4/4 times since step 2 started**, at the same assertion every
+time: the member sends a message, and the mentor's reply ("I'm here — tell
+me more when you're ready.") never appears. This was passing on PR #10
+(step 1, SDK 53) — something in step 2's cascade broke it specifically.
 
-**Next:** once both are green, merge #11 then #12 into master, and continue
-T6.2 step 4 (SDK 55→56: icons to `@react-native-vector-icons/ionicons`,
-expo-router codemod) the same way, then step 5 (SDK 56→57: Reanimated
-4/Skia 2/Lottie 7.5/Sentry 8 — **this is where the reanimated/worklets
-override above should be reconciled for real**, not carried forward again).
+Evidence gathered (`mentor-bot.log` + device `logcat.txt`, pulled from the
+`maestro-failure-diagnostics` artifact on two separate failed runs):
+- mentor-bot authenticates, finds the new conversation, and (after adding a
+  `withTimeout` guard this session) now confirms `client.connectUser()` and
+  `channel.watch()` both succeed. It then hangs in "wait for a message from
+  the member" — reading `channel.state.messages` in a loop — until its own
+  150s timeout, past which **the process should throw, log
+  `MENTOR_BOT_FAIL`, and write `mentor-bot.exitcode`, but none of that
+  appears in the captured log either** — a second oddity on top of the
+  member's message never arriving.
+- The member's own on-device `logcat.txt` shows **zero errors or exceptions**
+  of any kind around the send — no caught JS exception, no native crash, no
+  Stream-related log line at all (release/Hermes strips most dev logging, so
+  absence of logs isn't itself conclusive either way).
+- The exact same flow, same backend, same `stream-chat` JS client version,
+  passed cleanly on **web** this session (`two-party-chat.e2e.js`, real
+  Stream, both directions, 0 page errors) — which points at something
+  **native-Android-specific** (new-arch networking, `stream-chat-expo`'s
+  native layer, or the RN 0.79→0.83 jump) rather than a `stream-chat`/`ws`
+  dependency-version drift (checked: both identical to PR #10's lockfile).
+- Not yet checked: whether the member's message actually reaches Stream's
+  servers at all (no way to confirm from this evidence alone — would need
+  Stream's own dashboard/debug logging, or instrumenting the app's send path
+  directly, neither done this session).
+
+This mirrors T6.1's own flow-2 history (see the 2026-09-29 entry below) —
+same symptom shape, different cause (that one was mentor-bot latching onto
+a stale conversation; this one is a real reply that never lands with zero
+diagnostic trail on either side). Following that precedent: **stopping here
+rather than continuing to guess** — this needs a dedicated session with
+Stream debug logging enabled or a native-side send/receive trace, not more
+timeout tweaks.
+
+**Next:** a fresh session should root-cause flow 2 before merging #11/#12 —
+start from the evidence above, specifically "does the member's message
+reach Stream at all" (instrument `components/chat/Composer.tsx`'s send path
+or check Stream's own dashboard for the channel) before touching mentor-bot
+again. Once flow 2 is green, merge #11 then #12, then continue T6.2 step 4
+(SDK 55→56: icons to `@react-native-vector-icons/ionicons`, expo-router
+codemod), then step 5 (SDK 56→57: Reanimated 4/Skia 2/Lottie 7.5/Sentry 8 —
+**this is where the reanimated/worklets override below should be
+reconciled for real**, not carried forward again).
 
 **Open decisions (founder veto welcome, not blocking):**
-- The Reanimated 4.6.0 / worklets 0.12.0 override (above) deviates from
+- The Reanimated 4.6.0 / worklets 0.12.2 override (above) deviates from
   expo's SDK-55-blessed pin (4.2.1/0.7.4). Peer ranges still cover our RN
-  version and the upstream bug is confirmed, so this was implemented rather
-  than blocked on — but it should be revisited at step 5 rather than carried
-  indefinitely.
+  version and both upstream bugs are confirmed (not guessed), so this was
+  implemented rather than blocked on — but it should be revisited at step 5
+  rather than carried indefinitely.
 - `@expo/config-plugins` is now a direct devDependency solely to work around
   Sentry's outdated plugin import. Drop it once `@sentry/react-native` ships
   a fixed `app.plugin.js` (check on step 5's Sentry 8 bump).
 
-**How to resume:** `git fetch`, check PR #11 and #12 CI status
-(`gh pr checks 11/12 --repo trendywink247-afk/mento-app`); if both green,
-merge in order (11 then 12) and start step 4 on a new branch off master.
+**How to resume:** `git fetch`; both PR #11 and #12 have every fix above
+pushed and are CI-green on flow 1, red on flow 2 (`gh pr checks 11/12
+--repo trendywink247-afk/mento-app`, then `gh run download <run-id> -n
+maestro-failure-diagnostics` for the latest evidence). Root-cause flow 2
+first — do not merge either PR until it passes — then resume the step
+sequence from step 4.
 
 ---
 
