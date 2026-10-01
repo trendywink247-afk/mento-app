@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-02 — Separate architecture images
+
+**Done:** Added two shareable PNG diagrams under `docs/diagrams/`: current deployed topology and proposed growth architecture. Included server roles, Stream versus own-chat, release flow, operational gaps and planned status. Preserved a deterministic Pillow renderer. Visually inspected both images for readability and connections; no application or deployment changes.
+
+**Resume:** Open `docs/diagrams/mento-current-architecture.png` and `mento-desired-architecture.png`; execution priorities remain in `docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md`.
+
+---
+
 ## 2026-10-02 — Enterprise workflow and iOS roadmap
 
 **Done:** Reviewed current workflow/EAS/mobile configuration against the older Balanced plan and staging evidence. Added `docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md`: current/target architecture, component acceptance matrix, communities versus professional-mentor identity, CI/release gaps, iOS/App Store path, capacity benchmarks, staffing-dependent timeline and work packages. Prepared a bounded read-only Claude mobile/iOS audit handoff; no message was sent to another instance. Checked current Apple/Expo/GitHub/OWASP and Indian government sources; links are in the plan.
