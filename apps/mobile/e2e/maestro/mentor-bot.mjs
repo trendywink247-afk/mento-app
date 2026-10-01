@@ -82,7 +82,7 @@ async function withTimeout(promise, timeoutMs, label) {
   }
 }
 
-async function waitFor(fn, timeoutMs, label, intervalMs = 1000, heartbeatMs = 0) {
+async function waitFor(fn, timeoutMs, label, intervalMs = 1000, heartbeatMs = 0, describe = null) {
   const start = Date.now();
   let lastBeat = start;
   for (;;) {
@@ -92,9 +92,11 @@ async function waitFor(fn, timeoutMs, label, intervalMs = 1000, heartbeatMs = 0)
     // A heartbeat tells apart "the loop is alive but the condition never comes true" from
     // "the whole process is frozen" (the orphan-process kill at job teardown on 2026-10-01's
     // CI runs proved it was the latter, at least once — nothing, not even this timeout,
-    // ran again after "connected, watching channel").
+    // ran again after "connected, watching channel"). `describe` adds channel state so we
+    // can tell "zero messages ever arrived" from "messages arrived but none matched".
     if (heartbeatMs && now - lastBeat >= heartbeatMs) {
-      console.log(`mentor-bot: still waiting for ${label} (${Math.round((now - start) / 1000)}s elapsed)`);
+      const extra = describe ? ` — ${describe()}` : '';
+      console.log(`mentor-bot: still waiting for ${label} (${Math.round((now - start) / 1000)}s elapsed)${extra}`);
       lastBeat = now;
     }
     if (now - start > timeoutMs) throw new Error(`timed out waiting for ${label}`);
@@ -176,6 +178,10 @@ async function main() {
     "a message from the member",
     1000,
     10000,
+    () => {
+      const state = channel.state.messages;
+      return `channel has ${state.length} message(s) total: ${JSON.stringify(state.map((m) => ({ id: m.id, user: m.user?.id, type: m.type })))}`;
+    },
   );
   console.log('mentor-bot: member message seen, replying');
 
