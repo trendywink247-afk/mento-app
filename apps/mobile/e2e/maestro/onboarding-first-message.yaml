@@ -19,10 +19,15 @@ appId: com.mento.app
 # SwiftShader graphics than on real hardware — session 48, run 6: 22+s between launch
 # and a bare tapOn timing out on the very first real emulator run these flows ever got.
 # Every later screen transition already gets this treatment; this was the one gap.
+#
+# T6.2 (2026-10-01): 60s -> 90s. Failed right here at ~61s on a real run (SDK 55,
+# the same job whose "Prebuild + assemble release APK" step now takes ~31 min,
+# was ~5-10 min when 60s was chosen) — a heavier app under a more CPU-contended
+# CI emulator pushes even this first-paint wait past its old margin sometimes.
 - extendedWaitUntil:
     visible:
       id: "start"
-    timeout: 60000
+    timeout: 90000
 - tapOn:
     id: "start"
 
