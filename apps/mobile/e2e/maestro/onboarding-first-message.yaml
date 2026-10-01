@@ -20,14 +20,15 @@ appId: com.mento.app
 # and a bare tapOn timing out on the very first real emulator run these flows ever got.
 # Every later screen transition already gets this treatment; this was the one gap.
 #
-# T6.2 (2026-10-01): 60s -> 90s. Failed right here at ~61s on a real run (SDK 55,
-# the same job whose "Prebuild + assemble release APK" step now takes ~31 min,
-# was ~5-10 min when 60s was chosen) — a heavier app under a more CPU-contended
-# CI emulator pushes even this first-paint wait past its old margin sometimes.
+# T6.2 (2026-10-01): 60s -> 90s -> 150s. 90s still failed right at the edge twice
+# (~91s both times) — this runner's emulator is CPU-contended enough (confirmed:
+# load average 1.7-4.6 on 2 cores) that even a generous-looking margin isn't
+# generous enough. 150s is the same budget mentor-bot.mjs needed for the same
+# reason (see maestro.yml's --timeout 480 comment).
 - extendedWaitUntil:
     visible:
       id: "start"
-    timeout: 90000
+    timeout: 150000
 - tapOn:
     id: "start"
 
