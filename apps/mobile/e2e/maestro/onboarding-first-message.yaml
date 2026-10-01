@@ -68,6 +68,10 @@ appId: com.mento.app
 - tapOn:
     id: "composer-input"
 - inputText: "hello — this is my first message"
+# T6.2 (2026-10-01) bisection 3 — see two-party-chat.yaml's comment at the same
+# point: testing whether the composer's post-typing layout settle is stale-coordinate
+# territory for the tap that follows.
+- waitForAnimationToEnd
 - tapOn:
     id: "composer-send"
 

@@ -1,25 +1,18 @@
 diff --git a/node_modules/react-native-teleport/lib/module/views/Portal/index.native.js b/node_modules/react-native-teleport/lib/module/views/Portal/index.native.js
-index 0ab1b75..8bb791a 100644
+index 0ab1b75..8c6a753 100644
 --- a/node_modules/react-native-teleport/lib/module/views/Portal/index.native.js
 +++ b/node_modules/react-native-teleport/lib/module/views/Portal/index.native.js
-@@ -1,4 +1,25 @@
+@@ -1,4 +1,18 @@
  "use strict";
  
 -export { default } from "../../specs/PortalViewNativeComponent";
-+// Expo Go patch, now CONDITIONAL (2026-10-01 — T6.2 flow-2 regression hunt):
-+// the real PortalView is a Fabric native component that re-parents its
-+// children into the PortalHost natively. Expo Go's binary does not contain
-+// it, so Expo Go renders children inline instead (overlays lose their
-+// "break out of parent" behavior, but nothing crashes). This USED to apply
-+// unconditionally, in every build including release APKs — bisecting a
-+// touch-delivery regression in the composer send key (PROGRESS.md), which
-+// sits inside this exact Portal.
-+import Constants from "expo-constants";
++// Expo Go patch: the real PortalView is a Fabric native component that
++// re-parents its children into the PortalHost natively. Expo Go's binary
++// does not contain it, so render children inline instead. Overlays lose
++// their "break out of parent" behavior but nothing crashes.
 +import { View } from "react-native";
 +import { jsx as _jsx } from "react/jsx-runtime";
-+import RealPortalView from "../../specs/PortalViewNativeComponent";
-+const isExpoGo = Constants.appOwnership === "expo";
-+const InlinePortalView = ({
++const PortalView = ({
 +  style,
 +  children
 +}) => /*#__PURE__*/_jsx(View, {
@@ -27,41 +20,31 @@ index 0ab1b75..8bb791a 100644
 +  style: style,
 +  children: children
 +});
-+export default isExpoGo ? InlinePortalView : RealPortalView;
++export default PortalView;
  //# sourceMappingURL=index.native.js.map
 diff --git a/node_modules/react-native-teleport/lib/module/views/PortalHost/index.native.js b/node_modules/react-native-teleport/lib/module/views/PortalHost/index.native.js
-index 64a0796..b883983 100644
+index 64a0796..d7fccb6 100644
 --- a/node_modules/react-native-teleport/lib/module/views/PortalHost/index.native.js
 +++ b/node_modules/react-native-teleport/lib/module/views/PortalHost/index.native.js
-@@ -1,9 +1,29 @@
+@@ -1,11 +1,18 @@
  "use strict";
  
 -import PortalHostNativeComponent from "../../specs/PortalHostViewNativeComponent";
-+// Expo Go patch, now CONDITIONAL (2026-10-01 — T6.2 flow-2 regression hunt):
-+// the real PortalHost is a Fabric native component missing from Expo Go's
-+// binary. A plain pass-through View keeps Expo Go's layout valid;
++// Expo Go patch: the real PortalHost is a Fabric native component missing
++// from Expo Go's binary. A plain pass-through View keeps the layout valid;
 +// pointerEvents="box-none" so absolute-fill hosts never swallow touches.
-+// This USED to apply unconditionally, in every build including release
-+// APKs — bisecting a touch-delivery regression in the composer send key
-+// (PROGRESS.md), which lives inside a Portal targeting this exact host.
-+import Constants from "expo-constants";
 +import { View } from "react-native";
  import { jsx as _jsx } from "react/jsx-runtime";
-+import RealPortalHostNativeComponent from "../../specs/PortalHostViewNativeComponent";
-+const isExpoGo = Constants.appOwnership === "expo";
  const PortalHost = props => {
 -  return /*#__PURE__*/_jsx(PortalHostNativeComponent, {
-+  if (isExpoGo) {
-+    const {
-+      name,
-+      ...rest
-+    } = props;
-+    return /*#__PURE__*/_jsx(View, {
-+      pointerEvents: "box-none",
-+      ...rest
-+    });
-+  }
-+  return /*#__PURE__*/_jsx(RealPortalHostNativeComponent, {
++  const {
++    name,
++    ...rest
++  } = props;
++  return /*#__PURE__*/_jsx(View, {
      pointerEvents: "box-none",
-     ...props
+-    ...props
++    ...rest
    });
+ };
+ export default PortalHost;

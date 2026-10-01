@@ -51,6 +51,14 @@ appId: com.mento.app
 - tapOn:
     id: "composer-input"
 - inputText: "hi, thanks for being here"
+# T6.2 (2026-10-01) bisection 3: the composer-send PressKey's own onPressIn never
+# fires (confirmed by direct instrumentation — PROGRESS.md) even though Maestro
+# reports the tap COMPLETED. One untested mechanism: the keyboard/composer layout
+# is still settling right after typing (the field grows with the words), so the
+# coordinates Maestro reads from the accessibility tree are stale by the time the
+# tap actually lands. Settling here before tapping costs under a second if this
+# isn't the cause.
+- waitForAnimationToEnd
 - tapOn:
     id: "composer-send"
 
