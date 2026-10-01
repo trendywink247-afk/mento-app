@@ -1,0 +1,31 @@
+# Isolated infrastructure for the H: workspace. Never shares legacy container names,
+# volumes or ports. App processes run from this checkout; Metro watches frontend changes.
+# Restart the API after backend edits.
+name: mento-h-dev
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mento
+      POSTGRES_PASSWORD: mento-local-only
+      POSTGRES_DB: mento_dev
+    ports: ["127.0.0.1:15432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mento -d mento_dev"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
+    ports: ["127.0.0.1:16379:6379"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  pgdata:

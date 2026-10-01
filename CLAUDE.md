@@ -1,5 +1,14 @@
 # CLAUDE.md — Mento project memory
 
+> **Current workspace/release contract (founder, 2026-10-02):** work only under
+> `H:\Mento gpt`, repo `H:\Mento gpt\Mento`; leave the Desktop checkout untouched.
+> Use `scripts/local/workspace.ps1` for isolated development (web :18081, API :18000,
+> Postgres :15432, Valkey :16379). VPS staging follows local checks, then staged
+> production promotion. VPS B's corrected IP is **31.42.125.238**, verified against
+> its prior SSH host key; A remains 129.121.122.28. See `docs/ENVIRONMENTS.md` and
+> `docs/ARCHITECTURE_REVIEW_2026-10-02.md`. Historical commands below target the old
+> shared stack and must not be used to reset this workspace.
+
 > Auto-loaded every session. Keep tight and current. If this conflicts with the code, fix one of them — don't let them drift.
 > **Source-of-truth order:** `docs/DECISIONS.md` → `docs/PRD.md` → mockups (`docs/Mockups/`, cataloged in `docs/MOCKUP_INVENTORY.md`). DECISIONS wins on any conflict.
 > **Resume protocol:** read `PROGRESS.md` (newest-on-top) before touching code. End every session by updating `PROGRESS.md` (Done / In-progress / Next / Open decisions) and committing.

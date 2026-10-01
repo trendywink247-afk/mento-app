@@ -4,6 +4,37 @@
 
 ---
 
+## 2026-10-02 — H-workspace isolation and staged-release foundation
+
+**Done**
+- Work moved exclusively to `H:\Mento gpt\Mento`, branch `codex/local-staging-foundation`. Desktop copy was not modified. Architecture review is the implementation baseline; `docs/ENVIRONMENTS.md` records the operating contract.
+- Added dedicated Compose project `mento-h-dev`: Postgres on loopback 15432 and Valkey on 16379, separate volumes. Local launchers run API 18000, web 18081 and worker; disable inherited/copied dotenv credentials and use optional ignored `.local/stream.env` for dedicated development Stream credentials. Development Stream key was confirmed different from both servers without displaying secrets.
+- Verified 708 API tests pass (20 warnings), TypeScript, Alembic drift, Ruff, Black, Compose validation and PowerShell syntax. Fixed test harness issues: isolated launcher settings, real Docker pg_dump fallback on Windows, and xdist engine rebinding preserving application statement-timeout settings.
+- Browser age gate, session refresh, recovery code and live two-party Stream chat pass in normal and reduced-motion modes, with zero page errors. Added reduced-motion option to two-party test. Worker maintenance jobs succeeded. Services remain running locally; logs are ignored under `.local/`.
+- VPS B recovered at `31.42.125.238` with strict verification against its existing host key. Added repository-scoped SSH aliases for both VPSs. B: Debian 12, 2 CPU, about 2 GB RAM, 30 GB disk; legacy application plus Uptime Kuma. September 29 off-site dump passes gzip integrity, but this is not restore proof.
+
+**In progress / release gates**
+- No remote configuration changes or deployments made. Production remains at its audited release. Production backup destination and public status DNS still reference the obsolete address and need repair.
+- Public tunnel download/start was rejected by automatic approval review (reason: blocked by policy). No workaround attempted. Live Stream-to-local crisis-webhook acceptance is unverified; the development Stream hook still points at its previous tunnel.
+- Native CI acceptance remains unresolved; browser success does not close the native chat/crisis gate. Staging has not been provisioned.
+
+**Next**
+1. Repair production-to-B backup routing with strict host validation and status DNS; prove a database restore in isolation.
+2. Provision resource-capped staging on B while preserving monitoring and recovery capacity. Use separate data and credentials; verify actual memory/load before promotion.
+3. Complete native and live safety acceptance, staging migration/recovery/erasure/push/reconnect checks and alert delivery; record immutable release artifacts before staged production promotion.
+
+**Open decisions:** no product-scope expansion; preserve v1 and existing safety requirements. Remaining acceptance failures are release blockers, not implied approvals.
+
+**How to resume** (PowerShell, only this checkout):
+```powershell
+Set-Location 'H:\Mento gpt\Mento'
+pwsh -File scripts/local/workspace.ps1 status
+Get-Content docs/ARCHITECTURE_REVIEW_2026-10-02.md
+Get-Content docs/ENVIRONMENTS.md
+```
+
+---
+
 ## 2026-09-29 (session 48, cont'd) — WS6 T6.1: flow 1 proven on real CI, flow 2 handed off
 
 **Context:** continuing straight from session 48's earlier T6.1 entries (local AVD

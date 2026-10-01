@@ -29,6 +29,8 @@
  */
 const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
+// Run a second invocation with MENTO_REDUCED_MOTION=1 for accessibility coverage.
+const motion = process.env.MENTO_REDUCED_MOTION === '1' ? { reducedMotion: 'reduce' } : {};
 const LISTENER_ID = process.env.LISTENER_ID;
 const MEMBER_MSG = 'hello, are you there?';
 const LISTENER_MSG = 'yes, I am right here with you';
@@ -80,7 +82,7 @@ async function onboardMember(page, tid) {
   const browser = await chromium.launch({ headless: true });
 
   // --- member ---
-  const mctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const mctx = await browser.newContext({ viewport: { width: 390, height: 844 }, ...motion });
   const mpage = await mctx.newPage();
   mpage.on('pageerror', (e) => errors.member.push(String(e)));
   const mtid = (id) => mpage.locator(`[data-testid="${id}"]`);
@@ -99,7 +101,7 @@ async function onboardMember(page, tid) {
   console.log('OK member Enter-to-send works and clears the field');
 
   // --- listener console (dev picker; no token needed in dev) ---
-  const lctx = await browser.newContext({ viewport: { width: 1100, height: 800 } });
+  const lctx = await browser.newContext({ viewport: { width: 1100, height: 800 }, ...motion });
   const lpage = await lctx.newPage();
   lpage.on('pageerror', (e) => errors.listener.push(String(e)));
   const ltid = (id) => lpage.locator(`[data-testid="${id}"]`);

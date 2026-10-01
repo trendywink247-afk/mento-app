@@ -2,6 +2,14 @@
 
 Cross-tool brief for any AI agent or assistant working in this repo (Claude Code, Copilot, Cursor, Codex, etc.).
 
+## Workspace boundary (founder, 2026-10-02)
+- Work only inside `H:\Mento gpt`; this checkout is `H:\Mento gpt\Mento`.
+- Do not read, edit, sync, launch, or commit the Desktop checkout for this work.
+- Use `scripts/local/workspace.ps1` for isolated local development; do not use the
+  old shared container names, databases, or ports in historical commands.
+- Release order: local development and automated checks → isolated VPS staging
+  and end-to-end acceptance → staged production promotion. See `docs/ENVIRONMENTS.md`.
+
 ## Read these first, in order
 1. **`CLAUDE.md`** — the durable project brain: stack, repo layout, conventions, SCOPE, definition-of-done, Trust & Safety, performance targets, colour tokens. This is the primary brief.
 2. **`docs/DECISIONS.md`** — authoritative product decisions. **Wins over the PRD and the mockups on any conflict.**
