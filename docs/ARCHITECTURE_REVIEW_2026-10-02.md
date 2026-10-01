@@ -2,6 +2,11 @@
 
 Reviewed 2 October 2026, Asia/Kolkata. This is an evidence-based review and proposed plan, not a deployment or a change to product scope.
 
+Expanded roadmap: `docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md` covers professional
+delivery workflows, iOS/App Store eligibility and release, verified mentoring,
+capacity benchmarks, staffing-dependent estimates and the Claude audit handoff.
+It complements this deployment audit; proposed capabilities are not deployed facts.
+
 ## Execution update — verified VPS staging, 2 October 2026
 
 This review remains the implementation baseline. All source changes are exclusively

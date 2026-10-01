@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-02 — Enterprise workflow and iOS roadmap
+
+**Done:** Reviewed current workflow/EAS/mobile configuration against the older Balanced plan and staging evidence. Added `docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md`: current/target architecture, component acceptance matrix, communities versus professional-mentor identity, CI/release gaps, iOS/App Store path, capacity benchmarks, staffing-dependent timeline and work packages. Prepared a bounded read-only Claude mobile/iOS audit handoff; no message was sent to another instance. Checked current Apple/Expo/GitHub/OWASP and Indian government sources; links are in the plan.
+
+**Founder clarification:** “RV” was dictated “are we,” not a component. Communities are UPSC, NEET and JEE, with finance/others possible later. Preserve current anonymous support and 18+ scope. Verified professional profiles/booking/payment are future capability proposals until their concrete scope is agreed; the community roadmap alone does not authorize exposing identity or building paid Module B.
+
+**Findings / next:** Web deployment can bypass staging; EAS effective channel/runtime and source-map settings need audit; native/iOS acceptance remains unproven. Apple anonymous-chat review policy is a material product gate. Begin E01/E02 then E03/E04 in the new plan. Estimated staffed closed pilot 45–75 calendar days, enterprise baseline 90–150; founder plus AI-only execution has wider ranges. These are provisional estimates, not launch promises.
+
+**Validation:** Documentation-only changes; checked referenced local paths, Markdown structure and Git whitespace. No runtime tests or server/CI changes in this planning turn. The initial oversized shell write was blocked by automatic approval review; the dedicated patch tool successfully saved the documents.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; Get-Content docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md`. For Claude, use `docs/CLAUDE_MOBILE_RELEASE_HANDOFF_2026-10-02.md`. Remaining drift: historical CLAUDE stack descriptions and old programme task status assumptions need reconciliation against the actual supported native build.
+
+---
+
 ## 2026-10-02 — VPS staging deployed; safety and recovery proven
 
 **Done**
