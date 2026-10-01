@@ -60,7 +60,12 @@ jobs:
     if: needs.check-secrets.outputs.has-stream == 'true'
     # KVM-accelerated emulators need a real (not container) Linux runner.
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Was 45. T6.2 (2026-10-01): "Prebuild + assemble release APK" alone now runs
+    # ~31 minutes (confirmed: run 36848744264, 10:25:41-10:56:24) under SDK 55's
+    # larger native dependency graph — was ~5-10 min back when this 45 was set
+    # (SDK 52). That left only ~14 min of real slack, which is why bumping
+    # mentor-bot's own timeout below needed headroom here too, not just there.
+    timeout-minutes: 65
     env:
       DATABASE_URL: postgresql+psycopg://mento:mento@localhost:5432/mento
       REDIS_URL: redis://localhost:6379/0
@@ -273,9 +278,20 @@ jobs:
             # 150s comfortably covers the observed ~92s gap with margin for CI jitter;
             # the poll loop below is bumped to match so it doesn't give up on the bot
             # before the bot's own longer timeout would.
-            nohup sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 150; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 &
+            #
+            # T6.2 (2026-10-01): 150s stopped being enough. Proven with a heartbeat log
+            # added to mentor-bot.mjs (not a guess): in the failing run, the bot's own
+            # "still waiting" heartbeat was healthy and ticking every 10s right up to its
+            # 150s deadline, while flow 2's actual composer-send didn't happen until 296s
+            # after the bot started — SDK 55's heavier app + this job's now ~31-minute
+            # prebuild (was ~5-10 min when 150s was chosen) leaves flow 2's onboarding
+            # taking far longer under CI load. The bot was already dead (self-timed-out)
+            # before there was anything to reply to — not a hang, not a delivery bug.
+            # 480s covers the observed 296s with real margin; the job timeout above was
+            # raised to match.
+            nohup sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 480; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 &
             maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
-            i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 180 ]; do sleep 1; i=$((i + 1)); done
+            i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 500 ]; do sleep 1; i=$((i + 1)); done
             [ -f mentor-bot.exitcode ] && [ "$(cat mentor-bot.exitcode)" = "0" ] || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
             # crisis-card.yaml is deliberately NOT run here. The crisis card is drawn from a
             # `crisis` payload that the server's Stream before-message-send hook adds, and
