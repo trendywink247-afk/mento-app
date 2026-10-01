@@ -254,6 +254,13 @@ jobs:
           script: |
             adb logcat -c
             adb install apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            # T6.2 step 2/3 regression hunt (2026-10-01): flow 2's mentor reply has hung
+            # 4/4 times with zero diagnostic trail — mentor-bot.mjs's own node process
+            # had to be force-killed as an orphan at job teardown every time (it never
+            # exits on its own, success or failure). This logs CPU/memory every 5s for
+            # the rest of the step so the next failure shows whether the runner was
+            # actually resource-starved at the critical moment, instead of guessing again.
+            nohup sh -c 'while true; do date -u +%T; nproc; free -m; uptime; echo ---; sleep 5; done' > "$GITHUB_WORKSPACE/resource-usage.log" 2>&1 &
             maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
             # Run 14 (session 48) is the payoff: flow 1 completed ENTIRELY for the first
             # time ever (real onboarding, real chat, real message send), and flow 2 got
@@ -287,6 +294,7 @@ jobs:
           path: |
             logcat.txt
             maestro-debug/
+            resource-usage.log
           if-no-files-found: warn
           retention-days: 7
 

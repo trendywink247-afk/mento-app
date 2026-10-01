@@ -82,12 +82,22 @@ async function withTimeout(promise, timeoutMs, label) {
   }
 }
 
-async function waitFor(fn, timeoutMs, label, intervalMs = 1000) {
+async function waitFor(fn, timeoutMs, label, intervalMs = 1000, heartbeatMs = 0) {
   const start = Date.now();
+  let lastBeat = start;
   for (;;) {
     const v = await fn();
     if (v) return v;
-    if (Date.now() - start > timeoutMs) throw new Error(`timed out waiting for ${label}`);
+    const now = Date.now();
+    // A heartbeat tells apart "the loop is alive but the condition never comes true" from
+    // "the whole process is frozen" (the orphan-process kill at job teardown on 2026-10-01's
+    // CI runs proved it was the latter, at least once — nothing, not even this timeout,
+    // ran again after "connected, watching channel").
+    if (heartbeatMs && now - lastBeat >= heartbeatMs) {
+      console.log(`mentor-bot: still waiting for ${label} (${Math.round((now - start) / 1000)}s elapsed)`);
+      lastBeat = now;
+    }
+    if (now - start > timeoutMs) throw new Error(`timed out waiting for ${label}`);
     await new Promise((r) => setTimeout(r, intervalMs));
   }
 }
@@ -164,6 +174,8 @@ async function main() {
     },
     timeoutMs,
     "a message from the member",
+    1000,
+    10000,
   );
   console.log('mentor-bot: member message seen, replying');
 
