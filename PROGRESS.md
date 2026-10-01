@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-02 — Staging acceptance: recovery navigation fix
+
+**Done:** Found an exported-web recovery navigation error (`ImageData` width zero): the landing recovery link bypassed the existing Lottie teardown guard. Both onboarding and recovery now select their destination after the canvas unmounts. TypeScript and local recovery browser acceptance pass in normal and reduced motion, including recovery identity and revocation of the previous refresh session.
+
+**In progress:** VPS staging is deployed with TLS, isolated services and staff network restrictions. Live Stream safety and two-party normal/reduced chat passed; the corrected web build is being prepared for staging acceptance. Production backup routing is repaired with host-key pinning; a fresh transferred backup restored and migrated in an isolated disposable container. Full deployment details and remaining gates will be recorded in this session's next entry.
+
+**Next / resume:** Rebuild the staging web export from this commit, deploy it, rerun recovery and onboarding acceptance, then finish the staging runbook. Work only in `H:\Mento gpt\Mento`.
+
+---
+
 ## 2026-10-02 — H-workspace isolation and staged-release foundation
 
 **Done**

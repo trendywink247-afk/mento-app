@@ -70,7 +70,7 @@ export default function Landing() {
   // teardown, so WEB swaps to the still scene — but only once the exit fade has made
   // the hero invisible. Swapping at the tap (and on native, which never needed it) put
   // a different picture on screen for the whole fade (session 35, frame capture).
-  const [leaving, setLeaving] = useState(false);
+  const [leaving, setLeaving] = useState<false | '/onboarding' | '/recover'>(false);
 
   useEffect(() => {
     let active = true;
@@ -148,7 +148,7 @@ export default function Landing() {
     capture('onboarding_started');
     // Reduced motion already shows the still scene; native has no canvas to protect.
     // Web pushes from the `leaving` effect below, after the still has committed.
-    const go = () => (Platform.OS === 'web' && !reduced ? setLeaving(true) : router.push('/onboarding'));
+    const go = () => (Platform.OS === 'web' && !reduced ? setLeaving('/onboarding') : router.push('/onboarding'));
     if (reduced) {
       go();
       return;
@@ -161,7 +161,7 @@ export default function Landing() {
 
   // Runs after the commit that unmounted the Lottie canvas — the push is now safe.
   useEffect(() => {
-    if (leaving) router.push('/onboarding');
+    if (leaving) router.push(leaving);
   }, [leaving, router]);
 
   if (!checked) return null;
@@ -324,7 +324,11 @@ export default function Landing() {
                   email or password. Quiet — a link, never a second CTA. */}
               <Animated.View style={textExit}>
                 <PressKey
-                  onPress={() => router.push('/recover')}
+                  onPress={() => {
+                    // Recovery also leaves the animated canvas; unmount it before navigation.
+                    if (Platform.OS === 'web' && !reduced) setLeaving('/recover');
+                    else router.push('/recover');
+                  }}
                   edge="transparent"
                   travel={2}
                   radius={radius.sm}
