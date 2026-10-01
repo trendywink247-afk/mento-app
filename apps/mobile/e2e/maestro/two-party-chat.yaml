@@ -20,10 +20,14 @@ appId: com.mento.app
 # SwiftShader graphics than on real hardware — session 48, run 6: 22+s between launch
 # and a bare tapOn timing out on the very first real emulator run these flows ever got.
 # Every later screen transition already gets this treatment; this was the one gap.
+#
+# T6.2 (2026-10-01): 60s -> 90s, same reasoning as onboarding-first-message.yaml —
+# a real run failed right here at ~61s under SDK 55's heavier app + this job's now
+# much longer prebuild.
 - extendedWaitUntil:
     visible:
       id: "start"
-    timeout: 60000
+    timeout: 90000
 - tapOn:
     id: "start"
 - tapOn:
