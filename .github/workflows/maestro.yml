@@ -168,6 +168,16 @@ jobs:
           # this step's native-module compile time roughly 4x, which matters against
           # the job's 45-minute timeout.
           cd android && ./gradlew assembleRelease -PreactNativeArchitectures=x86_64
+          # The Gradle daemon stays resident after the build finishes (that's the
+          # whole point of a daemon) — at the -Xmx4096m/1024m metaspace this step
+          # just raised, an idle daemon left too little free RAM once the emulator
+          # (needing ~2GB) also launched, and the runner VM died with no in-script
+          # error at all (just silence, then "Complete job" minutes early — not a
+          # timeout, not a logged failure). Confirmed by diffing two failed runs:
+          # same crash-free prebuild, same point of silence, only the jvmargs size
+          # changed between them. Stopping it here frees that memory before the
+          # emulator step starts.
+          ./gradlew --stop
 
       - uses: actions/setup-java@v4
         with:
