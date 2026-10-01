@@ -100,6 +100,12 @@ export function PressKey({
   }));
 
   const onPressIn = () => {
+    // T6.2 regression hunt (2026-10-01): the composer-send key's onPress never
+    // reaches Composer.tsx's handleSend on native — this (and the onPress log
+    // below) tell apart "the touch never starts a Pressable gesture at all" from
+    // "it starts (haptic fires) but a competing gesture steals it before the tap
+    // completes" (temporary — testID-gated so it only fires for the one key).
+    if (testID === 'composer-send') console.log(`[PressKey] onPressIn testID=${testID} disabled=${disabled}`);
     if (disabled) return;
     const meaning: PressKeyIntent = intent ?? (travel === 4 ? 'navigate' : 'select');
     if (hapticMode === 'impact') INTENT_HAPTIC[meaning]();
@@ -115,9 +121,16 @@ export function PressKey({
       : withSpring(0, spring.calm);
   };
 
+  const wrappedOnPress = disabled
+    ? undefined
+    : () => {
+        if (testID === 'composer-send') console.log(`[PressKey] onPress fired testID=${testID}`);
+        onPress?.();
+      };
+
   return (
     <Pressable
-      onPress={disabled ? undefined : onPress}
+      onPress={wrappedOnPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       disabled={disabled}
