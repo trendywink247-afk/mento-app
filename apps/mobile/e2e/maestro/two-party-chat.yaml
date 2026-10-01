@@ -60,7 +60,14 @@ appId: com.mento.app
 # matcher also sent this member to a different listener than the bot's). Both fixed —
 # the bot now ignores conversations that predate it and CI pins matching to its one
 # listener. With those, the round trip is a few seconds; 90s is generous headroom.
+#
+# T6.2 (2026-10-01): raised again, 90s -> 120s — not because the round trip got
+# slower (it's still a few seconds once the bot is actually alive to see the
+# message), but because mentor-bot.mjs's OWN lifetime budget was proven too short
+# under SDK 55 + this job's now much longer prebuild (see maestro.yml's --timeout
+# 480 comment) — the bot was timing itself out before flow 2 even sent anything.
+# This wait only matters once that's fixed; a little extra margin here is cheap.
 - extendedWaitUntil:
     visible:
       text: "I'm here — tell me more when you're ready."
-    timeout: 90000
+    timeout: 120000
