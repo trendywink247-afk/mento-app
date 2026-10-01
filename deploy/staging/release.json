@@ -1,0 +1,13 @@
+{
+  "environment": "staging",
+  "host": "staging.mento.chat",
+  "api_commit": "6e47f7a426fc4b007763c71eb712eb234a0dfd0b",
+  "api_image": "mento-api:staging-6e47f7a",
+  "api_image_id": "sha256:28b42aba7e8c9a5baeb849c1f01b183358584ffdfaedfb329f10c769088aeb3b",
+  "web_commit": "dc8d17c3d71a7175abf624131c3da362c98bda57",
+  "web_archive_sha256": "6c65e4f6fac7ddffbb248fc244aa7a84b62f98a266802e52bacdaf8e220de11d",
+  "schema": "e5a6part0001",
+  "transport": "Stream (dedicated non-production app)",
+  "push_enabled": false,
+  "edge": "Nginx with operator IP allowlist; signed webhook ingress public"
+}

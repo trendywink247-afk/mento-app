@@ -31,6 +31,7 @@ const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
 // Run a second invocation with MENTO_REDUCED_MOTION=1 for accessibility coverage.
 const motion = process.env.MENTO_REDUCED_MOTION === '1' ? { reducedMotion: 'reduce' } : {};
+// Staging uses a real mentor token URL supplied privately; never print it.
 const LISTENER_ID = process.env.LISTENER_ID;
 const MEMBER_MSG = 'hello, are you there?';
 const LISTENER_MSG = 'yes, I am right here with you';
@@ -105,7 +106,7 @@ async function onboardMember(page, tid) {
   const lpage = await lctx.newPage();
   lpage.on('pageerror', (e) => errors.listener.push(String(e)));
   const ltid = (id) => lpage.locator(`[data-testid="${id}"]`);
-  await lpage.goto(`${WEB}/listener`, { waitUntil: 'networkidle', timeout: 120000 });
+  await lpage.goto((process.env.MENTO_LISTENER_URL || `${WEB}/listener`), { waitUntil: 'networkidle', timeout: 120000 });
   await lpage.waitForSelector('[data-testid="console-dev-picker"],[data-testid="console-ready"]', { timeout: 60000 });
   if (await ltid('console-dev-picker').count()) {
     await ltid(`dev-listener-${LISTENER_ID}`).click();

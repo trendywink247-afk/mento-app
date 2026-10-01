@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-10-02 — VPS staging deployed; safety and recovery proven
+
+**Done**
+- Deployed isolated `mento-staging` under `/opt/mento-staging` on B (31.42.125.238). API commit 6e47f7a, web dc8d17c; image/archive hashes recorded in `deploy/staging/release.json`. ENV=staging, distinct role/message secrets, separate Postgres/Valkey, bounded pools/CPU/RAM, push disabled and working maintenance worker.
+- Issued staging.mento.chat TLS certificate; installed/tested renewal reload hook. App/API restricted to operator network; public readiness and signature-protected Stream endpoints only. Confirmed outsider root 403, readiness 200 and unsigned hook 401. Existing status monitoring still returns HTTPS 302.
+- Non-production Stream hooks point to staging. Live bypass test verified crisis augmentation plus one deduplicated safety flag; benign message had none. Real two-party browser chat passed normal/reduced motion with zero page errors. Recovery teardown bug fixed separately in dc8d17c; corrected export passed recovery and age-gate flows in both motion modes, zero page errors. TypeScript clean.
+- Repaired production rclone address and added verified host-key pinning with private config rollback copy. New backup transferred; SHA-256 matched both hosts. Empty host trust file correctly refused transfer. Restored the fresh archive in isolated temporary Postgres and migrated c13a0seen001 → e5a6part0001. Removed temporary restore container and data volume. Production application release unchanged.
+- Operational scripts, access contract, rollback, remaining gates: `deploy/staging/README.md`. Source remains only in H:; user architecture HTML remains untracked and untouched.
+
+**Open / next**
+- Native Android acceptance, staging erasure/reconnect/restart/load, scoped push and alert delivery, then Caddy/blue-green rehearsal and release promotion. Existing backup SQL archives still need encryption/deletion-compatible retention and separately protected storage. Current staging smoke tests are not full launch certification.
+- Development Stream project is currently assigned to staging; simultaneous independent local real-chat acceptance requires another non-production app. Do not repoint production Stream. Local UI/backend tests remain available.
+- Staff allowlist is the current workstation public IP: if that network changes, update the rendered Nginx allowlist via verified SSH; do not make staging public by removing the boundary.
+
+**Resume**
+```powershell
+Set-Location 'H:\Mento gpt\Mento'
+Get-Content deploy/staging/README.md
+ssh -F deploy/ssh.config mento-staging 'cd /opt/mento-staging && docker compose ps'
+```
+
+---
+
 ## 2026-10-02 — Staging acceptance: recovery navigation fix
 
 **Done:** Found an exported-web recovery navigation error (`ImageData` width zero): the landing recovery link bypassed the existing Lottie teardown guard. Both onboarding and recovery now select their destination after the canvas unmounts. TypeScript and local recovery browser acceptance pass in normal and reduced motion, including recovery identity and revocation of the previous refresh session.

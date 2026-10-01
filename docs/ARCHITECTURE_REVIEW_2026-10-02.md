@@ -2,40 +2,42 @@
 
 Reviewed 2 October 2026, Asia/Kolkata. This is an evidence-based review and proposed plan, not a deployment or a change to product scope.
 
-## Execution update — H: workspace and recovered server address
+## Execution update — verified VPS staging, 2 October 2026
 
-This document is the implementation baseline. The founder subsequently directed all
-work into `H:\Mento gpt` (repo `H:\Mento gpt\Mento`), excluding the Desktop copy.
-Release order is local development/checks → VPS staging/end-to-end acceptance →
-staged production promotion. `docs/ENVIRONMENTS.md` records the environment contract.
+This review remains the implementation baseline. All source changes are exclusively
+in `H:\Mento gpt\Mento`; Desktop is untouched. Historical audit findings below are
+preserved as the initial snapshot; this update records changes since that audit.
 
-**VPS B has been located at `31.42.125.238`.** The founder supplied the changed IP;
-SSH succeeded using the existing `id_ed25519` key and strict validation against the
-old address's known host key (`HostKeyAlias=87.232.72.79`). Observed: hostname
-`api.mento.in`, Debian 12, 2 CPUs, 1,918 MiB RAM (about 1,257 MiB available), 30 GiB
-root disk (22 GiB available), old API/Postgres/Redis plus healthy Uptime Kuma.
-Backup files from the new production server through September 29 remain present.
-The old public IP is obsolete; the earlier timeout findings below are historical,
-not a claim that the recovered server is down. Stale DNS and production's backup
-destination still need correction and verification. No remote changes have yet
-been made in this follow-up.
+- **VPS B:** 31.42.125.238, strict SSH validation against its existing host identity.
+  Debian 12, 2 CPUs, 1,918 MiB RAM, 30 GiB disk. Status DNS is corrected and HTTPS
+  returns the monitoring dashboard redirect. Existing monitoring/legacy services remain.
+- **Staging deployed:** https://staging.mento.chat, valid TLS, operator-network-only
+  app/API access, public signed webhook routes and readiness. Dedicated Compose
+  project/database/cache/secrets; push disabled. API/worker/Postgres/Valkey have
+  resource caps. Production-like ENV=staging and migration-first startup are enforced.
+- **Artifacts:** API 6e47f7a; web dc8d17c fixes recovery navigation's Lottie teardown
+  error. Exact image ID and web archive hash: `deploy/staging/release.json`.
+- **Acceptance:** live two-party browser chat passed normal/reduced motion with zero
+  page errors. Corrected web recovery and age-gate checks also passed both motion modes.
+  Live server-to-Stream safety bypass test proved crisis augmentation,
+  one deduplicated signal flag and benign pass-through. Unsigned hooks return 401;
+  app access from a non-allowlisted host returns 403; readiness returns 200. Local
+  API baseline remains 708 passing tests; no API source was changed in this deployment.
+- **Recovery restored:** production rclone now uses the new IP and pinned trusted
+  host keys; transfer succeeded and an empty trust file was rejected. A fresh dump's
+  hashes matched on A/B. It restored in a network-isolated disposable container and
+  migrated from c13a0seen001 to e5a6part0001. Restore container/data volume removed;
+  production data was never attached to the staging app.
+- **Operational limits:** this initial staging uses existing host Nginx; Caddy and
+  blue/green remain a later rehearsal. The development Stream app is assigned to
+  staging; simultaneous live local Stream acceptance needs a separate app. Existing
+  backup archives are not encrypted at rest. Native acceptance, push, erasure,
+  reconnect/load, alert-delivery and broader backup hardening gates remain open.
+  Production application deployment has not changed; only its backup routing/trust
+  configuration was repaired.
 
-Repository-scoped access: `ssh -F deploy/ssh.config mento-staging` and
-`ssh -F deploy/ssh.config mento-production`. The B alias preserves the trusted host
-key identity; it does not disable host-key validation.
-
-Plan tracking: local isolated development foundation is verified; B is accessible;
-staging is not yet deployed; production remains on the previously audited release.
-Keep the phase gates in section 11 and use the corrected B address for future work.
-
-Local evidence: 708 API tests passed (20 warnings); TypeScript, migration drift,
-Ruff and Black checks passed. Age gate, session refresh, recovery code and real
-two-party Stream chat passed in normal and reduced-motion browser runs. API, web
-and maintenance worker run against dedicated H-workspace infrastructure. Native
-acceptance remains open. A public tunnel setup was blocked by automatic approval
-review, so live Stream-to-local crisis-webhook acceptance remains unverified.
-The September 29 off-site dump passed gzip integrity checking; a database restore
-has not been rehearsed. None of these results authorizes skipping release gates.
+Runbook: `deploy/staging/README.md`. Environment contract: `docs/ENVIRONMENTS.md`.
+Access: `ssh -F deploy/ssh.config mento-staging` / `mento-production`.
 
 ## 1. Executive assessment
 

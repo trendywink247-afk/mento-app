@@ -11,7 +11,7 @@ staging environment, then promote in stages to production.
 |---|---|---|
 | Development | H: checkout, API 18000 / web 18081 | Code, visual review, fast checks; no production data |
 | Automated local tests | Dedicated `mento_test` database and Valkey index 1 | Repeatable backend and cross-worker integration tests |
-| Staging | VPS B `31.42.125.238` (previously `87.232.72.79`) | Production-like release validation with synthetic users and separate secrets; not deployed yet |
+| Staging | VPS B `31.42.125.238` (previously `87.232.72.79`) | Production-like release validation with synthetic users and separate secrets; deployed at staging.mento.chat; operator network restricted |
 | Production | VPS A `129.121.122.28` | Public member, mentor, and staff services |
 | Monitoring | VPS B watches A; A watches B; independent dead-man check | Detect host failure as well as application failure |
 | Recovery | Encrypted off-site backups with independently protected retention | Tested restores; never equate a backup file with proven recovery |
@@ -63,10 +63,12 @@ fingerprint comparisons confirmed the copied development API key differs from
 both VPS applications. That development application was explicitly enabled through
 `.local/stream.env`, and real two-party browser chat passed normally and under
 reduced motion. Own-chat server integration tests exercise real sockets independently
-of the UI. A live crisis-webhook drill still requires a reachable development-only
-webhook endpoint: automatic approval review blocked downloading/starting a public
-tunnel in this session. Existing development webhook settings were not changed;
-ordinary message delivery is not proof of crisis-hook enforcement. Never repoint
+of the UI. The live crisis-webhook drill subsequently passed on VPS staging, using stable
+HTTPS instead of a local tunnel. The non-production Stream application's hooks now
+point to staging. Do not run simultaneous local live-chat acceptance against it:
+local and staging have separate databases. Use a distinct Stream application for
+concurrent live local work; hermetic local/backend checks remain independent.
+Never repoint
 production's webhooks for testing.
 
 Browser scripts that accept `MENTO_WEB`/`MENTO_API` can target these ports:
@@ -105,7 +107,9 @@ excluded. Preserve existing data/services while planning staging resource limits
 The prior read-only production audit found A running the legacy Nginx/API/Postgres/
 Redis stack, release `92b8f57a5cd3`, not Balanced. Off-site backup logs recorded
 success through September 29 and failures September 30/October 1. Reconfirm these
-facts before making a release decision; this local setup does not repair them.
+facts before making a release decision; the staging follow-up repaired the destination and enabled host-key validation. A fresh
+backup transfer, matching hashes, isolated restore and forward migration were proven;
+see `deploy/staging/README.md`. Backup encryption at rest remains open.
 
 ## Staging isolation contract
 
@@ -158,3 +162,16 @@ the existing v1 before separately specifying deferred paid mentoring or Communit
 The September 20 architecture book remains a useful target-design reference. Its
 prices, capacity and recovery estimates are not acceptance evidence. Document live,
 implemented-but-undeployed, and planned capabilities separately.
+
+## Staging acceptance evidence — 2 October follow-up
+
+Valid TLS, public readiness 200, signed-hook enforcement (unsigned 401), and
+non-operator root access 403 were checked. Two-party chat passed normal/reduced
+motion; live crisis bypass augmentation/flag/benign checks passed. Recovery browser
+acceptance caught a landing animation teardown bug; fix dc8d17c passed locally and
+on the exported staging build in both motion modes. TypeScript is clean. Worker
+maintenance completed successfully. These smoke tests do not replace native,
+load, alert-delivery or release-promotion gates.
+
+Versioned web release and rollback instructions, resource caps, exact artifact
+identity and access restrictions: `deploy/staging/README.md` and `release.json`.

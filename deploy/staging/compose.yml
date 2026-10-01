@@ -1,0 +1,44 @@
+name: mento-staging
+x-app: &app
+  image: mento-api:staging-6e47f7a
+  env_file: /opt/mento-staging/secrets/api.env
+  restart: unless-stopped
+  mem_limit: 256m
+  cpus: 0.5
+  logging:
+    driver: json-file
+    options: {max-size: "5m", max-file: "2"}
+services:
+  postgres:
+    image: postgres:16-alpine
+    env_file: /opt/mento-staging/secrets/db.env
+    command: [postgres, -c, shared_buffers=32MB, -c, max_connections=30]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U mento_staging -d mento_staging"]
+      interval: 5s
+      retries: 12
+  valkey:
+    image: valkey/valkey:8-alpine
+    command: [valkey-server, --maxmemory, 48mb, --maxmemory-policy, volatile-lru, --save, "", --appendonly, "no"]
+    mem_limit: 80m
+    cpus: 0.25
+    restart: unless-stopped
+  api:
+    <<: *app
+    ports: ["127.0.0.1:18010:8000"]
+  worker:
+    <<: *app
+    command: [python, -m, app.jobs.worker]
+    healthcheck: {disable: true}
+  migrate:
+    <<: *app
+    profiles: [tools]
+    restart: "no"
+    command: [alembic, upgrade, head]
+    healthcheck: {disable: true}
+volumes:
+  pgdata:

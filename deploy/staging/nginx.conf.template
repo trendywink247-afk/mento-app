@@ -1,0 +1,43 @@
+server {
+ listen 80;
+ server_name staging.mento.chat;
+ access_log off;
+ location /.well-known/acme-challenge/ { root /var/www/mento-staging-acme; }
+ location / { return 301 https://$host$request_uri; }
+}
+server {
+ listen 443 ssl;
+ server_name staging.mento.chat;
+ ssl_certificate /etc/letsencrypt/live/staging.mento.chat/fullchain.pem;
+ ssl_certificate_key /etc/letsencrypt/live/staging.mento.chat/privkey.pem;
+ ssl_protocols TLSv1.2 TLSv1.3;
+ access_log off;
+ add_header X-Robots-Tag "noindex, nofollow" always;
+ add_header X-Content-Type-Options nosniff always;
+ root /opt/mento-staging/web;
+ index index.html;
+ client_max_body_size 1m;
+ allow OPERATOR_IP;
+ allow 127.0.0.1;
+ deny all;
+ location = /api/v1/stream/before-message-send {
+   allow all;
+   proxy_pass http://127.0.0.1:18010;
+   include /etc/nginx/mento-staging-proxy.conf;
+ }
+ location = /api/v1/stream/webhook {
+   allow all;
+   proxy_pass http://127.0.0.1:18010;
+   include /etc/nginx/mento-staging-proxy.conf;
+ }
+ location = /api/v1/health/ready {
+   allow all;
+   proxy_pass http://127.0.0.1:18010;
+   include /etc/nginx/mento-staging-proxy.conf;
+ }
+ location /api/ {
+   proxy_pass http://127.0.0.1:18010;
+   include /etc/nginx/mento-staging-proxy.conf;
+ }
+ location / { try_files $uri $uri/ /index.html; }
+}
