@@ -170,7 +170,7 @@ async function main() {
   // The before-send hook can answer with a `type: 'error'` message instead of throwing
   // (allowance hold, moderation) — Stream then never saves it. Log and fail loudly rather
   // than reporting OK for a reply the member will never see (T6.1 flow 2 diagnosis).
-  const sent = await channel.sendMessage({ text: args.reply });
+  const sent = await withTimeout(channel.sendMessage({ text: args.reply }), 30000, 'channel.sendMessage');
   const m = sent.message;
   console.log(`mentor-bot: sendMessage -> id=${m?.id} type=${m?.type} status=${m?.status} text=${JSON.stringify(m?.text)}`);
   if (m?.type === 'error') fail(`reply was not kept by Stream (type=error, text=${JSON.stringify(m.text)})`);
