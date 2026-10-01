@@ -127,35 +127,100 @@ message sending is confirmed working on a real native build. This is a
 correctness regression in the shipped app, not a CI gate technicality — if
 merged as-is, no member could send a chat message on Android.
 
-**Next:** a fresh investigation (or this session, continued) should start
-from `MessageComposer.tsx`'s three suspects above, in this order (cheapest
-test first):
-1. Render a plain `PressKey` test button directly in `ChatScreen.tsx`
-   (outside the kit's composer tree entirely) in the same screen — if IT also
-   fails to fire `onPress` under Maestro, the cause is something ambient
-   (`GestureHandlerRootView`, a global touch interceptor), not the portal.
-   If it works, the cause is specific to the kit's composer subtree.
-2. Temporarily strip `layout={transitions.layout200}` from the kit's
-   `Animated.View`s around the Input slot (a local, throwaway
-   patch-package edit — not a real fix, a bisection) and re-run
-   `two-party-chat.yaml` — if sending starts working, Reanimated's layout
-   animations interrupting mid-touch is the mechanism.
-3. If neither isolates it, the `react-native-teleport` Portal/PortalHost
-   patch (unconditional, not Expo-Go-gated) is the next suspect — try
-   gating it properly (`Platform.OS` alone isn't enough; needs an
-   Expo-Go-specific check, e.g. `Constants.appOwnership === 'expo'`) so a
-   real release build gets the REAL native portal instead of the patched
-   inline stand-in, and see if that changes anything.
+**Update, same day, ~16 more CI rounds — three mechanisms tested and ruled
+out, each with direct evidence, none guessed:**
 
-**How to resume:** both PR #11 and #12 have every fix above pushed, CI-green
-through onboarding and cold launch, red only on the composer-send
-touch-delivery question. `git fetch`, read `apps/mobile/components/chat/Composer.tsx`,
-`ComposerField.tsx`, `components/motion/PressKey.tsx`, and the kit source path
-above before changing anything — the diagnostics are still live in all three
-files (gated/cheap, safe to leave or strip). Pull the latest
-`maestro-failure-diagnostics` artifact's `rnjs.log` for the clean up-to-date
-trace (`gh run list --workflow maestro.yml --limit 5`, then
-`gh run download <id> -n maestro-failure-diagnostics`).
+1. **A plain `PressKey` elsewhere in the same tree (the control group)**:
+   confirmed logically, no CI round needed — `AppProviders.native.tsx` wraps
+   the ENTIRE app (every screen, onboarding included) in both
+   `GestureHandlerRootView` and `OverlayProvider`. Onboarding's `PressKey`
+   buttons (`start`, `role-talk`, `continue`, `animal-panda`, …) all fire
+   correctly under the exact same ambient providers — confirmed by reading
+   `app/index.tsx` (the `start` button is a `PressKey` too) and by every flow
+   visibly progressing through each screen. **This rules out
+   `GestureHandlerRootView`/`OverlayProvider` themselves.** The problem is
+   specific to being inside a mounted kit `<Channel>`/`<MessageComposer>`
+   tree, not ambient.
+2. **Reanimated's `layout={transitions.layout200}` layout animation**
+   (bisection: patched the kit's `MessageComposer.tsx` via patch-package to
+   drop just that one prop — the only one of three in the file that actually
+   wraps our `Input` override) — **no change.** `PressKey`'s `onPressIn`
+   still never fired. Reverted (patches/stream-chat-expo++… back to its
+   pre-bisection state).
+3. **`react-native-teleport`'s unconditional Expo Go patch** (bisection:
+   gated both `Portal`/`PortalHost` patches on
+   `Constants.appOwnership === 'expo'`, via `expo-constants`, so a real
+   release build gets the actual native Fabric component instead of the
+   patched inline `View` stand-in) — **no change**, and notably the build
+   succeeded (the real native component links and codegens fine, no crash)
+   — so it's not that the native module was ever missing, it genuinely
+   doesn't matter which Portal implementation renders. Reverted.
+4. **Maestro tap-coordinate staleness** (a different category — not a React
+   Native event bug, a Maestro-timing one: the composer field grows with
+   typed words, so coordinates read from an accessibility-tree snapshot
+   could be stale by the time the dispatched tap lands) — added
+   `waitForAnimationToEnd` between typing and tapping send in both flows —
+   **no change.**
+
+All four ruled out with hard evidence (not re-tested or re-guessed without
+new evidence — do not repeat any of these four without a new reason).
+
+**Where this leaves it:** `PressKey`'s `onPressIn`/`onPress` — the literal
+`react-native` `Pressable` callbacks — have now been confirmed to never fire
+for the `composer-send` key across **five** independent clean CI runs,
+regardless of: the Reanimated layout animation, the Portal implementation,
+or tap timing. The touch genuinely never completes a `Pressable` gesture
+while nested inside the kit's mounted `<Channel>`/`MessageComposer` tree,
+and genuinely does complete one everywhere else in the same app, under the
+same ambient providers. This is a narrow, well-bounded, 100%-reproducible
+symptom — but isolating the exact remaining mechanism (something about
+`<Channel>`'s own context/re-render behavior on a brand-new conversation?
+`MicPositionProvider`? `PortalWhileClosingView`'s `collapsable={false}`
+wrapper view specifically, independent of which Portal renders inside it?
+some other kit-internal gesture claim not yet read?) needs a different
+diagnostic method than "patch a suspect, spend 40 CI minutes, read the
+result" — each round has correctly ruled out one well-reasoned hypothesis,
+but the hypothesis space inside `MessageComposer.tsx`'s full render tree is
+larger than four guesses, and continuing to guess has low expected value
+per round from here.
+
+**Recommended next method (pick one, don't default to more bisection):**
+- A native Android Studio **Layout Inspector** session (not available in
+  this environment) would show directly which view is actually receiving
+  the touch and whether the Pressable's hit rect is even where expected —
+  this single session would likely resolve it faster than 5 more CI rounds.
+- Failing that, **systematic bisection of entire dependency MAJOR versions**
+  (not individual props) between PR #10 (last known-good, SDK 53) and PR #11
+  (first broken, SDK 54) — specifically try pinning `react-native-reanimated`
+  back to 3.x on top of SDK 54's other bumps (Reanimated 3→4 is a complete
+  engine rewrite, new-architecture-only; everything tested above was a prop
+  or a patch, never the library's major version itself) — accepting this
+  may require also reverting `react-native-worklets` and may not be
+  cleanly possible given SDK 54+'s other packages now assume Reanimated 4.
+- Or: **report upstream** to `stream-chat-react-native`
+  (GetStream/stream-chat-react-native on GitHub) — if this is a real
+  RN 0.83 + new-architecture compatibility bug in their kit's
+  `MessageComposer`, other teams upgrading will hit it too, and GetStream's
+  own team can trace it with tools (their own CI matrix, internal device
+  farm) this environment doesn't have.
+
+**Blocked — not merged, not silently decided:** do not merge #11 or #12
+until message sending is confirmed working on a real native build. This
+remains a correctness regression in the shipped app, not a CI gate
+technicality.
+
+**How to resume:** both PR #11 and #12 have every real fix from the first
+half of this entry pushed and CI-green through onboarding/cold-launch; all
+four bisections above are reverted (not left half-applied) so the branches
+are clean except for the diagnostic logging still live in
+`Composer.tsx`/`ComposerField.tsx`/`PressKey.tsx` (cheap, gated, safe to
+leave or strip). `git fetch`, pull the latest
+`maestro-failure-diagnostics` artifact's `rnjs.log` for a fresh trace
+(`gh run list --repo trendywink247-afk/mento-app --workflow maestro.yml
+--limit 5`, then `gh run download <id> -n maestro-failure-diagnostics`),
+and read this entry in full before choosing a next method — the point is
+not to re-run any of the four ruled-out bisections again without a genuinely
+new reason to suspect them.
 
 ---
 
