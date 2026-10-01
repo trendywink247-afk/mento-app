@@ -4,6 +4,161 @@
 
 ---
 
+## 2026-10-01 (session 49 cont'd) — WS6 T6.2: flow 2 root-caused — a real native send-path bug, not a CI flake
+
+**Context:** continuing the flow-2 investigation from the entry below ("lets start
+digging" — explicit instruction to keep root-causing rather than hand off). ~14
+more CI rounds on PRs #11/#12 since that entry, each adding one precise,
+targeted diagnostic and reading the real evidence before writing the next —
+not guessing. The outcome reclassifies this from "CI timing is flaky" to
+**"the upgraded native app cannot send a chat message at all"** — a real,
+reproducible, production-blocking regression, not a test artifact.
+
+**What actually got fixed along the way (real, confirmed bugs/gaps, all
+already committed to both PR branches):**
+1. **mentor-bot.mjs's own timeout was genuinely too short** (150s) — proven
+   with a heartbeat log: in a clean run, flow 2's onboarding alone can now
+   take up to ~296s (was ~90s when 150s was chosen) because
+   "Prebuild + assemble release APK" ballooned from ~5-10 min to ~31 min under
+   SDK 55's larger native dependency graph, and that general slowdown carries
+   through to on-device UI timing too. Raised to 480s, outer poll loop and the
+   job's `timeout-minutes` (45→65) raised to match.
+2. **Every cold-launch `extendedWaitUntil` was too tight**, same root cause:
+   60s → 90s → **150s** (90s still failed right at the edge, ~91s, twice, on
+   different flows). Applies to both `onboarding-first-message.yaml` and
+   `two-party-chat.yaml`.
+3. **A real CI-infra bug**: the Gradle daemon stays resident after
+   `assembleRelease` returns; at the raised metaspace, an idle daemon left too
+   little RAM once the emulator also launched and the runner VM itself died
+   with zero logged error. Fixed with `./gradlew --stop` right after the build.
+4. **A real native-build bug**: `react-native-worklets@0.12.0`'s own compiled
+   header still reported its internal stable-API version as `"0.9.0"` (stale —
+   never regenerated when its npm version was bumped), while reanimated 4.6.0
+   hard-asserts it must read `"0.12.1"` — a genuine C++ compile failure, only
+   caught by PR #12's native build, invisible to every web/local check. Fixed:
+   worklets → 0.12.2 (verified both headers' literal strings match before
+   pushing, not just trusting npm semver this time).
+5. **`adb logcat -d`'s end-of-run buffer dump loses our own JS console output**
+   on a long run — a torrent of UI-automation/system noise (many lines/sec)
+   evicts our comparatively rare `ReactNativeJS`-tagged lines from the kernel
+   log buffer before the single end-of-run read ever sees them. Fixed:
+   `nohup adb logcat -v time ReactNativeJS:V '*:S' > rnjs.log &`, streamed
+   continuously from the moment the buffer is cleared — this is what finally
+   made every diagnostic below possible to actually read.
+6. Two system-level Android ANRs / a bounce-to-launcher (ruled out as the
+   current blocker — see "Also observed, not the current blocker" below).
+
+**The real finding, once the above stopped producing noise:**
+
+With a clean run (cold-launch and timeout fixes all landed), both flow 1 and
+flow 2 complete onboarding fine and reach the chat composer. `mentor-bot.mjs`
+connects to Stream and watches the channel successfully, then sees **zero
+messages, ever** — not a timing issue, not an attribution bug, a flat `0`
+every 10s heartbeat for 160s+. Traced top-down with four successive,
+evidence-confirmed diagnostics (each one ruling something out before adding
+the next):
+
+- `Composer.tsx`'s `handleSend` was given an **unconditional** entry log
+  (`trimmed=... sending=...`), placed *before* its early-return — this never
+  appeared, on **either flow**, even flow 1's send (which the UI always
+  treated as "successful"). Every other tap in the same flows (role-talk,
+  continue, animal-panda, colour pick…) visibly works — the member progresses
+  through every screen — so this isn't a general Pressable regression.
+- Ruled out the obvious app-level suspect: `ComposerField`'s "held" branch
+  (allowance paused — three-in-a-row / daily cap) renders a plain inert
+  `<View accessibilityRole="button">` with **no `onPress` at all**, by design.
+  If that were rendering instead of the real key, a tap would succeed
+  visually while doing nothing. Logged `held`/`disabled` on every render:
+  confirmed `held=false, disabled=false` on both flows, right before the tap.
+  The real `PressKey` is what's mounted and enabled.
+- Went one level lower: instrumented `PressKey`'s own `onPressIn`/`onPress` —
+  the actual `react-native` `Pressable` callbacks — directly, gated to the
+  `composer-send` testID only. **Neither fired, on either flow, ever.** Not
+  even `onPressIn` (which would fire the haptic). This is the conclusive
+  result: **the native touch never reaches this Pressable's gesture
+  recognizer at all.** It is not an app-logic bug, not an allowance-state
+  bug, not an async/await bug — it is a touch-delivery/hit-testing failure,
+  specific to this one key, confirmed at the lowest level our own code
+  touches.
+
+**Where the problem almost certainly lives (not yet proven further):**
+Read `stream-chat-expo`'s actual bundled `MessageComposer.tsx`
+(`node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/MessageInput/MessageComposer.tsx`)
+directly — our `Input` override (`Composer.tsx`, wired via
+`WithComponents overrides={{ Input: Composer }}`, CLAUDE.md's kit-seam
+pattern) renders inside the kit's own `PortalWhileClosingView` (uses
+`react-native-teleport`, patched — see `patches/react-native-teleport+1.1.8.patch`
+— for Expo Go, but the patch applies **unconditionally**, in every build
+including this release APK) and `Animated.View`s carrying
+`layout={transitions.layout200}` (a Reanimated **layout animation**), all
+inside a tree that also contains a `GestureHandlerRootView` (for the poll
+modal). Any of these — the portal re-parenting, a layout-animation
+re-measuring/interrupting the view mid-touch, or a gesture-handler root
+upstream claiming the touch before our nested Pressable's responder chain
+completes it — is a plausible mechanism for exactly this symptom. Not
+narrowed further than that; doing so needs either a native Android Studio
+layout-inspector session (not available in this environment) or a sequence
+of targeted library-version bisections (next: try reverting
+`react-native-reanimated` layout-animation behavior, or testing whether a
+non-kit, directly-rendered `PressKey` elsewhere in the SAME chat screen also
+fails — if it does, the suspect is something ambient like
+`GestureHandlerRootView`, not the portal specifically).
+
+**Why this is a regression, not a pre-existing issue:** PR #10 (T6.2 step 1,
+SDK 53) passed this exact same `two-party-chat.yaml` flow cleanly on real CI
+— a real message, both directions. Something in step 2's dependency cascade
+(SDK 53→54: RN, Reanimated 3→4, react-native-gesture-handler, react-native-screens,
+safe-area-context, worklets all bumped together) broke it, and it persists
+unchanged through step 3 (SDK 55). Confirmed identical on both PR #11 and
+PR #12 — not branch-specific.
+
+**Also observed, not the current blocker (don't re-investigate without new
+evidence):** two separate runs hit system-level Android instability — a
+"Quickstep isn't responding" ANR over an otherwise-correctly-rendered app,
+and once a bounce clean back to the launcher — both on flow 2's own second
+cold launch, both before the cold-launch timeout bump above landed. Added a
+5s settle beat between flow 1 ending and flow 2 launching; subsequent runs
+have not reproduced either symptom. If they resurface, the next lever is
+splitting flow 1 and flow 2 into separate emulator boots (more isolation,
+costs ~60-90s extra per run) rather than more timeout tuning.
+
+**Blocked — not merged, not silently decided:** do not merge #11 or #12 until
+message sending is confirmed working on a real native build. This is a
+correctness regression in the shipped app, not a CI gate technicality — if
+merged as-is, no member could send a chat message on Android.
+
+**Next:** a fresh investigation (or this session, continued) should start
+from `MessageComposer.tsx`'s three suspects above, in this order (cheapest
+test first):
+1. Render a plain `PressKey` test button directly in `ChatScreen.tsx`
+   (outside the kit's composer tree entirely) in the same screen — if IT also
+   fails to fire `onPress` under Maestro, the cause is something ambient
+   (`GestureHandlerRootView`, a global touch interceptor), not the portal.
+   If it works, the cause is specific to the kit's composer subtree.
+2. Temporarily strip `layout={transitions.layout200}` from the kit's
+   `Animated.View`s around the Input slot (a local, throwaway
+   patch-package edit — not a real fix, a bisection) and re-run
+   `two-party-chat.yaml` — if sending starts working, Reanimated's layout
+   animations interrupting mid-touch is the mechanism.
+3. If neither isolates it, the `react-native-teleport` Portal/PortalHost
+   patch (unconditional, not Expo-Go-gated) is the next suspect — try
+   gating it properly (`Platform.OS` alone isn't enough; needs an
+   Expo-Go-specific check, e.g. `Constants.appOwnership === 'expo'`) so a
+   real release build gets the REAL native portal instead of the patched
+   inline stand-in, and see if that changes anything.
+
+**How to resume:** both PR #11 and #12 have every fix above pushed, CI-green
+through onboarding and cold launch, red only on the composer-send
+touch-delivery question. `git fetch`, read `apps/mobile/components/chat/Composer.tsx`,
+`ComposerField.tsx`, `components/motion/PressKey.tsx`, and the kit source path
+above before changing anything — the diagnostics are still live in all three
+files (gated/cheap, safe to leave or strip). Pull the latest
+`maestro-failure-diagnostics` artifact's `rnjs.log` for the clean up-to-date
+trace (`gh run list --workflow maestro.yml --limit 5`, then
+`gh run download <id> -n maestro-failure-diagnostics`).
+
+---
+
 ## 2026-10-01 (session 49) — WS6 T6.2: Expo upgrade chain, steps 2 and 3 (of 5)
 
 **Context:** continuing straight through T6.2 per the founder's "go go go" /
