@@ -259,6 +259,18 @@ jobs:
           script: |
             adb logcat -c
             adb install apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            # T6.2 (2026-10-01): a filtered, continuously-STREAMED copy of our own JS
+            # console output, not a buffer snapshot at the end. `adb logcat -d`'s final
+            # dump found ZERO "[Composer]" lines on the last two runs despite them being
+            # unconditionally logged on every send attempt — and found only flow 1's OWN
+            # startup lines, not flow 2's, even though flow 2 definitely re-ran the same
+            # module-init code on its own cold launch. The kernel log buffer fills with
+            # a torrent of UI-automation/system noise (QueryController, UiDevice, etc.)
+            # over several minutes and evicts our comparatively rare JS-tagged lines
+            # before the end-of-run dump ever reads them — streaming a tag-filtered copy
+            # out to a file as each line happens, instead of querying the buffer once at
+            # the end, can't lose anything that way.
+            nohup adb logcat -v time ReactNativeJS:V '*:S' > "$GITHUB_WORKSPACE/rnjs.log" 2>&1 &
             # T6.2 step 2/3 regression hunt (2026-10-01): flow 2's mentor reply has hung
             # 4/4 times with zero diagnostic trail — mentor-bot.mjs's own node process
             # had to be force-killed as an orphan at job teardown every time (it never
@@ -321,6 +333,7 @@ jobs:
           name: maestro-failure-diagnostics
           path: |
             logcat.txt
+            rnjs.log
             maestro-debug/
           if-no-files-found: warn
           retention-days: 7
