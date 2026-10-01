@@ -24,6 +24,18 @@ index d9c4aff..32c8dcc 100644
  var animationOptions = {
    damping: 24,
    mass: 1,
+diff --git a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/MessageInput/MessageComposer.tsx b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/MessageInput/MessageComposer.tsx
+index 4e74ada..8627e53 100644
+--- a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/MessageInput/MessageComposer.tsx
++++ b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/MessageInput/MessageComposer.tsx
+@@ -357,7 +357,6 @@ const MessageComposerWithContext = (props: MessageComposerPropsWithContext) => {
+               ]
+             : null
+         }
+-        layout={transitions.layout200}
+       >
+         <PortalWhileClosingView portalHostName='overlay-composer' portalName='message-composer'>
+           <View
 diff --git a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/UIComponents/SwipableWrapper.tsx b/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/UIComponents/SwipableWrapper.tsx
 index 0ce5d9b..5c3d21a 100644
 --- a/node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/UIComponents/SwipableWrapper.tsx
