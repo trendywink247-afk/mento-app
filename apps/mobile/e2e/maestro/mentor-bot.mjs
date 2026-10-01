@@ -70,6 +70,18 @@ async function api(base, path, token, init = {}) {
   return res.status === 204 ? null : res.json();
 }
 
+async function withTimeout(promise, timeoutMs, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`timed out after ${timeoutMs}ms waiting for ${label}`)), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function waitFor(fn, timeoutMs, label, intervalMs = 1000) {
   const start = Date.now();
   for (;;) {
@@ -131,9 +143,19 @@ async function main() {
   // Stream's client otherwise warns/blocks connectUser outside a real client
   // runtime. The real app never sets this; only this test helper does.
   const client = new StreamChat(streamKey, { allowServerSideConnect: true });
-  await client.connectUser({ id: me.id, name: me.persona_name }, me.stream_token);
+  // A hung WebSocket handshake otherwise never rejects — this script would sit
+  // silent until Maestro's own assertion timeout fires with no diagnosis at all
+  // (seen once: the log just stopped right after "active conversation", nothing
+  // after). Bound it so a real failure here is loud, not silent.
+  console.log('mentor-bot: connecting to Stream');
+  await withTimeout(
+    client.connectUser({ id: me.id, name: me.persona_name }, me.stream_token),
+    Math.min(timeoutMs, 30000),
+    'Stream connectUser',
+  );
+  console.log('mentor-bot: connected, watching channel');
   const channel = client.channel('messaging', convo.stream_channel_id);
-  await channel.watch();
+  await withTimeout(channel.watch(), Math.min(timeoutMs, 30000), 'channel.watch');
 
   await waitFor(
     async () => {
