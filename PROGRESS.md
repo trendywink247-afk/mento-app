@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — README and operations cookbook
+
+**Done:** Updated the stale README stack, local ports, self-hosted server roles and release status. Added `docs/mento-cookbook.html`, using the user-provided Desktop Ops cookbook only as a read-only style reference. Includes existing current/target architecture images with explicit snapshot dates, local/verification recipes, VPS access, release/recovery, scaling stages and iOS gates. Chromium validation at 1440 and 390 pixels: zero page errors, no page overflow, no broken images, anchors or local file links; screenshots visually inspected. Desktop files unchanged.
+
+**Delivery:** Documentation is on `codex/operations-cookbook`, separate from the running release-foundation checks. Integrate after PR #13. Production preflight: API readiness 200, crisis freshness 503 with last hook September 28; latest transferred backup October 2; production worker still absent. Do not mistake the freshness failure for proof of either working or broken end-to-end hooks.
+
+**Resume:** Open `docs/mento-cookbook.html`; inspect `gh pr checks 13`, finish the release foundation, then integrate this documentation branch. Continue through staged release acceptance before production promotion.
+
+---
+
 ## 2026-10-03 — Expo dependencies integrated
 
 **Done:** PRs #11 and #12 merged into master after native checks passed. PR #13 retargeted to master and marked ready for review. At bfe4ec5 API, web and release-tooling checks passed; native and review remained pending. Preserved both branches' progress history while resolving the documentation-only merge conflict. Quarantined the deliberately broken rollback candidate on VPS B. Production remains unchanged; its worker is still absent and promotion remains disabled.
