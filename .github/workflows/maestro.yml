@@ -30,6 +30,10 @@ on:
       - ".github/workflows/maestro.yml"
   workflow_dispatch: {}
 
+concurrency:
+  group: maestro-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check-secrets:
     # A job-level `if:` can't read `secrets` directly (actionlint: "context secrets is
@@ -313,7 +317,7 @@ jobs:
             # before there was anything to reply to — not a hang, not a delivery bug.
             # 480s covers the observed 296s with real margin; the job timeout above was
             # raised to match.
-            nohup sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 480; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 &
+            setsid sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 480; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 & echo $! > mentor-bot.pid
             maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
             i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 500 ]; do sleep 1; i=$((i + 1)); done
             [ -f mentor-bot.exitcode ] && [ "$(cat mentor-bot.exitcode)" = "0" ] || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
@@ -325,6 +329,15 @@ jobs:
             # for CI plus a tunnel + scripts.configure_stream — NOT the shared app, because
             # configure_stream repoints the app-wide hooks and would break crisis scanning
             # for whoever else uses those keys. Until then the flow is run by hand (README).
+
+      - name: Stop mentor helper on success, failure or cancellation
+        if: always()
+        run: |
+          if [ -f mentor-bot.pid ]; then
+            pid=$(cat mentor-bot.pid)
+            [[ "$pid" =~ ^[0-9]+$ ]] && [ "$pid" -gt 1 ] || exit 1
+            kill -- "-$pid" 2>/dev/null || true
+          fi
 
       - name: Upload failure diagnostics (logcat + Maestro screenshots/hierarchy)
         if: failure()

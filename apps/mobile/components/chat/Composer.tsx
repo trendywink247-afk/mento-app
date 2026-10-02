@@ -78,12 +78,6 @@ export function Composer() {
   );
 
   const handleSend = useCallback(async () => {
-    // T6.2 regression hunt (2026-10-01): a native-Android message never reaches
-    // Stream, yet nothing ever lands in the catch below either — this line tells
-    // apart "handleSend never ran / bailed out early" (trimmed empty here means
-    // the composer's StateStore never synced the typed text) from "it called
-    // sendMessage and that silently resolved without really delivering".
-    console.log(`[Composer] handleSend: trimmed=${JSON.stringify(trimmed)} sending=${sending}`);
     if (!trimmed || sending) return;
     // Whitespace never sends: trim before compose picks the text up. setText is the
     // silent variant (no typing event) — appropriate immediately before a send.
@@ -91,15 +85,15 @@ export function Composer() {
     setSending(true);
     try {
       await sendMessage();
-      console.log('[Composer] sendMessage resolved');
-    } catch (err) {
+    } catch {
       // The kit already clears the composer optimistically before this promise
       // settles; on failure the optimistic message stays in the transcript as a
       // retryable failed bubble (the kit's own error/retry affordance) — nothing
       // further to do here. Logged (reason, not a thrown-away detail): this path
       // was completely silent before T6.2's regression hunt (2026-10-01) — a
       // real native-Android send failure left zero trace anywhere, app or server.
-      console.error('[Composer] sendMessage failed:', err);
+      // SDK errors may contain the submitted body. Never put them in device logs.
+      console.error('[Composer] sendMessage failed');
     } finally {
       setSending(false);
     }
