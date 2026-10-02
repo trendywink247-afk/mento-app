@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-03 — Expo dependencies integrated
+
+**Done:** PRs #11 and #12 merged into master after native checks passed. PR #13 retargeted to master and marked ready for review. At bfe4ec5 API, web and release-tooling checks passed; native and review remained pending. Preserved both branches' progress history while resolving the documentation-only merge conflict. Quarantined the deliberately broken rollback candidate on VPS B. Production remains unchanged; its worker is still absent and promotion remains disabled.
+
+**Next:** Complete current-head review/checks, merge #13, run master checks and the full staging workflow. Resume: `gh pr checks 13` from this H: checkout.
+
+---
+
 ## 2026-10-03 — Receiver rollback proven; dependency hardening
 
 **Evidence:** PR #11 native run 36947188595 and PR #12 native run 36947275697 passed. PR #13 at 551345c passed API, Test CI and native run 36947359945. CodeRabbit was paused/skipped and is not substantive review evidence. The staging receiver deployed 551345c, passed schema/safety/isolated backup-restore acceptance, and passed age-gate, recovery and two-party browser checks in both motion modes. A corrupted archive was rejected. A deliberate startup-failure image triggered rollback to 551345c; API/worker recovered and readiness returned 200. Runtime identity was verified again on October 3.
@@ -115,6 +123,379 @@ pwsh -File scripts/local/workspace.ps1 status
 Get-Content docs/ARCHITECTURE_REVIEW_2026-10-02.md
 Get-Content docs/ENVIRONMENTS.md
 ```
+---
+## 2026-10-01 (session 49 cont'd) — WS6 T6.2: flow 2 root-caused — a real native send-path bug, not a CI flake
+
+**Context:** continuing the flow-2 investigation from the entry below ("lets start
+digging" — explicit instruction to keep root-causing rather than hand off). ~14
+more CI rounds on PRs #11/#12 since that entry, each adding one precise,
+targeted diagnostic and reading the real evidence before writing the next —
+not guessing. The outcome reclassifies this from "CI timing is flaky" to
+**"the upgraded native app cannot send a chat message at all"** — a real,
+reproducible, production-blocking regression, not a test artifact.
+
+**What actually got fixed along the way (real, confirmed bugs/gaps, all
+already committed to both PR branches):**
+1. **mentor-bot.mjs's own timeout was genuinely too short** (150s) — proven
+   with a heartbeat log: in a clean run, flow 2's onboarding alone can now
+   take up to ~296s (was ~90s when 150s was chosen) because
+   "Prebuild + assemble release APK" ballooned from ~5-10 min to ~31 min under
+   SDK 55's larger native dependency graph, and that general slowdown carries
+   through to on-device UI timing too. Raised to 480s, outer poll loop and the
+   job's `timeout-minutes` (45→65) raised to match.
+2. **Every cold-launch `extendedWaitUntil` was too tight**, same root cause:
+   60s → 90s → **150s** (90s still failed right at the edge, ~91s, twice, on
+   different flows). Applies to both `onboarding-first-message.yaml` and
+   `two-party-chat.yaml`.
+3. **A real CI-infra bug**: the Gradle daemon stays resident after
+   `assembleRelease` returns; at the raised metaspace, an idle daemon left too
+   little RAM once the emulator also launched and the runner VM itself died
+   with zero logged error. Fixed with `./gradlew --stop` right after the build.
+4. **A real native-build bug**: `react-native-worklets@0.12.0`'s own compiled
+   header still reported its internal stable-API version as `"0.9.0"` (stale —
+   never regenerated when its npm version was bumped), while reanimated 4.6.0
+   hard-asserts it must read `"0.12.1"` — a genuine C++ compile failure, only
+   caught by PR #12's native build, invisible to every web/local check. Fixed:
+   worklets → 0.12.2 (verified both headers' literal strings match before
+   pushing, not just trusting npm semver this time).
+5. **`adb logcat -d`'s end-of-run buffer dump loses our own JS console output**
+   on a long run — a torrent of UI-automation/system noise (many lines/sec)
+   evicts our comparatively rare `ReactNativeJS`-tagged lines from the kernel
+   log buffer before the single end-of-run read ever sees them. Fixed:
+   `nohup adb logcat -v time ReactNativeJS:V '*:S' > rnjs.log &`, streamed
+   continuously from the moment the buffer is cleared — this is what finally
+   made every diagnostic below possible to actually read.
+6. Two system-level Android ANRs / a bounce-to-launcher (ruled out as the
+   current blocker — see "Also observed, not the current blocker" below).
+
+**The real finding, once the above stopped producing noise:**
+
+With a clean run (cold-launch and timeout fixes all landed), both flow 1 and
+flow 2 complete onboarding fine and reach the chat composer. `mentor-bot.mjs`
+connects to Stream and watches the channel successfully, then sees **zero
+messages, ever** — not a timing issue, not an attribution bug, a flat `0`
+every 10s heartbeat for 160s+. Traced top-down with four successive,
+evidence-confirmed diagnostics (each one ruling something out before adding
+the next):
+
+- `Composer.tsx`'s `handleSend` was given an **unconditional** entry log
+  (`trimmed=... sending=...`), placed *before* its early-return — this never
+  appeared, on **either flow**, even flow 1's send (which the UI always
+  treated as "successful"). Every other tap in the same flows (role-talk,
+  continue, animal-panda, colour pick…) visibly works — the member progresses
+  through every screen — so this isn't a general Pressable regression.
+- Ruled out the obvious app-level suspect: `ComposerField`'s "held" branch
+  (allowance paused — three-in-a-row / daily cap) renders a plain inert
+  `<View accessibilityRole="button">` with **no `onPress` at all**, by design.
+  If that were rendering instead of the real key, a tap would succeed
+  visually while doing nothing. Logged `held`/`disabled` on every render:
+  confirmed `held=false, disabled=false` on both flows, right before the tap.
+  The real `PressKey` is what's mounted and enabled.
+- Went one level lower: instrumented `PressKey`'s own `onPressIn`/`onPress` —
+  the actual `react-native` `Pressable` callbacks — directly, gated to the
+  `composer-send` testID only. **Neither fired, on either flow, ever.** Not
+  even `onPressIn` (which would fire the haptic). This is the conclusive
+  result: **the native touch never reaches this Pressable's gesture
+  recognizer at all.** It is not an app-logic bug, not an allowance-state
+  bug, not an async/await bug — it is a touch-delivery/hit-testing failure,
+  specific to this one key, confirmed at the lowest level our own code
+  touches.
+
+**Where the problem almost certainly lives (not yet proven further):**
+Read `stream-chat-expo`'s actual bundled `MessageComposer.tsx`
+(`node_modules/stream-chat-expo/node_modules/stream-chat-react-native-core/src/components/MessageInput/MessageComposer.tsx`)
+directly — our `Input` override (`Composer.tsx`, wired via
+`WithComponents overrides={{ Input: Composer }}`, CLAUDE.md's kit-seam
+pattern) renders inside the kit's own `PortalWhileClosingView` (uses
+`react-native-teleport`, patched — see `patches/react-native-teleport+1.1.8.patch`
+— for Expo Go, but the patch applies **unconditionally**, in every build
+including this release APK) and `Animated.View`s carrying
+`layout={transitions.layout200}` (a Reanimated **layout animation**), all
+inside a tree that also contains a `GestureHandlerRootView` (for the poll
+modal). Any of these — the portal re-parenting, a layout-animation
+re-measuring/interrupting the view mid-touch, or a gesture-handler root
+upstream claiming the touch before our nested Pressable's responder chain
+completes it — is a plausible mechanism for exactly this symptom. Not
+narrowed further than that; doing so needs either a native Android Studio
+layout-inspector session (not available in this environment) or a sequence
+of targeted library-version bisections (next: try reverting
+`react-native-reanimated` layout-animation behavior, or testing whether a
+non-kit, directly-rendered `PressKey` elsewhere in the SAME chat screen also
+fails — if it does, the suspect is something ambient like
+`GestureHandlerRootView`, not the portal specifically).
+
+**Why this is a regression, not a pre-existing issue:** PR #10 (T6.2 step 1,
+SDK 53) passed this exact same `two-party-chat.yaml` flow cleanly on real CI
+— a real message, both directions. Something in step 2's dependency cascade
+(SDK 53→54: RN, Reanimated 3→4, react-native-gesture-handler, react-native-screens,
+safe-area-context, worklets all bumped together) broke it, and it persists
+unchanged through step 3 (SDK 55). Confirmed identical on both PR #11 and
+PR #12 — not branch-specific.
+
+**Also observed, not the current blocker (don't re-investigate without new
+evidence):** two separate runs hit system-level Android instability — a
+"Quickstep isn't responding" ANR over an otherwise-correctly-rendered app,
+and once a bounce clean back to the launcher — both on flow 2's own second
+cold launch, both before the cold-launch timeout bump above landed. Added a
+5s settle beat between flow 1 ending and flow 2 launching; subsequent runs
+have not reproduced either symptom. If they resurface, the next lever is
+splitting flow 1 and flow 2 into separate emulator boots (more isolation,
+costs ~60-90s extra per run) rather than more timeout tuning.
+
+**Blocked — not merged, not silently decided:** do not merge #11 or #12 until
+message sending is confirmed working on a real native build. This is a
+correctness regression in the shipped app, not a CI gate technicality — if
+merged as-is, no member could send a chat message on Android.
+
+**Update, same day, ~16 more CI rounds — three mechanisms tested and ruled
+out, each with direct evidence, none guessed:**
+
+1. **A plain `PressKey` elsewhere in the same tree (the control group)**:
+   confirmed logically, no CI round needed — `AppProviders.native.tsx` wraps
+   the ENTIRE app (every screen, onboarding included) in both
+   `GestureHandlerRootView` and `OverlayProvider`. Onboarding's `PressKey`
+   buttons (`start`, `role-talk`, `continue`, `animal-panda`, …) all fire
+   correctly under the exact same ambient providers — confirmed by reading
+   `app/index.tsx` (the `start` button is a `PressKey` too) and by every flow
+   visibly progressing through each screen. **This rules out
+   `GestureHandlerRootView`/`OverlayProvider` themselves.** The problem is
+   specific to being inside a mounted kit `<Channel>`/`<MessageComposer>`
+   tree, not ambient.
+2. **Reanimated's `layout={transitions.layout200}` layout animation**
+   (bisection: patched the kit's `MessageComposer.tsx` via patch-package to
+   drop just that one prop — the only one of three in the file that actually
+   wraps our `Input` override) — **no change.** `PressKey`'s `onPressIn`
+   still never fired. Reverted (patches/stream-chat-expo++… back to its
+   pre-bisection state).
+3. **`react-native-teleport`'s unconditional Expo Go patch** (bisection:
+   gated both `Portal`/`PortalHost` patches on
+   `Constants.appOwnership === 'expo'`, via `expo-constants`, so a real
+   release build gets the actual native Fabric component instead of the
+   patched inline `View` stand-in) — **no change**, and notably the build
+   succeeded (the real native component links and codegens fine, no crash)
+   — so it's not that the native module was ever missing, it genuinely
+   doesn't matter which Portal implementation renders. Reverted.
+4. **Maestro tap-coordinate staleness** (a different category — not a React
+   Native event bug, a Maestro-timing one: the composer field grows with
+   typed words, so coordinates read from an accessibility-tree snapshot
+   could be stale by the time the dispatched tap lands) — added
+   `waitForAnimationToEnd` between typing and tapping send in both flows —
+   **no change.**
+
+All four ruled out with hard evidence (not re-tested or re-guessed without
+new evidence — do not repeat any of these four without a new reason).
+
+**Where this leaves it:** `PressKey`'s `onPressIn`/`onPress` — the literal
+`react-native` `Pressable` callbacks — have now been confirmed to never fire
+for the `composer-send` key across **five** independent clean CI runs,
+regardless of: the Reanimated layout animation, the Portal implementation,
+or tap timing. The touch genuinely never completes a `Pressable` gesture
+while nested inside the kit's mounted `<Channel>`/`MessageComposer` tree,
+and genuinely does complete one everywhere else in the same app, under the
+same ambient providers. This is a narrow, well-bounded, 100%-reproducible
+symptom — but isolating the exact remaining mechanism (something about
+`<Channel>`'s own context/re-render behavior on a brand-new conversation?
+`MicPositionProvider`? `PortalWhileClosingView`'s `collapsable={false}`
+wrapper view specifically, independent of which Portal renders inside it?
+some other kit-internal gesture claim not yet read?) needs a different
+diagnostic method than "patch a suspect, spend 40 CI minutes, read the
+result" — each round has correctly ruled out one well-reasoned hypothesis,
+but the hypothesis space inside `MessageComposer.tsx`'s full render tree is
+larger than four guesses, and continuing to guess has low expected value
+per round from here.
+
+**Recommended next method (pick one, don't default to more bisection):**
+- A native Android Studio **Layout Inspector** session (not available in
+  this environment) would show directly which view is actually receiving
+  the touch and whether the Pressable's hit rect is even where expected —
+  this single session would likely resolve it faster than 5 more CI rounds.
+- Failing that, **systematic bisection of entire dependency MAJOR versions**
+  (not individual props) between PR #10 (last known-good, SDK 53) and PR #11
+  (first broken, SDK 54) — specifically try pinning `react-native-reanimated`
+  back to 3.x on top of SDK 54's other bumps (Reanimated 3→4 is a complete
+  engine rewrite, new-architecture-only; everything tested above was a prop
+  or a patch, never the library's major version itself) — accepting this
+  may require also reverting `react-native-worklets` and may not be
+  cleanly possible given SDK 54+'s other packages now assume Reanimated 4.
+- Or: **report upstream** to `stream-chat-react-native`
+  (GetStream/stream-chat-react-native on GitHub) — if this is a real
+  RN 0.83 + new-architecture compatibility bug in their kit's
+  `MessageComposer`, other teams upgrading will hit it too, and GetStream's
+  own team can trace it with tools (their own CI matrix, internal device
+  farm) this environment doesn't have.
+
+**Blocked — not merged, not silently decided:** do not merge #11 or #12
+until message sending is confirmed working on a real native build. This
+remains a correctness regression in the shipped app, not a CI gate
+technicality.
+
+**How to resume:** both PR #11 and #12 have every real fix from the first
+half of this entry pushed and CI-green through onboarding/cold-launch; all
+four bisections above are reverted (not left half-applied) so the branches
+are clean except for the diagnostic logging still live in
+`Composer.tsx`/`ComposerField.tsx`/`PressKey.tsx` (cheap, gated, safe to
+leave or strip). `git fetch`, pull the latest
+`maestro-failure-diagnostics` artifact's `rnjs.log` for a fresh trace
+(`gh run list --repo trendywink247-afk/mento-app --workflow maestro.yml
+--limit 5`, then `gh run download <id> -n maestro-failure-diagnostics`),
+and read this entry in full before choosing a next method — the point is
+not to re-run any of the four ruled-out bisections again without a genuinely
+new reason to suspect them.
+
+---
+
+## 2026-10-01 (session 49) — WS6 T6.2: Expo upgrade chain, steps 2 and 3 (of 5)
+
+**Context:** continuing straight through T6.2 per the founder's "go go go" /
+"move to step 2" instructions — no check-ins between steps, each one gated the
+same way step 1 was (expo-doctor, tsc, a real browser e2e run, commit, PR,
+wait on Maestro CI) before starting the next.
+
+**Done:**
+- **Step 2 (SDK 53→54)**, PR #11, branch `feat/ws6-t6.2-step2-expo54`: cascaded
+  every native module via `expo install --fix`; added `react-native-worklets`
+  (Reanimated 4's new required peer — Reanimated 4 itself already arrived at
+  this step, not step 5 as the plan sketch assumed); fixed Sentry 7's renamed
+  init option (`autoSessionTracking` → `enableAutoSessionTracking`); widened
+  the `react-native-safe-area-context` npm override to `~5.6.0` (was pinned
+  stale at `5.4.0`, causing `EOVERRIDE`); deleted a stray untracked `android/`
+  prebuild folder left over from earlier local AVD testing (this repo is CNG —
+  no native folders committed — and its presence was failing expo-doctor's
+  config-sync check).
+- **Step 3 (SDK 54→55)**, PR #12 (stacked on #11), branch
+  `feat/ws6-t6.2-step3-expo55`: same cascade; removed the now-obsolete
+  `newArchEnabled` app.json flag (mandatory as of this SDK); fixed
+  expo-video's renamed `VideoView` prop (`allowsFullscreen` →
+  `fullscreenOptions.enable`); added `@expo/config-plugins` as an explicit
+  devDependency — without it npm nested it only under `expo`'s/`@expo/cli`'s
+  own `node_modules` instead of hoisting to root, and Sentry's
+  `app.plugin.js` bare-`require`s it, so `expo config`/expo-doctor/prebuild
+  all hard-failed with `MODULE_NOT_FOUND` (upstream bug on Sentry's side;
+  expo-doctor's own advice says the override is fine to keep).
+- **Real regression caught and fixed, step 3**: Reanimated 4.2.1 + RN 0.83
+  has a confirmed upstream bug
+  ([reanimated#8854](https://github.com/software-mansion/react-native-reanimated/issues/8854),
+  an RN 0.78→0.83 regression) — every `Animated.View` on web threw
+  `"[Reanimated] Perhaps you are trying to pass an animated style to a
+  non-animated component"` the instant `ConnectOrbs`' shared-value styles
+  mounted on the connecting screen. `connecting-experience.e2e.js` caught it
+  (16 page errors). Bumped `react-native-reanimated` → 4.6.0 and
+  `react-native-worklets` → 0.12.2 (peer range 0.83-0.87 still covers our RN
+  0.83.10) — confirmed clean on web. Both pinned exactly and added to
+  `expo.install.exclude` so a future `expo install --fix` doesn't silently
+  drag them back down onto the broken SDK-55-blessed pin. (worklets 0.12.0
+  itself turned out to have a second, separate bug — see below — caught by
+  the native build, not web.)
+- **CI infra fix (both PRs)**: PR #11's Maestro run failed —
+  `:react-native-community_netinfo:lintVitalAnalyzeRelease` ran the default
+  generated `org.gradle.jvmargs` (`-Xmx2048m`/512m metaspace) out of
+  Metaspace under SDK 54/55's larger dependency graph. Reproduced locally
+  against the same generated `android/gradle.properties`; fixed by raising
+  it to `-Xmx4096m`/1024m right after `expo prebuild`, before `gradlew` runs
+  (`.github/workflows/maestro.yml`). Cherry-picked onto PR #11; native on
+  PR #12.
+- Each step verified: `expo-doctor`, `tsc --noEmit`, and real browser e2e runs
+  (`connecting-experience`, `path-communities`, and `two-party-chat` against
+  real Stream, both directions) — all 0 page errors on web. Backend
+  untouched: pytest 707/708 (1 pre-existing local-env gap, `pg_dump` not on
+  this machine's PATH — unrelated to this work), `alembic check` clean.
+- **Second real bug found by CI, not local testing**: `react-native-worklets@0.12.0`'s
+  own native header (`Compat/StableApi.h`) still defined
+  `WORKLETS_STABLE_API_VERSION` as `"0.9.0"` — its npm version was bumped
+  without regenerating that file — while reanimated 4.6.0's header hard
+  `static_assert`s it must read `"0.12.1"`. A real C++ compile failure on
+  PR #12's native build (`react-native-reanimated:buildCMakeRelWithDebInfo`),
+  invisible to every local/web check. Fixed: worklets → 0.12.2 (grepped both
+  headers directly to confirm the literal strings now match before pushing
+  again, not just trusting npm semver ranges a second time).
+- **CI infra, two more real findings (both silent — the job just died or
+  hung with nothing logged, not an in-script error)**:
+  1. The emulator step crashed outright (segfault inside the crashpad
+     handler itself) on the very first post-metaspace-fix run — reproducible
+     once, not again after a retry; most likely a stock GH-runner/swiftshader
+     flake, left unresolved since it didn't recur.
+  2. PR #11's *second* run then died silently ~2 minutes into emulator boot
+     with zero error text, just "Complete job" firing early — root-caused by
+     diffing it against the first (pre-metaspace-fix) failure: a Gradle
+     **daemon** stays resident after `assembleRelease` returns, and at the
+     `-Xmx4096m`/1024m the metaspace fix had just set, an idle daemon left
+     too little free RAM once the emulator (~2GB) also launched, so the
+     runner VM itself died rather than Gradle or the emulator logging
+     anything. Fixed with `./gradlew --stop` right after the build.
+     Confirmed: the next run completed the whole step properly (ran to
+     teardown, uploaded diagnostics, etc.) for the first time since step 2
+     started — this was real, not a guess.
+
+**Blocked — not merged, not silently decided:** with the two infra fixes
+above landed, flow 1 (`onboarding-first-message`) now passes cleanly and
+reliably on both PRs' real-device CI runs — proves the upgrade itself
+(install, boot, full onboarding, live chat navigation, a real device send)
+is sound. **Flow 2 (`two-party-chat`, the mentor-bot reply) has failed
+identically 4/4 times since step 2 started**, at the same assertion every
+time: the member sends a message, and the mentor's reply ("I'm here — tell
+me more when you're ready.") never appears. This was passing on PR #10
+(step 1, SDK 53) — something in step 2's cascade broke it specifically.
+
+Evidence gathered (`mentor-bot.log` + device `logcat.txt`, pulled from the
+`maestro-failure-diagnostics` artifact on two separate failed runs):
+- mentor-bot authenticates, finds the new conversation, and (after adding a
+  `withTimeout` guard this session) now confirms `client.connectUser()` and
+  `channel.watch()` both succeed. It then hangs in "wait for a message from
+  the member" — reading `channel.state.messages` in a loop — until its own
+  150s timeout, past which **the process should throw, log
+  `MENTOR_BOT_FAIL`, and write `mentor-bot.exitcode`, but none of that
+  appears in the captured log either** — a second oddity on top of the
+  member's message never arriving.
+- The member's own on-device `logcat.txt` shows **zero errors or exceptions**
+  of any kind around the send — no caught JS exception, no native crash, no
+  Stream-related log line at all (release/Hermes strips most dev logging, so
+  absence of logs isn't itself conclusive either way).
+- The exact same flow, same backend, same `stream-chat` JS client version,
+  passed cleanly on **web** this session (`two-party-chat.e2e.js`, real
+  Stream, both directions, 0 page errors) — which points at something
+  **native-Android-specific** (new-arch networking, `stream-chat-expo`'s
+  native layer, or the RN 0.79→0.83 jump) rather than a `stream-chat`/`ws`
+  dependency-version drift (checked: both identical to PR #10's lockfile).
+- Not yet checked: whether the member's message actually reaches Stream's
+  servers at all (no way to confirm from this evidence alone — would need
+  Stream's own dashboard/debug logging, or instrumenting the app's send path
+  directly, neither done this session).
+
+This mirrors T6.1's own flow-2 history (see the 2026-09-29 entry below) —
+same symptom shape, different cause (that one was mentor-bot latching onto
+a stale conversation; this one is a real reply that never lands with zero
+diagnostic trail on either side). Following that precedent: **stopping here
+rather than continuing to guess** — this needs a dedicated session with
+Stream debug logging enabled or a native-side send/receive trace, not more
+timeout tweaks.
+
+**Next:** a fresh session should root-cause flow 2 before merging #11/#12 —
+start from the evidence above, specifically "does the member's message
+reach Stream at all" (instrument `components/chat/Composer.tsx`'s send path
+or check Stream's own dashboard for the channel) before touching mentor-bot
+again. Once flow 2 is green, merge #11 then #12, then continue T6.2 step 4
+(SDK 55→56: icons to `@react-native-vector-icons/ionicons`, expo-router
+codemod), then step 5 (SDK 56→57: Reanimated 4/Skia 2/Lottie 7.5/Sentry 8 —
+**this is where the reanimated/worklets override below should be
+reconciled for real**, not carried forward again).
+
+**Open decisions (founder veto welcome, not blocking):**
+- The Reanimated 4.6.0 / worklets 0.12.2 override (above) deviates from
+  expo's SDK-55-blessed pin (4.2.1/0.7.4). Peer ranges still cover our RN
+  version and both upstream bugs are confirmed (not guessed), so this was
+  implemented rather than blocked on — but it should be revisited at step 5
+  rather than carried indefinitely.
+- `@expo/config-plugins` is now a direct devDependency solely to work around
+  Sentry's outdated plugin import. Drop it once `@sentry/react-native` ships
+  a fixed `app.plugin.js` (check on step 5's Sentry 8 bump).
+
+**How to resume:** `git fetch`; both PR #11 and #12 have every fix above
+pushed and are CI-green on flow 1, red on flow 2 (`gh pr checks 11/12
+--repo trendywink247-afk/mento-app`, then `gh run download <run-id> -n
+maestro-failure-diagnostics` for the latest evidence). Root-cause flow 2
+first — do not merge either PR until it passes — then resume the step
+sequence from step 4.
+
 
 ---
 
