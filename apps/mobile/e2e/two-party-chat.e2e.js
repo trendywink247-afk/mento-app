@@ -88,6 +88,7 @@ async function onboardMember(page, tid) {
   mpage.on('pageerror', (e) => errors.member.push(String(e)));
   const mtid = (id) => mpage.locator(`[data-testid="${id}"]`);
   await onboardMember(mpage, mtid);
+  const conversationId = new URL(mpage.url()).pathname.split('/').filter(Boolean).pop();
   console.log('OK member onboarded + in chat');
 
   await mtid('composer-input').fill(MEMBER_MSG);
@@ -114,8 +115,9 @@ async function onboardMember(page, tid) {
   await lpage.waitForSelector('[data-testid="console-ready"]', { timeout: 60000 });
   console.log('OK listener console ready');
 
-  await lpage.waitForSelector('[data-testid^="convo-"]', { timeout: 30000 });
-  await lpage.locator('[data-testid^="convo-"]').first().click();
+  // Match this member's conversation, not an older synthetic row in the inbox.
+  await ltid(`convo-${conversationId}`).waitFor({ state: 'visible', timeout: 30000 });
+  await ltid(`convo-${conversationId}`).click();
   await lpage.waitForSelector('[data-testid="listener-chat-ready"]', { timeout: 60000 });
   await lpage.waitForSelector(`text=${MEMBER_MSG}`, { timeout: 30000 });
   console.log('OK member->listener delivery confirmed');

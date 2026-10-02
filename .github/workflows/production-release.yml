@@ -1,0 +1,62 @@
+name: Production Release
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full SHA already accepted on staging
+        required: true
+      staging_run_id:
+        description: Successful Staging Release run containing this candidate
+        required: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: mento-production-release
+  cancel-in-progress: false
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/master'
+    environment: production
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ inputs.sha }}
+      STAGING_RUN: ${{ inputs.staging_run_id }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+          fetch-depth: 0
+      - name: Verify exact-commit tests and accepted staging artifact
+        run: |
+          python3 scripts/ci/release_gate.py checks "$SHA"
+          git merge-base --is-ancestor "$SHA" origin/master
+          python3 scripts/ci/release_gate.py staging "$STAGING_RUN" "$SHA"
+          (cd candidate && sha256sum --check SHA256SUMS)
+      - name: Require production readiness switch
+        env:
+          ENABLED: ${{ vars.PRODUCTION_RELEASE_ENABLED }}
+        run: |
+          [ "$ENABLED" = true ] || { echo 'Production remains locked until the operational release checklist is complete.'; exit 1; }
+      - name: Configure pinned deploy identity
+        env:
+          DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.PRODUCTION_DEPLOY_KNOWN_HOSTS }}
+        run: bash scripts/ci/setup-ssh.sh
+      - name: Promote the accepted artifacts without rebuilding
+        run: |
+          tar -C candidate -czf candidate.tgz .
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ops@129.121.122.28 "receive $SHA" < candidate.tgz
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ops@129.121.122.28 "deploy $SHA"
+      - name: Verify production routes
+        run: |
+          . deploy/domains.env
+          curl --fail --retry 5 --retry-delay 3 "https://$API_HOST/api/v1/health/ready"
+          for url in "https://$APP_HOST/" "https://$ADMIN_HOST/admin"; do
+            curl --fail --silent --output /dev/null "$url"
+          done
+      - name: Remove runner identity
+        if: always()
+        run: rm -f ~/.ssh/mento-release

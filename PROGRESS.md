@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-02 — GitHub delivery gates and PR review (in progress)
+
+**Done:** Pushed the H-only foundation as draft PR #13, stacked on #12 → #11. Reviewed both existing PRs: native checks are red; no merges or production promotions performed. Removed native message-body/error-object logging and corrected measured keyboard offsets for member/mentor chat. Strengthened Maestro's first-message assertion; native verification remains pending. Added Test CI, exact-SHA/master-push release policy, immutable candidate checksums and distinct staging/production workflows; removed the independent production bypass workflows in this branch. Pinned Actions to reviewed commit SHAs and added Actions dependency updates. Operational details: `docs/RELEASE_PIPELINES.md`.
+
+**Evidence:** GitHub on 58c7b80: API lint/schema/tests passed (708 tests, 23 warnings); Test CI passed including TypeScript, web export, age gate normal/reduced and release policy tests. Local actionlint passes; receiver/policy tests 4 passed. Live staging two-party test passes in both motion modes with zero page errors, using the new temporary fixture and exact conversation selector. Cleanup restored prior mentor availability and suspended the synthetic mentor credential. Native release APK build is still running; no native success claim.
+
+**Server/GitHub setup:** Created staging/production environments (no approval rules). Production readiness switch is false. Installed root-owned staging receiver and dedicated `mento-ci-staging` account; arbitrary-shell probe correctly rejected, pinned HTTPS tunnel returned 200. Configured staging-specific key/host/Stream secrets. No production CI key/receiver activated and no production app version changed. The private repository's branch-protection API reported a paid-plan requirement; environment creation itself succeeded.
+
+**Next / limitations:** Finish native diagnosis and bring the PR dependency chain green. Rehearse the complete workflow on a green master SHA; manual fixture tests do not prove image deployment/rollback. Production receiver, legacy web-to-symlink conversion, rollback rehearsal, encrypted backup retention and broader enterprise acceptance remain gates before enabling promotion. A cancelled fixture may need `cleanup <SHA>`; the saved snapshot blocks another fixture until restored. Candidate uploads are immutable: retain/reuse the same build artifacts when retrying a partially completed release. User architecture HTML remains untracked and untouched.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 13; Get-Content docs/RELEASE_PIPELINES.md`. First native diagnostic run: 36944156709. Review the latest run's failure artifact before changing keyboard behavior again. Desktop checkout is untouched.
+
+---
+
 ## 2026-10-02 — Separate architecture images
 
 **Done:** Added two shareable PNG diagrams under `docs/diagrams/`: current deployed topology and proposed growth architecture. Included server roles, Stream versus own-chat, release flow, operational gaps and planned status. Preserved a deterministic Pillow renderer. Visually inspected both images for readability and connections; no application or deployment changes.

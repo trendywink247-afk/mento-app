@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Read-only input from an existing backup; isolated temporary container, no host ports.
 set -euo pipefail
-name=mento-restore-drill-20261002
+name=mento-restore-drill-$$
 backup=$(find /opt/mento-backups/from-new-box -maxdepth 1 -name 'mento-*.sql.gz' -type f | sort | tail -1)
 test -n "$backup"
 gzip -t "$backup"
@@ -14,6 +14,6 @@ done
 gzip -dc "$backup" | docker exec -i "$name" psql -X -v ON_ERROR_STOP=1 -U mento -d mento >/dev/null
 printf 'Restored archive: %s\n' "$(basename "$backup")"
 docker exec "$name" psql -X -At -U mento -d mento -c 'SELECT version_num FROM alembic_version;'
-docker run --rm --network "container:$name" --memory 256m --cpus 0.5 -e DATABASE_URL=postgresql+psycopg://mento@127.0.0.1:5432/mento mento-api:staging-6e47f7a alembic upgrade head
+docker run --rm --network "container:$name" --memory 256m --cpus 0.5 -e DATABASE_URL=postgresql+psycopg://mento@127.0.0.1:5432/mento "${RESTORE_IMAGE:-mento-api:staging-6e47f7a}" alembic upgrade head
 docker exec "$name" psql -X -At -U mento -d mento -c 'SELECT version_num FROM alembic_version;'
 echo 'PASS: isolated restore and forward migration; no serving application attached'

@@ -23,8 +23,8 @@ jobs:
       EXPO_PUBLIC_API_URL: http://127.0.0.1:18000/api/v1
       EXPO_NO_DOTENV: '1'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: npm
@@ -46,9 +46,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Validate release policy tests
         run: python3 -m unittest discover -s scripts/ci -p 'test_*.py'
+      - name: Validate all GitHub workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck=
       - name: Validate shell syntax
         run: while IFS= read -r -d '' file; do bash -n "$file"; done < <(find deploy scripts/ci -name '*.sh' -print0)
   test-gate:
