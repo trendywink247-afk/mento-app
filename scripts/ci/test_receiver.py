@@ -13,6 +13,27 @@ spec.loader.exec_module(receiver)
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_image_archive_must_import_only_the_expected_source_tag(self):
+        sha = "a" * 40
+        for tag, revision, valid in [(f"mento-api:{sha[:12]}", sha, True),
+                                      ("mento-api:other", sha, False),
+                                      (f"mento-api:{sha[:12]}", "b" * 40, False)]:
+            with self.subTest(tag=tag, revision=revision), tempfile.TemporaryDirectory() as temp:
+                archive = Path(temp) / "image.tgz"
+                files = {"manifest.json": [{"Config": "config.json", "RepoTags": [tag]}],
+                         "config.json": {"config": {"Labels": {"org.opencontainers.image.revision": revision}}}}
+                with tarfile.open(archive, "w:gz") as out:
+                    for name, value in files.items():
+                        data = json.dumps(value).encode()
+                        item = tarfile.TarInfo(name)
+                        item.size = len(data)
+                        out.addfile(item, io.BytesIO(data))
+                if valid:
+                    receiver.verify_image_archive(archive, sha)
+                else:
+                    with self.assertRaises(ValueError):
+                        receiver.verify_image_archive(archive, sha)
+
     def test_rejects_traversal_links_and_unexpected_files(self):
         for name, kind in [("../escape", tarfile.REGTYPE), ("/escape", tarfile.REGTYPE),
                            ("link", tarfile.SYMTYPE), ("secret.env", tarfile.REGTYPE)]:

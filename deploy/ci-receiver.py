@@ -10,10 +10,12 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 
 
 def run(*args, **kwargs):
@@ -70,10 +72,26 @@ def verify_candidate(candidate, sha):
     return manifest
 
 
+def verify_image_archive(archive, sha):
+    # Docker's classic and containerd stores expose different native image IDs.
+    # The checksummed archive is portable; require it to import exactly our tag.
+    with tarfile.open(archive, "r:gz") as source:
+        manifest = json.load(source.extractfile("manifest.json"))
+        if len(manifest) != 1 or manifest[0].get("RepoTags") != [f"mento-api:{sha[:12]}"]:
+            raise ValueError("Image archive must contain exactly the candidate tag")
+        config = json.load(source.extractfile(manifest[0]["Config"]))
+        if config.get("config", {}).get("Labels", {}).get("org.opencontainers.image.revision") != sha:
+            raise ValueError("Archived image source revision differs from candidate")
+
+
 def main():
     import fcntl  # Linux server only; archive validation is testable on Windows.
 
     os.umask(0o077)
+    def interrupted(_signal, _frame):
+        raise RuntimeError("Release interrupted; restoring previous runtime")
+    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGHUP, interrupted)
     environment = sys.argv[1]
     if environment not in {"staging", "production"}:
         raise ValueError("Invalid installed environment")
@@ -116,6 +134,9 @@ def main():
 
         manifest = verify_candidate(candidate, sha)
         image = f"mento-api:{sha[:12]}"
+        runtime_ids = base / "runtime-image-ids"
+        runtime_ids.mkdir(exist_ok=True)
+        runtime_id = runtime_ids / sha
         os.chdir(base)
         dc = ["docker", "compose", "-f", str(base / "compose.yml"), "-f", str(base / "ci.override.yml")]
         if operation in {"fixture", "cleanup"}:
@@ -156,7 +177,7 @@ def main():
             for service in ("api", "worker"):
                 cid = subprocess.check_output([*dc, "ps", "-q", service], text=True).strip()
                 actual = subprocess.check_output(["docker", "inspect", "--format", "{{.Image}}", cid], text=True).strip()
-                if actual != manifest["image"]:
+                if actual != runtime_id.read_text().strip():
                     raise ValueError("Running image differs from candidate")
             if operation == "accept":
                 run(*dc, "exec", "-T", "api", "alembic", "check")
@@ -169,14 +190,16 @@ def main():
 
         if (base / "fixture-state.json").exists():
             raise ValueError("Restore outstanding staging fixture before another deployment")
+        verify_image_archive(candidate / "api-image.tar.gz", sha)
         run("docker", "load", "--input", str(candidate / "api-image.tar.gz"))
         actual = subprocess.check_output(["docker", "image", "inspect", image, "--format", "{{.Id}}"], text=True).strip()
-        if actual != manifest["image"]:
-            raise ValueError("Loaded image differs from manifest")
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", actual):
+            raise ValueError("Loaded image has no content identity")
         revision = subprocess.check_output(["docker", "image", "inspect", image, "--format",
                                             '{{index .Config.Labels "org.opencontainers.image.revision"}}'], text=True).strip()
         if revision != sha:
             raise ValueError("Image source revision differs from candidate")
+        runtime_id.write_text(actual + "\n")
         webbase = base if environment == "staging" else Path("/opt/mento-console")
         release = webbase / "web-releases" / sha
         if not release.exists():
@@ -207,12 +230,13 @@ def main():
                 # Back up before a migration; do not print database contents.
                 backups = base / "predeploy-backups"
                 backups.mkdir(mode=0o700, exist_ok=True)
-                with (backups / f"{sha}.sql").open("wb") as backup:
+                with (backups / f"{sha}-{time.time_ns()}.sql").open("xb") as backup:
                     run("docker", "compose", "-f", str(base / "compose.yml"), "exec", "-T", "postgres",
                         "pg_dump", "-U", "mento_staging", "-d", "mento_staging", stdin=subprocess.DEVNULL, stdout=backup)
                 override.write_text("services:\n" + "".join(f"  {service}:\n    image: {image}\n" for service in ("api", "worker", "migrate")))
+                override.chmod(0o644)  # image tags only; operator Compose reads remain usable
                 run(*dc, "run", "--rm", "--no-deps", "migrate")
-                run(*dc, "up", "-d", "--wait", "api", "worker")
+                run(*dc, "up", "-d", "--wait", "--wait-timeout", "120", "api", "worker")
             else:
                 # The existing operator script checks master ancestry, backs up,
                 # migrates once and reuses the preloaded SHA-tagged image.
@@ -229,6 +253,9 @@ def main():
             if old_web:
                 (base / "previous-web").write_text(str(old_web) + "\n")
         except Exception:
+            # Complete recovery even if the SSH caller sends another interruption.
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            signal.signal(signal.SIGHUP, signal.SIG_IGN)
             if old_web:
                 rollback = webbase / "ci-rollback"
                 rollback.unlink(missing_ok=True)
@@ -237,10 +264,10 @@ def main():
             if environment == "staging":
                 if old_override is None:
                     override.unlink(missing_ok=True)
-                    run("docker", "compose", "-f", str(base / "compose.yml"), "up", "-d", "--wait", "api", "worker")
+                    run("docker", "compose", "-f", str(base / "compose.yml"), "up", "-d", "--wait", "--wait-timeout", "120", "api", "worker")
                 else:
                     override.write_text(old_override)
-                    run(*dc, "up", "-d", "--wait", "api", "worker")
+                    run(*dc, "up", "-d", "--wait", "--wait-timeout", "120", "api", "worker")
             elif production_api_changed:
                 run("sudo", "-Hu", "mento-ops", "bash", "/opt/mento/deploy/deploy.sh", "--rollback")
             # Schema rollback is never automatic: migrations must be expand/contract.

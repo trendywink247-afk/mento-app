@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-03 — Receiver rollback proven; dependency hardening
+
+**Evidence:** PR #11 native run 36947188595 and PR #12 native run 36947275697 passed. PR #13 at 551345c passed API, Test CI and native run 36947359945. CodeRabbit was paused/skipped and is not substantive review evidence. The staging receiver deployed 551345c, passed schema/safety/isolated backup-restore acceptance, and passed age-gate, recovery and two-party browser checks in both motion modes. A corrupted archive was rejected. A deliberate startup-failure image triggered rollback to 551345c; API/worker recovered and readiness returned 200. Runtime identity was verified again on October 3.
+
+**Changes:** Verify portable Docker archive source/tag before import and record the server's native image identity; preserve unique predeploy backups; bound startup waits; recover on termination/hangup. Release tooling tests: 8 passed; actionlint and whitespace checks clean. Compatible dependency patches and scoped Stream Lodash override reduce the recorded runtime audit from 24 to 16 entries (5 high, 11 moderate). The five high entries propagate one unpatched node-forge advisory; this is not a clean security audit or a risk waiver.
+
+**Next:** Push these changes and validate the new commit, then integrate #11 → #12 → #13 and exercise the actual Staging Release workflow on green master. Manual rehearsal artifacts are not production-promotable evidence. Keep production promotion disabled until the documented operational gates pass. Quarantine the deliberately broken staging candidate before further releases. Production application remains unchanged.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 13; Get-Content docs/RELEASE_PIPELINES.md`. Desktop checkout remains untouched.
+
+---
+
 ## 2026-10-02 — GitHub delivery gates and PR review (in progress)
 
 **Done:** Pushed the H-only foundation as draft PR #13, stacked on #12 → #11. Reviewed both existing PRs: native checks are red; no merges or production promotions performed. Removed native message-body/error-object logging and corrected measured keyboard offsets for member/mentor chat. Strengthened Maestro's first-message assertion; native verification remains pending. Added Test CI, exact-SHA/master-push release policy, immutable candidate checksums and distinct staging/production workflows; removed the independent production bypass workflows in this branch. Pinned Actions to reviewed commit SHAs and added Actions dependency updates. Operational details: `docs/RELEASE_PIPELINES.md`.

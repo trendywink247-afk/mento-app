@@ -29,6 +29,9 @@ Dispatch on **master** with a full SHA already green on master. The workflow:
    production URLs/Stream keys). Records image identity and SHA-256 checksums.
 3. Uploads the candidate to the staging-only forced-command receiver. It rejects
    unsafe archives, changed candidates, incorrect checksums and low disk space.
+   The API archive checksum is the portable identity. The receiver checks its
+   sole image tag/source label and records the loaded host's native image ID;
+   Docker classic and containerd image stores need not expose the same build ID.
 4. Takes a pre-migration staging backup, migrates once, starts API/worker on the
    same image, then switches the web symlink. On failure it restores the prior
    image configuration and web pointer. Schema downgrades are never automatic.
