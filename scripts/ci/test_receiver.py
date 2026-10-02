@@ -1,5 +1,7 @@
 import importlib.util
 import io
+import hashlib
+import json
 from pathlib import Path
 import tarfile
 import tempfile
@@ -37,3 +39,24 @@ class ArchiveTests(unittest.TestCase):
                 out.addfile(item, io.BytesIO(b"ok"))
             receiver.extract(archive, target)
             self.assertEqual((target / "assets/index.js").read_bytes(), b"ok")
+
+    def test_candidate_tampering_and_wrong_commit_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            candidate = Path(temp)
+            sha = "a" * 40
+            manifest = {"sha": sha, "image": "sha256:" + "b" * 64}
+            files = {"api-image.tar.gz": b"api", "web-staging.tar.gz": b"staging",
+                     "web-production.tar.gz": b"production", "checks.json": b"{}",
+                     "image-id.txt": manifest["image"].encode(),
+                     "release.json": json.dumps(manifest).encode()}
+            checksums = []
+            for name, data in files.items():
+                (candidate / name).write_bytes(data)
+                checksums.append(f"{hashlib.sha256(data).hexdigest()}  {name}")
+            (candidate / "SHA256SUMS").write_text("\n".join(checksums))
+            self.assertEqual(receiver.verify_candidate(candidate, sha), manifest)
+            with self.assertRaises(ValueError):
+                receiver.verify_candidate(candidate, "c" * 40)
+            (candidate / "api-image.tar.gz").write_bytes(b"tampered")
+            with self.assertRaises(ValueError):
+                receiver.verify_candidate(candidate, sha)

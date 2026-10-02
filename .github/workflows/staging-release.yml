@@ -5,6 +5,9 @@ on:
       sha:
         description: Full SHA on master with green API, web and native push checks
         required: true
+      reuse_build_run_id:
+        description: Optional completed staging run whose immutable build should be retried
+        required: false
 permissions:
   contents: read
   actions: read
@@ -20,6 +23,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       SHA: ${{ inputs.sha }}
+      REUSE_RUN: ${{ inputs.reuse_build_run_id }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -31,17 +35,24 @@ jobs:
           python3 scripts/ci/release_gate.py checks "$SHA" > candidate/checks.json
           git merge-base --is-ancestor "$SHA" origin/master
           git checkout --detach "$SHA"
+      - name: Reuse a previously built candidate for a deployment retry
+        if: inputs.reuse_build_run_id != ''
+        run: |
+          python3 scripts/ci/release_gate.py built "$REUSE_RUN" "$SHA"
+          (cd candidate && sha256sum --check SHA256SUMS)
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
       - name: Build API once for both environments
+        if: inputs.reuse_build_run_id == ''
         run: |
           docker build --label "org.opencontainers.image.revision=$SHA" -t "mento-api:${SHA:0:12}" services/api
           docker save "mento-api:${SHA:0:12}" | gzip > candidate/api-image.tar.gz
           docker image inspect "mento-api:${SHA:0:12}" --format '{{.Id}}' > candidate/image-id.txt
       - name: Build both web configurations from the same source
+        if: inputs.reuse_build_run_id == ''
         env:
           STAGING_STREAM_KEY: ${{ secrets.STAGING_STREAM_API_KEY }}
           PRODUCTION_WEB_ENV: ${{ secrets.MOBILE_ENV_PRODUCTION }}
@@ -56,6 +67,7 @@ jobs:
           rm .env.production
           tar -C dist-production -czf ../../candidate/web-production.tar.gz .
       - name: Record immutable candidate manifest
+        if: inputs.reuse_build_run_id == ''
         run: |
           python3 - <<'PY'
           import json, os, pathlib
@@ -63,7 +75,13 @@ jobs:
           (p / 'release.json').write_text(json.dumps(dict(sha=os.environ['SHA'], image=(p / 'image-id.txt').read_text().strip(), checks=json.loads((p / 'checks.json').read_text()))))
           PY
           (cd candidate && sha256sum api-image.tar.gz web-staging.tar.gz web-production.tar.gz release.json checks.json image-id.txt > SHA256SUMS)
-          tar -C candidate -czf candidate.tgz .
+      - name: Preserve build for retries (not production acceptance)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: built-candidate
+          path: candidate/
+          if-no-files-found: error
+          retention-days: 14
       - name: Configure pinned staging identity
         env:
           DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_SSH_KEY }}
@@ -71,6 +89,7 @@ jobs:
         run: bash scripts/ci/setup-ssh.sh
       - name: Deploy to isolated VPS B
         run: |
+          tar -C candidate -czf candidate.tgz .
           ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "receive $SHA" < candidate.tgz
           ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "deploy $SHA"
           ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "accept $SHA"

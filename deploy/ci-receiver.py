@@ -22,7 +22,11 @@ def run(*args, **kwargs):
 
 def extract(archive, target, allowed=None):
     with tarfile.open(archive, "r:gz") as source:
-        members = source.getmembers()
+        members = []
+        for member in source:
+            members.append(member)
+            if len(members) > (16 if allowed is not None else 100000):
+                raise ValueError("Archive has too many entries")
         if sum(member.size for member in members) > 2 * 1024**3:
             raise ValueError("Expanded archive exceeds 2 GiB")
         for member in members:
@@ -31,6 +35,8 @@ def extract(archive, target, allowed=None):
                 raise ValueError("Unsafe archive entry")
             if member.isfile() and allowed is not None and str(path) not in allowed:
                 raise ValueError("Unexpected candidate file")
+            if member.isdir() and allowed is not None and str(path) != ".":
+                raise ValueError("Unexpected candidate directory")
         for member in members:
             destination = target / member.name
             if member.isdir():
@@ -82,8 +88,8 @@ def main():
         candidate = base / "candidates" / sha
         candidate.parent.mkdir(exist_ok=True)
         if operation == "receive":
-            if shutil.disk_usage(base).free < 3 * 1024**3:
-                raise ValueError("Less than 3 GiB free; review retained release artifacts before retrying")
+            if shutil.disk_usage(base).free < 8 * 1024**3:
+                raise ValueError("Less than 8 GiB free; review retained release artifacts before retrying")
             with tempfile.TemporaryDirectory(dir=base) as temp:
                 temp = Path(temp)
                 archive = temp / "candidate.tgz"
@@ -161,10 +167,16 @@ def main():
             print("Staging candidate verified")
             return
 
+        if (base / "fixture-state.json").exists():
+            raise ValueError("Restore outstanding staging fixture before another deployment")
         run("docker", "load", "--input", str(candidate / "api-image.tar.gz"))
         actual = subprocess.check_output(["docker", "image", "inspect", image, "--format", "{{.Id}}"], text=True).strip()
         if actual != manifest["image"]:
             raise ValueError("Loaded image differs from manifest")
+        revision = subprocess.check_output(["docker", "image", "inspect", image, "--format",
+                                            '{{index .Config.Labels "org.opencontainers.image.revision"}}'], text=True).strip()
+        if revision != sha:
+            raise ValueError("Image source revision differs from candidate")
         webbase = base if environment == "staging" else Path("/opt/mento-console")
         release = webbase / "web-releases" / sha
         if not release.exists():

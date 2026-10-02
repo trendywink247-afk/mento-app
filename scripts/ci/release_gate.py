@@ -48,7 +48,7 @@ def checks(repo, sha):
     return evidence
 
 
-def staging(repo, run_id, sha):
+def staging(repo, run_id, sha, accepted=True):
     if not run_id.isdigit():
         raise ValueError("Expected a numeric staging run ID")
     run = api(f"repos/{repo}/actions/runs/{run_id}")
@@ -57,13 +57,14 @@ def staging(repo, run_id, sha):
         and run["head_branch"] == "master"
         and run["event"] == "workflow_dispatch"
         and run["status"] == "completed"
-        and run["conclusion"] == "success"
+        and (not accepted or run["conclusion"] == "success")
     ):
         raise RuntimeError("Not a successful staging release from master")
-    require_jobs(api(f"repos/{repo}/actions/runs/{run_id}/jobs?filter=latest&per_page=100")["jobs"], {"stage"})
+    if accepted:
+        require_jobs(api(f"repos/{repo}/actions/runs/{run_id}/jobs?filter=latest&per_page=100")["jobs"], {"stage"})
     # Artifact provenance is tied to this exact successful run; download only it.
     subprocess.run(["gh", "run", "download", run_id, "--repo", repo,
-                    "--name", "release-candidate", "--dir", "candidate"], check=True)
+                    "--name", "release-candidate" if accepted else "built-candidate", "--dir", "candidate"], check=True)
     with open("candidate/release.json", encoding="utf-8") as source:
         manifest = json.load(source)
     if manifest["sha"] != sha:
@@ -77,6 +78,8 @@ if __name__ == "__main__":
         result = checks(repo, sys.argv[2])
     elif sys.argv[1] == "staging":
         result = staging(repo, sys.argv[2], sys.argv[3])
+    elif sys.argv[1] == "built":
+        result = staging(repo, sys.argv[2], sys.argv[3], accepted=False)
     else:
         raise SystemExit("Unknown release gate")
     print(json.dumps(result, indent=2))

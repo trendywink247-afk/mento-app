@@ -17,7 +17,8 @@ attempt cannot hide a newer failed attempt. Crisis acceptance runs on staging
 where Stream can reach the signed webhook, not on the CI runner's localhost.
 
 The old automatic Console Deploy and independent API Deploy workflows are removed
-by this PR. Until the PR merges, master still contains those old workflows.
+by this PR. Both are also disabled in GitHub now, so merging the dependency PRs
+cannot trigger their old production bypass before this PR lands.
 
 ## Staging Release
 
@@ -42,6 +43,13 @@ Dispatch on **master** with a full SHA already green on master. The workflow:
    another fixture; the next fixture fails closed while recovery is outstanding.
 8. Rechecks the running image/commit and publishes the accepted candidate artifact
    for 14 days. A failing acceptance step publishes no promotable artifact.
+
+The separate `built-candidate` artifact is saved before deployment. For a failed
+or interrupted deployment, redispatch with `reuse_build_run_id` set to that
+completed staging run. This reuses identical bytes and avoids mutating an existing
+candidate. Production accepts only `release-candidate` from a successful staging
+run; a successful build alone is not acceptance. Expired artifacts require a new
+candidate commit/build, not overwriting a previously received candidate.
 
 Staging is exclusively reserved during acceptance. Existing chats and capacity
 counters are preserved. Synthetic account/chat retention needs a scheduled policy;
