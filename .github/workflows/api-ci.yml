@@ -6,13 +6,14 @@ name: API CI
 on:
   push:
     branches: [main, master]
-    paths:
-      - "services/api/**"
-      - ".github/workflows/api-ci.yml"
   pull_request:
-    paths:
-      - "services/api/**"
-      - ".github/workflows/api-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 defaults:
   run:
@@ -44,7 +45,9 @@ jobs:
     env:
       # Matches the docker-compose Postgres published on localhost:5432.
       DATABASE_URL: postgresql+psycopg://mento:mento@localhost:5432/mento
-      JWT_SECRET: ci-secret
+      JWT_SECRET: ci-secret-at-least-32-bytes-long-000000
+      ENV: dev
+      REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
 

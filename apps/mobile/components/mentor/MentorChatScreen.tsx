@@ -67,6 +67,7 @@ export default function MentorChatScreen() {
   }>();
 
   const [channel, setChannel] = useState<ChannelType | null>(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState(false);
   const [menu, setMenu] = useState<MenuState>('closed');
@@ -232,7 +233,8 @@ export default function MentorChatScreen() {
           </PressKey>
         </View>
       ) : channel ? (
-        <View style={styles.flex} testID="mentor-chat-ready">
+        <View style={styles.flex} testID="mentor-chat-ready"
+          onLayout={(event) => event.currentTarget.measureInWindow((_x, y) => setKeyboardOffset(y))}>
           <Chat client={getListenerStreamClient()} style={streamTheme}>
             {/* MessageAuthor off: the kit reserves an avatar's width beside every incoming
                 message (an avatar on the last of a run, a spacer on the rest) — no thread
@@ -240,7 +242,7 @@ export default function MentorChatScreen() {
             <WithComponents
               overrides={{ MessageText: MentorMessageText, Input: Composer, MessageAuthor: RenderNothing }}
             >
-              <Channel channel={channel}>
+              <Channel channel={channel} keyboardVerticalOffset={keyboardOffset}>
                 <MessageList additionalFlatListProps={listProps} />
                 {/* Your companion over the message field, seated on the footer's edge. */}
                 <MentorPeek animal={mine} label={t('mentorChatPage.companionA11y')} />

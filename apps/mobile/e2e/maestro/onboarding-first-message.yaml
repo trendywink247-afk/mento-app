@@ -75,7 +75,12 @@ appId: com.mento.app
 - tapOn:
     id: "composer-send"
 
-# The composer clears on a successful send; that's the assertion, not a
-# message-bubble screenshot (bubble text rendering is proven elsewhere).
-- assertVisible:
+# A visible input alone passed even when no send happened. Require the actual
+# bubble after the composer clears; flow 2 also proves server delivery/reply.
+- extendedWaitUntil:
+    visible:
+      text: "hello — this is my first message"
+    timeout: 20000
+- assertNotVisible:
     id: "composer-input"
+    text: "hello — this is my first message"
