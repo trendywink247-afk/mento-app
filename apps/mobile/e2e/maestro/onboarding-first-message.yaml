@@ -19,10 +19,16 @@ appId: com.mento.app
 # SwiftShader graphics than on real hardware — session 48, run 6: 22+s between launch
 # and a bare tapOn timing out on the very first real emulator run these flows ever got.
 # Every later screen transition already gets this treatment; this was the one gap.
+#
+# T6.2 (2026-10-01): 60s -> 90s -> 150s. 90s still failed right at the edge twice
+# (~91s both times) — this runner's emulator is CPU-contended enough (confirmed:
+# load average 1.7-4.6 on 2 cores) that even a generous-looking margin isn't
+# generous enough. 150s is the same budget mentor-bot.mjs needed for the same
+# reason (see maestro.yml's --timeout 480 comment).
 - extendedWaitUntil:
     visible:
       id: "start"
-    timeout: 60000
+    timeout: 150000
 - tapOn:
     id: "start"
 
@@ -62,10 +68,19 @@ appId: com.mento.app
 - tapOn:
     id: "composer-input"
 - inputText: "hello — this is my first message"
+# T6.2 (2026-10-01) bisection 3 — see two-party-chat.yaml's comment at the same
+# point: testing whether the composer's post-typing layout settle is stale-coordinate
+# territory for the tap that follows.
+- waitForAnimationToEnd
 - tapOn:
     id: "composer-send"
 
-# The composer clears on a successful send; that's the assertion, not a
-# message-bubble screenshot (bubble text rendering is proven elsewhere).
-- assertVisible:
+# A visible input alone passed even when no send happened. Require the actual
+# bubble after the composer clears; flow 2 also proves server delivery/reply.
+- extendedWaitUntil:
+    visible:
+      text: "hello — this is my first message"
+    timeout: 20000
+- assertNotVisible:
     id: "composer-input"
+    text: "hello — this is my first message"

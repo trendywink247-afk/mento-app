@@ -70,12 +70,36 @@ async function api(base, path, token, init = {}) {
   return res.status === 204 ? null : res.json();
 }
 
-async function waitFor(fn, timeoutMs, label, intervalMs = 1000) {
+async function withTimeout(promise, timeoutMs, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`timed out after ${timeoutMs}ms waiting for ${label}`)), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function waitFor(fn, timeoutMs, label, intervalMs = 1000, heartbeatMs = 0, describe = null) {
   const start = Date.now();
+  let lastBeat = start;
   for (;;) {
     const v = await fn();
     if (v) return v;
-    if (Date.now() - start > timeoutMs) throw new Error(`timed out waiting for ${label}`);
+    const now = Date.now();
+    // A heartbeat tells apart "the loop is alive but the condition never comes true" from
+    // "the whole process is frozen" (the orphan-process kill at job teardown on 2026-10-01's
+    // CI runs proved it was the latter, at least once — nothing, not even this timeout,
+    // ran again after "connected, watching channel"). `describe` adds channel state so we
+    // can tell "zero messages ever arrived" from "messages arrived but none matched".
+    if (heartbeatMs && now - lastBeat >= heartbeatMs) {
+      const extra = describe ? ` — ${describe()}` : '';
+      console.log(`mentor-bot: still waiting for ${label} (${Math.round((now - start) / 1000)}s elapsed)${extra}`);
+      lastBeat = now;
+    }
+    if (now - start > timeoutMs) throw new Error(`timed out waiting for ${label}`);
     await new Promise((r) => setTimeout(r, intervalMs));
   }
 }
@@ -131,9 +155,19 @@ async function main() {
   // Stream's client otherwise warns/blocks connectUser outside a real client
   // runtime. The real app never sets this; only this test helper does.
   const client = new StreamChat(streamKey, { allowServerSideConnect: true });
-  await client.connectUser({ id: me.id, name: me.persona_name }, me.stream_token);
+  // A hung WebSocket handshake otherwise never rejects — this script would sit
+  // silent until Maestro's own assertion timeout fires with no diagnosis at all
+  // (seen once: the log just stopped right after "active conversation", nothing
+  // after). Bound it so a real failure here is loud, not silent.
+  console.log('mentor-bot: connecting to Stream');
+  await withTimeout(
+    client.connectUser({ id: me.id, name: me.persona_name }, me.stream_token),
+    Math.min(timeoutMs, 30000),
+    'Stream connectUser',
+  );
+  console.log('mentor-bot: connected, watching channel');
   const channel = client.channel('messaging', convo.stream_channel_id);
-  await channel.watch();
+  await withTimeout(channel.watch(), Math.min(timeoutMs, 30000), 'channel.watch');
 
   await waitFor(
     async () => {
@@ -142,13 +176,19 @@ async function main() {
     },
     timeoutMs,
     "a message from the member",
+    1000,
+    10000,
+    () => {
+      const state = channel.state.messages;
+      return `channel has ${state.length} message(s) total: ${JSON.stringify(state.map((m) => ({ id: m.id, user: m.user?.id, type: m.type })))}`;
+    },
   );
   console.log('mentor-bot: member message seen, replying');
 
   // The before-send hook can answer with a `type: 'error'` message instead of throwing
   // (allowance hold, moderation) — Stream then never saves it. Log and fail loudly rather
   // than reporting OK for a reply the member will never see (T6.1 flow 2 diagnosis).
-  const sent = await channel.sendMessage({ text: args.reply });
+  const sent = await withTimeout(channel.sendMessage({ text: args.reply }), 30000, 'channel.sendMessage');
   const m = sent.message;
   console.log(`mentor-bot: sendMessage -> id=${m?.id} type=${m?.type} status=${m?.status} text=${JSON.stringify(m?.text)}`);
   if (m?.type === 'error') fail(`reply was not kept by Stream (type=error, text=${JSON.stringify(m.text)})`);

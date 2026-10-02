@@ -9,7 +9,7 @@
  * their own text state and guard/async logic and just hand it primitives.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -93,6 +93,15 @@ export function ComposerField({
   const perch = useContext(ComposerPerchContext);
   const chrome = useContext(ComposerChromeContext);
   const held = chrome.held === true;
+  // T6.2 regression hunt (2026-10-01): on native, tapping the send key leaves zero
+  // trace anywhere — not even Composer.tsx's own unconditional entry log. One of the
+  // two things that could silently swallow a tap with no trace is this branch: the
+  // "held" view (allowance paused) has no onPress at all, by design. Logged once per
+  // change, not every render, so the next run tells us whether held is unexpectedly
+  // true from the very first fresh conversation.
+  useEffect(() => {
+    console.log(`[ComposerField] testIDPrefix=${testIDPrefix} held=${held} disabled=${disabled}`);
+  }, [held, testIDPrefix, disabled]);
   // Web only: react-native-web's <textarea> never grows by itself (it is pinned to one row
   // below), so an invisible twin of the words measures the wrapped height and the field is
   // sized from it — one line to MAX_LINES. It shrinks again as words are deleted. Native

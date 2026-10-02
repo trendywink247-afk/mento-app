@@ -30,6 +30,10 @@ on:
       - ".github/workflows/maestro.yml"
   workflow_dispatch: {}
 
+concurrency:
+  group: maestro-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check-secrets:
     # A job-level `if:` can't read `secrets` directly (actionlint: "context secrets is
@@ -60,7 +64,12 @@ jobs:
     if: needs.check-secrets.outputs.has-stream == 'true'
     # KVM-accelerated emulators need a real (not container) Linux runner.
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # Was 45. T6.2 (2026-10-01): "Prebuild + assemble release APK" alone now runs
+    # ~31 minutes (confirmed: run 36848744264, 10:25:41-10:56:24) under SDK 55's
+    # larger native dependency graph — was ~5-10 min back when this 45 was set
+    # (SDK 52). That left only ~14 min of real slack, which is why bumping
+    # mentor-bot's own timeout below needed headroom here too, not just there.
+    timeout-minutes: 65
     env:
       DATABASE_URL: postgresql+psycopg://mento:mento@localhost:5432/mento
       REDIS_URL: redis://localhost:6379/0
@@ -145,6 +154,14 @@ jobs:
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
         run: |
           npx expo prebuild --platform android --no-install
+          # T6.2 step 3 (SDK 55): the default generated org.gradle.jvmargs
+          # (-Xmx2048m -XX:MaxMetaspaceSize=512m) ran the release build's
+          # :react-native-community_netinfo:lintVitalAnalyzeRelease worker out of
+          # Metaspace and failed the build — a resource ceiling, not a code
+          # regression (reproduced: same failure locally, fixed by raising this).
+          # SDK 55's larger dependency graph pushed it over; ubuntu-latest has
+          # headroom for this before the emulator (a separate, later step) starts.
+          sed -i 's/org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m/' android/gradle.properties
           # Run 11 (session 48): a debug build never leaves expo-dev-client's launcher
           # screen in CI (confirmed by an actual screenshot — "Development servers /
           # npx expo start", waiting for a Metro connection nothing provides). Run 12
@@ -160,6 +177,16 @@ jobs:
           # this step's native-module compile time roughly 4x, which matters against
           # the job's 45-minute timeout.
           cd android && ./gradlew assembleRelease -PreactNativeArchitectures=x86_64
+          # The Gradle daemon stays resident after the build finishes (that's the
+          # whole point of a daemon) — at the -Xmx4096m/1024m metaspace this step
+          # just raised, an idle daemon left too little free RAM once the emulator
+          # (needing ~2GB) also launched, and the runner VM died with no in-script
+          # error at all (just silence, then "Complete job" minutes early — not a
+          # timeout, not a logged failure). Confirmed by diffing two failed runs:
+          # same crash-free prebuild, same point of silence, only the jvmargs size
+          # changed between them. Stopping it here frees that memory before the
+          # emulator step starts.
+          ./gradlew --stop
 
       - uses: actions/setup-java@v4
         with:
@@ -236,7 +263,38 @@ jobs:
           script: |
             adb logcat -c
             adb install apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+            # T6.2 (2026-10-01): a filtered, continuously-STREAMED copy of our own JS
+            # console output, not a buffer snapshot at the end. `adb logcat -d`'s final
+            # dump found ZERO "[Composer]" lines on the last two runs despite them being
+            # unconditionally logged on every send attempt — and found only flow 1's OWN
+            # startup lines, not flow 2's, even though flow 2 definitely re-ran the same
+            # module-init code on its own cold launch. The kernel log buffer fills with
+            # a torrent of UI-automation/system noise (QueryController, UiDevice, etc.)
+            # over several minutes and evicts our comparatively rare JS-tagged lines
+            # before the end-of-run dump ever reads them — streaming a tag-filtered copy
+            # out to a file as each line happens, instead of querying the buffer once at
+            # the end, can't lose anything that way.
+            nohup adb logcat -v time ReactNativeJS:V '*:S' > "$GITHUB_WORKSPACE/rnjs.log" 2>&1 &
+            # T6.2 step 2/3 regression hunt (2026-10-01): flow 2's mentor reply has hung
+            # 4/4 times with zero diagnostic trail — mentor-bot.mjs's own node process
+            # had to be force-killed as an orphan at job teardown every time (it never
+            # exits on its own, success or failure). The 5s CPU/memory sampler that
+            # lived here did its job (confirmed real contention: load average 1.7-4.6
+            # on this runner's 2 cores) and is removed again now — two runs after the
+            # cold-launch/timeout fixes landed, flow 2's OWN second cold launch started
+            # hitting a system-level "Quickstep isn't responding" ANR and once got
+            # bounced clean back to the launcher (app not even open) — a stability
+            # problem the sampler's own continuous background churn could only be
+            # making worse on an already 2-core-constrained box, for no further
+            # diagnostic value now that the real cause (CPU contention, not a hang)
+            # is proven.
             maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
+            # A beat for the system to settle (GC, window teardown) before the next
+            # cold launch — flow 2's own "id: start is visible" has twice hit a
+            # system-level "Quickstep isn't responding" ANR / been bounced clean back
+            # to the launcher, immediately after flow 1's app, resource sampler and
+            # mentor-bot all started in the same instant. Cheap to try, costs 5s.
+            sleep 5
             # Run 14 (session 48) is the payoff: flow 1 completed ENTIRELY for the first
             # time ever (real onboarding, real chat, real message send), and flow 2 got
             # all the way to sending its own message too. It failed waiting for the
@@ -248,9 +306,20 @@ jobs:
             # 150s comfortably covers the observed ~92s gap with margin for CI jitter;
             # the poll loop below is bumped to match so it doesn't give up on the bot
             # before the bot's own longer timeout would.
-            nohup sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 150; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 &
+            #
+            # T6.2 (2026-10-01): 150s stopped being enough. Proven with a heartbeat log
+            # added to mentor-bot.mjs (not a guess): in the failing run, the bot's own
+            # "still waiting" heartbeat was healthy and ticking every 10s right up to its
+            # 150s deadline, while flow 2's actual composer-send didn't happen until 296s
+            # after the bot started — SDK 55's heavier app + this job's now ~31-minute
+            # prebuild (was ~5-10 min when 150s was chosen) leaves flow 2's onboarding
+            # taking far longer under CI load. The bot was already dead (self-timed-out)
+            # before there was anything to reply to — not a hang, not a delivery bug.
+            # 480s covers the observed 296s with real margin; the job timeout above was
+            # raised to match.
+            setsid sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 480; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 & echo $! > mentor-bot.pid
             maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
-            i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 180 ]; do sleep 1; i=$((i + 1)); done
+            i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 500 ]; do sleep 1; i=$((i + 1)); done
             [ -f mentor-bot.exitcode ] && [ "$(cat mentor-bot.exitcode)" = "0" ] || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
             # crisis-card.yaml is deliberately NOT run here. The crisis card is drawn from a
             # `crisis` payload that the server's Stream before-message-send hook adds, and
@@ -261,6 +330,15 @@ jobs:
             # configure_stream repoints the app-wide hooks and would break crisis scanning
             # for whoever else uses those keys. Until then the flow is run by hand (README).
 
+      - name: Stop mentor helper on success, failure or cancellation
+        if: always()
+        run: |
+          if [ -f mentor-bot.pid ]; then
+            pid=$(cat mentor-bot.pid)
+            [[ "$pid" =~ ^[0-9]+$ ]] && [ "$pid" -gt 1 ] || exit 1
+            kill -- "-$pid" 2>/dev/null || true
+          fi
+
       - name: Upload failure diagnostics (logcat + Maestro screenshots/hierarchy)
         if: failure()
         uses: actions/upload-artifact@v4
@@ -268,6 +346,7 @@ jobs:
           name: maestro-failure-diagnostics
           path: |
             logcat.txt
+            rnjs.log
             maestro-debug/
           if-no-files-found: warn
           retention-days: 7

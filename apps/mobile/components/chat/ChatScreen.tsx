@@ -161,6 +161,7 @@ export default function ChatScreen() {
   const headerName = listener ?? header.profile?.persona_name ?? listenerName;
 
   const [channel, setChannel] = useState<ChannelType | null>(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -479,7 +480,8 @@ export default function ChatScreen() {
           <Text style={[type.body, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
         </View>
       ) : channel ? (
-        <View style={{ flex: 1 }} testID="chat-ready">
+        <View style={{ flex: 1 }} testID="chat-ready"
+          onLayout={(event) => event.currentTarget.measureInWindow((_x, y) => setKeyboardOffset(y))}>
           <Chat client={getStreamClient()} style={streamTheme}>
             {/* Baloo message text + Android measure/draw fix (components/chat/MessageText.tsx),
                 pillow-key composer (components/chat/Composer.tsx), and the board's thread
@@ -514,6 +516,9 @@ export default function ChatScreen() {
             >
             <Channel
               channel={channel}
+              // The thread starts below our header, not at screen origin. Stream's
+              // default Android offset (-300) leaves the composer under the IME.
+              keyboardVerticalOffset={keyboardOffset}
               doSendMessageRequest={doSendMessageRequest}
               messageActions={customMessageActions}
               myMessageTheme={myMessageTheme}

@@ -20,10 +20,13 @@ appId: com.mento.app
 # SwiftShader graphics than on real hardware — session 48, run 6: 22+s between launch
 # and a bare tapOn timing out on the very first real emulator run these flows ever got.
 # Every later screen transition already gets this treatment; this was the one gap.
+#
+# T6.2 (2026-10-01): 60s -> 90s -> 150s, same reasoning as
+# onboarding-first-message.yaml — 90s still failed right at the edge (~91s).
 - extendedWaitUntil:
     visible:
       id: "start"
-    timeout: 60000
+    timeout: 150000
 - tapOn:
     id: "start"
 - tapOn:
@@ -48,6 +51,14 @@ appId: com.mento.app
 - tapOn:
     id: "composer-input"
 - inputText: "hi, thanks for being here"
+# T6.2 (2026-10-01) bisection 3: the composer-send PressKey's own onPressIn never
+# fires (confirmed by direct instrumentation — PROGRESS.md) even though Maestro
+# reports the tap COMPLETED. One untested mechanism: the keyboard/composer layout
+# is still settling right after typing (the field grows with the words), so the
+# coordinates Maestro reads from the accessibility tree are stale by the time the
+# tap actually lands. Settling here before tapping costs under a second if this
+# isn't the cause.
+- waitForAnimationToEnd
 - tapOn:
     id: "composer-send"
 
@@ -60,7 +71,14 @@ appId: com.mento.app
 # matcher also sent this member to a different listener than the bot's). Both fixed —
 # the bot now ignores conversations that predate it and CI pins matching to its one
 # listener. With those, the round trip is a few seconds; 90s is generous headroom.
+#
+# T6.2 (2026-10-01): raised again, 90s -> 120s — not because the round trip got
+# slower (it's still a few seconds once the bot is actually alive to see the
+# message), but because mentor-bot.mjs's OWN lifetime budget was proven too short
+# under SDK 55 + this job's now much longer prebuild (see maestro.yml's --timeout
+# 480 comment) — the bot was timing itself out before flow 2 even sent anything.
+# This wait only matters once that's fixed; a little extra margin here is cheap.
 - extendedWaitUntil:
     visible:
       text: "I'm here — tell me more when you're ready."
-    timeout: 90000
+    timeout: 120000

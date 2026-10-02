@@ -89,7 +89,11 @@ export function Composer() {
       // The kit already clears the composer optimistically before this promise
       // settles; on failure the optimistic message stays in the transcript as a
       // retryable failed bubble (the kit's own error/retry affordance) — nothing
-      // further to do here.
+      // further to do here. Logged (reason, not a thrown-away detail): this path
+      // was completely silent before T6.2's regression hunt (2026-10-01) — a
+      // real native-Android send failure left zero trace anywhere, app or server.
+      // SDK errors may contain the submitted body. Never put them in device logs.
+      console.error('[Composer] sendMessage failed');
     } finally {
       setSending(false);
     }

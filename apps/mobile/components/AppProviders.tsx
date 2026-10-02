@@ -9,7 +9,7 @@ if (SENTRY_DSN) {
   // reason: guarded require keeps the SDK out of the module-eval path when dark.
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const Sentry = require('@sentry/react-native') as typeof import('@sentry/react-native');
-  Sentry.init({ dsn: SENTRY_DSN, sendDefaultPii: false, tracesSampleRate: 0, autoSessionTracking: false });
+  Sentry.init({ dsn: SENTRY_DSN, sendDefaultPii: false, tracesSampleRate: 0, enableAutoSessionTracking: false });
 }
 
 /** Web does NOT pull in stream-chat-expo (its RN new-arch internals don't bundle under
