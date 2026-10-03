@@ -79,7 +79,7 @@ jobs:
       EXPO_PUBLIC_STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
       EXPO_PUBLIC_API_URL: http://10.0.2.2:8000/api/v1 # the emulator's host-loopback address
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # ubuntu-latest ships ~20GB of preinstalled toolchains this job never touches
       # (.NET, Haskell, extra Docker images...). The build alone got past that once

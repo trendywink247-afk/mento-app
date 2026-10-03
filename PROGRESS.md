@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Node upgrade merged; checkout conflict resolved
+
+**Done:** Full Staging Release 37132617426 succeeded for ade37a1d01de216b2e7cd590a73cf7e5f07843fa and restricted server verification passed independently. PR #17 exact head d4e75d4601de6f58d0492e08d1c3753defe0058e passed required checks plus actual native run 37132622078; merged as master 3d2074fae9687594be784ab349ad1d2cf6be86f8.
+
+**Checkout:** PR #15 conflicted with the merged Node upgrade in test-ci.yml. Merged master locally, retained both checkout v7.0.1 and setup-node v7.0.0 pins, and validated all workflow syntax with actionlint plus git diff --check. Pushed resolution b41cf42 to the existing PR branch successfully. No failed check bypassed; combined current-head CI/native verification remains required before merge.
+
+**Next:** Verify PR #15 current checks and a real native run, then integrate if green. Verify new master's exact release gates before staging. Production remains locked; accepted staging is ade37a1, not the newer master. Backup custody/content decisions remain open. Resume in H:\Mento gpt\Mento; preserve untracked architecture book. Earlier progress entries also remain on codex/backup-partition-drill.
+
+---
 ## 2026-10-03 — Partition exclusion recovery drill passed locally
 
 **Done:** PR #36 merged with green required checks. Extended the encrypted database drill with synthetic current, default and renamed future partitions. Catalogue discovery supplies parent/descendant data exclusions. Assertions verify sentinel absence, zero restored message rows, retained partition hierarchy and working insert routing after recovery.
