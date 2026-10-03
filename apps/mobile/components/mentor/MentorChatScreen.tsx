@@ -24,6 +24,7 @@ import { SageSky } from '@/components/motion/SageSky';
 import { bubbleMaxWidth } from '@/components/chat/bubbleWidth';
 import { useFrameSize } from '@/lib/useFrameSize';
 import { useI18n } from '@/lib/i18n';
+import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { ensureListenerConnected, getListenerStreamClient } from '@/lib/listenerStreamClient';
 import { leaveToMentorHome } from '@/lib/leaveToChats';
@@ -68,6 +69,7 @@ export default function MentorChatScreen() {
 
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const keyboardBoundary = useChatKeyboardBoundary(keyboardOffset);
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState(false);
   const [menu, setMenu] = useState<MenuState>('closed');
@@ -233,7 +235,7 @@ export default function MentorChatScreen() {
           </PressKey>
         </View>
       ) : channel ? (
-        <View style={styles.flex} testID="mentor-chat-ready"
+        <View style={[styles.flex, keyboardBoundary]} testID="mentor-chat-ready"
           onLayout={(event) => event.currentTarget.measureInWindow((_x, y) => setKeyboardOffset(y))}>
           <Chat client={getListenerStreamClient()} style={streamTheme}>
             {/* MessageAuthor off: the kit reserves an avatar's width beside every incoming
@@ -243,6 +245,7 @@ export default function MentorChatScreen() {
               overrides={{ MessageText: MentorMessageText, Input: Composer, MessageAuthor: RenderNothing }}
             >
               <Channel channel={channel} keyboardVerticalOffset={keyboardOffset}
+                disableKeyboardCompatibleView={Platform.OS === 'android'}
                 keyboardBehavior={Platform.OS === 'android' ? 'height' : 'padding'}
                 additionalKeyboardAvoidingViewProps={{ style: { flex: 1 } }}>
                 <MessageList additionalFlatListProps={listProps} />
