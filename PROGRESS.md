@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Native first-message failure under investigation
+
+**Verified:** PR42 native run 37159288785 failed after a successful APK build/install and onboarding. First-message bubble did not appear after send; API/Test checks passed. Downloaded diagnostics into ignored .local/native-failure-37159288785. React Native log shows composer enabled after typing; it does not prove send or delivery. Artifact lacked a usable failure screenshot/hierarchy. Do not classify this as infrastructure flakiness or bypass it.
+
+**Change:** PR42 head ba02b96 adds direct adb screenshot and UI hierarchy capture in both failure handlers before emulator teardown. Actionlint and diff whitespace passed. Fresh native run required; send/reply assertions unchanged. No master merge or staging release. PR50 checks passed but held to avoid strict-base churn.
+
+**Reminder:** User permanently cancelled automation; app confirmed deletion. Never recreate it. Continue current work only during active authorized execution. Next inspect fresh native outcome and device evidence; fix demonstrated cause, require green current-head checks, integrate then run exact master gates/full staging. Production remains locked. Resume in H:\Mento gpt\Mento; preserve untracked book.
+
+---
 ## 2026-10-04 — Native candidate updated to required current base
 
 **Done:** GitHub reported #42 BEHIND after #49 integration. Merged master 8ee2f8c into the native branch without conflicts; candidate is e1ed303 (resolve full head from PR). This incorporates actual backup code/tests, not a progress-only update. Resolved production/preview Expo configuration regression test passed locally after integration. Existing untracked architecture book preserved.
