@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-03 — Latest staging verified; Java tooling integrated
+
+**Done:** Independently verified serving staging candidate 03a19f4a25c0373acedc7186a092a8e1c9375d97 through the restricted receiver after full Staging Release 37129003001 succeeded. PR #16 current head 2bcbdd91313a85cec808580bb7bc83a3469ac5aa passed required checks and real native tests (manual run 37129037059 and PR run 37129031672). Merged with exact-head guard; master is now ade37a1d01de216b2e7cd590a73cf7e5f07843fa.
+
+**Access blocker:** Updating PR #17 to master was rejected by GitHub: OAuth App lacks workflow scope for .github/workflows/maestro.yml. PR remains behind at 8fb080dacaee1471612a67b0abafe45f31b7fca2. Do not bypass branch protection or treat older checks as current. A repository maintainer can update the branch, or the configured credential needs workflow authorization before retrying. PR #15 remains open too.
+
+**Independent review:** Inspected setup-node v7 upstream release notes and README. Existing uses explicitly select Node versions and npm caching; assess cache trust boundaries before release-workflow acceptance. No Node tooling change integrated. Production environment PRODUCTION_RELEASE_ENABLED independently remains false.
+
+**Next:** Inspect exact master ade37a1 checks, then run its release gate and staging acceptance. Resume dependency integration after branch-update access is restored; continue backup/operational gates independently. Work only in H:\Mento gpt\Mento and preserve the untracked architecture book.
+
+---
 ## 2026-10-03 — Staging refreshed; current master and Java upgrade validation
 
 **Done:** Staging Release 37127286719 succeeded for candidate 832b58bd1694b5b467acb48b5cb4f73cfa9cfddc. Restricted server verify passed independently; built-candidate and release-candidate artifacts exist and are nonexpired (104718150 bytes each). This is the latest verified accepted staging candidate at this entry.
