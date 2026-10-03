@@ -75,6 +75,9 @@ trap cleanup EXIT
 export GIT_INDEX_FILE="$TMP/index"
 git -C "$ROOT" read-tree HEAD
 git -C "$ROOT" add -A
+# The fake box must use only its generated test environment. Exclude the real
+# encrypted production environment from this temporary index, never the checkout.
+git -C "$ROOT" update-index --force-remove -- deploy/secrets/prod.env.sops.yaml
 SNAP="$(git -C "$ROOT" commit-tree "$(git -C "$ROOT" write-tree)" -p HEAD -m "test-deploy snapshot")"
 unset GIT_INDEX_FILE
 git init -q --bare --initial-branch=master "$REMOTE"
