@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — Staging workflow failure diagnosis and retry fixes
+
+**Findings:** Run 37089759308 preserved built-candidate but SSH rejected the runner key (libcrypto parse error); serving staging remained healthy at 551345c. Re-uploaded the existing restricted staging key using exact LF bytes without logging it. Retry 37091485354 then failed before SSH because fresh candidate/checks.json collided with the immutable artifact download.
+
+**Changes:** Keep fresh gate evidence outside candidate on retries; only copy it into newly built candidates. Normalize CRLF and validate unattended SSH keys before deployment. Local release tests 8 passed; actionlint, bash syntax and whitespace clean. No deployment or acceptance claimed.
+
+**Next:** Merge this workflow fix after its checks, then dispatch from updated master using SHA f6174737d6aa4023d331da0ed76c308f2ebd744a and reuse_build_run_id=37089759308. Workflow steps can be updated while preserving the original tested app artifact. Production stays disabled.
+
+---
+
 ## 2026-10-03 — Exact master checks green; staging workflow dispatched
 
 **Evidence:** release_gate.py checks accepted f6174737d6aa4023d331da0ed76c308f2ebd744a using API run 37084074174, Test CI 37084074163 and native run 37084074168, all successful master-push attempt 1. Dispatched Staging Release run 37089759308 for that SHA. Acceptance is pending; do not equate dispatch with deployment or promotion readiness.

@@ -32,7 +32,12 @@ jobs:
       - name: Require exact-commit master checks
         run: |
           mkdir candidate
-          python3 scripts/ci/release_gate.py checks "$SHA" > candidate/checks.json
+          python3 scripts/ci/release_gate.py checks "$SHA" > "$RUNNER_TEMP/current-checks.json"
+          # Artifact download refuses existing files. Keep fresh gate evidence
+          # outside the immutable candidate when reusing a prior build.
+          if [ -z "$REUSE_RUN" ]; then
+            cp "$RUNNER_TEMP/current-checks.json" candidate/checks.json
+          fi
           git merge-base --is-ancestor "$SHA" origin/master
           git checkout --detach "$SHA"
       - name: Reuse a previously built candidate for a deployment retry
