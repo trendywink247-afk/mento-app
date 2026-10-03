@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — Atomic web-layout preparation tested locally
+
+**Done:** Added deploy/web-release-layout.py for explicit Linux operator preparation: hash/copy legacy web content, atomically exchange current with a release symlink, retain the original directory and support explicit rollback. Refuses existing release links and unexpected symlink assets. Ten release-tooling tests passed in the existing local Linux API image with networking disabled and a read-only repository mount; tests use temporary directories. Whitespace clean.
+
+**Limits:** Not installed or executed on production. Requires deployment lock and no concurrent web writers during preparation. This is not disaster recovery or a substitute for rollback of later application releases. GitHub billing still blocks PR #21's final gate; no retries/purchases or bypasses attempted.
+
+**Resume:** Continue local production preparation on codex/production-preparation; after billing recovery, complete PR #21 and review this follow-up before any server mutation. See docs/RELEASE_PIPELINES.md for the bootstrap/rollback contract.
+
+---
+
 ## 2026-10-03 — GitHub Actions billing blocks final gate
 
 **Evidence:** PR #21 API, mobile-web and release-tooling jobs passed, including the new worker rollback control-flow test. test-gate job 111132959857 never started (no steps/log); its GitHub annotation says recent account payments failed or the spending limit must be increased. This is an account-side blocker, not a passing gate. PR #21 remains unmerged; no billing settings changed and no gate bypassed.
