@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — Production preflight exposes four operational blockers
+
+**Done:** PR #19 documentation merged after green checks. Added read-only deploy/production-preflight.sh and ran it on A: readiness, rollback-tag presence and disk headroom PASS; webhook freshness, worker presence, web symlink and worker-aware installed deploy script FAIL (exit 1). No server files or services changed. Bash syntax and whitespace checked.
+
+**Finding:** A still serves 92b8f57 with a clean checkout. Its installed deploy.sh lacks start_worker and parses functions before resetting the checkout, so delegating to it cannot be assumed to deploy the worker even when the new source contains that function. Production activation must install/review the updated script and prove whole-release rollback, not just API health.
+
+**Next:** Prepare and test the production installer/reversible web migration, then independently complete safety/job/backup/alert gates. Keep production locked. Resume with deploy/production-preflight.sh and docs/RELEASE_PIPELINES.md. Full staged candidate remains f617473 from accepted run 37093153629.
+
+---
+
 ## 2026-10-03 — Full CI staging acceptance passed
 
 **Done:** Staging Release 37093153629 succeeded for f6174737d6aa4023d331da0ed76c308f2ebd744a, reusing the original build from 37089759308. It completed deploy, schema/safety/restore acceptance, private browser acceptance, synthetic fixture cleanup and final runtime verification. The non-expired release-candidate artifact is 104726730 bytes. Restricted live verify independently passed after workflow completion. PRODUCTION_RELEASE_ENABLED remains false; no production upgrade occurred.
