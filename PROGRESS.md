@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-03 — Staging refreshed; current master and Java upgrade validation
+
+**Done:** Staging Release 37127286719 succeeded for candidate 832b58bd1694b5b467acb48b5cb4f73cfa9cfddc. Restricted server verify passed independently; built-candidate and release-candidate artifacts exist and are nonexpired (104718150 bytes each). This is the latest verified accepted staging candidate at this entry.
+
+**In progress:** Exact release gate passed for master 03a19f4a25c0373acedc7186a092a8e1c9375d97, including actual native job success. Dispatched full Staging Release 37129003001 for that candidate; not yet accepted at inspection.
+
+**Dependency review:** Reviewed PR #16's single pinned setup-java change and upstream v6.0.1 release/README: Temurin 17 remains supported, hosted Ubuntu runners fit the Node 24 runtime requirement, removed AdoptOpenJDK inputs are unused. Updated PR #16 to current master (head 2bcbdd91313a85cec808580bb7bc83a3469ac5aa). Dispatched real native workflow 37129037059 on its branch so skipped Dependabot-secret jobs are not used as validation. Required PR checks and this manual native run must pass before integration. No dependency PR merged this turn.
+
+**Next:** Inspect staging 37129003001, independently verify 03a19f4 if accepted, and review PR #16 current-head required checks plus native 37129037059. Continue remaining dependency updates sequentially. Production remains locked; no live backup activation. Resume in H:\Mento gpt\Mento with this entry; preserve the untracked architecture book.
+
+---
 ## 2026-10-03 — Partition recovery integrated; refreshed staging acceptance running
 
 **Done:** PR #37 merged after required checks passed (Test CI 37125754502, API CI 37125754534). Master is 03a19f4a25c0373acedc7186a092a8e1c9375d97. Reviewed Dependabot #15/#16/#17 diffs; their skipped native jobs are not native acceptance and no dependency PR was merged this turn.
