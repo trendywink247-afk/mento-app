@@ -51,6 +51,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/ci -p 'test_*.py'
       - name: Validate worker startup rollback control flow
         run: bash deploy/test-worker-rollback.sh
+      - name: Validate backup failure handling
+        run: bash deploy/test-backup-failures.sh
       - name: Validate all GitHub workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck=
       - name: Validate shell syntax

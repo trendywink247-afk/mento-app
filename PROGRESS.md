@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-10-03 — Backup failure handling hardened locally
+
+**Finding:** Existing backup script could publish a partial dump under its final archive name and return success after failed off-box copying. Added private umask, unique temporary archive, gzip validation and atomic publication. Off-box copy failure now exits nonzero before pruning, retaining the valid local archive. Existing successful-run retention settings remain unchanged; no backup script executed against real data.
+
+**Validation:** Network-disabled disposable Linux test passed failed-dump cleanup, no attempted upload after dump failure, nonzero off-box failure, retained gzip integrity and 0600 archive permissions. Added this test to Test CI. Actionlint and whitespace passed. This is not encryption: key custody, encrypted restore/retention and deletion-compatible policy remain open. Not installed on either VPS.
+
+**Next:** Review current PR with CI; separately design encrypted backup key custody and restoration without putting decrypting keys on the backup host. Keep production locked and preserve all existing backup data during preparation.
+
+---
+## 2026-10-03 — Verified worker-recovery tooling installed on A
+
+**Done:** Installed merged PR #30 operator script under both receiver/operator deployment locks, after confirming promotion remained disabled and the server marker absent. SHA256 verified before and after atomic replacement: e967a63aac77dfd9ad47172e4f7a95dab4b63620c00f288f3a5646403806aad7. Retained root-owned prior copy at /usr/local/lib/mento-release/operator-deploy.sh.before-1791020743088777356. Bash syntax passed. No application deployment, worker launch or database change.
+
+**Verified:** Read-only preflight now passes API readiness, web symlink, previous tag, installed operator ownership/entrypoint and disk headroom. Safety webhook freshness and running worker remain FAIL. Source still 92b8f57a5cd30602c27487e046b92162e7528687. GitHub production promotion remains false.
+
+**Next:** Continue backup encryption/retention, real job and alert delivery verification, and native/device gates. Explicitly plan first-worker activation with the rehearsed rollback contract; a missing legacy worker is not evidence that the new code has already been deployed. Production remains locked; do not claim the remaining manual gates from preflight alone.
+
+---
+## 2026-10-03 — First-worker rollback proven; readiness fix merged
+
+**Done:** PR #30 merged after required CI and full isolated run 37112777741 passed. Operator deployment records prior worker running/stopped state, preserving API-only baselines on rollback. Worker startup now waits for the actual app.jobs.worker process and fresh queue heartbeat. Shell state tests pass.
+
+**Evidence:** Initial first-worker rehearsal 37112515912 failed because Docker reported started before the process exited; this was a real readiness gap, not bypassed. After the fix, combined Balanced/legacy rehearsal passed: first-worker failure rejected, API-only baseline recovered, failed worker stopped, valid redeployment succeeded, and migration/unhealthy-image/blue-green rollback assertions all held. Transcript retained in .local/rollback-37112777741 and Actions. No production app changes.
+
+**Next:** Install the merged operator script on A under deployment locks, retaining the installed prior copy, then verify readiness gates without enabling promotion. Job-delivery proof, backup encryption/retention, production crisis/alert verification, coordinated API/web recovery and native/capacity gates remain. Aggregate queue heartbeat is not per-replica health. Staging stays accepted bdef06a; production remains locked.
+
+---
 ## 2026-10-03 — Both rollback stacks rehearsed; production web layout prepared
 
 **Done:** PR #28 merged green and first isolated runs exposed shallow-history and encrypted-environment fixture errors. Fixed full checkout history, temporary master initialization, temporary-index exclusion of production SOPS file and synthetic monitoring configuration in PR #29, now merged after green checks and successful rehearsals.
