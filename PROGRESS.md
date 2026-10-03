@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Backup failure handling hardened locally
+
+**Finding:** Existing backup script could publish a partial dump under its final archive name and return success after failed off-box copying. Added private umask, unique temporary archive, gzip validation and atomic publication. Off-box copy failure now exits nonzero before pruning, retaining the valid local archive. Existing successful-run retention settings remain unchanged; no backup script executed against real data.
+
+**Validation:** Network-disabled disposable Linux test passed failed-dump cleanup, no attempted upload after dump failure, nonzero off-box failure, retained gzip integrity and 0600 archive permissions. Added this test to Test CI. Actionlint and whitespace passed. This is not encryption: key custody, encrypted restore/retention and deletion-compatible policy remain open. Not installed on either VPS.
+
+**Next:** Review current PR with CI; separately design encrypted backup key custody and restoration without putting decrypting keys on the backup host. Keep production locked and preserve all existing backup data during preparation.
+
+---
 ## 2026-10-03 — Verified worker-recovery tooling installed on A
 
 **Done:** Installed merged PR #30 operator script under both receiver/operator deployment locks, after confirming promotion remained disabled and the server marker absent. SHA256 verified before and after atomic replacement: e967a63aac77dfd9ad47172e4f7a95dab4b63620c00f288f3a5646403806aad7. Retained root-owned prior copy at /usr/local/lib/mento-release/operator-deploy.sh.before-1791020743088777356. Bash syntax passed. No application deployment, worker launch or database change.
