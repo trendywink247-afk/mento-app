@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-03 — Operator staging access restored
+
+**Done:** Investigated the user's 403 screenshot. Nginx error logs and authenticated SSH connection agreed on the current operator IP, while staging allowed only the previous IP. Replaced the old operator allow entry with the verified current address, retained localhost and deny-all restrictions, preserved a timestamped configuration backup, validated nginx -t and reloaded successfully. HTTPS root now returns 200 from this workstation. No application deployment or production change.
+
+**Limit:** IP-based access follows the user's network/VPN address and can require updating again. A stable authenticated access mechanism remains an improvement; do not make staging public to avoid this restriction.
+
+---
 ## 2026-10-03 — Disposable rollback rehearsal workflow prepared
 
 **Done:** Added a manual Isolated Rollback Rehearsal workflow using a fresh GitHub-hosted runner, synthetic database settings and no VPS credentials. It drives the real deployment harness against a disposable local Git remote and preserves the transcript on success/failure. This avoids the developer Docker daemon, whose application images must not be pruned. Actionlint and whitespace passed.
