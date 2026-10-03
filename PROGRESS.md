@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Semantic monitoring merged; host prerequisites checked
+
+**Done:** PR #39 exact head 38ad5084795ee09f93a063e5d84b220606de1380 passed Linux Test CI 37143904020 and API CI 37143904066. Merged as bd7856ead4f325c3b589624ecd80dc90187fe40b. This includes default-python3 classifier and mocked alert retry validation, resolving the earlier local Docker limitation.
+
+**Release:** Exact gate passed for previous master 0882abe5643ae2917bf7cff088a40100f3ef4206 (API 37142529521, Test 37142529509, native 37142529512). Dispatched staging 37145025868 for that candidate; do not confuse workflow head bd7856e with candidate 0882abe. Not yet accepted at inspection. Production enable variable remains false.
+
+**Read-only host check:** VPS B has Python 3.11.2, existing monitor script mento-ops:mento-ops mode 755 with valid Bash syntax, and state directory. New classifier is not installed. No monitor execution, notification delivery, script replacement, credential disclosure or cron change occurred. Installation must preserve the configured notification destination and state, deploy script/helper together, and distinguish simulated tests from delivered-alert proof. Actual recipient notification remains outside this heartbeat's authorization.
+
+**Next:** Inspect staging 37145025868 and new master checks; independently verify accepted candidate. Continue operational preparation without claiming live monitor activation or full production readiness. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-03 — Semantic crisis monitor prepared and locally tested
 
 **Done:** Added a response classifier accepting only HTTP 200/ok and 503/stale. Degraded, malformed and unexpected responses fail closed; raw response data is never included in alerts. Monitor now bounds response size and requires the sibling classifier plus Python. Added classifier cases and retained mocked outage/recovery retry tests.
