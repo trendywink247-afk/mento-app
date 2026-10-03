@@ -12,6 +12,15 @@ FILE="${BACKUP_DIR}/mento-${STAMP}.sql.gz"
 
 mkdir -p "${BACKUP_DIR}"
 
+# Keep this inode in place: unlinking a lock file permits another process to
+# lock a different inode while the first exporter is still running. Hold the
+# descriptor through off-site copy and retention, releasing it on process exit.
+exec 9>"${BACKUP_DIR}/.backup.lock"
+if ! flock --nonblock 9; then
+  echo '[backup] ERROR: another backup holds the archive lock; no work performed' >&2
+  exit 1
+fi
+
 PARTIAL=$(mktemp "${BACKUP_DIR}/.mento-backup-partial.XXXXXX")
 trap 'rm -f -- "$PARTIAL"' EXIT
 docker exec mento-postgres-prod pg_dump -U mento mento | gzip > "$PARTIAL"
