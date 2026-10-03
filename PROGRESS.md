@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-03 — Monitor review extended to crisis reachability alerts
+
+**Done:** PR #38 initial head passed required CI (Test 37138826045, API 37138826068). Review identified missing coverage of the separate crisis reachability branch. Added simulated connection failure, failed delivery, successful retry, deduplication and failed recovery delivery cases for that path. Full mocked-curl suite passed locally; no real notification was sent.
+
+**Next:** Require fresh PR #38 current-head checks before merging the expanded coverage. Latest independently verified staging remains 11e8073; production stays disabled and no VPS monitor was changed. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
 ## 2026-10-03 — Latest master accepted on staging; monitor retry fix prepared
 
 **Done:** Full staging 37137493795 succeeded for 11e8073fa4fb9a1b20081771e6e858341aeb2585; independent restricted receiver verify passed. No open PRs at initial inspection.
