@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — Release foundation and cookbook merged
+
+**Done:** Native correction 878315a passed Maestro run 37081436815 (36m57s), alongside green API, web and release-tooling checks. PR #13 merged, then documentation PR #14 merged. Resulting master is f6174737d6aa4023d331da0ed76c308f2ebd744a. CodeRabbit was rate-limited/skipped on the newest revisions; its status is not substantive approval evidence.
+
+**Next:** Wait for exact master-push runs: API 37084074174, Test CI 37084074163, Maestro 37084074168. Only after all pass, dispatch Staging Release for f6174737d6aa4023d331da0ed76c308f2ebd744a. Do not promote production. Earlier native failure entries below are historical and superseded by this successful correction, not deleted.
+
+**Resume:** `gh run view 37084074168`; then use scripts/ci/release_gate.py and staging-release.yml. Cookbook/README date snapshots still need their merged status refreshed in the next documentation update. Current branch codex/staging-acceptance records follow-up work. Desktop unchanged.
+
+---
+
 ## 2026-10-03 — Architecture book crosswalk and native regression
 
 **Done:** Re-read the original H:\Mento gpt\Mento-Architecture-Book.html, including chapter 7.1. Added docs/ARCHITECTURE_BOOK_ALIGNMENT.md and linked it from README/cookbook. Balanced remains the near-term baseline; two-VPS staging extends it, while the larger enterprise topology is a later measured stage. Original book unchanged.
