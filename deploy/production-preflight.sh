@@ -16,6 +16,12 @@ check() {
 worker_running() {
   test "$(docker inspect --format '{{.State.Running}}' mento-worker-prod 2>/dev/null)" = true
 }
+queue_schema_ready() {
+  local present
+  present=$(docker exec mento-postgres-prod psql -X -v ON_ERROR_STOP=1 -U mento -d mento -Atc \
+    "SELECT to_regclass('public.procrastinate_jobs') IS NOT NULL AND to_regclass('public.procrastinate_workers') IS NOT NULL;") || return 1
+  test "$present" = t
+}
 disk_headroom() {
   test "$(df -Pk /opt/mento | awk 'NR==2 {print $4}')" -ge 8388608
 }
@@ -29,6 +35,7 @@ operator_ready() {
 check 'Production API readiness' curl --fail --silent --max-time 10 http://127.0.0.1:8000/api/v1/health/ready
 check 'Recent production safety webhook (freshness only)' curl --fail --silent --max-time 10 http://127.0.0.1:8000/api/v1/health/crisis
 check 'Worker container running (not end-to-end job proof)' worker_running
+check 'Worker queue tables present (not full migration compatibility proof)' queue_schema_ready
 check 'Production web uses release symlink' test -L /opt/mento-console/current
 check 'Recorded previous API image tag' test -s /home/mento-ops/.local/state/mento/api-tag.previous
 check 'Installed CI operator script ownership and worker rollback entrypoint' operator_ready
