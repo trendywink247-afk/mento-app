@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Recovery policy proven; backup overlap protection
+
+**Done:** PR #48 merged as 27763f6 after all current-head checks passed. Test CI 37158558324 verified actual application chat rows excluded, saved notes/reports/block state retained, and both baseline/current-schema encrypted restore plus forward migration. Local temporary age recovery identity exists under ignored .local/recovery in current-user DPAPI protection, with a successful synthetic decrypt round trip; it is not durable off-device custody. Updated existing heartbeat to the current five-phase worklist, preserving its 20-minute schedule and quiet unchanged-state behavior.
+
+**Implementation:** Backup export now holds a nonblocking kernel lock through export, off-site copy and retention. Concurrent invocations fail before any export or pruning. Extended isolated failure test to exercise real lock contention, release after export/copy failure and a subsequent successful run. Bash syntax and whitespace passed; Linux runtime validation pending CI because local Docker and flock are unavailable. No live backup schedule or production configuration changed.
+
+**Next:** Require current-head Linux checks before merging lock protection. Native PR #42 needs a PROGRESS conflict resolved against newer master and fresh native proof. Master 27763f6 must pass exact master checks before full staging. Production remains disabled; durable recovery custody, live content-filtered exporter/deletion reconciliation, schema/worker and operational acceptance remain gates. Resume: Set-Location 'H:\Mento gpt\Mento'; Get-Content PROGRESS.md -TotalCount 60; git status --short.
+
+---
 ## 2026-10-04 — Approved backup content policy exercised on application tables
 
 **Implementation:** Extended the isolated current-schema encrypted recovery drill with synthetic member/mentor/conversation, own-chat message, saved journal note and moderation report using real application models. Discover actual chat partitions for data exclusion; after recovery require zero chat rows while saved note, report narrative, block state and referenced member/conversation remain. Production-baseline forward migration remains a separate case.
