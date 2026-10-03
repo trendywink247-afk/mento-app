@@ -269,7 +269,8 @@ def main():
                 # The existing operator script checks master ancestry, backs up,
                 # migrates once and reuses the preloaded SHA-tagged image.
                 run("sudo", "-Hu", "mento-ops", "env", f"SSH_ORIGINAL_COMMAND=deploy {sha}",
-                    "bash", "/opt/mento/deploy/deploy.sh", "--from-ssh")
+                    "MENTO_CHECKOUT_ROOT=/opt/mento", "bash",
+                    "/usr/local/lib/mento-release/operator-deploy.sh", "--from-ssh")
                 production_api_changed = True
                 for attempt in range(12):
                     try:
@@ -305,7 +306,8 @@ def main():
                     override.write_text(old_override)
                     run(*dc, "up", "-d", "--wait", "--wait-timeout", "120", "api", "worker")
             elif production_api_changed:
-                run("sudo", "-Hu", "mento-ops", "bash", "/opt/mento/deploy/deploy.sh", "--rollback")
+                run("sudo", "-Hu", "mento-ops", "env", "MENTO_CHECKOUT_ROOT=/opt/mento",
+                    "bash", "/usr/local/lib/mento-release/operator-deploy.sh", "--rollback")
             # Schema rollback is never automatic: migrations must be expand/contract.
             raise
         print(f"Deployed {environment} candidate {sha}")

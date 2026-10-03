@@ -104,9 +104,15 @@ No production identity or receiver has been activated by this change.
 identity using a reviewed receiver and one `production-ci.pub` Ed25519 key. It
 refuses an existing account or enabled server gate, restricts the key and SSH user
 to the receiver, disables forwarding and keeps the key path root-owned. It does
-not update the application, install the operator deploy script, migrate web files
+not update the application, migrate web files
 or enable promotion. A partial installation must be audited before retrying;
 the script deliberately does not delete an existing identity to recover.
+
+The reviewed `deploy.sh` is installed as root-owned
+`/usr/local/lib/mento-release/operator-deploy.sh`. CI uses this stable copy for
+both deployment and rollback, with `MENTO_CHECKOUT_ROOT=/opt/mento`; a checkout
+reset cannot replace its functions with an older artifact's operator code.
+Compose and helper paths still come from the selected application checkout.
 
 Production deployment additionally requires the root-owned, non-symlink file
 `/etc/mento-release/production-enabled`, not writable by group/others, containing

@@ -9,6 +9,7 @@ temp=$(mktemp -d)
 ssh-keygen -q -t ed25519 -N '' -f "$temp/key"
 cp "$temp/key.pub" "$temp/production-ci.pub"
 cp "$source_root/deploy/ci-receiver.py" "$temp/ci-receiver.py"
+cp "$source_root/deploy/deploy.sh" "$temp/deploy.sh"
 mkdir -p /run/sshd
 ssh-keygen -A >/dev/null
 # Containers have no systemd; configuration validation and SSH are real.
@@ -17,6 +18,8 @@ printf '#!/bin/sh\n[ "$*" = "reload ssh" ]\n' > "$temp/bin/systemctl"
 chmod +x "$temp/bin/systemctl"
 PATH="$temp/bin:$PATH" bash "$source_root/deploy/install-ci-production.sh" "$temp"
 test ! -e /etc/mento-release/production-enabled
+cmp "$temp/deploy.sh" /usr/local/lib/mento-release/operator-deploy.sh
+test "$(stat -c '%u:%a' /usr/local/lib/mento-release/operator-deploy.sh)" = '0:644'
 if PATH="$temp/bin:$PATH" bash "$source_root/deploy/install-ci-production.sh" "$temp"; then
   echo 'Existing account was unexpectedly overwritten' >&2; exit 1
 fi

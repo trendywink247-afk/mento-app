@@ -5,6 +5,8 @@ test "$(id -u)" = 0
 test -x /usr/bin/python3
 source_dir=$(realpath "${1:?reviewed source directory required}")
 test -f "$source_dir/ci-receiver.py"
+test -f "$source_dir/deploy.sh"
+bash -n "$source_dir/deploy.sh"
 test -f "$source_dir/production-ci.pub"
 test ! -e /etc/mento-release/production-enabled
 test ! -L /etc/mento-release/production-enabled
@@ -30,6 +32,7 @@ chown root:root /home/mento-ci-production
 chmod 755 /home/mento-ci-production
 install -d -m 755 /usr/local/lib/mento-release /etc/mento-release
 install -m 644 "$source_dir/ci-receiver.py" /usr/local/lib/mento-release/ci-receiver.py
+install -m 644 "$source_dir/deploy.sh" /usr/local/lib/mento-release/operator-deploy.sh
 install -d -m 755 /home/mento-ci-production/.ssh
 {
   printf 'restrict,command="/usr/bin/sudo -n /usr/bin/python3 /usr/local/lib/mento-release/ci-receiver.py production" '
