@@ -25,9 +25,13 @@ test "$ready" = 1
 if [ -n "${RESTORE_IMAGE:-}" ]; then
   docker run --rm --network "container:$name" --memory 256m \
     -e ENV=dev -e DATABASE_URL=postgresql+psycopg://drill@127.0.0.1:5432/source \
-    "$RESTORE_IMAGE" alembic upgrade head
+    "$RESTORE_IMAGE" alembic upgrade "${BASELINE_REVISION:-head}"
   revision=$(docker exec "$name" psql -X -At -U drill -d source -c 'SELECT version_num FROM alembic_version;')
   test -n "$revision"
+  if [ "${BASELINE_REVISION:-}" = c13a0seen001 ]; then
+    test "$revision" = c13a0seen001
+    test "$(docker exec "$name" psql -X -At -U drill -d source -c "SELECT to_regclass('public.procrastinate_jobs') IS NULL;")" = t
+  fi
 fi
 docker exec -i "$name" psql -X -v ON_ERROR_STOP=1 -U drill -d source >/dev/null <<'SQL'
 CREATE TABLE drill_accounts (id integer PRIMARY KEY, display_name text NOT NULL);
@@ -76,12 +80,18 @@ fi
 if [ -n "${RESTORE_IMAGE:-}" ]; then
   recovered_revision=$(docker exec "$name" psql -X -At -U drill -d recovered -c 'SELECT version_num FROM alembic_version;')
   test "$revision" = "$recovered_revision"
+  # Upgrade only the isolated recovered copy, never the source or a live server.
+  docker run --rm --network "container:$name" --memory 256m \
+    -e ENV=dev -e DATABASE_URL=postgresql+psycopg://drill@127.0.0.1:5432/recovered \
+    "$RESTORE_IMAGE" alembic upgrade head
+  test "$(docker exec "$name" psql -X -At -U drill -d recovered -c "SELECT to_regclass('public.procrastinate_jobs') IS NOT NULL AND to_regclass('public.procrastinate_workers') IS NOT NULL;")" = t
+  test "$(docker exec "$name" psql -X -At -U drill -d recovered -c 'SELECT count(*) FROM drill_accounts JOIN drill_memberships ON id=account_id;')" = 2
   # Remove only synthetic drill tables before comparing application metadata.
   docker exec "$name" psql -X -v ON_ERROR_STOP=1 -U drill -d recovered \
     -c 'DROP TABLE drill_memberships; DROP TABLE drill_accounts; DROP TABLE drill_messages CASCADE;' >/dev/null
   docker run --rm --network "container:$name" --memory 256m \
     -e ENV=dev -e DATABASE_URL=postgresql+psycopg://drill@127.0.0.1:5432/recovered \
     "$RESTORE_IMAGE" alembic check
-  echo 'PASS: restored Mento migration revision and schema match the application image'
+  echo 'PASS: restored revision preserved, forward migration and current schema verified'
 fi
 echo 'PASS: synthetic encrypted PostgreSQL restore preserves rows and foreign-key enforcement'
