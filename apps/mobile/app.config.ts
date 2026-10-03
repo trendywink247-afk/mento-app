@@ -19,5 +19,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   });
   // reason: `config` is app.json, which always carries name + slug; ConfigContext types
   // it as Partial<ExpoConfig> only because a bare app.config.ts may have no app.json.
-  return { ...config, plugins } as ExpoConfig;
+  // Local prebuilds do not receive EAS Build's channel injection. Keep production
+  // binaries on the same channel declared by the production EAS profile.
+  const updates = isProduction
+    ? { ...config.updates, requestHeaders: { ...config.updates?.requestHeaders, 'expo-channel-name': 'production' } }
+    : config.updates;
+  return { ...config, plugins, updates } as ExpoConfig;
 };

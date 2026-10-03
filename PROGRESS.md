@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Local production update channel aligned with EAS profile
+
+**Done:** Official Expo guidance confirms non-EAS prebuilds use updates.requestHeaders, while EAS uses the build profile channel (https://docs.expo.dev/eas-update/getting-started/). Updated dynamic config so APP_VARIANT=production uses the production header; preview retains preview. This addresses the local Android release script path without publishing any OTA or changing installed binaries.
+
+**Validation:** Added resolved Expo config test comparing production/preview channels with eas.json and checking Android cleartext separation plus bundle identity. Local config test passed; actionlint and git diff --check passed. CI now runs this regression test. No signed iOS build, store submission, paid build or runtime-channel proof is claimed.
+
+**Next:** Require current PR API/web/native checks before integration, inspect actual signed-build configuration before distribution, and keep production gates intact. Latest accepted VPS staging remains fe6c2e6. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Latest master staging accepted; native update configuration audited
 
 **Done:** Full staging 37153495894 succeeded for fe6c2e6aa74ca35f8b97765e97543ee3e976520b; independent restricted receiver verification passed. No open PRs at inspection. This is the latest accepted and verified staging candidate.
