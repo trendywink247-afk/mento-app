@@ -35,6 +35,12 @@ main() {
     local HERE ROOT STATE_DIR mode="deploy" backup=0 ref="" arg
     HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     ROOT="$(cd "$HERE/.." && pwd)"
+    # A reviewed, root-owned CI copy can live outside the application checkout.
+    # Keep helper scripts/Compose paths tied to the explicitly selected checkout.
+    if [ -n "${MENTO_CHECKOUT_ROOT:-}" ]; then
+        ROOT="$(cd "$MENTO_CHECKOUT_ROOT" && pwd)"
+        HERE="$ROOT/deploy"
+    fi
     STATE_DIR="${MENTO_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/mento}"
     cd "$ROOT"
 

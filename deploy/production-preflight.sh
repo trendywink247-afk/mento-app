@@ -24,7 +24,7 @@ check 'Recent production safety webhook (freshness only)' curl --fail --silent -
 check 'Worker container running (not end-to-end job proof)' worker_running
 check 'Production web uses release symlink' test -L /opt/mento-console/current
 check 'Recorded previous API image tag' test -s /home/mento-ops/.local/state/mento/api-tag.previous
-check 'Installed deploy script includes worker startup' grep -Fq 'start_worker "$TAG"' /opt/mento/deploy/deploy.sh
+check 'Installed CI operator script includes worker startup' grep -Fq 'start_worker "$TAG"' /usr/local/lib/mento-release/operator-deploy.sh
 check 'At least 8 GiB free for release/rollback artifacts' disk_headroom
 printf 'Remaining manual gates: reviewed receiver and deploy script, artifact identity, job execution/health, rollback drill, encrypted deletion-compatible backups, restore proof, delivered alerts, privacy/security and device acceptance.\n'
 if [ "$failures" -gt 0 ]; then

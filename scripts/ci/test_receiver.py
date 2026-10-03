@@ -7,6 +7,7 @@ import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
+from types import SimpleNamespace
 
 spec = importlib.util.spec_from_file_location("receiver", Path(__file__).resolve().parents[2] / "deploy/ci-receiver.py")
 receiver = importlib.util.module_from_spec(spec)
@@ -14,6 +15,28 @@ spec.loader.exec_module(receiver)
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_production_gate_fails_closed(self):
+        from unittest.mock import Mock
+        gate = Mock()
+        gate.is_symlink.return_value = False
+        gate.is_file.return_value = True
+        gate.stat.return_value = SimpleNamespace(st_uid=0, st_mode=0o100600)
+        gate.read_text.return_value = "enabled\n"
+        receiver.require_production_enabled(gate)
+        for uid, mode, content in [(1000, 0o100600, "enabled"), (0, 0o100622, "enabled"), (0, 0o100600, "disabled")]:
+            with self.subTest(uid=uid, mode=mode, content=content):
+                gate.stat.return_value = SimpleNamespace(st_uid=uid, st_mode=mode)
+                gate.read_text.return_value = content
+                with self.assertRaises(ValueError):
+                    receiver.require_production_enabled(gate)
+        gate.is_file.return_value = False
+        with self.assertRaises(ValueError):
+            receiver.require_production_enabled(gate)
+        gate.is_file.return_value = True
+        gate.is_symlink.return_value = True
+        with self.assertRaises(ValueError):
+            receiver.require_production_enabled(gate)
+
     def test_production_requires_matching_api_worker_and_heartbeat(self):
         expected = "sha256:" + "a" * 64
         healthy = json.dumps([{"Image": expected, "State": {"Running": True}}])

@@ -55,9 +55,18 @@ jobs:
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck=
       - name: Validate shell syntax
         run: while IFS= read -r -d '' file; do bash -n "$file"; done < <(find deploy scripts/ci -name '*.sh' -print0)
+  receiver-isolation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build disposable SSH test environment
+        run: docker build -f deploy/production-installer-test.Dockerfile -t mento-installer-test deploy
+      - name: Verify installer and restricted identity over real SSH
+        run: docker run --rm --network none --mount "type=bind,source=$PWD,target=/work,readonly" mento-installer-test /work/deploy/test-production-installer.sh
   test-gate:
     if: always()
-    needs: [mobile-web, release-tooling]
+    needs: [mobile-web, release-tooling, receiver-isolation]
     runs-on: ubuntu-latest
     steps:
       - name: Require every test job

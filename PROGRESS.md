@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-03 — Production identity rehearsed; master protections enforced
+
+**Done:** PR #22 passed API/web/release-tooling checks and merged as 67fb984. GitHub master protection now requires up-to-date lint, test and test-gate checks, applies to administrators, requires review-thread resolution and blocks force pushes/deletion. Production environment switch independently confirmed false.
+
+**Next increment:** Added a dedicated production receiver installer and server-side deployment lock; workflow uses mento-ci-production. Local disposable Linux rehearsal with real SSH passed: arbitrary commands/forwarding/sudo denied, locked deploy denied, root-owned key path protected, repeat installation refused. Systemd reload alone was stubbed. All 14 release unit tests, actionlint, shell syntax and whitespace checks passed. Added receiver-isolation to CI and its required aggregate gate.
+
+**Follow-up:** Installer now keeps the reviewed operator script root-owned outside the checkout; receiver deployment and rollback select /opt/mento explicitly, preventing an accepted older artifact from overwriting the executing recovery tooling. Real-SSH rehearsal, worker rollback control-flow tests and all 14 release tests passed again. Read-only production SSH inspection confirms the dedicated account still needs its restrictions installed; no live access configuration changed.
+
+**Limits / resume:** Tooling is not installed on A. Review current PR checks, then audit host-specific SSH configuration, updated operator-script persistence and whole-stack rollback before activation. Production remains unchanged and locked; staging accepted f617473/run 37093153629. Master 67fb984 API/Test CI passed; native master run 37106561711 is queued behind the previous native run. Backup encryption/retention, crisis/alert/job delivery, capacity and store gates remain unfinished. Preserve untracked Mento-Architecture-Book.html.
+
+---
 ## 2026-10-03 — Actions unblocked; worker rollback integrated
 
 **Done:** Repository visibility is now public following the founder's change. Retried Test CI run 37098263875; the formerly blocked test-gate actually ran and passed (job 111155136134). PR #21 merged after all checks passed. Merged master into production-preparation without conflicts. The billing limitation below is historical, not the current blocker.
