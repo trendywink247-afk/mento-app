@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — Architecture book crosswalk and native regression
+
+**Done:** Re-read the original H:\Mento gpt\Mento-Architecture-Book.html, including chapter 7.1. Added docs/ARCHITECTURE_BOOK_ALIGNMENT.md and linked it from README/cookbook. Balanced remains the near-term baseline; two-VPS staging extends it, while the larger enterprise topology is a later measured stage. Original book unchanged.
+
+**Blocker:** PR #13 native run 37078386018 failed locating composer-send. Screenshot shows the composer displaced directly below the header while the keyboard is open; do not call the earlier native success conclusive. Downloaded artifacts under .local/native-failure-37078386018 for diagnosis. All non-native checks pass. PR #14 documentation checks pass.
+
+**Next:** Fix native layout/accessibility based on artifacts, validate and resume gated integration.
+
+---
+
 ## 2026-10-03 — README and operations cookbook
 
 **Done:** Updated the stale README stack, local ports, self-hosted server roles and release status. Added `docs/mento-cookbook.html`, using the user-provided Desktop Ops cookbook only as a read-only style reference. Includes existing current/target architecture images with explicit snapshot dates, local/verification recipes, VPS access, release/recovery, scaling stages and iOS gates. Chromium validation at 1440 and 390 pixels: zero page errors, no page overflow, no broken images, anchors or local file links; screenshots visually inspected. Desktop files unchanged.
