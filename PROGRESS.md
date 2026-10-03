@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-03 — Exact master checks green; staging workflow dispatched
+
+**Evidence:** release_gate.py checks accepted f6174737d6aa4023d331da0ed76c308f2ebd744a using API run 37084074174, Test CI 37084074163 and native run 37084074168, all successful master-push attempt 1. Dispatched Staging Release run 37089759308 for that SHA. Acceptance is pending; do not equate dispatch with deployment or promotion readiness.
+
+**Next / resume:** `gh run view 37089759308`. Inspect failed-step logs if needed; reuse the preserved built-candidate only when it exists and the retry gate accepts its provenance. Production remains disabled. Dependabot PRs #15–#17 are action major upgrades; assess compatibility separately, without changing the candidate during this rehearsal.
+
+---
+
 ## 2026-10-03 — Release foundation and cookbook merged
 
 **Done:** Native correction 878315a passed Maestro run 37081436815 (36m57s), alongside green API, web and release-tooling checks. PR #13 merged, then documentation PR #14 merged. Resulting master is f6174737d6aa4023d331da0ed76c308f2ebd744a. CodeRabbit was rate-limited/skipped on the newest revisions; its status is not substantive approval evidence.
