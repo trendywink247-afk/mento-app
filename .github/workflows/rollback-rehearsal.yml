@@ -1,0 +1,40 @@
+name: Isolated Rollback Rehearsal
+on:
+  workflow_dispatch:
+    inputs:
+      stack:
+        description: Disposable stack to exercise
+        required: true
+        default: legacy
+        type: choice
+        options: [legacy, balanced, all]
+permissions:
+  contents: read
+concurrency:
+  group: mento-rollback-rehearsal
+  cancel-in-progress: false
+jobs:
+  rehearse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      STACK: ${{ inputs.stack }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Configure disposable repository identity
+        run: |
+          git config --global user.name 'Mento rollback rehearsal'
+          git config --global user.email 'rollback-test@mento.invalid'
+      - name: Exercise real deployment and recovery on an empty runner
+        shell: bash
+        run: |
+          set -o pipefail
+          bash deploy/test-deploy.sh "$STACK" 2>&1 | tee "$RUNNER_TEMP/rollback-rehearsal.log"
+      - name: Preserve rehearsal transcript
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rollback-rehearsal
+          path: ${{ runner.temp }}/rollback-rehearsal.log
+          retention-days: 14
+          if-no-files-found: warn

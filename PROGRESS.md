@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-03 — Disposable rollback rehearsal workflow prepared
+
+**Done:** Added a manual Isolated Rollback Rehearsal workflow using a fresh GitHub-hosted runner, synthetic database settings and no VPS credentials. It drives the real deployment harness against a disposable local Git remote and preserves the transcript on success/failure. This avoids the developer Docker daemon, whose application images must not be pruned. Actionlint and whitespace passed.
+
+**Not yet proven:** Workflow has not run. Review and merge with green checks, then dispatch rollback-rehearsal.yml with stack=legacy and diagnose failures. Harness coverage does not yet establish first-worker recovery or coordinated API/web rollback; do not count it as every production gate. Staging bdef06a remains accepted; latest native runs remain active/pending. Production stays locked.
+
+---
 ## 2026-10-03 — Full staging retry accepted bdef06a
 
 **Done:** PR #27 merged after all required checks passed. Installed the reviewed restore helper on B and verified its SHA256 matches the local source (78d8a9d9100545f301cd4e826ba4c73fa33adefc57a1e52e622001347e4964aa). Staging Release 37109782797 succeeded in 5m32s using the unchanged build from 37109094125 for bdef06a52f57ac2229c75a825ff7389a42d76fa7. Deployment/schema/safety/restore, browser acceptance, fixture cleanup, runtime verification and accepted artifact publication all passed. Independent receiver verify passed; fixture-state absence and current SHA verified on B. Production promotion remains false.
