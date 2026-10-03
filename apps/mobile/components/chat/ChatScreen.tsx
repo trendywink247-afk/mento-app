@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps } from 'react';
@@ -519,6 +519,10 @@ export default function ChatScreen() {
               // The thread starts below our header, not at screen origin. Stream's
               // default Android offset (-300) leaves the composer under the IME.
               keyboardVerticalOffset={keyboardOffset}
+              // Bound the kit's percentage-height child to the available thread.
+              // Android height mode avoids padding inflating that child under IME resize.
+              keyboardBehavior={Platform.OS === 'android' ? 'height' : 'padding'}
+              additionalKeyboardAvoidingViewProps={{ style: { flex: 1 } }}
               doSendMessageRequest={doSendMessageRequest}
               messageActions={customMessageActions}
               myMessageTheme={myMessageTheme}

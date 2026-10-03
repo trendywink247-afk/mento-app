@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps } from 'react';
 import type { Channel as ChannelType, Event } from 'stream-chat';
@@ -242,7 +242,9 @@ export default function MentorChatScreen() {
             <WithComponents
               overrides={{ MessageText: MentorMessageText, Input: Composer, MessageAuthor: RenderNothing }}
             >
-              <Channel channel={channel} keyboardVerticalOffset={keyboardOffset}>
+              <Channel channel={channel} keyboardVerticalOffset={keyboardOffset}
+                keyboardBehavior={Platform.OS === 'android' ? 'height' : 'padding'}
+                additionalKeyboardAvoidingViewProps={{ style: { flex: 1 } }}>
                 <MessageList additionalFlatListProps={listProps} />
                 {/* Your companion over the message field, seated on the footer's edge. */}
                 <MentorPeek animal={mine} label={t('mentorChatPage.companionA11y')} />

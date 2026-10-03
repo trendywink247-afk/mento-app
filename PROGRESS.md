@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — Native layout regression follow-up
+
+**Evidence:** Run 37078386018 built/installed the APK but failed locating composer-send. Its screenshot shows the composer displaced directly below the header with the keyboard open. All API/web/release-tooling checks passed. The kit nests a percentage-height content view inside its keyboard wrapper; our Channel did not constrain that wrapper with flex.
+
+**Candidate correction:** Bound the keyboard wrapper with flex:1 in member and mentor chat and use Android height avoidance rather than padding; preserve measured header offset and iOS padding. This is a hypothesis under native acceptance, not yet a proven fix. Do not merge while native checks are red.
+
+**Documentation:** Cookbook PR #14 also maps the original Balanced Architecture Book to implementation; original H: book remains unchanged. Desired architecture is not complete. Resume with `gh pr checks 13` and inspect native failure artifacts before further changes.
+
+---
+
 ## 2026-10-03 — Expo dependencies integrated
 
 **Done:** PRs #11 and #12 merged into master after native checks passed. PR #13 retargeted to master and marked ready for review. At bfe4ec5 API, web and release-tooling checks passed; native and review remained pending. Preserved both branches' progress history while resolving the documentation-only merge conflict. Quarantined the deliberately broken rollback candidate on VPS B. Production remains unchanged; its worker is still absent and promotion remains disabled.
