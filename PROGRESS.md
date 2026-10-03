@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Latest master staging accepted; native update configuration audited
+
+**Done:** Full staging 37153495894 succeeded for fe6c2e6aa74ca35f8b97765e97543ee3e976520b; independent restricted receiver verification passed. No open PRs at inspection. This is the latest accepted and verified staging candidate.
+
+**Native audit:** Read app.json, app.config.ts and eas.json. EAS production declares channel=production, but shared app.json hard-codes expo-channel-name=preview. Local `APP_VARIANT=production EXPO_NO_DOTENV=1 expo config --type public --json` resolves bundle com.mento.app, appVersion runtime policy, updates enabled and preview header. Only these allowlisted fields were displayed; no credentials printed. This is local resolved config, not proof of the channel embedded by EAS in a signed binary. No build purchase, store submission or OTA publication occurred.
+
+**Next:** Reconcile local/native production channel semantics with EAS-generated configuration and test variant separation before changing rollout behavior. Production remains locked; live monitor installation, worker/safety proof, backup custody/content/deletion and device gates remain outstanding. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Connection-budget master cleared release gate
 
 **Done:** Exact-commit release gate passed for fe6c2e6aa74ca35f8b97765e97543ee3e976520b with API 37151116571, Test CI 37151116467 and actual Android 37151116427. No open PRs. Dispatched full Staging Release 37153495894 for that exact SHA; pending acceptance. Production enable flag independently remains false.
