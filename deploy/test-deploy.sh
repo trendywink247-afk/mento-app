@@ -77,7 +77,7 @@ git -C "$ROOT" read-tree HEAD
 git -C "$ROOT" add -A
 SNAP="$(git -C "$ROOT" commit-tree "$(git -C "$ROOT" write-tree)" -p HEAD -m "test-deploy snapshot")"
 unset GIT_INDEX_FILE
-git init -q --bare "$REMOTE"
+git init -q --bare --initial-branch=master "$REMOTE"
 git -C "$ROOT" push -q "$REMOTE" "$SNAP:refs/heads/master"
 git clone -q "$REMOTE" "$BOX"
 git clone -q "$REMOTE" "$DEV"
