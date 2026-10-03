@@ -127,6 +127,9 @@ main() {
             log "no recorded tag; the running image is now mento-api:$prev (rollback target)"
         fi
     fi
+    # Preserve whether the previous release actually had a running worker. The
+    # first worker-enabled release must be able to recover an API-only baseline.
+    [ -z "$prev" ] || record_worker_state "$prev"
     log "swapping to mento-api:$TAG"
     if [ "$STACK" = balanced ]; then
         "$HERE/bluegreen.sh" "$TAG" >/dev/null || die "swap FAILED — the previous colour is still serving"
@@ -198,7 +201,7 @@ rollback() {
     fi
     mv -f "$STATE_DIR/api-tag" "$STATE_DIR/api-tag.previous" 2>/dev/null || true
     echo "$prev" > "$STATE_DIR/api-tag"
-    start_worker "$prev" || die "rollback API recovered but worker failed — operator recovery required"
+    restore_worker_state "$prev" || die "rollback API recovered but worker failed — operator recovery required"
     log "healthy on $prev"
 }
 
@@ -220,6 +223,31 @@ start_worker() {
     log "worker onto mento-api:$1"
     API_TAG="$1" dc up -d --no-deps --no-build worker \
         || { log "job WORKER failed to start on $1"; return 1; }
+}
+
+record_worker_state() {
+    local tag=$1 cid state=stopped
+    cid="$(dc ps --all -q worker)" || return 1
+    if [ -n "$cid" ]; then
+        state="$(docker inspect -f '{{.State.Running}}' "$cid")" || return 1
+        case "$state" in true) state=running ;; false) state=stopped ;; *) return 1 ;; esac
+    fi
+    mkdir -p "$STATE_DIR/worker-state"
+    printf '%s\n' "$state" > "$STATE_DIR/worker-state/$tag"
+}
+
+restore_worker_state() {
+    local tag=$1 state=running
+    # Older state directories had no worker metadata: retain their previous
+    # start-worker behavior rather than guessing that jobs should be stopped.
+    if [ -f "$STATE_DIR/worker-state/$tag" ]; then
+        state="$(cat "$STATE_DIR/worker-state/$tag")"
+    fi
+    case "$state" in
+        running) start_worker "$tag" ;;
+        stopped) dc stop worker ;; # includes an originally absent worker
+        *) log 'Invalid recorded worker state; operator recovery required'; return 1 ;;
+    esac
 }
 
 # Keep the live and previous images (the rollback target); drop older ones.
