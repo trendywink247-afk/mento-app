@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Verified worker-recovery tooling installed on A
+
+**Done:** Installed merged PR #30 operator script under both receiver/operator deployment locks, after confirming promotion remained disabled and the server marker absent. SHA256 verified before and after atomic replacement: e967a63aac77dfd9ad47172e4f7a95dab4b63620c00f288f3a5646403806aad7. Retained root-owned prior copy at /usr/local/lib/mento-release/operator-deploy.sh.before-1791020743088777356. Bash syntax passed. No application deployment, worker launch or database change.
+
+**Verified:** Read-only preflight now passes API readiness, web symlink, previous tag, installed operator ownership/entrypoint and disk headroom. Safety webhook freshness and running worker remain FAIL. Source still 92b8f57a5cd30602c27487e046b92162e7528687. GitHub production promotion remains false.
+
+**Next:** Continue backup encryption/retention, real job and alert delivery verification, and native/device gates. Explicitly plan first-worker activation with the rehearsed rollback contract; a missing legacy worker is not evidence that the new code has already been deployed. Production remains locked; do not claim the remaining manual gates from preflight alone.
+
+---
 ## 2026-10-03 — First-worker rollback proven; readiness fix merged
 
 **Done:** PR #30 merged after required CI and full isolated run 37112777741 passed. Operator deployment records prior worker running/stopped state, preserving API-only baselines on rollback. Worker startup now waits for the actual app.jobs.worker process and fresh queue heartbeat. Shell state tests pass.
