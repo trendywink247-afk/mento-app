@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Backup recovery and overlap changes integrated
+
+**Verified:** PR #48 merged at 27763f6 after Test CI 37158558324 and API CI 37158558301 passed. Actual application chat exclusion, retained notes/reports/block state and both schema recovery cases passed. PR #49 merged at 8ee2f8c after Test CI 37159012821 and API CI 37159012754 passed; Linux log confirms overlap refused, lock released after failure, partial dump removed and copy before retention. No live backup activation or production migration.
+
+**Native:** Resolved #42 PROGRESS-only conflict preserving both histories, placing its historical entries after master's newer entries to avoid the repeated top-of-file insertion conflict. Head 91db0beacc8277783084f69ae6fba3e2097953e6 has fresh checks; prior native runs do not substitute. Do not push progress-only changes to that branch. Production enable variable independently verified false.
+
+**Next:** Inspect current #42 checks and mergeability, merge only on green native/current-head evidence, then exact master release gate and full staging. Latest accepted staging remains fe6c2e6. Continue step 1 operational gates: durable off-device identity custody, snapshot-safe content-filtered export, deletion reconciliation, live monitoring/safety and coordinated schema/worker rollout. Temporary DPAPI identity is not an independent vault. Work only in H:\Mento gpt\Mento; preserve architecture book. Resume: git status --short; gh pr view 42 --json headRefOid,mergeStateStatus,statusCheckRollup; Get-Content PROGRESS.md -TotalCount 50.
+
+---
 ## 2026-10-04 — Recovery policy proven; backup overlap protection
 
 **Done:** PR #48 merged as 27763f6 after all current-head checks passed. Test CI 37158558324 verified actual application chat rows excluded, saved notes/reports/block state retained, and both baseline/current-schema encrypted restore plus forward migration. Local temporary age recovery identity exists under ignored .local/recovery in current-user DPAPI protection, with a successful synthetic decrypt round trip; it is not durable off-device custody. Updated existing heartbeat to the current five-phase worklist, preserving its 20-minute schedule and quiet unchanged-state behavior.
