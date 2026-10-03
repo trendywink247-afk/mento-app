@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Encrypted synthetic database restore passed CI
+
+**Done:** PR #33 merged after green checks. PR #34 adds a network-isolated disposable PostgreSQL drill: synthetic relational data -> pg_dump/gzip -> age encryption -> authenticated recovery -> separate restored database. Test CI 37120726235 release-tooling passed the real database restore, joined-row check and restored foreign-key enforcement, plus existing encryption/failure tests. No host ports, VPS credentials, real backup data or persistent identity used.
+
+**Limits:** This verifies synthetic relational recovery, not the full Mento schema or production key custody. Remaining PR checks/revised-head checks must pass before merge. Production remains locked; live backup encryption, message-content exclusions, six-hour schedule, retention and full application restore integration remain unfinished.
+
+**Next:** Complete PR review and progress toward a synthetic full-schema encrypted restore before live activation. Preserve existing backups and user files.
+
+---
 ## 2026-10-03 — Authenticated backup recovery utility prepared
 
 **Done:** PR #32 merged after green checks. Added decrypt-backup.sh for an authorized recovery host: authenticate/decrypt completely, validate gzip, then publish private output without overwrite; never import SQL. Expanded synthetic tests cover byte-exact recovery, 0600 permissions, wrong identity, truncated ciphertext, non-gzip plaintext, overwrite refusal and partial cleanup. Disposable Linux validation passed. Existing Test CI runs this suite.

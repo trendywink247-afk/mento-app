@@ -58,6 +58,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq age
           bash deploy/test-backup-encryption.sh
+      - name: Restore an encrypted synthetic database
+        run: bash deploy/test-encrypted-database-restore.sh
       - name: Validate all GitHub workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck=
       - name: Validate shell syntax
