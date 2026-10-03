@@ -100,6 +100,25 @@ No production identity or receiver has been activated by this change.
 
 ## Activation and release checklist
 
+The receiver's production verification targets the current legacy container names:
+API and worker must both run the accepted image identity, followed by a fresh
+Procrastinate queue heartbeat within a bounded wait. Failure triggers runtime
+rollback. This is a single-worker readiness signal, not task-delivery proof or
+per-replica health; update the contract before moving to Balanced container names
+or multiple workers. Test actual queued job completion independently.
+
+For the legacy web-directory prerequisite, `deploy/web-release-layout.py` is an
+operator preparation tool, not a CI deployment step. With promotion locked and all
+web writers stopped, run it on Linux with `/opt/mento-console` as the explicit root.
+It copies and hashes the static files, then atomically exchanges `current` with a
+release symlink using `renameat2`; the untouched original is retained under the
+printed `.legacy-current-*` name. Preserve that name. Immediate rollback uses the
+same root plus `--rollback <retained-name>`. Do not use this bootstrap rollback
+after subsequent releases without reviewing which version would be restored.
+Local Linux tests prove file/inode preservation and refusal of unexpected symlink
+assets; the tool has not been run on production. Unsupported filesystems fail
+without replacing `current`. Review retained copies before any later cleanup.
+
 Run `deploy/production-preflight.sh` read-only on VPS A before planning promotion.
 It reports prerequisites without printing secrets. A pass does not replace the
 manual gates below. On 3 October, API readiness, rollback-tag presence and disk

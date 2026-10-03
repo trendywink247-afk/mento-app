@@ -84,6 +84,23 @@ def verify_image_archive(archive, sha):
             raise ValueError("Archived image source revision differs from candidate")
 
 
+def verify_production_runtime(expected_image):
+    """Reject API-only releases; the current production topology has one worker."""
+    for name in ("mento-api-prod", "mento-worker-prod"):
+        state = json.loads(subprocess.check_output(
+            ["docker", "inspect", name], text=True))[0]
+        if state["Image"] != expected_image or not state["State"]["Running"]:
+            raise ValueError(f"{name} is not running the accepted image")
+    # Queue heartbeat proves database participation, not successful delivery of
+    # every job. Per-worker identity is required before introducing replicas.
+    probe = (
+        "from app.db import SessionLocal; from app.jobs.health import queue_health; "
+        "db=SessionLocal(); result=queue_health(db); db.close(); "
+        "raise SystemExit(0 if result.get('worker_alive') else 1)"
+    )
+    run("docker", "exec", "mento-worker-prod", "python", "-c", probe)
+
+
 def main():
     import fcntl  # Linux server only; archive validation is testable on Windows.
 
@@ -243,6 +260,14 @@ def main():
                 run("sudo", "-Hu", "mento-ops", "env", f"SSH_ORIGINAL_COMMAND=deploy {sha}",
                     "bash", "/opt/mento/deploy/deploy.sh", "--from-ssh")
                 production_api_changed = True
+                for attempt in range(12):
+                    try:
+                        verify_production_runtime(actual)
+                        break
+                    except (ValueError, subprocess.CalledProcessError):
+                        if attempt == 11:
+                            raise
+                        time.sleep(5)
             next_link = webbase / "ci-next"
             next_link.unlink(missing_ok=True)
             next_link.symlink_to(release, target_is_directory=True)

@@ -4,6 +4,54 @@
 
 ---
 
+## 2026-10-03 — Actions unblocked; worker rollback integrated
+
+**Done:** Repository visibility is now public following the founder's change. Retried Test CI run 37098263875; the formerly blocked test-gate actually ran and passed (job 111155136134). PR #21 merged after all checks passed. Merged master into production-preparation without conflicts. The billing limitation below is historical, not the current blocker.
+
+**Next:** Review and integrate atomic web-layout and production runtime verification changes with fresh CI, then prepare the production receiver/installer and rehearse activation before any promotion. Remaining backup, safety, alert, capacity and native/store gates stay explicit. Production is unchanged; accepted staging is f617473 / run 37093153629.
+
+---
+
+## 2026-10-03 — Production receiver validates worker image and heartbeat
+
+**Done:** Added bounded production runtime verification after deploy: both legacy API/worker containers must run the accepted server image identity, and the queue heartbeat must become fresh. A failed check enters existing rollback handling. Added tests rejecting wrong API image, wrong/stopped worker and failed heartbeat. All 13 release tests pass in local network-disabled Linux; actionlint and whitespace clean. Read-only staging probe independently reported available=True, worker_alive=True, heartbeat age 3 seconds.
+
+**Limits:** This targets the current single-worker legacy topology. Aggregate heartbeat does not prove each worker in a future replica pool or successful completion of every task. Not installed on production; installer, whole-stack rehearsal and other release gates remain open.
+
+**Account blocker:** At the user's request, retried failed Test CI once. New test-gate job 111151414284 again never started and reports the same failed-payment/spending-limit annotation. PR #21 remains unmerged; stop repeated retries until account state changes. Continue independent local work on codex/production-preparation, whose changes must be reviewed after its dependency.
+
+**Resume:** `docker run --rm --network none --mount 'type=bind,source=H:\Mento gpt\Mento,target=/work,readonly' --workdir /work --entrypoint python mento-api:551345c5b617 -m unittest discover -s scripts/ci -p 'test_*.py'`. Production promotion remains false.
+
+---
+
+## 2026-10-03 — Web migration failure injection verified
+
+**Done:** Added Linux failure-injection tests for unsupported atomic exchange and a source file changing during copy. Both abort with the original current directory still serving; the writer's newer content is preserved. All 12 release-tooling tests pass in the network-disabled local Linux image. This does not replace the requirement to stop concurrent writers during an actual migration.
+
+**State:** PR #21 still blocked by the same GitHub billing annotation. No new CI retries or production changes. Resume on codex/production-preparation; merge/release gates remain enforced.
+
+---
+
+## 2026-10-03 — Atomic web-layout preparation tested locally
+
+**Done:** Added deploy/web-release-layout.py for explicit Linux operator preparation: hash/copy legacy web content, atomically exchange current with a release symlink, retain the original directory and support explicit rollback. Refuses existing release links and unexpected symlink assets. Ten release-tooling tests passed in the existing local Linux API image with networking disabled and a read-only repository mount; tests use temporary directories. Whitespace clean.
+
+**Limits:** Not installed or executed on production. Requires deployment lock and no concurrent web writers during preparation. This is not disaster recovery or a substitute for rollback of later application releases. GitHub billing still blocks PR #21's final gate; no retries/purchases or bypasses attempted.
+
+**Resume:** Continue local production preparation on codex/production-preparation; after billing recovery, complete PR #21 and review this follow-up before any server mutation. See docs/RELEASE_PIPELINES.md for the bootstrap/rollback contract.
+
+---
+
+## 2026-10-03 — GitHub Actions billing blocks final gate
+
+**Evidence:** PR #21 API, mobile-web and release-tooling jobs passed, including the new worker rollback control-flow test. test-gate job 111132959857 never started (no steps/log); its GitHub annotation says recent account payments failed or the spending limit must be increased. This is an account-side blocker, not a passing gate. PR #21 remains unmerged; no billing settings changed and no gate bypassed.
+
+**Independent audit:** app/jobs/health.py already computes Procrastinate worker heartbeat freshness (60 seconds), while production and staging Compose worker healthchecks are disabled. Next local work can expose an appropriate container readiness check and test bounded startup/crash recovery; distinguish aggregate queue health from per-process health when replicas are introduced.
+
+**Resume:** Account owner must resolve GitHub Billing & plans, then rerun the failed Test CI job in run 37098263875 and verify it before merging PR #21. Continue local production preparation on codex/production-preparation meanwhile. Production remains locked and staging stays on accepted f617473.
+
+---
+
 ## 2026-10-03 — Worker startup failure now requests whole-release rollback
 
 **Done:** PR #20 merged after green checks and completed review. Updated deploy.sh so a Compose worker-start failure restores the prior API/worker rather than exiting after an API-only swap. Missing or identical rollback targets fail closed. Added isolated shell control-flow tests for success, failure and missing/same targets; all pass locally, with no Docker/server mutation. Added the test to Test CI.
