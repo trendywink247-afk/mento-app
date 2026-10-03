@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — GitHub Actions billing blocks final gate
+
+**Evidence:** PR #21 API, mobile-web and release-tooling jobs passed, including the new worker rollback control-flow test. test-gate job 111132959857 never started (no steps/log); its GitHub annotation says recent account payments failed or the spending limit must be increased. This is an account-side blocker, not a passing gate. PR #21 remains unmerged; no billing settings changed and no gate bypassed.
+
+**Independent audit:** app/jobs/health.py already computes Procrastinate worker heartbeat freshness (60 seconds), while production and staging Compose worker healthchecks are disabled. Next local work can expose an appropriate container readiness check and test bounded startup/crash recovery; distinguish aggregate queue health from per-process health when replicas are introduced.
+
+**Resume:** Account owner must resolve GitHub Billing & plans, then rerun the failed Test CI job in run 37098263875 and verify it before merging PR #21. Continue local production preparation on codex/production-preparation meanwhile. Production remains locked and staging stays on accepted f617473.
+
+---
+
 ## 2026-10-03 — Worker startup failure now requests whole-release rollback
 
 **Done:** PR #20 merged after green checks and completed review. Updated deploy.sh so a Compose worker-start failure restores the prior API/worker rather than exiting after an API-only swap. Missing or identical rollback targets fail closed. Added isolated shell control-flow tests for success, failure and missing/same targets; all pass locally, with no Docker/server mutation. Added the test to Test CI.
