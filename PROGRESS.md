@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-03 — Production preflight refreshed after receiver installation
+
+**Done:** Corrected a stale worker-start string check: the installed script now enters through activate_worker_or_rollback, so searching for the former direct call would incorrectly fail. Preflight now validates root ownership/mode, non-symlink installation, Bash syntax and the current worker rollback entrypoint. Shell syntax and whitespace passed locally; read-only execution on A confirmed operator tooling PASS.
+
+**Observed:** API readiness, previous image tag, operator tooling and disk headroom PASS. Three checks still fail: safety webhook freshness, worker presence and web release symlink. No serving application changes. Master bdef06a API CI 37107215089 and Test CI 37107215082 passed; native 37107215097 remains queued, so no new staging release was dispatched. Prior accepted staging remains intact. Continue full recovery rehearsal and preparation; production stays locked.
+
+---
 ## 2026-10-03 — Restricted production receiver installed and verified
 
 **Done:** PR #23 passed lint, API tests, mobile-web, release-tooling, real SSH receiver-isolation and test-gate; merged as bdef06a. Compared SHA256 of uploaded reviewed files before running installer on VPS A. Installed root-owned receiver and stable operator script with dedicated mento-ci-production identity. Live pinned-host SSH probes proved arbitrary command rejection, port-forward rejection and server-side locked deployment rejection. Effective sshd configuration confirms password authentication off, forwarding disabled and forced receiver. Added the matching private deployment identity and pinned known hosts to the GitHub production environment without printing secret contents.
