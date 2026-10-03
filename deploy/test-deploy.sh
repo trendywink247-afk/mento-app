@@ -85,7 +85,7 @@ git -C "$ROOT" push -q "$REMOTE" "$SNAP:refs/heads/master"
 git clone -q "$REMOTE" "$BOX"
 git clone -q "$REMOTE" "$DEV"
 git -C "$DEV" config user.email test@deploy.local; git -C "$DEV" config user.name test-deploy
-printf 'ENV=dev\nPOSTGRES_PASSWORD=test-deploy-pw\nJWT_SECRET=test-deploy\nUVICORN_WORKERS=1\n' \
+printf 'ENV=dev\nPOSTGRES_PASSWORD=test-deploy-pw\nJWT_SECRET=test-deploy\nGLITCHTIP_SECRET_KEY=synthetic-rehearsal-only-not-production\nUVICORN_WORKERS=1\n' \
     > "$BOX/services/api/.env"
 mkdir -p "$TMP/web/current"; echo SPA > "$TMP/web/current/index.html"
 cat > "$TMP/test.override.yml" <<EOF
