@@ -14,8 +14,10 @@ if [[ " $* " == *' -d '* ]]; then
   echo attempt >> "$ALERT_LOG"
   exit "$ALERT_FAIL"
 fi
-if [[ " $* " == *'/health/crisis '* ]] && [ "$CRISIS_FAIL" = 1 ]; then
-  exit 7
+if [[ " $* " == *'/health/crisis '* ]]; then
+  if [ "$CRISIS_FAIL" = 1 ]; then exit 7; fi
+  printf '{"status":"ok"}\n200'
+  exit 0
 fi
 printf '%s' "$PROBE_CODE"
 MOCK

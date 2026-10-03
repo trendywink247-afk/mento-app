@@ -45,17 +45,21 @@ check web-admin   https://admin.mento.chat/admin               200 || failures=1
 
 # health/crisis legitimately reports 503 "stale" whenever no real crisis-webhook
 # message has passed through recently — that is expected, not an outage (see
-# PROGRESS.md). Only page if the endpoint is unreachable outright, not merely stale.
-crisis_code=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 https://api.mento.chat/api/v1/health/crisis 2>/dev/null)
-[ $? -eq 0 ] && [ -n "$crisis_code" ] || crisis_code="ERR"
+# PROGRESS.md). Degraded, malformed and unexpected HTTP responses are failures.
+# Install the classifier beside this script; missing Python/helper fails closed.
+monitor_dir=$(cd "$(dirname "$0")" && pwd)
+crisis_ok=0
+if crisis_response=$(curl -sS --max-filesize 65536 -w '\n%{http_code}' -m 10 https://api.mento.chat/api/v1/health/crisis 2>/dev/null) && printf '%s' "$crisis_response" | "${PYTHON:-python3}" "$monitor_dir/classify-crisis-health.py" 2>/dev/null; then
+  crisis_ok=1
+fi
 crisis_state_file="$STATE_DIR/api-crisis-reachable"
 prev_crisis="unknown"
 [ -f "$crisis_state_file" ] && prev_crisis="$(cat "$crisis_state_file")"
-if [ "$crisis_code" = "ERR" ]; then
-  if [ "$prev_crisis" != "down" ]; then alert "DOWN: crisis-webhook endpoint unreachable (not just stale)" || exit 1; fi
+if [ "$crisis_ok" != 1 ]; then
+  if [ "$prev_crisis" != "down" ]; then alert "DOWN: crisis-health probe failed (transport, degraded or invalid response)" || exit 1; fi
   echo "down" > "$crisis_state_file"
 else
-  if [ "$prev_crisis" = "down" ]; then alert "RECOVERED: crisis-webhook endpoint reachable again ($crisis_code)" || exit 1; fi
+  if [ "$prev_crisis" = "down" ]; then alert "RECOVERED: crisis-health probe returns an expected status (fresh or idle)" || exit 1; fi
   echo "up" > "$crisis_state_file"
 fi
 exit "$failures"
