@@ -220,9 +220,20 @@ activate_worker_or_rollback() {
 }
 
 start_worker() {
+    local cid attempt
     log "worker onto mento-api:$1"
     API_TAG="$1" dc up -d --no-deps --no-build worker \
         || { log "job WORKER failed to start on $1"; return 1; }
+    for attempt in $(seq 1 15); do
+        cid="$(dc ps -q worker)" || return 1
+        if [ -n "$cid" ] && docker exec "$cid" python -c \
+            'from pathlib import Path; from app.db import SessionLocal; from app.jobs.health import queue_health; assert b"app.jobs.worker" in Path("/proc/1/cmdline").read_bytes(); db=SessionLocal(); health=queue_health(db); db.close(); raise SystemExit(0 if health.get("worker_alive") else 1)' >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 2
+    done
+    log "job WORKER did not become ready on $1"
+    return 1
 }
 
 record_worker_state() {
