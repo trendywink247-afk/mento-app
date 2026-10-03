@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-03 — Actions unblocked; worker rollback integrated
+
+**Done:** Repository visibility is now public following the founder's change. Retried Test CI run 37098263875; the formerly blocked test-gate actually ran and passed (job 111155136134). PR #21 merged after all checks passed. Merged master into production-preparation without conflicts. The billing limitation below is historical, not the current blocker.
+
+**Next:** Review and integrate atomic web-layout and production runtime verification changes with fresh CI, then prepare the production receiver/installer and rehearse activation before any promotion. Remaining backup, safety, alert, capacity and native/store gates stay explicit. Production is unchanged; accepted staging is f617473 / run 37093153629.
+
+---
+
 ## 2026-10-03 — Production receiver validates worker image and heartbeat
 
 **Done:** Added bounded production runtime verification after deploy: both legacy API/worker containers must run the accepted server image identity, and the queue heartbeat must become fresh. A failed check enters existing rollback handling. Added tests rejecting wrong API image, wrong/stopped worker and failed heartbeat. All 13 release tests pass in local network-disabled Linux; actionlint and whitespace clean. Read-only staging probe independently reported available=True, worker_alive=True, heartbeat age 3 seconds.
