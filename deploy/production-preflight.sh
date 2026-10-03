@@ -19,12 +19,19 @@ worker_running() {
 disk_headroom() {
   test "$(df -Pk /opt/mento | awk 'NR==2 {print $4}')" -ge 8388608
 }
+operator_ready() {
+    local script=/usr/local/lib/mento-release/operator-deploy.sh
+    test ! -L "$script" && test "$(stat -c '%u:%a' "$script")" = '0:644' \
+        && bash -n "$script" \
+        && grep -Fq 'activate_worker_or_rollback "$TAG" "$prev" "$STACK"' "$script" \
+        && grep -Fq 'start_worker() {' "$script"
+}
 check 'Production API readiness' curl --fail --silent --max-time 10 http://127.0.0.1:8000/api/v1/health/ready
 check 'Recent production safety webhook (freshness only)' curl --fail --silent --max-time 10 http://127.0.0.1:8000/api/v1/health/crisis
 check 'Worker container running (not end-to-end job proof)' worker_running
 check 'Production web uses release symlink' test -L /opt/mento-console/current
 check 'Recorded previous API image tag' test -s /home/mento-ops/.local/state/mento/api-tag.previous
-check 'Installed CI operator script includes worker startup' grep -Fq 'start_worker "$TAG"' /usr/local/lib/mento-release/operator-deploy.sh
+check 'Installed CI operator script ownership and worker rollback entrypoint' operator_ready
 check 'At least 8 GiB free for release/rollback artifacts' disk_headroom
 printf 'Remaining manual gates: reviewed receiver and deploy script, artifact identity, job execution/health, rollback drill, encrypted deletion-compatible backups, restore proof, delivered alerts, privacy/security and device acceptance.\n'
 if [ "$failures" -gt 0 ]; then
