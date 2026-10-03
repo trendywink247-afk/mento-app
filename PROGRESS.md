@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-10-03 — Monitor review extended to crisis reachability alerts
+
+**Done:** PR #38 initial head passed required CI (Test 37138826045, API 37138826068). Review identified missing coverage of the separate crisis reachability branch. Added simulated connection failure, failed delivery, successful retry, deduplication and failed recovery delivery cases for that path. Full mocked-curl suite passed locally; no real notification was sent.
+
+**Next:** Require fresh PR #38 current-head checks before merging the expanded coverage. Latest independently verified staging remains 11e8073; production stays disabled and no VPS monitor was changed. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
+## 2026-10-03 — Latest master accepted on staging; monitor retry fix prepared
+
+**Done:** Full staging 37137493795 succeeded for 11e8073fa4fb9a1b20081771e6e858341aeb2585; independent restricted receiver verify passed. No open PRs at initial inspection.
+
+**Finding/fix:** External monitor swallowed alert delivery failures and marked state notified, preventing retry. Prepared a fix retaining previous notified state on failure and reporting nonzero while checking the remaining endpoints. Local mocked-curl test passed outage/recovery retry and successful-delivery deduplication; added CI coverage. No real notifications sent and no VPS monitor installed or changed.
+
+**Next:** Review monitor PR/current-head CI before integration. Production gates remain unsatisfied (worker, safety freshness, backup custody/content and other operational acceptance). Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
+## 2026-10-03 — Upgraded release tooling passes rollback; production gates refreshed
+
+**Done:** Staging run 37136265063 succeeded for 3d2074fae9687594be784ab349ad1d2cf6be86f8; independent restricted receiver verification passed. Both-stack rollback run 37136267615 succeeded on 11e8073: controlled blue/green drill recorded 0/13574 failed requests, while legacy recreate recorded 1573/4751 interruptions. These are deployment rehearsal results, not capacity evidence.
+
+**Current master:** Exact release gate passed for 11e8073fa4fb9a1b20081771e6e858341aeb2585 using API 37136249779, Test 37136249776 and native 37136249723. Dispatched full staging run 37137493795 for this SHA; pending acceptance. No open PRs at initial inspection.
+
+**Production read-only preflight:** API readiness, release symlink, previous image tag, installed worker-aware operator script and disk headroom pass. Safety-webhook freshness and running worker still fail. Production environment enable flag remains false. Do not interpret successful isolated rehearsal as activation of the live worker or delivered safety alerts.
+
+**Next:** Inspect staging 37137493795 and independently verify candidate 11e8073 after success. Then continue unresolved worker/job, safety alert, backup custody/content/deletion and device gates without enabling production prematurely. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
+## 2026-10-03 — Dependency PRs integrated; release and rollback verification running
+
+**Done:** PR #15 exact head 8c4df168c8f28500cce79a5d1649b0af75f3ab25 passed required checks and both real native runs (37134453313 and 37134454744). Merged with exact-head guard as 11e8073fa4fb9a1b20081771e6e858341aeb2585. PRs #15/#16/#17 are now merged; no open PRs at inspection. Production release variable independently remains false.
+
+**Validation in progress:** Exact release gate passed for previous master 3d2074fae9687594be784ab349ad1d2cf6be86f8 (API 37134384122, Test 37134384094, native 37134384155). Dispatched full staging 37136265063 for that candidate using current workflow head 11e8073. Also dispatched isolated rollback rehearsal 37136267615 with stack=all on 11e8073 to exercise the upgraded checkout with both infrastructure configurations. Neither run is claimed accepted yet.
+
+**Next:** Inspect those runs and diagnose failures; independently verify staging if successful. Current master 11e8073 checks: API 37136249779, Test 37136249776, Maestro 37136249723. Require its exact gate before staging that SHA. Latest verified accepted staging remains ade37a1. Production and live backup activation remain gated. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
 ## 2026-10-03 — Node upgrade merged; checkout conflict resolved
 
 **Done:** Full Staging Release 37132617426 succeeded for ade37a1d01de216b2e7cd590a73cf7e5f07843fa and restricted server verification passed independently. PR #17 exact head d4e75d4601de6f58d0492e08d1c3753defe0058e passed required checks plus actual native run 37132622078; merged as master 3d2074fae9687594be784ab349ad1d2cf6be86f8.
