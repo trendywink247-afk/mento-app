@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-03 — Java master green; Node candidate exercising native flow
+
+**Done:** Exact-commit gate passed for ade37a1d01de216b2e7cd590a73cf7e5f07843fa: API 37130767222, Test CI 37130767235, actual Maestro 37130767241. Dispatched full Staging Release 37132617426; pending, not accepted at handoff. Latest independently verified staging remains 03a19f4.
+
+**Dependency progress:** Dependabot independently refreshed PR #17 to d4e75d4601de6f58d0492e08d1c3753defe0058e, clean against master with required checks green. This removes the immediate stale-branch obstacle; it does not prove our OAuth scope changed. Reviewed current diff (only pinned setup-node substitutions) and dispatched real native run 37132622078 because the bot PR native job was skipped. Wait for this exact head before merging.
+
+**Checkout review:** PR #15 also refreshed to 48b0522ca761a1709b8712bef61ef98538df15ee with required checks green and native skipped. Reviewed upstream v7.0.1 release/README: stricter fork-trigger handling and runner-temp credential storage need preservation; hosted runners satisfy the documented runtime requirement. Native/release validation remains due, after Node integration to avoid claiming combined compatibility from separate old heads.
+
+**Next:** Inspect staging 37132617426 and Node native 37132622078, validate candidate/head identity, then integrate only with green current required checks. Production remains locked; live backup key custody/content policy is still unresolved. Resume in H:\Mento gpt\Mento; preserve the untracked architecture book.
+
+---
 ## 2026-10-03 — Latest staging verified; Java tooling integrated
 
 **Done:** Independently verified serving staging candidate 03a19f4a25c0373acedc7186a092a8e1c9375d97 through the restricted receiver after full Staging Release 37129003001 succeeded. PR #16 current head 2bcbdd91313a85cec808580bb7bc83a3469ac5aa passed required checks and real native tests (manual run 37129037059 and PR run 37129031672). Merged with exact-head guard; master is now ade37a1d01de216b2e7cd590a73cf7e5f07843fa.
