@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-03 — Legacy direct web deployment retired
+
+**Done:** PR #24 passed all checks and merged as d1bf93b. Auditing web writers found deploy-web.sh still rebuilding locally and swapping production directories without release locks or accepted-artifact checks. Replaced it with an immediate refusal directing operators to Staging/Production Release. The console alias also refuses. Both entrypoints verified exit 1; shell syntax and whitespace passed. No server mutation.
+
+**Limits:** Old checkouts retain the old script; operator writers still require review before migration. This closes the repository shortcut, not all administrator access. Latest observed native master bdef06a run 37107215097 is running; prior 46ac892 native passed. Production remains locked. Continue web migration/recovery preparation after reviewing this increment.
+
+---
 ## 2026-10-03 — Production preflight refreshed after receiver installation
 
 **Done:** Corrected a stale worker-start string check: the installed script now enters through activate_worker_or_rollback, so searching for the former direct call would incorrectly fail. Preflight now validates root ownership/mode, non-symlink installation, Bash syntax and the current worker rollback entrypoint. Shell syntax and whitespace passed locally; read-only execution on A confirmed operator tooling PASS.
