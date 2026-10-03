@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Current master staging accepted; offline pool budget prepared
+
+**Done:** Full staging 37148721249 passed for dd0edb032fe58f9e08ccd7ef1c8329a49eb47c2f; independent restricted receiver verify passed. Added an offline connection-budget utility with explicit API/worker process counts, worker queue pools, migration allowance, reserved slots and headroom. Source defaults with two API colors/one worker require 73 versus Balanced limit 50; this is a configuration bound, not observed exhaustion. Live overrides are lower as recorded below.
+
+**Validation:** Four unit tests passed for overflow, finite bounds, worker connector accounting and invalid/unlimited inputs. Existing CI discovers these tests. Documented a bounded example and homogeneous-pool assumption. No server settings changed; this tool is not an enforced deployment gate.
+
+**Next:** Review current PR CI and integrate if green. Production remains locked; worker/safety/backup/device gates remain outstanding. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
 ## 2026-10-04 — Live connection limits inspected; staging advanced
 
 **Done:** Staging 37147472690 succeeded for bd7856ead4f325c3b589624ecd80dc90187fe40b; independent receiver verify passed. Exact gate passed for current master dd0edb032fe58f9e08ccd7ef1c8329a49eb47c2f (API 37147472436, Test 37147472459, native 37147472460). Dispatched full staging 37148721249 for dd0edb0; pending at handoff.
