@@ -100,6 +100,32 @@ No production identity or receiver has been activated by this change.
 
 ## Activation and release checklist
 
+`deploy/install-ci-production.sh` prepares the dedicated `mento-ci-production`
+identity using a reviewed receiver and one `production-ci.pub` Ed25519 key. It
+refuses an existing account or enabled server gate, restricts the key and SSH user
+to the receiver, disables forwarding and keeps the key path root-owned. It does
+not update the application, install the operator deploy script, migrate web files
+or enable promotion. A partial installation must be audited before retrying;
+the script deliberately does not delete an existing identity to recover.
+
+Production deployment additionally requires the root-owned, non-symlink file
+`/etc/mento-release/production-enabled`, not writable by group/others, containing
+exactly `enabled` (surrounding whitespace is ignored). The installer leaves it
+absent. Create it only after all operational gates below pass, alongside the
+GitHub production environment switch. Artifact reception alone does not activate
+an application. The production workflow uses the dedicated CI account; operator
+SSH remains separate. A disposable Linux container rehearsal with real SSH proved
+shell commands, TCP forwarding, arbitrary sudo and locked deployment are denied;
+the key path is not writable and repeat installation refuses existing accounts.
+Only systemd reload is stubbed in this container. Test CI repeats this check in
+`receiver-isolation`, required by `test-gate`. Host-specific SSH configuration and
+operator-script readiness still need verification before installation on A.
+
+Master branch protection now requires `lint`, `test` and `test-gate` on an
+up-to-date PR, enforces the rules for administrators, resolves review threads and
+forbids force pushes/deletion. Native release evidence remains a separate
+exact-commit release gate because native PR checks are path-filtered.
+
 The receiver's production verification targets the current legacy container names:
 API and worker must both run the accepted image identity, followed by a fresh
 Procrastinate queue heartbeat within a bounded wait. Failure triggers runtime

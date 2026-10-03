@@ -101,6 +101,15 @@ def verify_production_runtime(expected_image):
     run("docker", "exec", "mento-worker-prod", "python", "-c", probe)
 
 
+def require_production_enabled(path):
+    """An operator-owned server gate complements the GitHub readiness switch."""
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Production promotion remains locked on this server")
+    state = path.stat()
+    if state.st_uid != 0 or state.st_mode & 0o022 or path.read_text().strip() != "enabled":
+        raise ValueError("Production gate must be root-owned, non-writable by others and explicitly enabled")
+
+
 def main():
     import fcntl  # Linux server only; archive validation is testable on Windows.
 
@@ -116,6 +125,8 @@ def main():
     if len(words) != 2 or words[0] not in {"receive", "deploy", "accept", "verify", "fixture", "cleanup"} or not re.fullmatch(r"[0-9a-f]{40}", words[1]):
         raise ValueError("Expected receive|deploy|accept|verify followed by a full SHA")
     operation, sha = words
+    if environment == "production" and operation == "deploy":
+        require_production_enabled(Path("/etc/mento-release/production-enabled"))
     base = Path("/opt/mento-staging" if environment == "staging" else "/opt/mento-release")
     base.mkdir(exist_ok=True)
     with (base / "ci.lock").open("w") as lock:
