@@ -100,6 +100,16 @@ No production identity or receiver has been activated by this change.
 
 ## Activation and release checklist
 
+Run `deploy/production-preflight.sh` read-only on VPS A before planning promotion.
+It reports prerequisites without printing secrets. A pass does not replace the
+manual gates below. On 3 October, API readiness, rollback-tag presence and disk
+headroom passed; safety-webhook freshness, running worker, web release symlink
+and worker-aware installed deploy script failed. The deployed script at 92b8f57
+parses its old functions before resetting the checkout, so merely deploying a
+new commit will not add worker startup to that invocation. Install and review the
+updated operator script before enabling the production receiver, then prove job
+execution and rollback; do not accept an API-only success as a complete release.
+
 - Complete the Expo PR chain (#11 → #12 → #13) with native evidence; do not merge
   red dependencies merely because the newest web/API jobs passed.
 - Rehearse the complete Staging Release workflow on a green master SHA. A manual
