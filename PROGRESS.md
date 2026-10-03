@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-10-04 — Approved backup content policy exercised on application tables
+
+**Implementation:** Extended the isolated current-schema encrypted recovery drill with synthetic member/mentor/conversation, own-chat message, saved journal note and moderation report using real application models. Discover actual chat partitions for data exclusion; after recovery require zero chat rows while saved note, report narrative, block state and referenced member/conversation remain. Production-baseline forward migration remains a separate case.
+
+**Validation:** Python compilation, Bash syntax and whitespace passed. Full runtime validation awaits CI; local Docker remains unavailable. Fixture refuses non-development databases and requires the drill user/loopback/source-or-recovered database. No real records, notifications, production migrations or key transfer involved.
+
+**Next:** Inspect CI and fix any real-schema fixture/migration issue before merging. This proves the approved selection rule only in isolation; live exporter snapshot/DDL coordination, deletion replay and durable off-device identity custody remain gates. Resume in H:\Mento gpt\Mento; keep production locked.
+
+---
+## 2026-10-04 — Production-baseline recovery rehearsal prepared
+
+**Done:** PR #46 merged after green checks. Extended isolated encrypted recovery drill to start from production revision c13a0seen001, assert queue absence, encrypt/restore into a separate database, verify original revision, then migrate only that recovered copy to current head. Assert queue tables appear, synthetic relational fixtures survive, and alembic check matches current models. CI runs both current-head and production-baseline cases.
+
+**Validation:** Bash syntax, actionlint and whitespace checks passed. Local Docker daemon is unavailable; full database execution awaits CI. This uses synthetic fixtures and does not claim a production-data migration rehearsal. No live schema, worker or backup activation.
+
+**Founder direction:** Proceed autonomously through steps 1–5. Retain notes/reports in encrypted backups and exclude chat history. Temporary local encrypted key custody was proposed after founder delegated the choice; no persistent key has yet been created and no off-device recovery proof exists. Do not count a single local copy as durable custody.
+
+**Next:** Require CI proof of baseline restore/forward migration before integration; continue production readiness without bypassing gates. Resume in H:\Mento gpt\Mento; preserve architecture book and current-head native tests on #42.
+
+---
 ## 2026-10-04 — Release-channel CI pending native; artifact upgrade rehearsal started
 
 **Verified:** PR #42 head 43932941947adbbdbdf0974ea11edb755fccb779 API and Test CI passed; Android run 37155962519 remains in progress. No merge while native acceptance is pending. Local TypeScript validation from the preceding turn completed successfully.
