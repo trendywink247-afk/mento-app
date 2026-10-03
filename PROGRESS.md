@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-03 — Full CI staging acceptance passed
+
+**Done:** Staging Release 37093153629 succeeded for f6174737d6aa4023d331da0ed76c308f2ebd744a, reusing the original build from 37089759308. It completed deploy, schema/safety/restore acceptance, private browser acceptance, synthetic fixture cleanup and final runtime verification. The non-expired release-candidate artifact is 104726730 bytes. Restricted live verify independently passed after workflow completion. PRODUCTION_RELEASE_ENABLED remains false; no production upgrade occurred.
+
+**Next:** Complete production receiver and reversible web layout, worker deployment/health, encrypted deletion-compatible backup retention, crisis-path and delivered-alert verification, and remaining acceptance gates before promotion. Keep Balanced architecture as baseline and own-chat migration gated by parity. Refresh dated documentation status with this evidence. Resume: `gh run view 37093153629`; checklist in docs/RELEASE_PIPELINES.md.
+
+---
+
 ## 2026-10-03 — Retry fix merged; immutable staging retry running
 
 **Done:** PR #18 passed API, web and release-tooling checks; review completed without inline findings. Merged as master 9b9c1ff. Dispatched Staging Release 37093153629 using the accepted test SHA f6174737d6aa4023d331da0ed76c308f2ebd744a and preserved build from 37089759308. No rebuild or bypass of exact app checks.
