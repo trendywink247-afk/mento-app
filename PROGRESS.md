@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-03 — Upgraded release tooling passes rollback; production gates refreshed
+
+**Done:** Staging run 37136265063 succeeded for 3d2074fae9687594be784ab349ad1d2cf6be86f8; independent restricted receiver verification passed. Both-stack rollback run 37136267615 succeeded on 11e8073: controlled blue/green drill recorded 0/13574 failed requests, while legacy recreate recorded 1573/4751 interruptions. These are deployment rehearsal results, not capacity evidence.
+
+**Current master:** Exact release gate passed for 11e8073fa4fb9a1b20081771e6e858341aeb2585 using API 37136249779, Test 37136249776 and native 37136249723. Dispatched full staging run 37137493795 for this SHA; pending acceptance. No open PRs at initial inspection.
+
+**Production read-only preflight:** API readiness, release symlink, previous image tag, installed worker-aware operator script and disk headroom pass. Safety-webhook freshness and running worker still fail. Production environment enable flag remains false. Do not interpret successful isolated rehearsal as activation of the live worker or delivered safety alerts.
+
+**Next:** Inspect staging 37137493795 and independently verify candidate 11e8073 after success. Then continue unresolved worker/job, safety alert, backup custody/content/deletion and device gates without enabling production prematurely. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
 ## 2026-10-03 — Dependency PRs integrated; release and rollback verification running
 
 **Done:** PR #15 exact head 8c4df168c8f28500cce79a5d1649b0af75f3ab25 passed required checks and both real native runs (37134453313 and 37134454744). Merged with exact-head guard as 11e8073fa4fb9a1b20081771e6e858341aeb2585. PRs #15/#16/#17 are now merged; no open PRs at inspection. Production release variable independently remains false.
