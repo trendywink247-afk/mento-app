@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Monitor retry fix integrated; semantic health gap identified
+
+**Done:** PR #38 head 88ea41171fb9be5f58910de772685fe4f8925a3c passed Test CI 37139962325 and API CI 37139962329, including expanded simulated crisis outage/recovery cases. Merged with exact-head guard as master 0882abe5643ae2917bf7cff088a40100f3ef4206. Production enable variable remains false. No VPS monitor changes or real notifications.
+
+**Next finding:** Existing external crisis probe considers any HTTP response reachable. Source app/routers/health.py distinguishes ok, stale and degraded; stale and degraded both return 503. A future monitor change must parse this semantic status, preserve expected-idle behavior, and alert on degraded/malformed/unexpected HTTP results without sending raw response content. Retry testing alone does not close this safety-monitoring gap.
+
+**Next:** Inspect exact master checks for 0882abe before its staging release. Prepare semantic crisis-probe tests independently; retain latest accepted staging 11e8073. Production worker, delivered alert proof, backup custody/content/deletion and device gates remain open. Resume in H:\Mento gpt\Mento and preserve untracked architecture book.
+
+---
 ## 2026-10-03 — Monitor review extended to crisis reachability alerts
 
 **Done:** PR #38 initial head passed required CI (Test 37138826045, API 37138826068). Review identified missing coverage of the separate crisis reachability branch. Added simulated connection failure, failed delivery, successful retry, deduplication and failed recovery delivery cases for that path. Full mocked-curl suite passed locally; no real notification was sent.
