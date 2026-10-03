@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Staging restore readiness race diagnosed
+
+**Observed:** Staging run 37109094125 deployed bdef06a, passed schema and live crisis-path checks, then failed isolated restore with PostgreSQL shutting down. Staging now runs bdef06a but is NOT accepted. Production remains locked. PR #26 passed all checks and merged as e646b32.
+
+**Fix:** Restore readiness previously used the Unix socket, which can report the temporary initialization server ready before its shutdown. Probe TCP 127.0.0.1 instead, wait up to 60 seconds and fail explicitly on timeout. Bash syntax and whitespace passed. Ran the revised isolated drill on B using the existing bdef06a image and latest production backup; restore and forward migration passed from c13a0seen001 to e5a6part0001 (archive mento-20261003-030001.sql.gz). Serving databases were not targets of the drill.
+
+**Next:** Review/merge readiness fix with green checks, install the reviewed restore helper, and retry the full workflow reusing built candidate from run 37109094125. Do not rebuild or claim full acceptance from an isolated drill alone.
+
+---
 ## 2026-10-03 — Fresh staging acceptance started; rehearsal isolation guard
 
 **Done:** PR #25 merged after all required checks passed (master d334435). Exact bdef06a native run 37107215097 passed alongside its API/Test CI. Dispatched full Staging Release 37109094125 for bdef06a; acceptance is pending, not claimed.
