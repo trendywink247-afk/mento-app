@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Fresh staging acceptance started; rehearsal isolation guard
+
+**Done:** PR #25 merged after all required checks passed (master d334435). Exact bdef06a native run 37107215097 passed alongside its API/Test CI. Dispatched full Staging Release 37109094125 for bdef06a; acceptance is pending, not claimed.
+
+**Finding / fix:** The full deployment rehearsal invokes real image pruning and could remove existing local mento-api images. It now refuses a daemon containing those images or existing rehearsal containers before creating its fake checkout, and checks missing worker/GlitchTip fixed-name collisions. Verified refusal exit 2 on this workspace Docker daemon and unchanged image inventory; Bash syntax and whitespace pass. A disposable daemon is required for the full rehearsal; no existing images were removed to make it run.
+
+**Next:** Follow Staging Release 37109094125 and diagnose any failure, review this isolation fix, then prepare a disposable Docker environment for complete rollback rehearsal. Production remains locked and unchanged. Existing untracked architecture book preserved.
+
+---
 ## 2026-10-03 — Legacy direct web deployment retired
 
 **Done:** PR #24 passed all checks and merged as d1bf93b. Auditing web writers found deploy-web.sh still rebuilding locally and swapping production directories without release locks or accepted-artifact checks. Replaced it with an immediate refusal directing operators to Staging/Production Release. The console alias also refuses. Both entrypoints verified exit 1; shell syntax and whitespace passed. No server mutation.
