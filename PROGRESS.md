@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Production-baseline recovery rehearsal prepared
+
+**Done:** PR #46 merged after green checks. Extended isolated encrypted recovery drill to start from production revision c13a0seen001, assert queue absence, encrypt/restore into a separate database, verify original revision, then migrate only that recovered copy to current head. Assert queue tables appear, synthetic relational fixtures survive, and alembic check matches current models. CI runs both current-head and production-baseline cases.
+
+**Validation:** Bash syntax, actionlint and whitespace checks passed. Local Docker daemon is unavailable; full database execution awaits CI. This uses synthetic fixtures and does not claim a production-data migration rehearsal. No live schema, worker or backup activation.
+
+**Founder direction:** Proceed autonomously through steps 1–5. Retain notes/reports in encrypted backups and exclude chat history. Temporary local encrypted key custody was proposed after founder delegated the choice; no persistent key has yet been created and no off-device recovery proof exists. Do not count a single local copy as durable custody.
+
+**Next:** Require CI proof of baseline restore/forward migration before integration; continue production readiness without bypassing gates. Resume in H:\Mento gpt\Mento; preserve architecture book and current-head native tests on #42.
+
+---
 ## 2026-10-04 — Step 1 prioritized; production schema and backup decisions
 
 **Founder direction:** Complete steps 1–5 sequentially, beginning with production readiness. Retain saved journal notes and moderation narratives in encrypted backups; exclude chat history. Recovery key belongs in an existing external password manager/secure vault; destination identification pending, no private key requested in chat.
