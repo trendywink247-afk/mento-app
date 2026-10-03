@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Release-channel CI pending native; artifact upgrade rehearsal started
+
+**Verified:** PR #42 head 43932941947adbbdbdf0974ea11edb755fccb779 API and Test CI passed; Android run 37155962519 remains in progress. No merge while native acceptance is pending. Local TypeScript validation from the preceding turn completed successfully.
+
+**Independent review:** New Dependabot PRs #43 setup-python, #44 upload-artifact and #45 free-disk-space appeared. Reviewed #44 diff and pinned upstream action metadata: archive defaults true, overwrite false, hidden files excluded, Node24 runtime. Dispatched isolated both-stack rollback rehearsal 37156940142 on #44 head 435908ae019d239b5d8bc82dbdecebfdad69de40 to verify actual upload/download compatibility before integration. Inspect its artifact rather than assuming a green upload proves recoverability. No VPS touched.
+
+**Review note:** #45 upstream v2 renames tool-cache to preinstalled-runtimes (old input temporarily supported), defaults swap preservation and changes specific-option precedence. Our workflow must continue preserving Android SDK, runtimes and swap; full native evidence required. No new dependency PR merged. #43 review remains due.
+
+**Next:** Inspect #42 native and #44 rehearsal/artifact, then current-head checks before any merge. Accepted staging remains fe6c2e6; production remains locked. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Local production update channel aligned with EAS profile
 
 **Done:** Official Expo guidance confirms non-EAS prebuilds use updates.requestHeaders, while EAS uses the build profile channel (https://docs.expo.dev/eas-update/getting-started/). Updated dynamic config so APP_VARIANT=production uses the production header; preview retains preview. This addresses the local Android release script path without publishing any OTA or changing installed binaries.
