@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Architecture refresh merged; semantic monitor candidate staging
+
+**Done:** PR #40 head b1fe51e02c03edba6d3f564efb05efac3a1fb7c4 passed required checks and merged as dd0edb032fe58f9e08ccd7ef1c8329a49eb47c2f. Exact release gate passed for bd7856ead4f325c3b589624ecd80dc90187fe40b (API 37145024006, Test 37145024020, native 37145024030). Dispatched full staging 37147472690 for bd7856e; pending at handoff. Latest verified staging remains 0882abe.
+
+**Independent architecture review:** SQLAlchemy defaults allow 10 pooled + 10 overflow connections per process; worker queue connector separately permits four. Compose database caps include 50 in compose.prod.yml and 30 in staging. Aggregate API/worker/deploy-overlap budgets need comparison against effective environment overrides before increasing replicas; these defaults alone are not evidence of live exhaustion. No environment values changed or secrets printed.
+
+**Next:** Inspect staging 37147472690 and current master checks. Continue aggregate database connection-budget validation alongside unresolved operational gates. Production remains locked. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Staging verified; architecture evidence refreshed
 
 **Done:** Staging 37145025868 succeeded for 0882abe5643ae2917bf7cff088a40100f3ef4206 and independent receiver verification passed. Refreshed architecture crosswalk with accepted staging, isolated rollback, merged tooling and prepared-versus-installed monitor/backup distinctions. Removed obsolete PR #13 resume command. Documentation validated against recorded CI and source; git diff --check passed.
