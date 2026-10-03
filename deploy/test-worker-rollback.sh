@@ -24,3 +24,25 @@ for scenario in success failed missing same; do
   esac
 done
 echo 'PASS: worker success, startup failure rollback, missing/same-target refusal'
+
+# Check recovery of an API-only baseline without launching an old image's worker.
+STATE_DIR=$(mktemp -d)
+trap 'rm -rf "$STATE_DIR"' EXIT
+dc() { if [ "$1" = ps ]; then printf '%s' "${worker_id:-}"; else echo "compose:$*"; fi; }
+docker() { echo "$worker_running"; }
+start_worker() { echo "start:$1"; }
+for scenario in absent stopped running; do
+    worker_id=worker; worker_running=false
+    [ "$scenario" != absent ] || worker_id=''
+    [ "$scenario" != running ] || worker_running=true
+    record_worker_state "$scenario"
+    output=$(restore_worker_state "$scenario")
+    case "$scenario" in
+        absent|stopped) test "$output" = 'compose:stop worker' ;;
+        running) test "$output" = 'start:running' ;;
+    esac
+done
+test "$(restore_worker_state unknown)" = 'start:unknown'
+printf 'invalid\n' > "$STATE_DIR/worker-state/bad"
+if restore_worker_state bad; then echo 'FAIL: invalid worker metadata accepted'; exit 1; fi
+echo 'PASS: absent/stopped/running worker baseline recovery and legacy-state fallback'

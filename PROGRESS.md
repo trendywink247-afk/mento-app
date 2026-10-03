@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-03 — Both rollback stacks rehearsed; production web layout prepared
+
+**Done:** PR #28 merged green and first isolated runs exposed shallow-history and encrypted-environment fixture errors. Fixed full checkout history, temporary master initialization, temporary-index exclusion of production SOPS file and synthetic monitoring configuration in PR #29, now merged after green checks and successful rehearsals.
+
+**Evidence:** Legacy run 37111660678 passed bad-migration protection and unhealthy-image rollback, including missing recorded tag. Normal single-container replacement interrupted 1411/2938 rapid requests. Balanced run 37111888400 passed swaps, broken/locked migration protection, explicit rollback and forced-command rejection; 0/10823 requests failed. This is controlled continuity evidence, not production capacity or proof of first-worker/coordinated API-web recovery. Transcripts retained in Actions and .local/rollback-*.
+
+**Production preparation:** With GitHub promotion false, server marker absent, no observed legacy writer process, and both receiver/operator locks held, executed the reviewed atomic web migration on A. Verified all 96 files against their original hashes and public app HTTP 200. Current points to /opt/mento-console/web-releases/bootstrap-18a88be67f494c9fbdc2df47438db259. Preserve original directory /opt/mento-console/.legacy-current-18a88be67f494c9fbdc2df47438db259 for immediate bootstrap rollback. Do not use it after later releases without review. Source/API remains 92b8f57; API readiness passed and server promotion remains locked. No app version or database change.
+
+**Next:** Close first-worker/runtime recovery gaps, job delivery, encrypted backup retention, production safety freshness/delivered alerts and device/capacity gates. Staging remains accepted bdef06a. Review pending action upgrades and investigate intermittent native composer failure. Production web-symlink prerequisite is now complete; do not continue reporting it as missing.
+
+---
 ## 2026-10-03 — Operator staging access restored
 
 **Done:** Investigated the user's 403 screenshot. Nginx error logs and authenticated SSH connection agreed on the current operator IP, while staging allowed only the previous IP. Replaced the old operator allow entry with the verified current address, retained localhost and deny-all restrictions, preserved a timestamped configuration backup, validated nginx -t and reloaded successfully. HTTPS root now returns 200 from this workstation. No application deployment or production change.

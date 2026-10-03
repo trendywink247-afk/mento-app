@@ -260,6 +260,24 @@ legacy() {
     stop_load leg "legacy recreate A -> B" report
     [ "$(api_tag)" = "mento-api:${B:0:12}" ] && ok "B is live" || fail "live image $(api_tag)"
 
+    # Model today's API-only production baseline, then force worker startup to
+    # fail. Recovery must restore the API without starting a worker on old code.
+    docker rm -f mento-worker-prod >/dev/null
+    sed -i 's/command: \["python", "-m", "app.jobs.worker"\]/command: ["\/missing-worker-executable"]/' "$DEV/deploy/docker-compose.prod.yml"
+    git -C "$DEV" add deploy/docker-compose.prod.yml
+    local W R
+    W="$(commit "legacy W: first worker cannot start")"; prebuild "$W"
+    if deploy; then fail "broken first worker deployed"; else ok "broken first worker fails deployment"; fi
+    [ "$(api_tag)" = "mento-api:${B:0:12}" ] && \
+        [ "$(curl -s -o /dev/null -w '%{http_code}' --noproxy '*' "$URL")" = 200 ] \
+        && ok "API-only baseline recovered" || { fail "first-worker API recovery"; show_log; }
+    [ "$(docker inspect -f '{{.State.Running}}' mento-worker-prod)" = false ] \
+        && ok "failed first worker remains stopped" || fail "unexpected worker after recovery"
+    git -C "$DEV" checkout "$B" -- deploy/docker-compose.prod.yml
+    R="$(commit "legacy R: restore valid worker command")"; prebuild "$R"
+    deploy && ok "valid worker release succeeds after recovery" || { fail "worker recovery redeploy"; show_log; }
+    B="$R"
+
     local HEAD; HEAD="$(head_rev)"
     migration zz_deploytest_broken.py deploytest_broken "$HEAD" 'op.execute("SELECT * FROM deploytest_no_such_table")'
     C="$(commit "legacy C: broken migration")"; prebuild "$C"
