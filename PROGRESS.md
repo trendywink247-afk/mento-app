@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Baseline recovery verified; current work trigger updated
+
+**Done:** PR #47 merged after green API/Test checks. CI 37158112559 confirms encrypted restore from c13a0seen001, forward migration creating the job queue, retained synthetic relational data and no schema drift. This remains synthetic evidence, not a production-data rehearsal. Current master b17592e includes the change.
+
+**Key preparation:** Created ignored .local/recovery/backup-identity.dpapi protected by Windows current-user DPAPI and a directory ACL restricted to that user. Public recipient is in backup-recipients.txt beside it. Recovered identity in memory and verified a synthetic age encrypt/decrypt round trip; removed only own synthetic fixtures. No private plaintext file, Git inclusion, VPS key transfer or secret output. This depends on the Windows profile and does not establish off-device recovery custody.
+
+**Continuity:** Updated existing continue-mento-architecture-delivery heartbeat in place, preserving ACTIVE status and 20-minute schedule. It now follows phases 1–5, reads live work state instead of historical PR13/14 instructions, and avoids progress-only native CI restarts. Resolved PR42's PROGRESS merge conflict retaining both sides; pushed 30b24bf, requiring new exact-head checks. Progress for this turn is on a separate branch.
+
+**Next:** Continue step 1 with retained-note/report backup content implementation and recovery proof; review current-head PR42 without repeated progress-only pushes. Keep production locked until actual operational gates pass. Resume in H:\Mento gpt\Mento; preserve architecture book and existing recovery identity without overwriting it.
+
+---
 ## 2026-10-04 — Production-baseline recovery rehearsal prepared
 
 **Done:** PR #46 merged after green checks. Extended isolated encrypted recovery drill to start from production revision c13a0seen001, assert queue absence, encrypt/restore into a separate database, verify original revision, then migrate only that recovered copy to current head. Assert queue tables appear, synthetic relational fixtures survive, and alembic check matches current models. CI runs both current-head and production-baseline cases.
