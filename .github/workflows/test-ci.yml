@@ -44,7 +44,7 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/browser-tools/node_modules" MENTO_WEB=http://127.0.0.1:18081 node e2e/age-gate.e2e.js
   release-tooling:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Validate release policy tests
@@ -59,7 +59,9 @@ jobs:
           sudo apt-get install -y -qq age
           bash deploy/test-backup-encryption.sh
       - name: Restore an encrypted synthetic database
-        run: bash deploy/test-encrypted-database-restore.sh
+        run: |
+          docker build -t mento-backup-drill services/api
+          RESTORE_IMAGE=mento-backup-drill bash deploy/test-encrypted-database-restore.sh
       - name: Validate all GitHub workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck=
       - name: Validate shell syntax
