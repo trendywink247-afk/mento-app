@@ -9,7 +9,7 @@ Baseline: `H:\Mento gpt\Mento-Architecture-Book.html`, Edition 1, 20 September 2
 | 4 GB production host in India | A has about 4 GB; B about 2 GB. Physical region/residency is not proven by IP or capacity. | Verify provider region before making India-residency promises. No unapproved server purchase. |
 | Caddy, local/production parity | Balanced Compose/Caddy files exist; serving hosts still use Nginx. H-workspace isolates data but is not full edge-stack parity. | Rehearse Balanced stack and HTTPS/WebSocket behavior before cutover. |
 | Own chat, one write path, native thread | Backend work exists; live UI still uses Stream. | Client migration, safety/redaction/persistence/reconnect parity, deletion and load tests; planned single cutover with rollback. |
-| Incremental Expo upgrades | Expo 54/55 PRs merged; source is SDK 55. Latest foundation Android run failed at locating composer-send despite earlier passing runs. | Fix reproducibility and verify native behavior; later SDK steps need compatibility evidence, not an automatic jump. |
+| Incremental Expo upgrades | Expo 54/55 PRs merged; source is SDK 55. Native correction and exact master Android run passed; full CI staging acceptance passed. | Fix reproducibility and verify native behavior; later SDK steps need compatibility evidence, not an automatic jump. |
 | Keep Expo updates initially | EAS profiles and update config exist. | Audit effective production channel/runtime; keep self-hosted OTA as a later, measured decision. |
 | Direct FCM; Apple push later | Push/worker code needs deployment and device proof; staging push is disabled. | Token scoping, quiet periods, revocation, background delivery and APNs acceptance. |
 | Harden anonymous identity | Recovery and role-separated identity mechanisms exist; this is not proof of every chapter 7.1 hardening item. | Audit issuer/audience, rotation, device binding, abuse resistance and mentor one-time access against tests. |
@@ -19,7 +19,7 @@ Baseline: `H:\Mento gpt\Mento-Architecture-Book.html`, Edition 1, 20 September 2
 | Durable jobs, Valkey, tuned database | Staging runs worker/Postgres/Valkey. Production remains older API/Postgres/Redis with no running worker. | Worker health and retry/backlog tests, bounded aggregate DB pools and production acceptance. |
 | GitHub Actions and blue/green | Separate workflows and restricted staging receiver implemented. Manual staging startup rollback proven. Full CI staging and production blue/green remain open. | Green exact master SHA → accepted staging artifact → production operational gates → controlled promotion. |
 | Safety desk and assistive AI | Existing moderation/safety implementation is not the entire refined admin/AI plan. | Reconcile feature-by-feature with decisions; use evaluated human-assistive tools, never an AI substitute for the mentor. |
-| Native/load/fuzz testing and store readiness | API/web suites pass; native regression currently blocks PR #13. | Native fix, capacity evidence, API fuzzing, iOS/device/signing and accurate policy/store disclosures. |
+| Native/load/fuzz testing and store readiness | API/web suites pass; native correction passed; full CI staging run 37093153629 passed. | Native fix, capacity evidence, API fuzzing, iOS/device/signing and accurate policy/store disclosures. |
 
 ## Intentional changes since the book
 
@@ -30,8 +30,8 @@ Baseline: `H:\Mento gpt\Mento-Architecture-Book.html`, Edition 1, 20 September 2
 
 ## Immediate order
 
-1. Diagnose and fix the latest native send-button failure from run `37078386018`; do not merge PR #13 while red.
-2. Finish its review and exact-commit checks, merge, then run the actual staging workflow. Integrate cookbook PR #14 after the foundation.
+1. Completed: fix the native layout regression; PR #13 and exact master Android checks passed.
+2. Completed: PRs #13/#14/#18 merged; full staging acceptance run 37093153629 passed for f617473.
 3. Complete production worker/receiver/rollback, backup and safety/monitoring gates.
 4. Continue Balanced delivery and own-chat parity, then the remaining identity, telemetry, push, admin and store work in reviewable increments.
 5. Move to the larger growth architecture only when measured capacity or availability requirements justify it.

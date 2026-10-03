@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-10-03 — Full CI staging acceptance passed
+
+**Done:** Staging Release 37093153629 succeeded for f6174737d6aa4023d331da0ed76c308f2ebd744a, reusing the original build from 37089759308. It completed deploy, schema/safety/restore acceptance, private browser acceptance, synthetic fixture cleanup and final runtime verification. The non-expired release-candidate artifact is 104726730 bytes. Restricted live verify independently passed after workflow completion. PRODUCTION_RELEASE_ENABLED remains false; no production upgrade occurred.
+
+**Next:** Complete production receiver and reversible web layout, worker deployment/health, encrypted deletion-compatible backup retention, crisis-path and delivered-alert verification, and remaining acceptance gates before promotion. Keep Balanced architecture as baseline and own-chat migration gated by parity. Refresh dated documentation status with this evidence. Resume: `gh run view 37093153629`; checklist in docs/RELEASE_PIPELINES.md.
+
+---
+
+## 2026-10-03 — Retry fix merged; immutable staging retry running
+
+**Done:** PR #18 passed API, web and release-tooling checks; review completed without inline findings. Merged as master 9b9c1ff. Dispatched Staging Release 37093153629 using the accepted test SHA f6174737d6aa4023d331da0ed76c308f2ebd744a and preserved build from 37089759308. No rebuild or bypass of exact app checks.
+
+**Resume:** `gh run view 37093153629`. Deployment/acceptance remains pending. Production remains disabled. Follow-up progress commits stay on codex/staging-acceptance until the next reviewed operational update.
+
+---
+
 ## 2026-10-03 — Staging workflow failure diagnosis and retry fixes
 
 **Findings:** Run 37089759308 preserved built-candidate but SSH rejected the runner key (libcrypto parse error); serving staging remained healthy at 551345c. Re-uploaded the existing restricted staging key using exact LF bytes without logging it. Retry 37091485354 then failed before SSH because fresh candidate/checks.json collided with the immutable artifact download.
