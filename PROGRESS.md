@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — Restricted production receiver installed and verified
+
+**Done:** PR #23 passed lint, API tests, mobile-web, release-tooling, real SSH receiver-isolation and test-gate; merged as bdef06a. Compared SHA256 of uploaded reviewed files before running installer on VPS A. Installed root-owned receiver and stable operator script with dedicated mento-ci-production identity. Live pinned-host SSH probes proved arbitrary command rejection, port-forward rejection and server-side locked deployment rejection. Effective sshd configuration confirms password authentication off, forwarding disabled and forced receiver. Added the matching private deployment identity and pinned known hosts to the GitHub production environment without printing secret contents.
+
+**Verified state:** A still serves source 92b8f57a5cd30602c27487e046b92162e7528687; readiness passed. Server promotion marker remains absent and PRODUCTION_RELEASE_ENABLED remains false. No app/container/database/web upgrade occurred. PR #23 CI runs: Test CI 37107037845 and API CI 37107037861. Native master checks remain separate from these ops-only PR checks.
+
+**Next:** Prepare the reversible static-web directory migration under deployment/writer locks; rehearse full API/worker/web recovery against the legacy baseline, including the first-worker rollback case. Complete backup encryption/retention, real job/crisis/alert delivery and remaining capacity/device gates before promotion. Staging accepted candidate remains f617473/run 37093153629. The installer is intentionally single-use; audit partial/existing installations rather than deleting the identity. Review major Dependabot PRs #15–17 separately. Resume on codex/production-activation-prep; preserve the untracked architecture book.
+
+---
+
 ## 2026-10-03 — Production identity rehearsed; master protections enforced
 
 **Done:** PR #22 passed API/web/release-tooling checks and merged as 67fb984. GitHub master protection now requires up-to-date lint, test and test-gate checks, applies to administrators, requires review-thread resolution and blocks force pushes/deletion. Production environment switch independently confirmed false.
