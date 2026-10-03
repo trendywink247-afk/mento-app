@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Partition recovery integrated; refreshed staging acceptance running
+
+**Done:** PR #37 merged after required checks passed (Test CI 37125754502, API CI 37125754534). Master is 03a19f4a25c0373acedc7186a092a8e1c9375d97. Reviewed Dependabot #15/#16/#17 diffs; their skipped native jobs are not native acceptance and no dependency PR was merged this turn.
+
+**Release evidence:** Exact-commit release gate passed for 832b58bd1694b5b467acb48b5cb4f73cfa9cfddc, including real Maestro job 111210030939 in run 37125552084. Dispatched full Staging Release 37127286719 for that SHA. Workflow head is newer master 03a19f4, but candidate input is explicitly 832b58b; do not confuse the two. Run was in progress at handoff, not yet accepted.
+
+**Next:** Inspect staging run 37127286719 and diagnose any failed step; verify accepted artifact/runtime before updating accepted staging SHA. Latest master checks are API 37127264034, Test CI 37127264040 and Maestro 37127264024, all running at inspection. Run the exact-commit gate on 03a19f4 when complete before promoting that candidate through staging. Production environment variable independently remains false. Backup key custody and content-policy activation gates remain open. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
 ## 2026-10-03 — Partition exclusion recovery drill passed locally
 
 **Done:** PR #36 merged with green required checks. Extended the encrypted database drill with synthetic current, default and renamed future partitions. Catalogue discovery supplies parent/descendant data exclusions. Assertions verify sentinel absence, zero restored message rows, retained partition hierarchy and working insert routing after recovery.
