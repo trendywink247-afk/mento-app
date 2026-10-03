@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Approved backup content policy exercised on application tables
+
+**Implementation:** Extended the isolated current-schema encrypted recovery drill with synthetic member/mentor/conversation, own-chat message, saved journal note and moderation report using real application models. Discover actual chat partitions for data exclusion; after recovery require zero chat rows while saved note, report narrative, block state and referenced member/conversation remain. Production-baseline forward migration remains a separate case.
+
+**Validation:** Python compilation, Bash syntax and whitespace passed. Full runtime validation awaits CI; local Docker remains unavailable. Fixture refuses non-development databases and requires the drill user/loopback/source-or-recovered database. No real records, notifications, production migrations or key transfer involved.
+
+**Next:** Inspect CI and fix any real-schema fixture/migration issue before merging. This proves the approved selection rule only in isolation; live exporter snapshot/DDL coordination, deletion replay and durable off-device identity custody remain gates. Resume in H:\Mento gpt\Mento; keep production locked.
+
+---
 ## 2026-10-04 — Production-baseline recovery rehearsal prepared
 
 **Done:** PR #46 merged after green checks. Extended isolated encrypted recovery drill to start from production revision c13a0seen001, assert queue absence, encrypt/restore into a separate database, verify original revision, then migrate only that recovered copy to current head. Assert queue tables appear, synthetic relational fixtures survive, and alembic check matches current models. CI runs both current-head and production-baseline cases.
