@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Connection-budget utility reviewed and integrated
+
+**Done:** PR #41 exact head bd047cb91c28b505e5cc51607c6e492071f26562 passed required Test CI 37149923860 and API CI 37149923798; merged as fe6c2e6aa74ca35f8b97765e97543ee3e976520b. Review confirmed separate per-worker queue allocation, shared-pool assumption and reserved/headroom accounting. Executed documented CLI example: required 43/50, exit 0. Oversized source-default overlap: required 73/50, exit 1 as expected.
+
+**Limits:** Manual budget tool only; no automatic deployment enforcement and no live pool changes. Latest independently verified staging remains dd0edb0. Capacity, production worker/safety acceptance, real backup key custody/content/deletion handling and iOS/device gates remain unresolved.
+
+**Next:** Inspect fe6c2e6 exact master checks before staging it. Continue bounded rollout preparation without enabling production. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Current master staging accepted; offline pool budget prepared
 
 **Done:** Full staging 37148721249 passed for dd0edb032fe58f9e08ccd7ef1c8329a49eb47c2f; independent restricted receiver verify passed. Added an offline connection-budget utility with explicit API/worker process counts, worker queue pools, migration allowance, reserved slots and headroom. Source defaults with two API colors/one worker require 73 versus Balanced limit 50; this is a configuration bound, not observed exhaustion. Live overrides are lower as recorded below.
