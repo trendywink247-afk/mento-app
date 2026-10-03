@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Partition exclusion recovery drill passed locally
+
+**Done:** PR #36 merged with green required checks. Extended the encrypted database drill with synthetic current, default and renamed future partitions. Catalogue discovery supplies parent/descendant data exclusions. Assertions verify sentinel absence, zero restored message rows, retained partition hierarchy and working insert routing after recovery.
+
+**Validation:** Local isolated PostgreSQL 16 drill with API image mento-api:551345c5b617 passed encryption/decryption, exclusion checks, relational integrity, migration revision equality and alembic check. Bash syntax and git diff --check passed. Existing CI runs this drill with a newly built API image; CI results remain pending for the new change.
+
+**Limits / next:** This is synthetic test coverage, not a live exporter or complete content policy. Concurrent partition DDL/snapshot coordination, saved-note/report treatment, recoverable identity custody and deletion reconciliation remain open. Production stays locked and real backups unchanged. Resume from H:\Mento gpt\Mento and review this branch's PR checks before integration.
+
+---
 ## 2026-10-03 — Backup content audit and activation boundary
 
 **Done:** Audited message partitions, saved mentor-note writes, report/feedback fields, safety signal writes and push retry payloads. Added docs/BACKUP_CONTENT_POLICY.md with source evidence and acceptance requirements. Chat-only exclusions are insufficient: journals explicitly copy message bodies. Current push retries contain rendered closed templates; safety matched_terms stores a signal enum, not raw message text.
