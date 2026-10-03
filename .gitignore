@@ -1,5 +1,6 @@
 # ---- Local secrets scratch (never commit) ----
 .secrets/
+.local/
 
 # ---- Node / Expo (apps/mobile) ----
 node_modules/

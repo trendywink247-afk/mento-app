@@ -1,0 +1,135 @@
+name: Staging Release
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full SHA on master with green API, web and native push checks
+        required: true
+      reuse_build_run_id:
+        description: Optional completed staging run whose immutable build should be retried
+        required: false
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: mento-staging-release
+  cancel-in-progress: false
+jobs:
+  stage:
+    if: github.ref == 'refs/heads/master'
+    environment: staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ inputs.sha }}
+      REUSE_RUN: ${{ inputs.reuse_build_run_id }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: master
+          fetch-depth: 0
+      - name: Require exact-commit master checks
+        run: |
+          mkdir candidate
+          python3 scripts/ci/release_gate.py checks "$SHA" > candidate/checks.json
+          git merge-base --is-ancestor "$SHA" origin/master
+          git checkout --detach "$SHA"
+      - name: Reuse a previously built candidate for a deployment retry
+        if: inputs.reuse_build_run_id != ''
+        run: |
+          python3 scripts/ci/release_gate.py built "$REUSE_RUN" "$SHA"
+          (cd candidate && sha256sum --check SHA256SUMS)
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - name: Build API once for both environments
+        if: inputs.reuse_build_run_id == ''
+        run: |
+          docker build --label "org.opencontainers.image.revision=$SHA" -t "mento-api:${SHA:0:12}" services/api
+          docker save "mento-api:${SHA:0:12}" | gzip > candidate/api-image.tar.gz
+          docker image inspect "mento-api:${SHA:0:12}" --format '{{.Id}}' > candidate/image-id.txt
+      - name: Build both web configurations from the same source
+        if: inputs.reuse_build_run_id == ''
+        env:
+          STAGING_STREAM_KEY: ${{ secrets.STAGING_STREAM_API_KEY }}
+          PRODUCTION_WEB_ENV: ${{ secrets.MOBILE_ENV_PRODUCTION }}
+        run: |
+          test -n "$STAGING_STREAM_KEY" && test -n "$PRODUCTION_WEB_ENV"
+          cd apps/mobile
+          npm ci
+          EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=https://staging.mento.chat/api/v1 EXPO_PUBLIC_STREAM_API_KEY="$STAGING_STREAM_KEY" npx expo export --platform web --output-dir dist-staging
+          tar -C dist-staging -czf ../../candidate/web-staging.tar.gz .
+          printf '%s\n' "$PRODUCTION_WEB_ENV" > .env.production
+          npx expo export --platform web --output-dir dist-production
+          rm .env.production
+          tar -C dist-production -czf ../../candidate/web-production.tar.gz .
+      - name: Record immutable candidate manifest
+        if: inputs.reuse_build_run_id == ''
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib
+          p = pathlib.Path('candidate')
+          (p / 'release.json').write_text(json.dumps(dict(sha=os.environ['SHA'], image=(p / 'image-id.txt').read_text().strip(), checks=json.loads((p / 'checks.json').read_text()))))
+          PY
+          (cd candidate && sha256sum api-image.tar.gz web-staging.tar.gz web-production.tar.gz release.json checks.json image-id.txt > SHA256SUMS)
+      - name: Preserve build for retries (not production acceptance)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: built-candidate
+          path: candidate/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Configure pinned staging identity
+        env:
+          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.STAGING_DEPLOY_KNOWN_HOSTS }}
+        run: bash scripts/ci/setup-ssh.sh
+      - name: Deploy to isolated VPS B
+        run: |
+          tar -C candidate -czf candidate.tgz .
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "receive $SHA" < candidate.tgz
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "deploy $SHA"
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "accept $SHA"
+      - name: Connect browser to private staging over SSH
+        run: |
+          echo '127.0.0.1 staging.mento.chat' | sudo tee -a /etc/hosts >/dev/null
+          sudo ssh -F /dev/null -i "$HOME/.ssh/mento-release" -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -fN -L 127.0.0.1:443:127.0.0.1:443 mento-ci-staging@31.42.125.238
+          npm install --prefix "$RUNNER_TEMP/browser-tools" --no-package-lock playwright@1.56.1
+          "$RUNNER_TEMP/browser-tools/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Staging browser acceptance
+        env:
+          MENTO_WEB: https://staging.mento.chat
+          MENTO_API: https://staging.mento.chat/api/v1
+        run: |
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "fixture $SHA" > "$RUNNER_TEMP/fixture.json"
+          export MENTO_LISTENER_URL="$(jq -r .url "$RUNNER_TEMP/fixture.json")"
+          export LISTENER_ID="$(jq -r .id "$RUNNER_TEMP/fixture.json")"
+          echo "::add-mask::$MENTO_LISTENER_URL"
+          echo "::add-mask::${MENTO_LISTENER_URL##*token=}"
+          rm "$RUNNER_TEMP/fixture.json"
+          export NODE_PATH="$RUNNER_TEMP/browser-tools/node_modules"
+          node apps/mobile/e2e/age-gate.e2e.js
+          node apps/mobile/e2e/recovery-code.e2e.js
+          node apps/mobile/e2e/two-party-chat.e2e.js
+          MENTO_REDUCED_MOTION=1 node apps/mobile/e2e/two-party-chat.e2e.js
+      - name: Restore staging fixture
+        if: always()
+        run: |
+          if [ -f ~/.ssh/mento-release ]; then
+            ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "cleanup $SHA"
+          fi
+      - name: Confirm staging still serves this candidate
+        run: ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "verify $SHA"
+      - name: Publish only an accepted candidate
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-candidate
+          path: candidate/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Remove runner identity
+        if: always()
+        run: rm -f ~/.ssh/mento-release

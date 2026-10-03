@@ -5,6 +5,13 @@ description: Use when starting a Mento session, when the app or API must run, or
 
 # Mento dev stack — start & repair
 
+**H: workspace (founder ruling 2026-10-02):** use
+`pwsh -File scripts/local/workspace.ps1 init`, then `api`, `worker`, and `web`
+in separate terminals from the repository root. Web is :18081, API :18000;
+Postgres/Valkey are the isolated `mento-h-dev` Compose project on :15432/:16379.
+See `docs/ENVIRONMENTS.md`. The legacy commands below must not be run for this
+workspace: they target shared container names/ports and can affect another checkout.
+
 ## Start (backend first, PowerShell)
 
 ```powershell

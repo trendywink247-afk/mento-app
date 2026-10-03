@@ -5,6 +5,13 @@ description: Use when proving a user-facing Mento flow in the browser, writing o
 
 # Mento E2E — write & run browser proofs
 
+**H: workspace override (2026-10-02):** use `MENTO_WEB=http://localhost:18081`
+and `MENTO_API=http://localhost:18000/api/v1`. Only reset the project from
+`deploy/compose.workspace.yml` (Valkey :16379, Postgres :15432); never run the
+legacy `docker exec mento-redis/mento-postgres` commands below. Read
+`docs/ENVIRONMENTS.md` before selecting specs: some still hard-code those names.
+`two-party-chat.e2e.js` accepts `MENTO_REDUCED_MOTION=1` for its second pass.
+
 Prereq: stack running per **mento-stack** (API :8000 seeded, Expo web :8081).
 
 ## Reset the environment BEFORE EVERY suite run — not once per session

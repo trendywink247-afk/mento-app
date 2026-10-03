@@ -6,6 +6,15 @@
 
 ---
 
+## Workspace and release environments — founder ruling, 2026-10-02
+
+Development now uses only `H:\Mento gpt` (repository `H:\Mento gpt\Mento`);
+the Desktop copy is not touched. Prove changes locally first, then validate releases
+on VPS staging before staged production deployment. Use both existing VPSs for
+production, isolated staging, and monitoring with explicit resource and data
+boundaries. Operational contract and current blockers: `docs/ENVIRONMENTS.md`.
+This changes delivery environments, not the v1 product scope.
+
 ## Positioning decision (governs everything below)
 
 Mento is an **anonymous emotional-support app**. UPSC is the **first community**, not the product. Mentor-led UPSC *sessions* (PRD Module B) are **build-second**, after the anonymous chat (Module A) is solid. The UPSC **self-assessment** suite (Self-Reflection, The Mirror, Knowledge Assessment, Preparation Challenges) is **deferred** to a later, separately-specced module.
@@ -256,4 +265,3 @@ Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code al
 - **qq. "I'd rather talk today" ends on My Chats, not in a live match.** A mentor switching sides came to look around; a chat is one tap away there. Age and email are never re-asked (every session was minted by the server's 18+ gate — `/apply` included — so `has_dob` is always true today); email stays optional. Back from the companion pick = "never mind": still on the mentor side.
 - **rr. The loop's way back** reads "Back to Profile" when Profile is behind it, otherwise "I'd rather talk today" (a new mentor from the fork has no member side yet).
 - **ss. The declined line names the date** ("You can apply again from 19 October") from the server's cooldown anchor; inside the month there is no form at all, after it an "Apply again" key goes straight to the application (they have seen the story and the primer).
-

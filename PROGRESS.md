@@ -4,6 +4,136 @@
 
 ---
 
+## 2026-10-03 — Native layout regression follow-up
+
+**Evidence:** Run 37078386018 built/installed the APK but failed locating composer-send. Its screenshot shows the composer displaced directly below the header with the keyboard open. All API/web/release-tooling checks passed. The kit nests a percentage-height content view inside its keyboard wrapper; our Channel did not constrain that wrapper with flex.
+
+**Candidate correction:** Bound the keyboard wrapper with flex:1 in member and mentor chat and use Android height avoidance rather than padding; preserve measured header offset and iOS padding. This is a hypothesis under native acceptance, not yet a proven fix. Do not merge while native checks are red.
+
+**Documentation:** Cookbook PR #14 also maps the original Balanced Architecture Book to implementation; original H: book remains unchanged. Desired architecture is not complete. Resume with `gh pr checks 13` and inspect native failure artifacts before further changes.
+
+---
+
+## 2026-10-03 — Expo dependencies integrated
+
+**Done:** PRs #11 and #12 merged into master after native checks passed. PR #13 retargeted to master and marked ready for review. At bfe4ec5 API, web and release-tooling checks passed; native and review remained pending. Preserved both branches' progress history while resolving the documentation-only merge conflict. Quarantined the deliberately broken rollback candidate on VPS B. Production remains unchanged; its worker is still absent and promotion remains disabled.
+
+**Next:** Complete current-head review/checks, merge #13, run master checks and the full staging workflow. Resume: `gh pr checks 13` from this H: checkout.
+
+---
+
+## 2026-10-03 — Receiver rollback proven; dependency hardening
+
+**Evidence:** PR #11 native run 36947188595 and PR #12 native run 36947275697 passed. PR #13 at 551345c passed API, Test CI and native run 36947359945. CodeRabbit was paused/skipped and is not substantive review evidence. The staging receiver deployed 551345c, passed schema/safety/isolated backup-restore acceptance, and passed age-gate, recovery and two-party browser checks in both motion modes. A corrupted archive was rejected. A deliberate startup-failure image triggered rollback to 551345c; API/worker recovered and readiness returned 200. Runtime identity was verified again on October 3.
+
+**Changes:** Verify portable Docker archive source/tag before import and record the server's native image identity; preserve unique predeploy backups; bound startup waits; recover on termination/hangup. Release tooling tests: 8 passed; actionlint and whitespace checks clean. Compatible dependency patches and scoped Stream Lodash override reduce the recorded runtime audit from 24 to 16 entries (5 high, 11 moderate). The five high entries propagate one unpatched node-forge advisory; this is not a clean security audit or a risk waiver.
+
+**Next:** Push these changes and validate the new commit, then integrate #11 → #12 → #13 and exercise the actual Staging Release workflow on green master. Manual rehearsal artifacts are not production-promotable evidence. Keep production promotion disabled until the documented operational gates pass. Quarantine the deliberately broken staging candidate before further releases. Production application remains unchanged.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 13; Get-Content docs/RELEASE_PIPELINES.md`. Desktop checkout remains untouched.
+
+---
+
+## 2026-10-02 — GitHub delivery gates and PR review (in progress)
+
+**Done:** Pushed the H-only foundation as draft PR #13, stacked on #12 → #11. Reviewed both existing PRs: native checks are red; no merges or production promotions performed. Removed native message-body/error-object logging and corrected measured keyboard offsets for member/mentor chat. Strengthened Maestro's first-message assertion; native verification remains pending. Added Test CI, exact-SHA/master-push release policy, immutable candidate checksums and distinct staging/production workflows; removed the independent production bypass workflows in this branch. Pinned Actions to reviewed commit SHAs and added Actions dependency updates. Operational details: `docs/RELEASE_PIPELINES.md`.
+
+**Evidence:** GitHub on 58c7b80: API lint/schema/tests passed (708 tests, 23 warnings); Test CI passed including TypeScript, web export, age gate normal/reduced and release policy tests. Native run 36944156709 completed successfully: visible sent message, cleared composer and mentor reply assertions all passed. API and Test CI also passed on 9718eb5 and 75a1903. Local actionlint passes; expanded receiver/policy tests 7 passed. Live staging two-party test passes in both motion modes with zero page errors, using the new temporary fixture and exact conversation selector. Cleanup restored prior mentor availability and suspended the synthetic mentor credential.
+
+**PR fixes:** Backported the proven native correction/privacy fix to PR #11 in 7eb75b1, then merged that fix into PR #12 in ac6b320. Expo 54 dependencies installed and TypeScript passed locally in an isolated H-only review worktree. Resolved the stacked workflow/composer conflicts while preserving SDK-specific dependencies. Added a recorded mentor-bot process group with always-run cleanup and native PR concurrency cancellation. The SDK 54 and updated SDK 55 PR runs are pending; do not infer their success from the earlier SDK 55 run. Main H branch includes these dependency fixes and reconciles the stale stack table in CLAUDE.md.
+
+**Server/GitHub setup:** Created staging/production environments (no approval rules). Production readiness switch is false. Disabled the legacy API Deploy and Console Deploy workflows in GitHub before any dependency merges can accidentally ship to production. Installed root-owned staging receiver and dedicated `mento-ci-staging` account; arbitrary-shell probe correctly rejected, pinned HTTPS tunnel returned 200. Configured staging-specific key/host/Stream secrets. No production CI key/receiver activated and no production app version changed. The private repository's branch-protection API reported a paid-plan requirement; environment creation itself succeeded.
+
+**Next / limitations:** Finish native diagnosis and bring the PR dependency chain green. Rehearse the complete workflow on a green master SHA; manual fixture tests do not prove image deployment/rollback. Production receiver, legacy web-to-symlink conversion, rollback rehearsal, encrypted backup retention and broader enterprise acceptance remain gates before enabling promotion. A cancelled fixture may need `cleanup <SHA>`; the saved snapshot blocks another fixture/deployment until restored. Candidate uploads are immutable: use `reuse_build_run_id` to retry with the preserved `built-candidate` artifact; only a successful staging run's `release-candidate` can promote. Expanded negative gate/archive tests: 7 passed locally. User architecture HTML remains untracked and untouched.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 13; Get-Content docs/RELEASE_PIPELINES.md`. First native diagnostic run: 36944156709. Review the latest run's failure artifact before changing keyboard behavior again. Desktop checkout is untouched.
+
+---
+
+## 2026-10-02 — Separate architecture images
+
+**Done:** Added two shareable PNG diagrams under `docs/diagrams/`: current deployed topology and proposed growth architecture. Included server roles, Stream versus own-chat, release flow, operational gaps and planned status. Preserved a deterministic Pillow renderer. Visually inspected both images for readability and connections; no application or deployment changes.
+
+**Resume:** Open `docs/diagrams/mento-current-architecture.png` and `mento-desired-architecture.png`; execution priorities remain in `docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md`.
+
+---
+
+## 2026-10-02 — Enterprise workflow and iOS roadmap
+
+**Done:** Reviewed current workflow/EAS/mobile configuration against the older Balanced plan and staging evidence. Added `docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md`: current/target architecture, component acceptance matrix, communities versus professional-mentor identity, CI/release gaps, iOS/App Store path, capacity benchmarks, staffing-dependent timeline and work packages. Prepared a bounded read-only Claude mobile/iOS audit handoff; no message was sent to another instance. Checked current Apple/Expo/GitHub/OWASP and Indian government sources; links are in the plan.
+
+**Founder clarification:** “RV” was dictated “are we,” not a component. Communities are UPSC, NEET and JEE, with finance/others possible later. Preserve current anonymous support and 18+ scope. Verified professional profiles/booking/payment are future capability proposals until their concrete scope is agreed; the community roadmap alone does not authorize exposing identity or building paid Module B.
+
+**Findings / next:** Web deployment can bypass staging; EAS effective channel/runtime and source-map settings need audit; native/iOS acceptance remains unproven. Apple anonymous-chat review policy is a material product gate. Begin E01/E02 then E03/E04 in the new plan. Estimated staffed closed pilot 45–75 calendar days, enterprise baseline 90–150; founder plus AI-only execution has wider ranges. These are provisional estimates, not launch promises.
+
+**Validation:** Documentation-only changes; checked referenced local paths, Markdown structure and Git whitespace. No runtime tests or server/CI changes in this planning turn. The initial oversized shell write was blocked by automatic approval review; the dedicated patch tool successfully saved the documents.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; Get-Content docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md`. For Claude, use `docs/CLAUDE_MOBILE_RELEASE_HANDOFF_2026-10-02.md`. Remaining drift: historical CLAUDE stack descriptions and old programme task status assumptions need reconciliation against the actual supported native build.
+
+---
+
+## 2026-10-02 — VPS staging deployed; safety and recovery proven
+
+**Done**
+- Deployed isolated `mento-staging` under `/opt/mento-staging` on B (31.42.125.238). API commit 6e47f7a, web dc8d17c; image/archive hashes recorded in `deploy/staging/release.json`. ENV=staging, distinct role/message secrets, separate Postgres/Valkey, bounded pools/CPU/RAM, push disabled and working maintenance worker.
+- Issued staging.mento.chat TLS certificate; installed/tested renewal reload hook. App/API restricted to operator network; public readiness and signature-protected Stream endpoints only. Confirmed outsider root 403, readiness 200 and unsigned hook 401. Existing status monitoring still returns HTTPS 302.
+- Non-production Stream hooks point to staging. Live bypass test verified crisis augmentation plus one deduplicated safety flag; benign message had none. Real two-party browser chat passed normal/reduced motion with zero page errors. Recovery teardown bug fixed separately in dc8d17c; corrected export passed recovery and age-gate flows in both motion modes, zero page errors. TypeScript clean.
+- Repaired production rclone address and added verified host-key pinning with private config rollback copy. New backup transferred; SHA-256 matched both hosts. Empty host trust file correctly refused transfer. Restored the fresh archive in isolated temporary Postgres and migrated c13a0seen001 → e5a6part0001. Removed temporary restore container and data volume. Production application release unchanged.
+- Operational scripts, access contract, rollback, remaining gates: `deploy/staging/README.md`. Source remains only in H:; user architecture HTML remains untracked and untouched.
+
+**Open / next**
+- Native Android acceptance, staging erasure/reconnect/restart/load, scoped push and alert delivery, then Caddy/blue-green rehearsal and release promotion. Existing backup SQL archives still need encryption/deletion-compatible retention and separately protected storage. Current staging smoke tests are not full launch certification.
+- Development Stream project is currently assigned to staging; simultaneous independent local real-chat acceptance requires another non-production app. Do not repoint production Stream. Local UI/backend tests remain available.
+- Staff allowlist is the current workstation public IP: if that network changes, update the rendered Nginx allowlist via verified SSH; do not make staging public by removing the boundary.
+
+**Resume**
+```powershell
+Set-Location 'H:\Mento gpt\Mento'
+Get-Content deploy/staging/README.md
+ssh -F deploy/ssh.config mento-staging 'cd /opt/mento-staging && docker compose ps'
+```
+
+---
+
+## 2026-10-02 — Staging acceptance: recovery navigation fix
+
+**Done:** Found an exported-web recovery navigation error (`ImageData` width zero): the landing recovery link bypassed the existing Lottie teardown guard. Both onboarding and recovery now select their destination after the canvas unmounts. TypeScript and local recovery browser acceptance pass in normal and reduced motion, including recovery identity and revocation of the previous refresh session.
+
+**In progress:** VPS staging is deployed with TLS, isolated services and staff network restrictions. Live Stream safety and two-party normal/reduced chat passed; the corrected web build is being prepared for staging acceptance. Production backup routing is repaired with host-key pinning; a fresh transferred backup restored and migrated in an isolated disposable container. Full deployment details and remaining gates will be recorded in this session's next entry.
+
+**Next / resume:** Rebuild the staging web export from this commit, deploy it, rerun recovery and onboarding acceptance, then finish the staging runbook. Work only in `H:\Mento gpt\Mento`.
+
+---
+
+## 2026-10-02 — H-workspace isolation and staged-release foundation
+
+**Done**
+- Work moved exclusively to `H:\Mento gpt\Mento`, branch `codex/local-staging-foundation`. Desktop copy was not modified. Architecture review is the implementation baseline; `docs/ENVIRONMENTS.md` records the operating contract.
+- Added dedicated Compose project `mento-h-dev`: Postgres on loopback 15432 and Valkey on 16379, separate volumes. Local launchers run API 18000, web 18081 and worker; disable inherited/copied dotenv credentials and use optional ignored `.local/stream.env` for dedicated development Stream credentials. Development Stream key was confirmed different from both servers without displaying secrets.
+- Verified 708 API tests pass (20 warnings), TypeScript, Alembic drift, Ruff, Black, Compose validation and PowerShell syntax. Fixed test harness issues: isolated launcher settings, real Docker pg_dump fallback on Windows, and xdist engine rebinding preserving application statement-timeout settings.
+- Browser age gate, session refresh, recovery code and live two-party Stream chat pass in normal and reduced-motion modes, with zero page errors. Added reduced-motion option to two-party test. Worker maintenance jobs succeeded. Services remain running locally; logs are ignored under `.local/`.
+- VPS B recovered at `31.42.125.238` with strict verification against its existing host key. Added repository-scoped SSH aliases for both VPSs. B: Debian 12, 2 CPU, about 2 GB RAM, 30 GB disk; legacy application plus Uptime Kuma. September 29 off-site dump passes gzip integrity, but this is not restore proof.
+
+**In progress / release gates**
+- No remote configuration changes or deployments made. Production remains at its audited release. Production backup destination and public status DNS still reference the obsolete address and need repair.
+- Public tunnel download/start was rejected by automatic approval review (reason: blocked by policy). No workaround attempted. Live Stream-to-local crisis-webhook acceptance is unverified; the development Stream hook still points at its previous tunnel.
+- Native CI acceptance remains unresolved; browser success does not close the native chat/crisis gate. Staging has not been provisioned.
+
+**Next**
+1. Repair production-to-B backup routing with strict host validation and status DNS; prove a database restore in isolation.
+2. Provision resource-capped staging on B while preserving monitoring and recovery capacity. Use separate data and credentials; verify actual memory/load before promotion.
+3. Complete native and live safety acceptance, staging migration/recovery/erasure/push/reconnect checks and alert delivery; record immutable release artifacts before staged production promotion.
+
+**Open decisions:** no product-scope expansion; preserve v1 and existing safety requirements. Remaining acceptance failures are release blockers, not implied approvals.
+
+**How to resume** (PowerShell, only this checkout):
+```powershell
+Set-Location 'H:\Mento gpt\Mento'
+pwsh -File scripts/local/workspace.ps1 status
+Get-Content docs/ARCHITECTURE_REVIEW_2026-10-02.md
+Get-Content docs/ENVIRONMENTS.md
+```
+---
 ## 2026-10-01 (session 49 cont'd) — WS6 T6.2: flow 2 root-caused — a real native send-path bug, not a CI flake
 
 **Context:** continuing the flow-2 investigation from the entry below ("lets start
@@ -375,6 +505,7 @@ pushed and are CI-green on flow 1, red on flow 2 (`gh pr checks 11/12
 maestro-failure-diagnostics` for the latest evidence). Root-cause flow 2
 first — do not merge either PR until it passes — then resume the step
 sequence from step 4.
+
 
 ---
 

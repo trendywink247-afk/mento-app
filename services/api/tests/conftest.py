@@ -72,7 +72,9 @@ if DB_URL != get_settings().database_url:  # a parallel worker: point the app at
     from app import db as _app_db
 
     _app_db.engine.dispose()
-    _app_db.engine = create_engine(DB_URL, pool_pre_ping=True, future=True)
+    # Keep production pool/statement-timeout settings when rebinding each worker.
+    # A bare create_engine silently dropped the 5-second statement cap under xdist.
+    _app_db.engine = create_engine(DB_URL, **_app_db.engine_kwargs(get_settings()))
     _app_db.SessionLocal.configure(bind=_app_db.engine)
 
 

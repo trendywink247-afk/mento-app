@@ -1,0 +1,65 @@
+name: Test CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+concurrency:
+  group: test-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_PUBLIC_API_URL: http://127.0.0.1:18000/api/v1
+      EXPO_NO_DOTENV: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:route && npm run test:question && npm run test:placement && npm run test:bubble
+      - run: npx expo export --platform web
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/browser-tools" --no-package-lock playwright@1.56.1
+          "$RUNNER_TEMP/browser-tools/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Age gate in normal and reduced motion
+        run: |
+          python3 -m http.server 18081 --bind 127.0.0.1 --directory dist > "$RUNNER_TEMP/web.log" 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:18081/ >/dev/null && break; sleep 1; done
+          NODE_PATH="$RUNNER_TEMP/browser-tools/node_modules" MENTO_WEB=http://127.0.0.1:18081 node e2e/age-gate.e2e.js
+  release-tooling:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate release policy tests
+        run: python3 -m unittest discover -s scripts/ci -p 'test_*.py'
+      - name: Validate all GitHub workflows
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck=
+      - name: Validate shell syntax
+        run: while IFS= read -r -d '' file; do bash -n "$file"; done < <(find deploy scripts/ci -name '*.sh' -print0)
+  test-gate:
+    if: always()
+    needs: [mobile-web, release-tooling]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every test job
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 -c 'import json,os; assert all(v["result"] == "success" for v in json.loads(os.environ["RESULTS"]).values()), "A required test job did not pass"'

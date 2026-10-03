@@ -1,5 +1,14 @@
 # CLAUDE.md — Mento project memory
 
+> **Current workspace/release contract (founder, 2026-10-02):** work only under
+> `H:\Mento gpt`, repo `H:\Mento gpt\Mento`; leave the Desktop checkout untouched.
+> Use `scripts/local/workspace.ps1` for isolated development (web :18081, API :18000,
+> Postgres :15432, Valkey :16379). VPS staging follows local checks, then staged
+> production promotion. VPS B's corrected IP is **31.42.125.238**, verified against
+> its prior SSH host key; A remains 129.121.122.28. See `docs/ENVIRONMENTS.md` and
+> `docs/ARCHITECTURE_REVIEW_2026-10-02.md`. Historical commands below target the old
+> shared stack and must not be used to reset this workspace.
+
 > Auto-loaded every session. Keep tight and current. If this conflicts with the code, fix one of them — don't let them drift.
 > **Source-of-truth order:** `docs/DECISIONS.md` → `docs/PRD.md` → mockups (`docs/Mockups/`, cataloged in `docs/MOCKUP_INVENTORY.md`). DECISIONS wins on any conflict.
 > **Resume protocol:** read `PROGRESS.md` (newest-on-top) before touching code. End every session by updating `PROGRESS.md` (Done / In-progress / Next / Open decisions) and committing.
@@ -24,8 +33,8 @@ Quality bar: international B2C, and since the 2026-07-11 rulings (DECISIONS §I)
 
 | Layer | Choice | Notes |
 |---|---|---|
-| Mobile | **Expo SDK 52** (RN 0.76, TS 5.3) + expo-router 4 | iOS + Android primary; **web = dev/test surface** (Playwright), best-effort UX — also served whole on prod at the app host (`app.<root>`, founder ruling 2026-09-19); the staff dashboard has its own host (`admin.<root>`); hostnames live only in `deploy/domains.env`. |
-| Motion | **Reanimated 3.16** + **@shopify/react-native-skia 1.5** + expo-haptics | Skia 1.5 is the SDK 52 pin (v2 needs SDK 53+). Ambient SkSL aurora + motion tokens (`theme/motion.ts`). Web lazy-loads CanvasKit, falls back to a static gradient. |
+| Mobile | **Expo SDK 55** (RN 0.83.10, TS 5.9.2) + expo-router 55 in this H branch | Expo 54/55 upgrade PRs remain stacked; Android send/reply passed on the corrected SDK 55 source, iOS release acceptance remains pending. Production has not been promoted. Web is also served on `app.<root>`; staff uses `admin.<root>`; hostnames live in `deploy/domains.env`. |
+| Motion | **Reanimated 4.6.0**, **worklets 0.12.2**, **Skia 2.4.18** + expo-haptics | Explicit Reanimated/worklets compatibility exclusions are recorded in package.json; do not blindly reset them with dependency auto-fix. Ambient SkSL aurora + motion tokens (`theme/motion.ts`). Web lazy-loads CanvasKit and falls back to a static gradient. |
 | Character art | In-house rig + painterly generated pose set (6 animals × 6 poses, `scripts/companions/`) + 2.5D `Tilt3D` parallax | **PERMANENT v1 route** (DECISIONS §I.4, amended 2026-07-13 — Rive retired, no commission budget; §K.8 painterly set 2026-09-05). Assets in `apps/mobile/assets/companions/generated/<Animal>/<pose>.webp`; regenerate via `scripts/companions/recipe.md` + `manifest.json`, cut with `cutout.py`. OPTIONAL cling poses (`hang`/`peek`/`dangle` — Cat only so far, cut with `clingcut.py`) let the companion hold on to the UI: `lib/companionPlacement.ts` picks a new slot on every arrival, `components/art/PerchedCompanion.tsx` draws it. |
 | Scene art | **Lottie** — `lottie-react-native` 7.1 (native) + `@lottiefiles/dotlottie-react` (web) | Free LottieFiles assets, palette **baked** by `scripts/theme_lottie.py` (repo root). Licenses tracked in `apps/mobile/assets/lottie/README.md`. See Lottie rules below. |
 | Backend | **FastAPI** (Python 3.12) | async; Pydantic v2. |

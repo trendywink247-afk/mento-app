@@ -118,7 +118,8 @@ def test_the_write_path_stores_ciphertext_and_reads_it_back(monkeypatch, db_sess
     assert sent.message["text"] == SECRET
 
     raw = db_session.execute(
-        text("SELECT body, key_id FROM chat_messages WHERE id = :id"), {"id": sent.message["id"]}
+        text("SELECT body, key_id FROM chat_messages WHERE id = :id"),
+        {"id": sent.message["id"]},
     ).one()
     assert raw.key_id == "k1" and SECRET.encode() not in bytes(raw.body)
     assert [m["text"] for m in chat.history(db_session, room.cid)] == [SECRET]
@@ -126,7 +127,10 @@ def test_the_write_path_stores_ciphertext_and_reads_it_back(monkeypatch, db_sess
 
 def test_a_database_dump_without_the_key_shows_only_ciphertext(monkeypatch, db_session):
     """The plan's accept criterion, with the real pg_dump."""
-    if shutil.which("pg_dump") is None:
+    import os
+
+    container = os.environ.get("MENTO_PG_CONTAINER")
+    if shutil.which("pg_dump") is None and not container:
         pytest.fail("pg_dump is not installed — this proof needs it (a skip is not a pass)")
     _use_keys(monkeypatch, _key("k1", 7))
     room = seed_chat(db_session)
@@ -134,17 +138,19 @@ def test_a_database_dump_without_the_key_shows_only_ciphertext(monkeypatch, db_s
     chat.send(db_session, room.mentor_id, room.cid, client_id="d2", body="I hear you, go on")
 
     url = urlsplit(DB_URL.replace("postgresql+psycopg", "postgresql"))
+    # Windows workspaces may use the matching Postgres container's real pg_dump.
+    # Explicit opt-in only; never guess a container belonging to another checkout.
+    command = (["docker", "exec", container] if container else []) + [
+        "pg_dump",
+        "--data-only",
+        "--table=chat_messages*",
+        *([] if container else [f"--host={url.hostname}", f"--port={url.port or 5432}"]),
+        f"--username={url.username}",
+        url.path.lstrip("/"),
+    ]
     dump = subprocess.run(
-        [
-            "pg_dump",
-            "--data-only",
-            "--table=chat_messages*",
-            f"--host={url.hostname}",
-            f"--port={url.port or 5432}",
-            f"--username={url.username}",
-            url.path.lstrip("/"),
-        ],
-        env={"PGPASSWORD": url.password or ""},
+        command,
+        env={**os.environ, "PGPASSWORD": url.password or ""},
         capture_output=True,
         text=True,
         check=True,
