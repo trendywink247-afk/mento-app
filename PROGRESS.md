@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-03 — Worker startup failure now requests whole-release rollback
+
+**Done:** PR #20 merged after green checks and completed review. Updated deploy.sh so a Compose worker-start failure restores the prior API/worker rather than exiting after an API-only swap. Missing or identical rollback targets fail closed. Added isolated shell control-flow tests for success, failure and missing/same targets; all pass locally, with no Docker/server mutation. Added the test to Test CI.
+
+**Limits:** This checks Compose startup failure, not a worker that starts and subsequently crashes or stops processing. Whole-stack Linux/Compose recovery rehearsal and an actual job health probe remain required. Production installer and reversible web layout are not yet installed; production unchanged and locked.
+
+**Resume:** Run `bash deploy/test-worker-rollback.sh`; finish PR checks then continue production activation preparation. The accepted staging artifact remains f617473 / run 37093153629.
+
+---
+
 ## 2026-10-03 — Production preflight exposes four operational blockers
 
 **Done:** PR #19 documentation merged after green checks. Added read-only deploy/production-preflight.sh and ran it on A: readiness, rollback-tag presence and disk headroom PASS; webhook freshness, worker presence, web symlink and worker-aware installed deploy script FAIL (exit 1). No server files or services changed. Bash syntax and whitespace checked.
