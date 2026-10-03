@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Android composer obstruction identified and fix pushed
+
+**Evidence:** Native run 37160525351 failed first-message send. Direct screenshot shows keyboard covering composer; device hierarchy places Send at y2054–2146 within keyboard area. React Native logs contain no press callback. API, Test CI and master 8ee2f8c native checks passed independently; no bypass of PR failure.
+
+**Fix candidate:** PR42 head 58ca5e9 bounds member and mentor Android thread containers using keyboard screenY minus measured thread top, clears bound on keyboard hide and disables competing internal Stream Android avoidance. iOS remains on existing avoidance. TypeScript and whitespace passed. PR title/body updated to cover final scope; fresh emulator acceptance pending. Do not mark resolved before unchanged send/reply tests pass.
+
+**Next:** Inspect exact current-head native run, use captured screen/hierarchy if it fails, iterate on demonstrated layout cause. Only integrate green candidate, then master release checks and staging. Production remains locked. Reminder remains permanently deleted. Resume in H:\Mento gpt\Mento; preserve book and user changes.
+
+---
 ## 2026-10-04 — Native first-message failure under investigation
 
 **Verified:** PR42 native run 37159288785 failed after a successful APK build/install and onboarding. First-message bubble did not appear after send; API/Test checks passed. Downloaded diagnostics into ignored .local/native-failure-37159288785. React Native log shows composer enabled after typing; it does not prove send or delivery. Artifact lacked a usable failure screenshot/hierarchy. Do not classify this as infrastructure flakiness or bypass it.
