@@ -100,6 +100,15 @@ No production identity or receiver has been activated by this change.
 
 ## Activation and release checklist
 
+Worker deployment now waits for the actual `app.jobs.worker` process and a fresh
+queue heartbeat instead of accepting Docker's initial "started" response. Before
+an API swap, the operator script records whether the baseline worker was running.
+Rollback to an absent/stopped baseline stops the candidate worker; it does not
+start jobs on an older API-only release. Baselines without recorded metadata keep
+the previous start-worker behavior. Invalid metadata fails explicitly. This is
+single-worker startup readiness, not per-replica health or job-delivery proof;
+install revised operator tooling only after its isolated recovery tests pass.
+
 Run the manual **Isolated Rollback Rehearsal** workflow for `legacy` first.
 It uses an empty GitHub-hosted Docker daemon, a disposable local Git remote and
 synthetic database settings; it receives no production/staging secrets and does

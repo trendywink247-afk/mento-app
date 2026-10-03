@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — First-worker rollback proven; readiness fix merged
+
+**Done:** PR #30 merged after required CI and full isolated run 37112777741 passed. Operator deployment records prior worker running/stopped state, preserving API-only baselines on rollback. Worker startup now waits for the actual app.jobs.worker process and fresh queue heartbeat. Shell state tests pass.
+
+**Evidence:** Initial first-worker rehearsal 37112515912 failed because Docker reported started before the process exited; this was a real readiness gap, not bypassed. After the fix, combined Balanced/legacy rehearsal passed: first-worker failure rejected, API-only baseline recovered, failed worker stopped, valid redeployment succeeded, and migration/unhealthy-image/blue-green rollback assertions all held. Transcript retained in .local/rollback-37112777741 and Actions. No production app changes.
+
+**Next:** Install the merged operator script on A under deployment locks, retaining the installed prior copy, then verify readiness gates without enabling promotion. Job-delivery proof, backup encryption/retention, production crisis/alert verification, coordinated API/web recovery and native/capacity gates remain. Aggregate queue heartbeat is not per-replica health. Staging stays accepted bdef06a; production remains locked.
+
+---
 ## 2026-10-03 — Both rollback stacks rehearsed; production web layout prepared
 
 **Done:** PR #28 merged green and first isolated runs exposed shallow-history and encrypted-environment fixture errors. Fixed full checkout history, temporary master initialization, temporary-index exclusion of production SOPS file and synthetic monitoring configuration in PR #29, now merged after green checks and successful rehearsals.
