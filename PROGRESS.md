@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Dependency PRs integrated; release and rollback verification running
+
+**Done:** PR #15 exact head 8c4df168c8f28500cce79a5d1649b0af75f3ab25 passed required checks and both real native runs (37134453313 and 37134454744). Merged with exact-head guard as 11e8073fa4fb9a1b20081771e6e858341aeb2585. PRs #15/#16/#17 are now merged; no open PRs at inspection. Production release variable independently remains false.
+
+**Validation in progress:** Exact release gate passed for previous master 3d2074fae9687594be784ab349ad1d2cf6be86f8 (API 37134384122, Test 37134384094, native 37134384155). Dispatched full staging 37136265063 for that candidate using current workflow head 11e8073. Also dispatched isolated rollback rehearsal 37136267615 with stack=all on 11e8073 to exercise the upgraded checkout with both infrastructure configurations. Neither run is claimed accepted yet.
+
+**Next:** Inspect those runs and diagnose failures; independently verify staging if successful. Current master 11e8073 checks: API 37136249779, Test 37136249776, Maestro 37136249723. Require its exact gate before staging that SHA. Latest verified accepted staging remains ade37a1. Production and live backup activation remain gated. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
 ## 2026-10-03 — Node upgrade merged; checkout conflict resolved
 
 **Done:** Full Staging Release 37132617426 succeeded for ade37a1d01de216b2e7cd590a73cf7e5f07843fa and restricted server verification passed independently. PR #17 exact head d4e75d4601de6f58d0492e08d1c3753defe0058e passed required checks plus actual native run 37132622078; merged as master 3d2074fae9687594be784ab349ad1d2cf6be86f8.
