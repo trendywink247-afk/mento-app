@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Step 1 prioritized; production schema and backup decisions
+
+**Founder direction:** Complete steps 1–5 sequentially, beginning with production readiness. Retain saved journal notes and moderation narratives in encrypted backups; exclude chat history. Recovery key belongs in an existing external password manager/secure vault; destination identification pending, no private key requested in chat.
+
+**Live finding:** Production Alembic revision is c13a0seen001 and public.procrastinate_jobs is absent. Worker activation requires the coordinated schema/application migration, not simply starting a container. Added read-only queue-table presence to production preflight. Bash syntax passed; live preflight now correctly reports missing schema alongside absent worker and stale safety signal, while readiness, release symlink, rollback tag, operator and disk checks pass. No live schema/data/config changed.
+
+**Next:** Review preflight change and prepare exact-baseline migration/recovery evidence; implement retained-note/report backup policy and verify external key custody before live activation. Native PR #42 remains pending its current-head Android test; do not restart it with progress-only commits. Accepted staging remains fe6c2e6. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Current master staging accepted; offline pool budget prepared
 
 **Done:** Full staging 37148721249 passed for dd0edb032fe58f9e08ccd7ef1c8329a49eb47c2f; independent restricted receiver verify passed. Added an offline connection-budget utility with explicit API/worker process counts, worker queue pools, migration allowance, reserved slots and headroom. Source defaults with two API colors/one worker require 73 versus Balanced limit 50; this is a configuration bound, not observed exhaustion. Live overrides are lower as recorded below.

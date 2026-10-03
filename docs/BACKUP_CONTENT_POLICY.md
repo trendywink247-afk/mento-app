@@ -4,6 +4,13 @@ Reviewed against source on 3 October 2026. This is an activation contract, not a
 
 ## Content inventory
 
+Founder decision, 4 October 2026: retain user-saved journal notes and moderation
+report narratives in encrypted recovery archives; exclude chat history itself.
+Consequently these archives can contain user-saved quotations of chat messages:
+do not describe them as containing no message-derived content. Recovery identity
+custody will be an existing password manager/secure vault outside both VPSes.
+The destination and verified key storage/recovery remain to be established.
+
 | Source | What the source establishes | Recovery boundary |
 |---|---|---|
 | `app/models/chat_message.py` | `chat_messages.body` is encrypted message content; range partitions use `chat_messages_p*`, including a default partition. | Encryption does not satisfy exclusion. Exclude message row data from the parent and every descendant while retaining schema. Validate the partition catalogue, not only today's names. |
@@ -29,4 +36,7 @@ Paths above are relative to `services/api`. This is a focused inventory of known
 
 PR #35 and Test CI run `37122366037` proved encrypted recovery of the migrated application schema with synthetic relational fixtures, revision equality, foreign-key enforcement and `alembic check`. They did **not** prove exclusions, real production data recovery, key custody, deletion reconciliation or six-hour operations.
 
-The remaining product boundary is whether user-saved mentor notes and narrative reports are included in encrypted recovery, redacted, or excluded with disclosed loss on restore. Engineering can build synthetic exclusion/recovery tests while that decision is outstanding; it must not erase those records or weaken Trust & Safety by inference. Production promotion remains disabled.
+Saved notes and report narratives are retained by the founder decision above.
+Implementation must now prove chat-history exclusion alongside recovery of these
+retained records and safety enforcement. Vault destination, key recovery and
+deletion reconciliation remain acceptance gates. Production promotion remains disabled.
