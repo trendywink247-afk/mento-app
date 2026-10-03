@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Latest master accepted on staging; monitor retry fix prepared
+
+**Done:** Full staging 37137493795 succeeded for 11e8073fa4fb9a1b20081771e6e858341aeb2585; independent restricted receiver verify passed. No open PRs at initial inspection.
+
+**Finding/fix:** External monitor swallowed alert delivery failures and marked state notified, preventing retry. Prepared a fix retaining previous notified state on failure and reporting nonzero while checking the remaining endpoints. Local mocked-curl test passed outage/recovery retry and successful-delivery deduplication; added CI coverage. No real notifications sent and no VPS monitor installed or changed.
+
+**Next:** Review monitor PR/current-head CI before integration. Production gates remain unsatisfied (worker, safety freshness, backup custody/content and other operational acceptance). Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-03 — Upgraded release tooling passes rollback; production gates refreshed
 
 **Done:** Staging run 37136265063 succeeded for 3d2074fae9687594be784ab349ad1d2cf6be86f8; independent restricted receiver verification passed. Both-stack rollback run 37136267615 succeeded on 11e8073: controlled blue/green drill recorded 0/13574 failed requests, while legacy recreate recorded 1573/4751 interruptions. These are deployment rehearsal results, not capacity evidence.
