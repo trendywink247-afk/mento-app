@@ -130,7 +130,7 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://localhost:8000/api/v1/health && exit 0; echo "waiting ($i/30)..."; sleep 1; done
           echo "::error::API never became healthy" && cat api.log && exit 1
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "20"
           cache: npm
