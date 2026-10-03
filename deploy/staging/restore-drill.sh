@@ -7,10 +7,17 @@ test -n "$backup"
 gzip -t "$backup"
 docker run -d --name "$name" --network none --memory 256m --cpus 0.5 -e POSTGRES_USER=mento -e POSTGRES_DB=mento -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine >/dev/null
 trap 'docker rm -fv "$name" >/dev/null' EXIT
-for i in $(seq 1 30); do
-  if docker exec "$name" pg_isready -U mento -d mento >/dev/null 2>&1; then break; fi
+ready=0
+for i in $(seq 1 60); do
+  # The initialization server listens on a Unix socket and then shuts down.
+  # TCP readiness identifies the final server, avoiding restore during restart.
+  if docker exec "$name" pg_isready -h 127.0.0.1 -U mento -d mento >/dev/null 2>&1; then ready=1; break; fi
   sleep 1
 done
+if [ "$ready" != 1 ]; then
+  echo 'Restore database did not become TCP-ready within 60 seconds' >&2
+  exit 1
+fi
 gzip -dc "$backup" | docker exec -i "$name" psql -X -v ON_ERROR_STOP=1 -U mento -d mento >/dev/null
 printf 'Restored archive: %s\n' "$(basename "$backup")"
 docker exec "$name" psql -X -At -U mento -d mento -c 'SELECT version_num FROM alembic_version;'
