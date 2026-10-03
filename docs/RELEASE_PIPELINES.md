@@ -100,6 +100,13 @@ No production identity or receiver has been activated by this change.
 
 ## Activation and release checklist
 
+The legacy `deploy/deploy-web.sh` and its `deploy-console.sh` alias now refuse
+direct deployment before reading environment files, building or contacting a
+server. Their former local rebuild and directory swap bypassed accepted-artifact
+provenance and the release lock. Use Staging Release followed by Production
+Release; there is no bypass flag. Older checkouts still contain the old script,
+so operator access and concurrent writers must be audited before web migration.
+
 `deploy/install-ci-production.sh` prepares the dedicated `mento-ci-production`
 identity using a reviewed receiver and one `production-ci.pub` Ed25519 key. It
 refuses an existing account or enabled server gate, restricts the key and SSH user
