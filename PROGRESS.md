@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Full-schema encrypted restore verified and integrated
+
+**Done:** PR #34 merged green. PR #35 extended encrypted recovery to the current API image: migrate an empty database to Mento head, add synthetic relational fixtures, dump/encrypt/decrypt/restore, compare Alembic revision, then remove only drill tables and run alembic check. Test CI 37122366037 release-tooling and all required PR checks passed; PR #35 merged. Logs confirm no new upgrade operations and successful restored schema/relational checks.
+
+**Limits:** This uses the full application schema with synthetic data, not a real production dump. No live backup pipeline, key custody or retention changed. Live encrypted recovery, message exclusions, six-hour scheduling and deletion-compatible retention remain open. Production stays locked; staging remains accepted bdef06a.
+
+**Next:** Audit actual message-bearing tables and job payloads for the book's exclusion requirement, prepare a non-destructive backup-content policy, and resolve recoverable off-server identity custody before live encryption activation. Preserve all existing backups.
+
+---
 ## 2026-10-03 — Encrypted synthetic database restore passed CI
 
 **Done:** PR #33 merged after green checks. PR #34 adds a network-isolated disposable PostgreSQL drill: synthetic relational data -> pg_dump/gzip -> age encryption -> authenticated recovery -> separate restored database. Test CI 37120726235 release-tooling passed the real database restore, joined-row check and restored foreign-key enforcement, plus existing encryption/failure tests. No host ports, VPS credentials, real backup data or persistent identity used.
