@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-03 — Web migration failure injection verified
+
+**Done:** Added Linux failure-injection tests for unsupported atomic exchange and a source file changing during copy. Both abort with the original current directory still serving; the writer's newer content is preserved. All 12 release-tooling tests pass in the network-disabled local Linux image. This does not replace the requirement to stop concurrent writers during an actual migration.
+
+**State:** PR #21 still blocked by the same GitHub billing annotation. No new CI retries or production changes. Resume on codex/production-preparation; merge/release gates remain enforced.
+
+---
+
 ## 2026-10-03 — Atomic web-layout preparation tested locally
 
 **Done:** Added deploy/web-release-layout.py for explicit Linux operator preparation: hash/copy legacy web content, atomically exchange current with a release symlink, retain the original directory and support explicit rollback. Refuses existing release links and unexpected symlink assets. Ten release-tooling tests passed in the existing local Linux API image with networking disabled and a read-only repository mount; tests use temporary directories. Whitespace clean.
