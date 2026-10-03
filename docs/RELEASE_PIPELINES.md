@@ -194,6 +194,22 @@ Local Linux tests prove file/inode preservation and refusal of unexpected symlin
 assets; the tool has not been run on production. Unsupported filesystems fail
 without replacing `current`. Review retained copies before any later cleanup.
 
+Before scaling or changing pool settings, run the offline connection-budget check
+with effective settings, including both API colors during rollout. For example:
+
+```sh
+python scripts/ci/database_budget.py --api-processes 2 --worker-processes 1 --pool-size 5 --max-overflow 5 --queue-pool 4 --migration-connections 1 --reserved 3 --headroom 5 --max-connections 50
+```
+
+This example budgets 43 connections including reserves; it is not installed tuning
+or capacity evidence. The checker assumes the same SQLAlchemy pool settings for
+each API/worker process; for heterogeneous pools use the largest values for a
+conservative bound. Count all processes, including overlapping releases. Account
+for additional database clients in headroom and verify actual PostgreSQL reserved
+slots. Zero-size/unlimited pools are rejected. This is a manual preparation tool,
+not yet an enforced deployment gate. Four worker queue connections are separate
+from each worker's SQLAlchemy pool.
+
 Run `deploy/production-preflight.sh` read-only on VPS A before planning promotion.
 It reports prerequisites without printing secrets. A pass does not replace the
 manual gates below. On 3 October, API readiness, rollback-tag presence and disk

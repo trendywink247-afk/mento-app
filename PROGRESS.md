@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-10-04 — Current master staging accepted; offline pool budget prepared
+
+**Done:** Full staging 37148721249 passed for dd0edb032fe58f9e08ccd7ef1c8329a49eb47c2f; independent restricted receiver verify passed. Added an offline connection-budget utility with explicit API/worker process counts, worker queue pools, migration allowance, reserved slots and headroom. Source defaults with two API colors/one worker require 73 versus Balanced limit 50; this is a configuration bound, not observed exhaustion. Live overrides are lower as recorded below.
+
+**Validation:** Four unit tests passed for overflow, finite bounds, worker connector accounting and invalid/unlimited inputs. Existing CI discovers these tests. Documented a bounded example and homogeneous-pool assumption. No server settings changed; this tool is not an enforced deployment gate.
+
+**Next:** Review current PR CI and integrate if green. Production remains locked; worker/safety/backup/device gates remain outstanding. Resume in H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
+## 2026-10-04 — Live connection limits inspected; staging advanced
+
+**Done:** Staging 37147472690 succeeded for bd7856ead4f325c3b589624ecd80dc90187fe40b; independent receiver verify passed. Exact gate passed for current master dd0edb032fe58f9e08ccd7ef1c8329a49eb47c2f (API 37147472436, Test 37147472459, native 37147472460). Dispatched full staging 37148721249 for dd0edb0; pending at handoff.
+
+**Read-only connection audit:** Staging API and worker each use pool_size=2, max_overflow=2, timeout=5; queue connector separately caps four. Database max_connections=30 with three reserved; pg_stat_activity snapshot counted 12 including background processes. Production API uses pool_size=5, max_overflow=5, timeout=5; live database max_connections=100 with three reserved and snapshot count 11. No secrets or user records read, no tuning changed. Snapshots are not capacity/load evidence. Live overrides differ from source defaults; Balanced target max_connections=50 still needs an explicit rollout budget including both API colors, worker, migrations and operational headroom.
+
+**Next:** Verify staging 37148721249 when complete. Continue target aggregate connection-budget checks before replica growth; retain production worker, safety, backup and device gates. Latest independently verified staging is bd7856e; production remains locked. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
+## 2026-10-04 — Architecture refresh merged; semantic monitor candidate staging
+
+**Done:** PR #40 head b1fe51e02c03edba6d3f564efb05efac3a1fb7c4 passed required checks and merged as dd0edb032fe58f9e08ccd7ef1c8329a49eb47c2f. Exact release gate passed for bd7856ead4f325c3b589624ecd80dc90187fe40b (API 37145024006, Test 37145024020, native 37145024030). Dispatched full staging 37147472690 for bd7856e; pending at handoff. Latest verified staging remains 0882abe.
+
+**Independent architecture review:** SQLAlchemy defaults allow 10 pooled + 10 overflow connections per process; worker queue connector separately permits four. Compose database caps include 50 in compose.prod.yml and 30 in staging. Aggregate API/worker/deploy-overlap budgets need comparison against effective environment overrides before increasing replicas; these defaults alone are not evidence of live exhaustion. No environment values changed or secrets printed.
+
+**Next:** Inspect staging 37147472690 and current master checks. Continue aggregate database connection-budget validation alongside unresolved operational gates. Production remains locked. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Staging verified; architecture evidence refreshed
 
 **Done:** Staging 37145025868 succeeded for 0882abe5643ae2917bf7cff088a40100f3ef4206 and independent receiver verification passed. Refreshed architecture crosswalk with accepted staging, isolated rollback, merged tooling and prepared-versus-installed monitor/backup distinctions. Removed obsolete PR #13 resume command. Documentation validated against recorded CI and source; git diff --check passed.
