@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-04 — Staging verified; architecture evidence refreshed
+
+**Done:** Staging 37145025868 succeeded for 0882abe5643ae2917bf7cff088a40100f3ef4206 and independent receiver verification passed. Refreshed architecture crosswalk with accepted staging, isolated rollback, merged tooling and prepared-versus-installed monitor/backup distinctions. Removed obsolete PR #13 resume command. Documentation validated against recorded CI and source; git diff --check passed.
+
+**Pending:** Exact gate correctly rejected bd7856e because Android run 37145024030 was still in progress, not because of a confirmed failure. Do not dispatch its staging release until that run and remaining required checks pass. Production remains locked. Resume in H:\Mento gpt\Mento with current PR checks; preserve architecture book.
+
+---
 ## 2026-10-04 — Semantic monitoring merged; host prerequisites checked
 
 **Done:** PR #39 exact head 38ad5084795ee09f93a063e5d84b220606de1380 passed Linux Test CI 37143904020 and API CI 37143904066. Merged as bd7856ead4f325c3b589624ecd80dc90187fe40b. This includes default-python3 classifier and mocked alert retry validation, resolving the earlier local Docker limitation.
