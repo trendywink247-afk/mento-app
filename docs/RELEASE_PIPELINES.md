@@ -100,6 +100,17 @@ No production identity or receiver has been activated by this change.
 
 ## Activation and release checklist
 
+`deploy/encrypt-backup.sh SOURCE.sql.gz PUBLIC_RECIPIENTS NEW_ARCHIVE.age`
+is a preparation utility, not the scheduled backup pipeline. It validates the
+gzip source, encrypts with age, publishes a private archive without overwriting
+an existing destination, and retains the source. Synthetic round-trip and failure
+tests run in CI. No real backup encryption or key custody is implied by these tests.
+Before activation: establish recoverable private-key custody outside both VPSes,
+install only public recipients on A, prove authorized restore, exclude message
+bodies as required by the architecture book, and approve deletion-compatible
+retention. Do not remove existing plaintext backups until that migration is
+explicitly authorized and recovery has been proven.
+
 Worker deployment now waits for the actual `app.jobs.worker` process and a fresh
 queue heartbeat instead of accepting Docker's initial "started" response. Before
 an API swap, the operator script records whether the baseline worker was running.

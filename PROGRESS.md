@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Backup encryption utility prepared and round-trip tested
+
+**Done:** PR #31 merged after all required checks passed. Added an explicit age encryption preparation utility: gzip validation, private output, atomic no-overwrite publication and retained plaintext input. A disposable Linux test with generated ephemeral identity passed byte-exact decrypt round-trip, 0600 permissions, overwrite refusal and invalid-recipient cleanup. Added CI coverage; actionlint, shell syntax and whitespace passed. No real backup or persistent key created/changed.
+
+**Limits:** This utility is not wired into cron, restore acceptance or the VPS backup pipeline. Recoverable private-key custody outside both VPSes, public recipient installation, content exclusions (message bodies), authorized restore and deletion-compatible retention remain required. Existing plaintext backups remain untouched. Production stays locked.
+
+**Next:** Review CI, then design safe activation and restore coverage without silently substituting transport encryption for encrypted archives or deleting existing backups.
+
+---
 ## 2026-10-03 — Backup failure handling hardened locally
 
 **Finding:** Existing backup script could publish a partial dump under its final archive name and return success after failed off-box copying. Added private umask, unique temporary archive, gzip validation and atomic publication. Off-box copy failure now exits nonzero before pruning, retaining the valid local archive. Existing successful-run retention settings remain unchanged; no backup script executed against real data.

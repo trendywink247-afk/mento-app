@@ -53,6 +53,11 @@ jobs:
         run: bash deploy/test-worker-rollback.sh
       - name: Validate backup failure handling
         run: bash deploy/test-backup-failures.sh
+      - name: Validate encrypted backup round trip
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+          bash deploy/test-backup-encryption.sh
       - name: Validate all GitHub workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck=
       - name: Validate shell syntax
