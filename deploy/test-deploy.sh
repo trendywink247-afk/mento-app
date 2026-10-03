@@ -24,6 +24,18 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 WHICH="${1:-all}"
+# The real deploy script prunes mento-api images. Never run this rehearsal on a
+# daemon holding application images, even if their containers are stopped.
+existing_images="$(docker image ls --format '{{.Repository}}:{{.Tag}}' mento-api)"
+if [ -n "$existing_images" ]; then
+    echo 'Use a disposable Docker daemon: existing mento-api images must be preserved.' >&2
+    exit 2
+fi
+existing_projects="$(docker ps -aq --filter label=com.docker.compose.project=mento-deploytest --filter label=com.docker.compose.project=mento-deploytest-legacy)"
+if [ -n "$existing_projects" ]; then
+    echo 'Existing deployment-test containers found; inspect them before rehearsal.' >&2
+    exit 2
+fi
 TMP="$(mktemp -d)"
 REMOTE="$TMP/origin.git"; BOX="$TMP/box"; DEV="$TMP/dev"
 export MENTO_STATE_DIR="$TMP/state"
@@ -33,7 +45,7 @@ ok()   { echo "ok   $*"; }
 fail() { echo "FAIL $*"; fails=$((fails+1)); }
 note() { echo "---- $*"; }
 
-for c in mento-postgres mento-redis mento-caddy mento-postgres-prod mento-redis-prod mento-api-prod; do
+for c in mento-postgres mento-redis mento-caddy mento-glitchtip mento-postgres-prod mento-redis-prod mento-api-prod mento-worker-prod; do
     if docker inspect "$c" >/dev/null 2>&1; then
         echo "container $c already exists — stop that stack first (this test reuses the names)"; exit 2
     fi
