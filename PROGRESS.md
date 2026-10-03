@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Reminder permanently deleted; live monitoring probes validated
+
+**Founder direction:** Deleted continue-mento-architecture-delivery through the app; tool confirmed deleted, not paused. Do not recreate it or schedule another reminder. Continue authorized five-phase engineering in this chat; no new chat created.
+
+**Implemented/tested:** Added MONITOR_CHECK_ONLY=1 to external monitor. It reports failing endpoint/semantic probes via exit status without alert delivery, state directory creation or deduplication writes; invalid mode values fail closed. Isolated fake-curl outage/recovery tests passed, including absent and existing state preservation. Live read-only probes from this workstation passed API health/readiness, app/admin and semantic crisis endpoint. This is neither delivered-alert acceptance nor proof of actual safety processing; no VPS installation occurred.
+
+**Pending:** PR #42 current head e1ed303 has green API/Test checks and native still running at inspection. Keep master stable until native integration to avoid repeated strict-base reruns. Probe-only change needs Linux CI and review; do not merge ahead of #42. Production remains disabled; backup custody, deletion reconciliation, live backup activation and coordinated schema/worker acceptance still prevent declaring phase 1 complete. Resume in H:\Mento gpt\Mento with current PR checks; preserve architecture book. No automatic wakeup remains.
+
+---
 ## 2026-10-04 — Recovery policy proven; backup overlap protection
 
 **Done:** PR #48 merged as 27763f6 after all current-head checks passed. Test CI 37158558324 verified actual application chat rows excluded, saved notes/reports/block state retained, and both baseline/current-schema encrypted restore plus forward migration. Local temporary age recovery identity exists under ignored .local/recovery in current-user DPAPI protection, with a successful synthetic decrypt round trip; it is not durable off-device custody. Updated existing heartbeat to the current five-phase worklist, preserving its 20-minute schedule and quiet unchanged-state behavior.

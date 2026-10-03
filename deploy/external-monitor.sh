@@ -9,7 +9,11 @@
 set -u
 NTFY_TOPIC="${NTFY_TOPIC:-__NTFY_TOPIC__}"
 STATE_DIR=${STATE_DIR:-/opt/mento-backups/.monitor-state}
-mkdir -p "$STATE_DIR"
+# Explicit probe-only mode for deployment acceptance: no alert delivery and no
+# changes to notification deduplication state. Invalid values fail closed.
+CHECK_ONLY=${MONITOR_CHECK_ONLY:-0}
+case "$CHECK_ONLY" in 0|1) ;; *) echo 'Invalid MONITOR_CHECK_ONLY' >&2; exit 2 ;; esac
+if [ "$CHECK_ONLY" = 0 ]; then mkdir -p "$STATE_DIR"; fi
 
 alert() {
   local msg="$1"
@@ -25,6 +29,10 @@ check() {
   # %{http_code} — only a DNS/connect/timeout failure should read as unreachable.
   code=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 "$url" 2>/dev/null)
   [ $? -eq 0 ] && [ -n "$code" ] || code="ERR"
+  if [ "$CHECK_ONLY" = 1 ]; then
+    if [ "$code" = "$want" ]; then printf 'PASS %s\n' "$name"; return 0; fi
+    printf 'FAIL %s\n' "$name"; return 1
+  fi
   local prev="unknown"
   [ -f "$state_file" ] && prev="$(cat "$state_file")"
   if [ "$code" = "$want" ]; then
@@ -51,6 +59,15 @@ monitor_dir=$(cd "$(dirname "$0")" && pwd)
 crisis_ok=0
 if crisis_response=$(curl -sS --max-filesize 65536 -w '\n%{http_code}' -m 10 https://api.mento.chat/api/v1/health/crisis 2>/dev/null) && printf '%s' "$crisis_response" | "${PYTHON:-python3}" "$monitor_dir/classify-crisis-health.py" 2>/dev/null; then
   crisis_ok=1
+fi
+if [ "$CHECK_ONLY" = 1 ]; then
+  if [ "$crisis_ok" = 1 ]; then
+    echo 'PASS crisis-health semantic probe (not safety execution proof)'
+  else
+    echo 'FAIL crisis-health semantic probe'
+    failures=1
+  fi
+  exit "$failures"
 fi
 crisis_state_file="$STATE_DIR/api-crisis-reachable"
 prev_crisis="unknown"
