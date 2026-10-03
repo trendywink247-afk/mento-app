@@ -111,6 +111,13 @@ bodies as required by the architecture book, and approve deletion-compatible
 retention. Do not remove existing plaintext backups until that migration is
 explicitly authorized and recovery has been proven.
 
+On an authorized recovery host, `deploy/decrypt-backup.sh ARCHIVE.age IDENTITY
+NEW.sql.gz` fully authenticates/decrypts and validates gzip before publishing a
+private recovery file. It refuses overwrite and removes partial output on errors.
+It never imports SQL. Tests reject a wrong identity, truncated ciphertext and a
+decryptable non-gzip payload. A successful decryption is not evidence of database
+restore or application recovery; those require separate isolated validation.
+
 Worker deployment now waits for the actual `app.jobs.worker` process and a fresh
 queue heartbeat instead of accepting Docker's initial "started" response. Before
 an API swap, the operator script records whether the baseline worker was running.
