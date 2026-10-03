@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-10-03 — Partition exclusion recovery drill passed locally
+
+**Done:** PR #36 merged with green required checks. Extended the encrypted database drill with synthetic current, default and renamed future partitions. Catalogue discovery supplies parent/descendant data exclusions. Assertions verify sentinel absence, zero restored message rows, retained partition hierarchy and working insert routing after recovery.
+
+**Validation:** Local isolated PostgreSQL 16 drill with API image mento-api:551345c5b617 passed encryption/decryption, exclusion checks, relational integrity, migration revision equality and alembic check. Bash syntax and git diff --check passed. Existing CI runs this drill with a newly built API image; CI results remain pending for the new change.
+
+**Limits / next:** This is synthetic test coverage, not a live exporter or complete content policy. Concurrent partition DDL/snapshot coordination, saved-note/report treatment, recoverable identity custody and deletion reconciliation remain open. Production stays locked and real backups unchanged. Resume from H:\Mento gpt\Mento and review this branch's PR checks before integration.
+
+---
+## 2026-10-03 — Backup content audit and activation boundary
+
+**Done:** Audited message partitions, saved mentor-note writes, report/feedback fields, safety signal writes and push retry payloads. Added docs/BACKUP_CONTENT_POLICY.md with source evidence and acceptance requirements. Chat-only exclusions are insufficient: journals explicitly copy message bodies. Current push retries contain rendered closed templates; safety matched_terms stores a signal enum, not raw message text.
+
+**Validation:** Reviewed source paths and journal write behavior; git diff --check passed. Documentation only: no application behavior or live data changed. Recent Dependabot CI is green but native execution is skipped there, so it is not device acceptance.
+
+**Next / decisions:** Build synthetic partition exclusion tests; resolve saved-note/report narrative recovery semantics and off-server identity custody before live activation. Preserve existing backups and safety enforcement. Production remains locked; accepted staging remains bdef06a. Resume in H:\Mento gpt\Mento by reading this entry and docs/BACKUP_CONTENT_POLICY.md.
+
+---
+## 2026-10-03 — Full-schema encrypted restore verified and integrated
+
+**Done:** PR #34 merged green. PR #35 extended encrypted recovery to the current API image: migrate an empty database to Mento head, add synthetic relational fixtures, dump/encrypt/decrypt/restore, compare Alembic revision, then remove only drill tables and run alembic check. Test CI 37122366037 release-tooling and all required PR checks passed; PR #35 merged. Logs confirm no new upgrade operations and successful restored schema/relational checks.
+
+**Limits:** This uses the full application schema with synthetic data, not a real production dump. No live backup pipeline, key custody or retention changed. Live encrypted recovery, message exclusions, six-hour scheduling and deletion-compatible retention remain open. Production stays locked; staging remains accepted bdef06a.
+
+**Next:** Audit actual message-bearing tables and job payloads for the book's exclusion requirement, prepare a non-destructive backup-content policy, and resolve recoverable off-server identity custody before live encryption activation. Preserve all existing backups.
+
+---
 ## 2026-10-03 — Encrypted synthetic database restore passed CI
 
 **Done:** PR #33 merged after green checks. PR #34 adds a network-isolated disposable PostgreSQL drill: synthetic relational data -> pg_dump/gzip -> age encryption -> authenticated recovery -> separate restored database. Test CI 37120726235 release-tooling passed the real database restore, joined-row check and restored foreign-key enforcement, plus existing encryption/failure tests. No host ports, VPS credentials, real backup data or persistent identity used.
