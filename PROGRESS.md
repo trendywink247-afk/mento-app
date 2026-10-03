@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-04 — Connection-budget master cleared release gate
+
+**Done:** Exact-commit release gate passed for fe6c2e6aa74ca35f8b97765e97543ee3e976520b with API 37151116571, Test CI 37151116467 and actual Android 37151116427. No open PRs. Dispatched full Staging Release 37153495894 for that exact SHA; pending acceptance. Production enable flag independently remains false.
+
+**Next:** Inspect 37153495894 and independently verify fe6c2e6 through the restricted receiver after success. Latest accepted/verified staging remains dd0edb0 until then. Remaining gates are unchanged: live worker and safety acceptance, monitor installation/delivered-alert evidence, backup custody/content/deletion/schedule, measured capacity and iOS/device readiness. Do not equate green release tooling with completion of those gates. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Connection-budget utility reviewed and integrated
 
 **Done:** PR #41 exact head bd047cb91c28b505e5cc51607c6e492071f26562 passed required Test CI 37149923860 and API CI 37149923798; merged as fe6c2e6aa74ca35f8b97765e97543ee3e976520b. Review confirmed separate per-worker queue allocation, shared-pool assumption and reserved/headroom accounting. Executed documented CLI example: required 43/50, exit 0. Oversized source-default overlap: required 73/50, exit 1 as expected.
