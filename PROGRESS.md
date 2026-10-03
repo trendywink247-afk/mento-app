@@ -4,6 +4,29 @@
 
 ---
 
+## 2026-10-03 — Operator staging access restored
+
+**Done:** Investigated the user's 403 screenshot. Nginx error logs and authenticated SSH connection agreed on the current operator IP, while staging allowed only the previous IP. Replaced the old operator allow entry with the verified current address, retained localhost and deny-all restrictions, preserved a timestamped configuration backup, validated nginx -t and reloaded successfully. HTTPS root now returns 200 from this workstation. No application deployment or production change.
+
+**Limit:** IP-based access follows the user's network/VPN address and can require updating again. A stable authenticated access mechanism remains an improvement; do not make staging public to avoid this restriction.
+
+---
+## 2026-10-03 — Disposable rollback rehearsal workflow prepared
+
+**Done:** Added a manual Isolated Rollback Rehearsal workflow using a fresh GitHub-hosted runner, synthetic database settings and no VPS credentials. It drives the real deployment harness against a disposable local Git remote and preserves the transcript on success/failure. This avoids the developer Docker daemon, whose application images must not be pruned. Actionlint and whitespace passed.
+
+**Not yet proven:** Workflow has not run. Review and merge with green checks, then dispatch rollback-rehearsal.yml with stack=legacy and diagnose failures. Harness coverage does not yet establish first-worker recovery or coordinated API/web rollback; do not count it as every production gate. Staging bdef06a remains accepted; latest native runs remain active/pending. Production stays locked.
+
+---
+## 2026-10-03 — Full staging retry accepted bdef06a
+
+**Done:** PR #27 merged after all required checks passed. Installed the reviewed restore helper on B and verified its SHA256 matches the local source (78d8a9d9100545f301cd4e826ba4c73fa33adefc57a1e52e622001347e4964aa). Staging Release 37109782797 succeeded in 5m32s using the unchanged build from 37109094125 for bdef06a52f57ac2229c75a825ff7389a42d76fa7. Deployment/schema/safety/restore, browser acceptance, fixture cleanup, runtime verification and accepted artifact publication all passed. Independent receiver verify passed; fixture-state absence and current SHA verified on B. Production promotion remains false.
+
+**Workflow audit:** Latest master 4de6b3c API and Test CI passed; native runs still progressing separately. Old failed runs remain history, not erased or relabeled. Older native run 37098160113 failed first-message composer clearing; screenshot shows composer obscured with keyboard. Later native runs passed, but intermittent send/layout behavior remains an investigation item, not proven fixed. Node 20 action deprecation warnings also remain; review Dependabot #15–17 and other pinned actions without weakening release gates.
+
+**Next:** Continue isolated full rollback rehearsal, reversible production web preparation, worker/job readiness, encrypted backups and delivered alerts. Production is unchanged and locked. No need for further user authorization for these agreed tasks. Keep user architecture book untracked and Desktop untouched.
+
+---
 ## 2026-10-03 — Staging restore readiness race diagnosed
 
 **Observed:** Staging run 37109094125 deployed bdef06a, passed schema and live crisis-path checks, then failed isolated restore with PostgreSQL shutting down. Staging now runs bdef06a but is NOT accepted. Production remains locked. PR #26 passed all checks and merged as e646b32.

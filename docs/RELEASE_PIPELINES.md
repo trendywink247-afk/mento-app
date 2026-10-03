@@ -100,6 +100,15 @@ No production identity or receiver has been activated by this change.
 
 ## Activation and release checklist
 
+Run the manual **Isolated Rollback Rehearsal** workflow for `legacy` first.
+It uses an empty GitHub-hosted Docker daemon, a disposable local Git remote and
+synthetic database settings; it receives no production/staging secrets and does
+not contact the VPS servers. It executes the real deployment harness and retains
+its transcript even on failure. A pass proves only the harness scenarios, not
+production data compatibility, first-worker recovery, or whole API/web rollback.
+Keep those additional operational gates separate. Do not run the harness on a
+developer daemon holding application images; it intentionally refuses that case.
+
 The legacy `deploy/deploy-web.sh` and its `deploy-console.sh` alias now refuse
 direct deployment before reading environment files, building or contacting a
 server. Their former local rebuild and directory swap bypassed accepted-artifact
