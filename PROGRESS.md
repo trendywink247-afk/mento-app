@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-03 — Production receiver validates worker image and heartbeat
+
+**Done:** Added bounded production runtime verification after deploy: both legacy API/worker containers must run the accepted server image identity, and the queue heartbeat must become fresh. A failed check enters existing rollback handling. Added tests rejecting wrong API image, wrong/stopped worker and failed heartbeat. All 13 release tests pass in local network-disabled Linux; actionlint and whitespace clean. Read-only staging probe independently reported available=True, worker_alive=True, heartbeat age 3 seconds.
+
+**Limits:** This targets the current single-worker legacy topology. Aggregate heartbeat does not prove each worker in a future replica pool or successful completion of every task. Not installed on production; installer, whole-stack rehearsal and other release gates remain open.
+
+**Account blocker:** At the user's request, retried failed Test CI once. New test-gate job 111151414284 again never started and reports the same failed-payment/spending-limit annotation. PR #21 remains unmerged; stop repeated retries until account state changes. Continue independent local work on codex/production-preparation, whose changes must be reviewed after its dependency.
+
+**Resume:** `docker run --rm --network none --mount 'type=bind,source=H:\Mento gpt\Mento,target=/work,readonly' --workdir /work --entrypoint python mento-api:551345c5b617 -m unittest discover -s scripts/ci -p 'test_*.py'`. Production promotion remains false.
+
+---
+
 ## 2026-10-03 — Web migration failure injection verified
 
 **Done:** Added Linux failure-injection tests for unsupported atomic exchange and a source file changing during copy. Both abort with the original current directory still serving; the writer's newer content is preserved. All 12 release-tooling tests pass in the network-disabled local Linux image. This does not replace the requirement to stop concurrent writers during an actual migration.

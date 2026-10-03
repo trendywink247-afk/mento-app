@@ -100,6 +100,13 @@ No production identity or receiver has been activated by this change.
 
 ## Activation and release checklist
 
+The receiver's production verification targets the current legacy container names:
+API and worker must both run the accepted image identity, followed by a fresh
+Procrastinate queue heartbeat within a bounded wait. Failure triggers runtime
+rollback. This is a single-worker readiness signal, not task-delivery proof or
+per-replica health; update the contract before moving to Balanced container names
+or multiple workers. Test actual queued job completion independently.
+
 For the legacy web-directory prerequisite, `deploy/web-release-layout.py` is an
 operator preparation tool, not a CI deployment step. With promotion locked and all
 web writers stopped, run it on Linux with `/opt/mento-console` as the explicit root.

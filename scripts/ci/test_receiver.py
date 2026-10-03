@@ -6,6 +6,7 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location("receiver", Path(__file__).resolve().parents[2] / "deploy/ci-receiver.py")
 receiver = importlib.util.module_from_spec(spec)
@@ -13,6 +14,23 @@ spec.loader.exec_module(receiver)
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_production_requires_matching_api_worker_and_heartbeat(self):
+        expected = "sha256:" + "a" * 64
+        healthy = json.dumps([{"Image": expected, "State": {"Running": True}}])
+        wrong = json.dumps([{"Image": "sha256:" + "b" * 64, "State": {"Running": True}}])
+        stopped = json.dumps([{"Image": expected, "State": {"Running": False}}])
+        for snapshots in [(wrong, healthy), (healthy, wrong), (healthy, stopped)]:
+            with self.subTest(snapshots=snapshots), patch.object(receiver.subprocess, "check_output", side_effect=snapshots), patch.object(receiver, "run") as run:
+                with self.assertRaises(ValueError):
+                    receiver.verify_production_runtime(expected)
+                run.assert_not_called()
+        with patch.object(receiver.subprocess, "check_output", side_effect=[healthy, healthy]), patch.object(receiver, "run") as run:
+            receiver.verify_production_runtime(expected)
+            self.assertEqual(run.call_args.args[:4], ("docker", "exec", "mento-worker-prod", "python"))
+        with patch.object(receiver.subprocess, "check_output", side_effect=[healthy, healthy]), patch.object(receiver, "run", side_effect=receiver.subprocess.CalledProcessError(1, "heartbeat")):
+            with self.assertRaises(receiver.subprocess.CalledProcessError):
+                receiver.verify_production_runtime(expected)
+
     def test_image_archive_must_import_only_the_expected_source_tag(self):
         sha = "a" * 40
         for tag, revision, valid in [(f"mento-api:{sha[:12]}", sha, True),
