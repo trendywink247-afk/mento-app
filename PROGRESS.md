@@ -4,6 +4,26 @@
 
 ---
 
+## 2026-10-03 — Architecture book crosswalk and native regression
+
+**Done:** Re-read the original H:\Mento gpt\Mento-Architecture-Book.html, including chapter 7.1. Added docs/ARCHITECTURE_BOOK_ALIGNMENT.md and linked it from README/cookbook. Balanced remains the near-term baseline; two-VPS staging extends it, while the larger enterprise topology is a later measured stage. Original book unchanged.
+
+**Blocker:** PR #13 native run 37078386018 failed locating composer-send. Screenshot shows the composer displaced directly below the header while the keyboard is open; do not call the earlier native success conclusive. Downloaded artifacts under .local/native-failure-37078386018 for diagnosis. All non-native checks pass. PR #14 documentation checks pass.
+
+**Next:** Fix native layout/accessibility based on artifacts, validate and resume gated integration.
+
+---
+
+## 2026-10-03 — README and operations cookbook
+
+**Done:** Updated the stale README stack, local ports, self-hosted server roles and release status. Added `docs/mento-cookbook.html`, using the user-provided Desktop Ops cookbook only as a read-only style reference. Includes existing current/target architecture images with explicit snapshot dates, local/verification recipes, VPS access, release/recovery, scaling stages and iOS gates. Chromium validation at 1440 and 390 pixels: zero page errors, no page overflow, no broken images, anchors or local file links; screenshots visually inspected. Desktop files unchanged.
+
+**Delivery:** Documentation is on `codex/operations-cookbook`, separate from the running release-foundation checks. Integrate after PR #13. Production preflight: API readiness 200, crisis freshness 503 with last hook September 28; latest transferred backup October 2; production worker still absent. Do not mistake the freshness failure for proof of either working or broken end-to-end hooks.
+
+**Resume:** Open `docs/mento-cookbook.html`; inspect `gh pr checks 13`, finish the release foundation, then integrate this documentation branch. Continue through staged release acceptance before production promotion.
+
+---
+
 ## 2026-10-03 — Native layout regression follow-up
 
 **Evidence:** Run 37078386018 built/installed the APK but failed locating composer-send. Its screenshot shows the composer displaced directly below the header with the keyboard open. All API/web/release-tooling checks passed. The kit nests a percentage-height content view inside its keyboard wrapper; our Channel did not constrain that wrapper with flex.

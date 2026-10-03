@@ -1,135 +1,111 @@
 # Mento
 
-**An anonymous, low-friction emotional-support app.** Open it in a hard moment and you're talking to a real human in under 30 seconds — no login, no name, no judgment. UPSC aspirants are our first community; the product is the conversation.
+An anonymous, low-friction emotional-support application with a shared onboarding base for members and mentors. The current v1 is 18+ anonymous support. UPSC, NEET and JEE are the community direction; verified professional mentoring, payments and broader sectors require their own agreed scope.
 
-> First-time here? The durable project brain is **`CLAUDE.md`**. The "what do we build and why" decisions live in **`docs/DECISIONS.md`** (it wins over the PRD and mockups on any conflict). The restart-from-anywhere log is **`PROGRESS.md`**.
+**Start here:** [Operations cookbook](docs/mento-cookbook.html) · [Current progress](PROGRESS.md) · [Product decisions](docs/DECISIONS.md) · [Release procedures](docs/RELEASE_PIPELINES.md)
 
----
+## Verified status — 3 October 2026
 
-## Status
+- Expo 54 and 55 upgrade PRs #11 and #12 merged after successful Android send/reply checks. Current mobile source uses **Expo 55 / React Native 0.83.10**.
+- Release foundation PR #13 introduces separate API/Test CI, staging acceptance and gated production promotion. At `f870d97`, API, web and release-tooling checks passed; native validation was still running when this snapshot was written. The latest native run subsequently failed at composer-send; PR #13 remains blocked. Check GitHub before releasing.
+- VPS staging runs API/worker source `551345c`, with separate Postgres/Valkey and non-production Stream credentials. Browser chat, age gate, recovery, signed safety hooks and isolated backup restoration passed. Corrupted artifacts were rejected and deliberate startup failure rolled back successfully.
+- Production application remains on the older deployment. Its API is healthy, but no new job worker is running and the crisis-webhook freshness probe is stale. Production promotion is disabled.
+- Remaining: full CI-driven staging rehearsal, production operational gates, dependency security findings, load/device acceptance and iOS/App Store readiness. Passing tests are not an enterprise launch certification.
 
-**v1 (Module A) is built and running locally.** The full anonymous-support loop works end-to-end and is verified continuously on Expo web (Playwright) + pytest:
+## Architecture
 
-- Cinematic onboarding (single-route journey over an ambient shader sky, living mascot, haptics) → anonymous persona → **live 1:1 Stream chat** in ~5s.
-- **Server-side crisis enforcement** on the message path (Stream webhooks — un-bypassable from the client), verified India helplines.
-- Conversation controls (PIN lock, Away Mask, Quiet Pause, honest End/Wipe with real server-side deletion, Report/Block → moderation queue).
-- End-of-conversation reflection (private, no points), save-to-Mentor-Notes, Journals hub (Mood/Finance/Gratitude/Mentor Notes), My Chats, Mentor discovery + Personal requests, Profile with live theme switching + Start fresh.
+The original **Balanced Architecture Book** remains the baseline. See the [book-to-implementation crosswalk](docs/ARCHITECTURE_BOOK_ALIGNMENT.md) for exact decisions, current gaps and the later two-VPS additions.
 
-Not yet: Razorpay wiring (creds), AI Journal Assistant (LLM decision), native device verification (Maestro), Module B mentor portal. Exact current state: `PROGRESS.md`.
+[Current architecture image](docs/diagrams/mento-current-architecture.png) · [Target architecture image](docs/diagrams/mento-desired-architecture.png)
 
-## Project layout
+![Current architecture: dated 2 October snapshot](docs/diagrams/mento-current-architecture.png)
 
+The diagram is the **2 October topology snapshot**. Android acceptance and release tooling have progressed since it was drawn; the status above and `PROGRESS.md` record that delta. The current UI uses Stream Chat; an own-chat backend is not a completed UI migration.
+
+![Target architecture: proposed growth design](docs/diagrams/mento-desired-architecture.png)
+
+The target is a design, not the deployed state. See the [architecture audit](docs/ARCHITECTURE_REVIEW_2026-10-02.md) and [enterprise plan](docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md) for evidence, stages and unresolved decisions.
+
+## Environments and connections
+
+| Environment | Address | Actual role |
+|---|---|---|
+| Development | `H:\Mento gpt\Mento`; web `18081`, API `18000` | Local development; isolated Docker Postgres `15432` and Valkey `16379` |
+| Production / VPS A | `129.121.122.28` | Nginx, static web, older FastAPI, self-hosted Postgres 16 and Redis 7; about 4 GB RAM / 2 CPU |
+| Staging + operations / VPS B | `31.42.125.238` | Restricted `staging.mento.chat`, API/worker, isolated Postgres/Valkey, Uptime Kuma, off-box backups; about 2 GB RAM / 2 CPU |
+| Chat transport | Stream Chat | Clients connect to Stream; signed server-to-server hooks enforce safety on the API |
+
+B's former IP was `87.232.72.79`; it is not the current connection address. Production backups transfer from A to B over pinned SFTP. These two servers are **not** an automatic failover cluster. Independent monitoring and encrypted recovery storage remain target improvements. See [environment ownership](docs/ENVIRONMENTS.md).
+
+## Repository map
+
+```text
+apps/mobile/          Expo Router app: onboarding, member/mentor chat, journals, staff UI
+  components/         UI, motion, onboarding and chat components
+  lib/                API client, identity/session and domain helpers
+  e2e/                Browser flows and Maestro native tests
+services/api/         FastAPI, SQLAlchemy 2, Alembic, jobs and pytest
+scripts/local/        H-workspace launchers and isolated test database
+scripts/ci/           Exact-commit release policy and archive tests
+deploy/               Compose, SSH access, receiver, staging and recovery scripts
+.github/workflows/    API CI, Test CI, Maestro, Staging Release, Production Release
+docs/                 Decisions, architecture, enterprise plan, diagrams and cookbook
+PROGRESS.md           Dated evidence, open work and resume instructions
 ```
-mento/
-  apps/mobile/          Expo SDK 52 React Native app (iOS/Android primary, web = dev/test surface)
-    app/                expo-router routes (onboarding journey, chat, (tabs): chats/journals/mentors/profile)
-    components/         UI + art/ (SVG mascot & scenes) + motion/ (ambient sky, primitives) + chat/ + onboarding/
-    theme/              tokens.ts (colour/type/space) · motion.ts (durations/easings) · companion accent system
-    lib/                typed API client, session store, haptics, reduced-motion
-  services/api/         FastAPI backend (Python 3.12, SQLAlchemy 2 + Alembic, Postgres + Redis via docker compose)
-    app/routers/        onboarding · match · conversation · stream_hooks (crisis) · moderation · journals · listeners
-    scripts/            seed_listeners · configure_stream (webhooks)
-    tests/              pytest (incl. matcher-concurrency + crisis-webhook proofs)
-  docs/
-    PRD.md              Product requirements (v2.0)
-    DECISIONS.md        Authoritative reconciliation + founder rulings (source of truth)
-    ALIGNMENT.md        PRD × mockups × build-now table
-    MOCKUP_INVENTORY.md Pixel-verified catalog of all 64 UI screens
-    Mockups/            64 source screens
-  .github/workflows/    api-ci.yml — compose up → alembic upgrade + check → pytest on every services/api push
-  CLAUDE.md  AGENTS.md  PROGRESS.md
-```
 
-## Stack
+## Local development
 
-| Layer | Choice |
-|---|---|
-| Mobile | Expo SDK 52 (React Native, TypeScript strict) + expo-router 4 |
-| Motion | react-native-reanimated 3.16 + **@shopify/react-native-skia 1.5** (ambient SkSL shader; lazy CanvasKit on web) + expo-haptics, all driven by `theme/motion.ts` tokens |
-| Backend | FastAPI (Python 3.12), Pydantic v2, SQLAlchemy 2.0 + Alembic |
-| Data | Postgres 16 + Redis 7 (docker compose locally; DigitalOcean managed in staging/prod) |
-| Messaging | Stream Chat (presence/typing/read-state; crisis scan enforced via its webhooks) |
-| Payments | Razorpay — contributions only, transparently disabled until creds land |
-| Analytics | PostHog (never message content / PII; crisis sessions excluded from retention) |
+Use only the H: checkout. Prerequisites: Node 22 (CI parity), npm, Python 3.12+, PowerShell 7 and Docker Desktop. If dependencies are not installed, create `services/api/.venv`, install `services/api/requirements-dev.txt` into it, and run `npm ci` in `apps/mobile`. Never copy production secrets into a development configuration.
 
-MSG91 is reserved for mentor verification in the deferred Module B — **not** in the v1 user path. Full rationale in `CLAUDE.md`.
-
----
-
-## Running locally
-
-### Prerequisites
-- Node 20+ and npm · Python 3.12+ · Docker Desktop
-- A browser (web is the dev/test surface) — or Expo Go / a simulator for native
-
-### 1. Backend — `services/api`
 ```powershell
-cd services/api
-# .env: copy .env.example, fill in at least JWT_SECRET; STREAM_* enables real chat (stub mode without)
-docker compose up -d --wait                    # Postgres 16 + Redis 7
-.\.venv\Scripts\python.exe -m alembic upgrade head
-.\.venv\Scripts\python.exe -m scripts.seed_listeners   # 3 approved listeners (+ Stream upsert)
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000   # docs at /docs
+Set-Location 'H:\Mento gpt\Mento'
+pwsh -File scripts/local/workspace.ps1 init
+# Run each service in its own terminal, from the same folder:
+pwsh -File scripts/local/workspace.ps1 api
+pwsh -File scripts/local/workspace.ps1 worker
+pwsh -File scripts/local/workspace.ps1 web
 ```
-(First time: `python -m venv .venv` + `pip install -r requirements-dev.txt`.)
 
-⚠️ Running `pytest` truncates the dev DB's listeners (test fixtures) — re-run `scripts.seed_listeners` afterwards or matching returns 503.
+Open <http://localhost:18081>. These wrappers ignore copied application `.env` files, use `mento_dev`, and run tests against `mento_test`. Local push is disabled. The opt-in `.local/stream.env` is ignored by Git; its non-production Stream app currently points at staging hooks. Do not repoint those hooks or run simultaneous independent local live-chat tests against it. Use hermetic tests or a separate development Stream application.
 
-### 2. Mobile — `apps/mobile`
+## Verify a change
+
 ```powershell
-cd apps/mobile
-# .env: EXPO_PUBLIC_API_URL=http://localhost:8000  (+ EXPO_PUBLIC_STREAM_API_KEY for real chat)
-npm install
-npx expo start --web --port 8081    # add -c after dependency changes
+# From repository root:
+pwsh -File scripts/local/workspace.ps1 status
+pwsh -File scripts/local/workspace.ps1 check
+pwsh -File scripts/local/workspace.ps1 test
+.\services\api\.venv\Scripts\python.exe -m unittest discover -s scripts/ci -p 'test_*.py'
+# From apps/mobile:
+npx tsc --noEmit
+npm run test:route
+npm run test:question
+npm run test:placement
+npm run test:bubble
 ```
-Open http://localhost:8081. Returning sessions land on My Chats — use Profile → **Start fresh** (or incognito) to replay onboarding.
 
-### 3. Crisis-webhook enforcement (live-testing only)
-The crisis scan is enforced by Stream calling our API server-to-server, so live Stream needs a public URL:
-```powershell
-cloudflared tunnel --url http://localhost:8000          # copy the trycloudflare URL
-.\.venv\Scripts\python.exe -m scripts.configure_stream https://<tunnel-url>
-```
-Per-session quick tunnels are a dev convenience; staging needs a stable URL (tracked in `PROGRESS.md`).
+Browser acceptance runs at 390 × 844, normally and with reduced motion, with zero page errors. Native CI verifies sent messages and mentor replies on an Android emulator. iOS physical-device/TestFlight acceptance remains separate. Use the isolated test wrapper instead of running raw pytest against a development or production database.
 
-### Verification conventions
-- Backend: `pytest` (hermetic Stream stubs; Postgres required — concurrency tests use row locks).
-- Mobile: `npx tsc --noEmit` + Playwright walkthroughs on Expo web at 390×844, asserting **0 console errors** (see PROGRESS for the established flows).
-- CI: `.github/workflows/api-ci.yml` runs compose → `alembic upgrade head` → `alembic check` → pytest on every `services/api` push.
+## Release and recovery
 
----
+1. Develop locally, verify touched layers, and open/review a PR.
+2. Merge only with current successful checks; then require successful **master-push checks for the exact SHA**.
+3. Run Staging Release: build once, checksum, deploy, migrate, verify safety/restore/browser behavior, and publish the accepted candidate.
+4. Complete the production checklist before enabling promotion. Production Release reuses that accepted candidate without rebuilding.
+5. Observe errors, latency, worker backlog and saturation before expanding exposure.
 
-## Env vars
+The full commands, retry-artifact rules, SSH restrictions and rollback limitations are in [RELEASE_PIPELINES.md](docs/RELEASE_PIPELINES.md) and the [cookbook](docs/mento-cookbook.html). Database migrations must remain backward-compatible: runtime rollback does not automatically reverse schema changes. Legacy automatic production workflows are disabled.
 
-Never commit real secrets. `.env` files are gitignored; each package ships an `.env.example`.
+## Safety and configuration
 
-### Backend (`services/api/.env`)
-| Var | Purpose |
-|---|---|
-| `DATABASE_URL` | Postgres (defaults to the compose instance `postgresql+psycopg://mento:mento@localhost:5432/mento`) |
-| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` / `DB_POOL_TIMEOUT` / `DB_POOL_RECYCLE` / `DB_STATEMENT_TIMEOUT_MS` | Connection pool tuning (defaults 10/10/5s/1800s/5000ms; per-process — keep workers × (size+overflow) under Postgres `max_connections`; every statement is cut off server-side after the timeout) |
-| `REDIS_URL` | Redis — backs the rate limiter (`app/ratelimit.py`); defaults to compose |
-| `RATE_LIMIT_ENABLED` | Default `true`; limiter fails open (with a warning) if Redis is down |
-| `JWT_SECRET` | Anonymous session + listener tokens (HS256). **Outside dev the API refuses to boot with the default value.** |
-| `STREAM_API_KEY` / `STREAM_API_SECRET` | Stream Chat server credentials — absent = dev stub mode. **Outside dev the API refuses to boot without them** (the crisis scan would be silently off). |
-| `STREAM_TIMEOUT_SECONDS` | Outbound Stream API budget (default 3s) |
-| `ADMIN_TOKEN` | Guards the moderation queue + the Personal-request accept/decline stand-in; empty = disabled |
-| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | Payments (contributions) — not yet wired |
-| `POSTHOG_API_KEY` / `POSTHOG_HOST` | Analytics (no message content / PII) |
+Never commit `.env`, private keys, tokens or user/message data. `EXPO_PUBLIC_*` variables are bundled into the client and cannot hold secrets. API role keys and Stream server credentials stay server-side. Read package `.env.example` files for configuration and `CLAUDE.md` for implementation conventions.
 
-### Mobile (`apps/mobile/.env`)
-| Var | Purpose |
-|---|---|
-| `EXPO_PUBLIC_API_URL` | Backend base URL |
-| `EXPO_PUBLIC_STREAM_API_KEY` | Stream Chat client key (publishable) |
-| `EXPO_PUBLIC_POSTHOG_KEY` / `EXPO_PUBLIC_POSTHOG_HOST` | Analytics |
+Preserve anonymity, 18+ age gating, crisis enforcement, honest payment states, deletion semantics and PII minimization. Keep a single shared onboarding base; do not infer a new bureaucrat-specific onboarding flow. Product decisions are authoritative over older PRDs and mockups.
 
----
+## Working references
 
-## Trust & Safety
-
-This is a mental-health-adjacent product. Crisis handling (server-side, fail-open-but-never-silent), honest payments, anonymity on **both** sides of the chat, age-gating, and "privacy policy matches reality" are **non-negotiable** and specified in `CLAUDE.md` → *Trust & Safety*. Read that before touching chat, payments, or onboarding.
-
-## Contributing / working rhythm
-
-Conventional commits; each unit proven (tests/Playwright) before the next. At the end of every meaningful unit: update `PROGRESS.md`, commit with a clear message, and note the exact resume command. `PROGRESS.md` is designed so anyone (including a fresh AI session) can pick up cold.
+- [Cookbook](docs/mento-cookbook.html): start, verify, inspect, release, recover and troubleshoot.
+- [Decisions](docs/DECISIONS.md), [PRD](docs/PRD.md), [project brief](CLAUDE.md).
+- [Release pipeline contract](docs/RELEASE_PIPELINES.md), [staging operations](deploy/staging/README.md).
+- [Enterprise and iOS roadmap](docs/ENTERPRISE_PLATFORM_PLAN_2026-10-02.md).
+- [Progress and handoff](PROGRESS.md): dated facts; verify live state before acting.
