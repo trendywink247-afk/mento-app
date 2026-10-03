@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Backup content audit and activation boundary
+
+**Done:** Audited message partitions, saved mentor-note writes, report/feedback fields, safety signal writes and push retry payloads. Added docs/BACKUP_CONTENT_POLICY.md with source evidence and acceptance requirements. Chat-only exclusions are insufficient: journals explicitly copy message bodies. Current push retries contain rendered closed templates; safety matched_terms stores a signal enum, not raw message text.
+
+**Validation:** Reviewed source paths and journal write behavior; git diff --check passed. Documentation only: no application behavior or live data changed. Recent Dependabot CI is green but native execution is skipped there, so it is not device acceptance.
+
+**Next / decisions:** Build synthetic partition exclusion tests; resolve saved-note/report narrative recovery semantics and off-server identity custody before live activation. Preserve existing backups and safety enforcement. Production remains locked; accepted staging remains bdef06a. Resume in H:\Mento gpt\Mento by reading this entry and docs/BACKUP_CONTENT_POLICY.md.
+
+---
 ## 2026-10-03 — Full-schema encrypted restore verified and integrated
 
 **Done:** PR #34 merged green. PR #35 extended encrypted recovery to the current API image: migrate an empty database to Mento head, add synthetic relational fixtures, dump/encrypt/decrypt/restore, compare Alembic revision, then remove only drill tables and run alembic check. Test CI 37122366037 release-tooling and all required PR checks passed; PR #35 merged. Logs confirm no new upgrade operations and successful restored schema/relational checks.
