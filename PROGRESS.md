@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-04 — Native candidate updated to required current base
+
+**Done:** GitHub reported #42 BEHIND after #49 integration. Merged master 8ee2f8c into the native branch without conflicts; candidate is e1ed303 (resolve full head from PR). This incorporates actual backup code/tests, not a progress-only update. Resolved production/preview Expo configuration regression test passed locally after integration. Existing untracked architecture book preserved.
+
+**Pending:** Fresh exact-head API, Test and native checks must pass before #42 integration. No release dispatch while exact master native evidence is pending; no production or VPS changes. Avoid other master merges until this candidate is accepted, to prevent repeated strict-base updates. Next: inspect #42 current-head checks, integrate green candidate, then let its exact master push checks finish before full staging acceptance. Production remains locked; no user input required for this CI state.
+
+---
 ## 2026-10-04 — Backup recovery and overlap changes integrated
 
 **Verified:** PR #48 merged at 27763f6 after Test CI 37158558324 and API CI 37158558301 passed. Actual application chat exclusion, retained notes/reports/block state and both schema recovery cases passed. PR #49 merged at 8ee2f8c after Test CI 37159012821 and API CI 37159012754 passed; Linux log confirms overlap refused, lock released after failure, partial dump removed and copy before retention. No live backup activation or production migration.
