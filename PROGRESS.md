@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-03 — Authenticated backup recovery utility prepared
+
+**Done:** PR #32 merged after green checks. Added decrypt-backup.sh for an authorized recovery host: authenticate/decrypt completely, validate gzip, then publish private output without overwrite; never import SQL. Expanded synthetic tests cover byte-exact recovery, 0600 permissions, wrong identity, truncated ciphertext, non-gzip plaintext, overwrite refusal and partial cleanup. Disposable Linux validation passed. Existing Test CI runs this suite.
+
+**Limits:** No persistent recovery identity created, no live backup changed, no SQL imported, and no VPS installation. Decryption alone is not proof of database/application restore. Key custody, content exclusions, restore integration and retention remain open; production stays locked.
+
+**Next:** Review CI and extend isolated database restore coverage using synthetic encrypted dumps; retain explicit distinction between prepared tools and deployed backup protection.
+
+---
 ## 2026-10-03 — Backup encryption utility prepared and round-trip tested
 
 **Done:** PR #31 merged after all required checks passed. Added an explicit age encryption preparation utility: gzip validation, private output, atomic no-overwrite publication and retained plaintext input. A disposable Linux test with generated ephemeral identity passed byte-exact decrypt round-trip, 0600 permissions, overwrite refusal and invalid-recipient cleanup. Added CI coverage; actionlint, shell syntax and whitespace passed. No real backup or persistent key created/changed.
