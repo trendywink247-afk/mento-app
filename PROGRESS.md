@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-10-04 — Phase 1 focused execution: deletion replay and real inter-VPS recovery transport
+
+**Founder direction:** Finish phase 1 before later phases. Asked for recovery vault location; founder said create it on VPS. No vault/private key was installed on either VPS: a VPS-hosted vault alone cannot establish recovery independent of both servers; an independently held unlock/recovery secret remains necessary. Existing identity is Windows-user DPAPI protected, not independently recoverable custody.
+
+**Implemented:** PR62 current 41e652b adds pseudonymous erasure receipts (domain-separated UUID digest and timestamp) in the same transaction as account deletion, no raw identifier/content/FK. Migration refuses dropping nonempty receipts. Offline reconciliation validates digests, refuses active mentor identities, removes erased members using the existing inventory and corrects seats without contacting providers or emitting chat events. Added tests for capture, transactional rollback, malformed input, idempotent replay and other-member preservation. No production migration, replica or public replay endpoint. Durable off-primary receipt replication and coverage proof remain unfinished.
+
+**Validated:** Current API CI 37214408935 lint and PostgreSQL tests passed. Test CI 37214408969 release-tooling (including current/baseline encrypted recovery/forward migration) passed; web/native acceptance still pending. Fixed formatter failure on previous head; no failed gate bypassed. Native run 37214408916 still required.
+
+**Real transport evidence:** On VPS A used only public recipients to encrypt a synthetic gzip sample, copied via configured oldbox SFTP to VPS B, verified full SHA-256 readback, downloaded the ciphertext and authenticated/decrypted locally using the existing DPAPI-held identity in memory. Payload comparison passed. Remote synthetic ciphertext retained at from-new-box/transport-drill-20261004/63d4f56ca500045380de2ec80be07c37defae9d2dd646857f2f56da4bd01166a.age. Temporary A directory /tmp/mento-recovery-transport.rgj6ZF removed after exact-path check; existing archives untouched. No private identity went to either VPS. This proves transport and recovery with the current computer, not independent key custody or real-data recovery.
+
+**Live preflight:** Production API, web symlink, rollback tag, operator ownership and disk passed. Safety webhook freshness, worker running and queue tables failed. Keep promotion disabled. Latest accepted staging c1fa271. Next: complete PR62 exact-head acceptance, durable receipt export/replication and isolated complete-coverage replay, key custody, six-hour activation/alerts and coordinated release acceptance. Resume H:\Mento gpt\Mento on codex/recovery-erasure-ledger; preserve book and Desktop. Phase 1 is not complete.
+
+---
 ## 2026-10-04 — Native fix staged and verified; rendered Balanced validation added
 
 **Verified:** Full Staging Release 37211166211 succeeded for c1fa27166e3dae8204db12ce0f22d4690823e2b0. Restricted receiver independently verified that exact artifact. Latest accepted staging is c1fa271, including the keyboard fix. Production remains disabled.
