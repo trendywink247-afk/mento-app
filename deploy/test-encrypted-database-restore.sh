@@ -46,23 +46,14 @@ CREATE TABLE drill_messages_default PARTITION OF drill_messages DEFAULT;
 INSERT INTO drill_messages VALUES (1, 'EXCLUDED_SENTINEL_CURRENT'),
  (11, 'EXCLUDED_SENTINEL_FUTURE'), (99, 'EXCLUDED_SENTINEL_DEFAULT');
 SQL
-# This is a drill, not a production exporter: concurrent partition DDL/snapshot
-# coordination and saved-note/report policies still need separate acceptance.
-docker exec "$name" psql -X -At -U drill -d source -c \
-  "SELECT format('%I.%I', n.nspname, c.relname) FROM pg_partition_tree('public.drill_messages') p JOIN pg_class c ON c.oid=p.relid JOIN pg_namespace n ON n.oid=c.relnamespace ORDER BY c.oid;" > "$temp/exclusions"
-test "$(wc -l < "$temp/exclusions")" -eq 4
+roots=(public.drill_messages)
 if [ -n "${RESTORE_IMAGE:-}" ] && [ "${BASELINE_REVISION:-head}" = head ]; then
   docker run --rm -i --network "container:$name" --memory 256m \
     -e ENV=dev -e DATABASE_URL=postgresql+psycopg://drill@127.0.0.1:5432/source \
     "$RESTORE_IMAGE" python - seed < "$root/deploy/backup-content-fixture.py"
-  docker exec "$name" psql -X -At -U drill -d source -c \
-    "SELECT format('%I.%I', n.nspname, c.relname) FROM pg_partition_tree('public.chat_messages') p JOIN pg_class c ON c.oid=p.relid JOIN pg_namespace n ON n.oid=c.relnamespace;" >> "$temp/exclusions"
+  roots+=(public.chat_messages)
 fi
-exclusions=()
-while IFS= read -r relation; do
-  exclusions+=("--exclude-table-data=$relation")
-done < "$temp/exclusions"
-docker exec "$name" pg_dump -U drill -d source "${exclusions[@]}" | gzip > "$temp/source.sql.gz"
+bash "$root/deploy/export-recovery-snapshot.sh" "$name" drill source "$temp/source.sql.gz" "${roots[@]}"
 if gzip -dc "$temp/source.sql.gz" | grep 'EXCLUDED_SENTINEL'; then
   echo 'FAIL: message sentinel leaked into dump'; exit 1
 fi
