@@ -484,3 +484,33 @@ def test_isolated_recovery_reconciles_old_snapshot_without_provider_calls(db_ses
         assert s.get(ListenerProfile, lid).active_conversations == 1
         assert reconcile_restored_members(s, {recovery_digest(me)}) == 0
         assert s.get(ErasureReceipt, recovery_digest(me)) is not None
+
+
+def test_recovery_rejects_malformed_receipts_before_changes(db_session):
+    from app.services.recovery_reconciliation import reconcile_restored_members
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        s.commit()
+        with pytest.raises(ValueError):
+            reconcile_restored_members(s, {recovery_digest(me), "bad"})
+        assert s.get(User, me) is not None
+        assert s.get(ErasureReceipt, recovery_digest(me)) is None
+
+
+def test_recovery_reconciliation_is_transactional(db_session):
+    from app.services.recovery_reconciliation import reconcile_restored_members
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        lid = _listener(s, "Open River", active=1)
+        mine = _world(s, me, lid, "me")
+        s.commit()
+        reconcile_restored_members(s, {recovery_digest(me)})
+        s.flush()
+        s.rollback()
+    with TestSession() as s:
+        assert s.get(User, me) is not None
+        assert s.get(Conversation, mine["active"]).status == ConversationStatus.active
+        assert s.get(ListenerProfile, lid).active_conversations == 1
+        assert s.get(ErasureReceipt, recovery_digest(me)) is None

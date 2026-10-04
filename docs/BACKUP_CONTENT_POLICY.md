@@ -71,3 +71,11 @@ Do not automatically prune receipts until every backup that could resurrect the
 associated account has expired and expiry is verified. A downgrade refuses to
 drop a nonempty receipt table. No live migration or new backup schedule is enabled
 by this change. The public erasure policy needs reconciliation before activation.
+`services/recovery_reconciliation.py` supplies database-only replay for an
+isolated restored database. It validates digest syntax before changing rows,
+refuses live mentor identities for separate review, adjusts active seats, and
+uses the existing deletion/detachment inventory. The caller owns the transaction.
+It neither contacts Stream nor publishes chat events. There is deliberately no
+public endpoint or automatic production invocation. A supplied set of digests is
+not evidence that all deletions were captured: durable replication and coverage
+verification remain required. Keep all restored jobs and serving processes off.
