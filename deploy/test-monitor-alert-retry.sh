@@ -23,6 +23,21 @@ printf '%s' "$PROBE_CODE"
 MOCK
 chmod +x "$temp/bin/curl"
 export PATH="$temp/bin:$PATH"
+export MONITOR_CHECK_ONLY=1
+if bash "$root/deploy/external-monitor.sh"; then
+  echo 'FAIL: probe-only mode accepted unhealthy endpoint'; exit 1
+fi
+test ! -e "$ALERT_LOG"
+test ! -e "$STATE_DIR"
+export PROBE_CODE=200
+bash "$root/deploy/external-monitor.sh"
+export CRISIS_FAIL=1
+if bash "$root/deploy/external-monitor.sh"; then
+  echo 'FAIL: probe-only mode accepted crisis transport failure'; exit 1
+fi
+test ! -e "$ALERT_LOG"
+test ! -e "$STATE_DIR"
+export MONITOR_CHECK_ONLY=0 PROBE_CODE=500 CRISIS_FAIL=0
 if bash "$root/deploy/external-monitor.sh"; then
   echo 'FAIL: failed delivery reported success'; exit 1
 fi
@@ -60,4 +75,10 @@ test "$(cat "$STATE_DIR/api-crisis-reachable")" = down
 export ALERT_FAIL=0
 bash "$root/deploy/external-monitor.sh"
 test "$(cat "$STATE_DIR/api-crisis-reachable")" = up
+before=$(find "$STATE_DIR" -type f -exec sha256sum {} \; | sort)
+count=$(wc -l < "$ALERT_LOG")
+MONITOR_CHECK_ONLY=1 bash "$root/deploy/external-monitor.sh"
+test "$(find "$STATE_DIR" -type f -exec sha256sum {} \; | sort)" = "$before"
+test "$(wc -l < "$ALERT_LOG")" = "$count"
 echo 'PASS: failed outage/recovery alerts retry; delivered states deduplicate'
+echo 'PASS: probe-only checks report failures without alerts or state changes'
