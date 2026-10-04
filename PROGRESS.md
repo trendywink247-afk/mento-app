@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Integrated encrypted snapshot merged; full staging dispatched
+
+**Integrated:** PR55 exact head 099ea38 passed refreshed API/Test (37198829116/37198829141) and merged as c402c8b. Current master gates are running. PR57 head dba7339 passed refreshed API/Test; after PR55 integration its branch was updated to master, then recovery-policy operator instructions added as 50dc907. Fresh checks are required before merge. No failed checks bypassed.
+
+**Release:** Master 7f6b350 exact API/Test/native all passed (37198790210/37198790211/37198790214). Dispatched complete Staging Release 37200457941 for that SHA; outcome and independent artifact verification pending. Until accepted, latest verified staging remains 781ccd3. No production promotion.
+
+**Recovery preparation:** Documented snapshot/encryption/copy sequence, public-only source recipients, digest verification limits, one-writer requirement, local-backend test evidence and absence of scheduled activation. Inspected current erasure service: audit retains counts without member identifiers, so it cannot reconstruct post-snapshot deletion requests. Durable reconciliation needs a separate mechanism; do not treat the current audit as a deletion ledger. Off-device key custody and operational acceptance still block six-hour activation.
+
+**Next:** Inspect PR57 latest checks, integrate only green head; run master gates/full staging and independently verify accepted artifact. Diagnose native transient geometry without declaring a permanent fix from green runs. Continue deletion-recovery preparation and phases 2–5. Resume H:\Mento gpt\Mento on the implementation branch, not this log-only branch; preserve untracked book and Desktop. Automation remains active.
+
+---
 ## 2026-10-04 — Backup readback regression passed; native diagnostics integrated
 
 **Verified:** PR57 head 66d338d passed API 37197368609 and Test 37197368648, including same-size/same-time corrupt-object rejection, byte readback and idempotent retry. This is actual rclone local-backend evidence, not live off-host recovery. PR56 head 99e0351 passed native 37195459709 attempt 2 as well as attempt 1, with all required checks green; reviewed and merged diagnostics as master 7f6b350. No claim of permanent native fix.
