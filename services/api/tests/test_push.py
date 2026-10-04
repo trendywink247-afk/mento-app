@@ -624,3 +624,228 @@ def test_dead_member_token_leaves_the_same_devices_listener_row(monkeypatch):
     with TestSession() as s:
         rows = s.scalars(select(PushToken)).all()
         assert [(r.owner_kind, r.owner_id) for r in rows] == [(PushOwnerKind.listener, lid)]
+
+
+@pytest.mark.parametrize(
+    "change", ["ended", "paused", "snoozed", "standing", "vetting", "watching"]
+)
+def test_retry_rechecks_current_delivery_policy(sent, monkeypatch, change):
+    from datetime import UTC, datetime, timedelta
+
+    from app.models.enums import MemberStatus
+
+    member = change in {"paused", "standing"}
+    kind = PushOwnerKind.member if member else PushOwnerKind.listener
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=kind)
+    # The first attempt fails and queues a real push.deliver job.
+    monkeypatch.setattr(
+        push, "_post_expo", lambda _: (_ for _ in ()).throw(push.httpx.ConnectError("offline"))
+    )
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid if member else uid)
+    assert _push_jobs() == [("push.deliver", "todo", 0)]
+    with TestSession() as s:
+        convo = s.get(Conversation, cid)
+        if change == "ended":
+            convo.status = ConversationStatus.ended
+        elif change == "paused":
+            convo.is_paused = True
+        elif change == "snoozed":
+            convo.snoozed_until = datetime.now(UTC) + timedelta(hours=24)
+        elif change == "standing":
+            s.get(User, uid).status = MemberStatus.suspended
+        elif change == "vetting":
+            s.get(ListenerProfile, lid).vetting_status = VettingStatus.suspended
+        s.commit()
+    if change == "watching":
+        monkeypatch.setattr(push, "_is_watching", lambda *_: True)
+    monkeypatch.setattr(push, "_post_expo", lambda msgs: sent.extend(msgs) or [{}] * len(msgs))
+    drain_push()
+    assert sent == []
+    assert _push_jobs() == []
+
+
+def test_retry_keeps_accepted_pause_exemption(sent):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.member, paused=True)
+    with TestSession() as s:
+        push.deliver(
+            s,
+            recipient_kind="member",
+            recipient_id=uid,
+            body="Open River is ready to talk",
+            data={"kind": "accepted", "conversation_id": cid, "stream_channel_id": None},
+        )
+    assert len(sent) == 1
+
+
+def test_retry_rejects_stale_request_and_wrong_recipient(sent):
+    from app.models.enums import RequestStatus
+
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+        req = ConversationRequest(
+            requester_id=uid, target_listener_id=lid, status=RequestStatus.declined
+        )
+        s.add(req)
+        s.commit()
+        rid = req.id
+    with TestSession() as s:
+        push.deliver(
+            s,
+            recipient_kind="listener",
+            recipient_id=lid,
+            body="Someone would like to talk with you",
+            data={"kind": "request", "request_id": rid},
+        )
+        push.deliver(
+            s,
+            recipient_kind="listener",
+            recipient_id=uid,
+            body="Someone sent a message",
+            data={"kind": "message", "conversation_id": cid},
+        )
+    assert sent == []
+
+
+def test_delayed_dead_token_does_not_delete_new_owner_registration(monkeypatch):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.member)
+        next_uid = _user(s, name="New Cove")
+        s.commit()
+
+    def reassign_then_report_dead(messages):
+        with TestSession() as s:
+            push.upsert_token(s, PushOwnerKind.member, next_uid, messages[0]["to"], "android")
+        return [{"status": "error", "details": {"error": "DeviceNotRegistered"}}]
+
+    monkeypatch.setattr(push, "ENABLED", True)
+    monkeypatch.setattr(push, "_is_watching", lambda *_: False)
+    monkeypatch.setattr(push, "_post_expo", reassign_then_report_dead)
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
+    with TestSession() as s:
+        row = s.scalars(select(PushToken)).one()
+        assert row.owner_id == next_uid
+
+
+def test_own_null_channel_message_push_and_presence_suppression(sent, monkeypatch):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+        convo = s.get(Conversation, cid)
+        convo.chat_backend = "own"
+        convo.stream_channel_id = None
+        s.commit()
+    monkeypatch.setattr(
+        push, "_is_watching", lambda *_: (_ for _ in ()).throw(AssertionError("Stream queried"))
+    )
+
+    class Presence:
+        count = 1
+
+        def hget(self, key, actor):
+            assert key == f"mento:chatp:{cid}" and actor == lid
+            return self.count
+
+        def set(self, *args, **kwargs):
+            return True
+
+    presence = Presence()
+    monkeypatch.setattr(ratelimit, "_redis", lambda: presence)
+    with TestSession() as s:
+        push.notify_message_for_channel(s, channel_id=cid, sender_stream_user_id=uid)
+    assert sent == []
+    presence.count = 0
+    with TestSession() as s:
+        push.notify_message_for_channel(s, channel_id=cid, sender_stream_user_id=uid)
+    assert len(sent) == 1
+    assert sent[0]["data"] == {"kind": "message", "conversation_id": cid, "stream_channel_id": None}
+    assert sent[0]["body"] == "Quiet Cove sent a message"
+    assert sent[0]["sound"] is None
+
+
+def test_crisis_wake_allows_ordinary_retry_without_crisis_payload(sent):
+    from datetime import UTC, datetime, timedelta
+
+    from app.services import snooze
+
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.listener)
+        convo = s.get(Conversation, cid)
+        convo.snoozed_until = datetime.now(UTC) + timedelta(hours=24)
+        s.commit()
+    with TestSession() as s:
+        assert snooze.end_for_crisis(s, cid, uid)
+        s.commit()
+    with TestSession() as s:
+        push.deliver(
+            s,
+            recipient_kind="listener",
+            recipient_id=lid,
+            body="Quiet Cove sent a message",
+            data={"kind": "message", "conversation_id": cid, "stream_channel_id": f"ch-{uid[:8]}"},
+        )
+    assert len(sent) == 1
+    assert sent[0]["body"] == "Quiet Cove sent a message"
+    assert set(sent[0]["data"]) == {"kind", "conversation_id", "stream_channel_id"}
+
+
+def test_delete_token_preserves_device_reassigned_at_delete_boundary():
+    """Race an actual re-registration after any read, immediately before SQL deletion."""
+    from sqlalchemy import event
+
+    from .conftest import test_engine
+
+    token = "ExponentPushToken[account-swap]"
+    with TestSession() as s:
+        old_uid, new_uid = _user(s), _user(s, name="New Cove")
+        _token(s, PushOwnerKind.member, old_uid, token)
+        s.commit()
+    raced = False
+
+    def reassign_before_delete(conn, cursor, statement, parameters, context, executemany):
+        nonlocal raced
+        if not raced and statement.lstrip().upper().startswith("DELETE FROM PUSH_TOKENS"):
+            raced = True
+            with TestSession() as concurrent:
+                push.upsert_token(concurrent, PushOwnerKind.member, new_uid, token, "android")
+
+    event.listen(test_engine, "before_cursor_execute", reassign_before_delete)
+    try:
+        with TestSession() as s:
+            push.delete_token(s, PushOwnerKind.member, old_uid, token)
+    finally:
+        event.remove(test_engine, "before_cursor_execute", reassign_before_delete)
+    assert raced, "the concurrent registration did not run at the delete boundary"
+    with TestSession() as s:
+        row = s.scalars(select(PushToken)).one()
+        assert row.owner_id == new_uid
+        # Its actual owner can still unregister normally.
+        push.delete_token(s, PushOwnerKind.member, new_uid, token)
+    with TestSession() as s:
+        assert s.scalars(select(PushToken)).all() == []
+
+
+def test_queued_retry_does_not_follow_token_to_new_account(sent, monkeypatch):
+    with TestSession() as s:
+        uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.member)
+        new_uid = _user(s, name="New Cove")
+        s.commit()
+    monkeypatch.setattr(
+        push, "_post_expo", lambda _: (_ for _ in ()).throw(push.httpx.ConnectError("offline"))
+    )
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
+    assert _push_jobs() == [("push.deliver", "todo", 0)]
+    with TestSession() as s:
+        push.upsert_token(s, PushOwnerKind.member, new_uid, "ExponentPushToken[member]", "android")
+    monkeypatch.setattr(
+        push, "_post_expo", lambda messages: sent.extend(messages) or [{}] * len(messages)
+    )
+    drain_push()
+    assert sent == []
+    assert _push_jobs() == []
+    with TestSession() as s:
+        row = s.scalars(select(PushToken)).one()
+        assert row.owner_id == new_uid
