@@ -7,7 +7,10 @@ name="mento-receipt-drill-$$"
 cleanup() { docker rm -f "$name" >/dev/null 2>&1 || true; rm -rf -- "$temp"; }
 trap cleanup EXIT
 docker run -d --name "$name" --network none --memory 256m --cpus 1 -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine >/dev/null
-for i in {1..30}; do docker exec "$name" pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
+for i in {1..30}; do docker exec "$name" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1 && break; sleep 1; done
+# Initdb temporarily accepts Unix socket connections before restarting. Require
+# the final TCP listener, then fail explicitly if readiness never arrived.
+docker exec "$name" pg_isready -h 127.0.0.1 -U postgres >/dev/null
 docker exec "$name" psql -X -v ON_ERROR_STOP=1 -U postgres -c 'CREATE TABLE erasure_receipts(member_digest varchar(64) PRIMARY KEY);' >/dev/null
 bash "$root/deploy/export-erasure-receipts.sh" "$name" postgres postgres "$temp/empty.gz"
 python3 - "$temp/empty.gz" <<'PY'
