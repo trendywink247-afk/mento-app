@@ -6,6 +6,10 @@ umask 077
 source_file=${1:?age archive required}
 remote_directory=${2:?configured rclone destination directory required}
 test -f "$source_file" && test ! -L "$source_file"
+# Cooperating transfers from one archive directory serialize through readback.
+# Never unlink this inode; this is not a lock across hosts or remote prefixes.
+exec 9>"$(dirname "$source_file")/.encrypted-copy.lock"
+flock --nonblock 9 || { echo 'Another encrypted copy is active' >&2; exit 1; }
 IFS= read -r header < "$source_file"
 test "$header" = age-encryption.org/v1 || { echo 'Expected binary age archive' >&2; exit 2; }
 digest=$(sha256sum -- "$source_file"); digest=${digest%% *}

@@ -45,6 +45,15 @@ test -z "$(find "$temp" -name '.encrypted-backup.*' -print)"
 # Actual rclone local backend exercises content naming, readback and immutable
 # rejection without contacting a VPS. It is transport-tool proof, not off-host DR.
 mkdir "$temp/offsite"
+# Contention must stop before publishing anything; release permits normal retry.
+(
+  exec 8>"$temp/.encrypted-copy.lock"
+  flock --nonblock 8
+  if bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp/offsite"; then
+    echo 'FAIL: overlapping encrypted copy accepted'; exit 1
+  fi
+  test -z "$(find "$temp/offsite" -type f -print)"
+)
 bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp/offsite"
 bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp/offsite"
 digest=$(sha256sum "$temp/archive.age"); digest=${digest%% *}
