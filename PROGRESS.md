@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Copy overlap protection accepted; next staging candidate in acceptance
+
+**Integrated:** PR58 da5d12e passed API 37202195403/Test 37202195404, including real Linux lock contention followed by successful retry and ciphertext regression checks. Merged as 452a854; current master requires fresh release gates. No production schedule or data changed.
+
+**Release:** Master 80054fba2a529f1146d1c8d866d2025f3d1d9f9c API/Test/native passed (37202157945/37202157972/37202157944). Dispatched full staging 37203899333 for this SHA. Pending acceptance and independent verification; latest verified staging remains 7f6b350.
+
+**Architecture review:** Balanced compose has Postgres max_connections=50 and includes optional GlitchTip on the same database server. Existing offline database_budget.py takes explicit caller inputs and accounts for API/worker/queue/migration, but does not discover effective Compose services or separately budget GlitchTip. Before Balanced activation, validate rendered settings including optional clients, both colors, operations and reserve; do not treat the standalone calculator's passing example as a deployment gate. This independent phase-2 preparation does not bypass phase-1 custody/deletion gates.
+
+**Next:** Check latest master gates and staged candidate, independently verify full SHA, then consolidate final accepted release. Continue deletion-recovery mechanism and recovery-key custody acceptance; Balanced effective-budget validation and native transient keyboard behavior remain open. Five phases not complete; production locked. Resume H:\Mento gpt\Mento; source scripts must come from current master-based branch, not this log branch. Preserve book and Desktop.
+
+---
 ## 2026-10-04 — Staging independently verified; encrypted-copy integration complete
 
 **Release evidence:** Full Staging Release 37200457941 succeeded for input SHA 7f6b350e1e2d3bd79fc375aa250b3ede55badbcc (workflow runner head c402c8b is not the deployed input). Independently invoked restricted staging receiver verify for the full input SHA: Staging candidate verified. Latest accepted staging is now 7f6b350. Production unchanged and locked.
