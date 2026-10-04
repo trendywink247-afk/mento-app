@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-10-04 — GitHub status reconciled and Balanced delivery resume plan
+
+**Done:** Read-only GitHub inspection confirms PR42 merged as 2544792 (production update channel and initial keyboard fix); follow-up keyboard correction PR59 merged as c1fa271. Current remote master is 2d87f6563a885ad76ac6dd62e52770d39a94491a. API 37220498436 and Test 37220498440 passed; native 37220498522 remained in progress at inspection. PR65 head 7c02640 has green API/Test (37220638646/37220638647), native 37220638693 pending. PR61 remains open and behind master, with green API/Test for b3cab0e. Dependency PRs 43/44/45 remain open and secondary to delivery.
+
+**Staging evidence:** Run 37218670432 succeeded, including browser acceptance and final receiver verification. Its workflow head is 5d6d3e3, but the logs explicitly identify deployed candidate 1441a9b2859c0e301e1404340269860caeebc38a. This agrees with the prior independently verified staging record; no fresh direct VPS inspection or production change occurred in this session. Production remains locked according to the prior handoff; the live enable flag was not re-read.
+
+**Local blocker:** Current session cannot read GitHub CLI configuration or access Docker engine/WSL (permission denied). GitHub connector supplied current PR/run evidence. These errors do not establish whether the previously recorded Docker inference-socket startup fault still exists. Preserve local-first acceptance: no push or merge of unvalidated implementation. Existing local commit 6a43b91 and untracked user files are preserved.
+
+**Next, in order:** (1) Restore permitted access to the isolated local Docker/WSL stack, then workspace init/check/test and browser acceptance. (2) Complete PR65 local database failure/retry acceptance and current native checks; update PR61 against master and validate effective overlap budgets locally before integration. (3) Complete independent durable deletion-receipt receiver/coverage, off-device key recovery, full restore after primary loss, and six-hour encrypted backup operation; retain saved notes/report narratives and exclude chat history per the existing founder decision. (4) Rehearse production-baseline schema migration plus worker, retries/backlog, synthetic safety processing and delivered monitoring alerts; prepare controlled promotion only after operational gates. (5) Rehearse Caddy/HTTPS/WebSocket and live rollback/headroom with bounded pools. (6) Deliver own-chat member/mentor vertical slice locally and in staging, then history/ack/dedup/reconnect/offline/safety/erasure/old-client rollback parity before cutover. Product accessibility/matching/admin acceptance, device push and iOS distribution, and measured load/failure limits remain required for the pilot; dependency maintenance is supporting work.
+
+**Open dependencies:** External vault destination and verified recovery access; configured monitoring recipient; real Android/iOS devices and Apple signing access. No new automation was created or resumed. No infrastructure or application implementation was changed by this status/planning review.
+
+**How to resume:** `Set-Location 'H:\Mento gpt\Mento'; Get-Content PROGRESS.md -TotalCount 45; git status --short --branch`. Once Docker access and health are restored: `./scripts/local/workspace.ps1 init`, then `check` and `test`; use the isolated app/API ports 18081/18000 and database 15432. Re-query exact-head CI before release actions.
+
+---
+
 ## 2026-10-04 — Founder requires local acceptance before any further push
 
 **Direction:** Implement and finish relevant local tests before pushing. Last already-running push completed as PR65 7c02640; no further push after the new instruction. Added rule to AGENTS.md. Updated complete-mento-implementation prompt to local-first validation, preserving its observed PAUSED status and 30-minute schedule. Do not resume automatically.
