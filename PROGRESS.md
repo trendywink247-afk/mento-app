@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Backup readback regression passed; native diagnostics integrated
+
+**Verified:** PR57 head 66d338d passed API 37197368609 and Test 37197368648, including same-size/same-time corrupt-object rejection, byte readback and idempotent retry. This is actual rclone local-backend evidence, not live off-host recovery. PR56 head 99e0351 passed native 37195459709 attempt 2 as well as attempt 1, with all required checks green; reviewed and merged diagnostics as master 7f6b350. No claim of permanent native fix.
+
+**New diagnostic evidence:** Attempt 2 first flow briefly reported keyboardTop 48.76 with measured container top 92.19 (the current Math.max height becomes zero), then hide/show restored keyboardTop 571.05. Second flow had normal 571.05 geometry and passed. This anomalous transient needs targeted handling/reproduction; it is evidence of a possible collapse path, not proof that it caused the earlier failed run.
+
+**Integration:** PR55 merge was blocked by PROGRESS conflict; resolved by retaining both entries and merged current master, pushed 099ea38. PR57 merge was blocked by required checks on the updated base; merged current master and pushed dba7339. Fresh checks pending; no bypass/admin merge. Master 7f6b350 API/Test/native runs 37198790210/37198790211/37198790214 running. Staging remains 781ccd3; production disabled.
+
+**Next:** Accept only fresh current-head checks for PR55/57, integrate in order and repeat master/full staging gates with independent artifact verification. Diagnose transient keyboard coordinates without weakening send/reply assertions. Off-device recovery custody, deletion reconciliation, live encrypted scheduling and remaining phases stay open. Resume H:\Mento gpt\Mento; this is a log-only branch, switch to current implementation before executing scripts. Preserve book; Desktop untouched.
+
+---
 ## 2026-10-04 — Ciphertext transport verification and native reproduction instrumentation
 
 **Implemented:** PR57 adds content-addressed encrypted archive copying with bounded rclone transfer and SHA-256 byte readback; source retained, no pruning, no private identity, no live activation. Initial Linux run 37197154124 caught a real defect: --immutable alone replaced the corrupt synthetic object. Fixed with --ignore-existing plus readback and strengthened regression to same-size/same-time corruption. Current head 66d338d is pushed; bash syntax/whitespace passed, new Linux CI pending. Local-backend rehearsal is not off-host recovery or custody proof; age header check is a format guard, not authentication. Concurrent writers/server-enforced immutability are not established.
