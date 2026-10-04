@@ -14,6 +14,20 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+      # Native runtime upgrades are coordinated with Expo and each other.
+      # For 0.x packages, incompatible upgrades can be semver-minor.
+      - dependency-name: react-native
+        update-types: ['version-update:semver-minor']
+      - dependency-name: react-native-reanimated
+        update-types: ['version-update:semver-minor']
+      - dependency-name: react-native-worklets
+        update-types: ['version-update:semver-minor']
+      - dependency-name: react
+        update-types: ['version-update:semver-minor']
+      - dependency-name: react-dom
+        update-types: ['version-update:semver-minor']
+      - dependency-name: '@types/react'
+        update-types: ['version-update:semver-minor']
   - package-ecosystem: pip
     directories:
       - /services/api

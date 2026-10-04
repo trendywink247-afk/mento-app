@@ -4,7 +4,45 @@
 
 ---
 
+## 2026-10-05 — Priority staging integration and cautious PR/branch cleanup
+
+**Done:** Founder authorized steps 1–4 first, followed by remaining architecture work and cautious cleanup. Reviewed and merged PR66's locally accepted, green head 0aa2f68 with an exact-head condition. Integrated master is `9e6aaa741a20a0f93ec325ab3422e5f5fdfc3dce`; API 37228796693, Test 37228796723 and Android 37228796778 all passed, including actual suites and full-suite markers. The release gate independently accepted that exact SHA. Staging run 37230079217 is building/deploying it; acceptance is not yet claimed. Android job took 18m57s, with APK build 12m32s and emulator flows 3m19s. Added the integrated `native-gate` to required master checks, preserving strict mode and existing GitHub Actions check identities. Production enable flag remains false.
+
+**Rollback evidence:** Isolated run 37228971109 passed both supported stacks. Balanced had zero failures in 11,494 requests over swaps, rejected migrations and rollback. Legacy recreate had 1,425/4,032 request failures; its migration refusal and recovery assertions passed. This is isolated deployment behavior, not live production capacity or a live cutover.
+
+**Cleanup:** GitHub marked PR65 merged when PR66 included its exact commits. Closed PR61 as superseded after checking its pool overrides, parity check and workflow coverage against the stronger implementation in PR66. Deleted 33 remote references only when each tip exactly matched a merged PR and was an ancestor of master; one atomic push used individual expected-tip leases. Local branches/worktrees, unique-history branches, the active growth branch and user files were preserved. Closed incompatible Dependabot PR71 (RN 0.87 versus Expo 55's 0.83.10), PR68 (Worklets 0.13 versus Reanimated 4.6's 0.12.x contract), and PR72 (React 19.3 while React DOM stays 19.2). Remaining API/action upgrade PRs need review, not blanket closure.
+
+**Maintenance follow-through:** Added Dependabot minor-update exclusions for the coordinated React/React DOM/types and RN/Reanimated/Worklets runtime. Existing global major exclusion remains; patch proposals remain reviewable. This addresses incompatible 0.x minor proposals without changing app dependencies. Parsed YAML and asserted the exact rules locally; whitespace checks pass. Work continues on `codex/staging-acceptance-followthrough`, preserving the three earlier local progress commits and integrating master. The original architecture books remain untouched.
+
+**Next / resume:** Finish run 37230079217, verify the running image/schema, then run staging-only synthetic worker/recovery/erasure and normal/reduced-motion reconnect/wipe probes. Probe scripts under ignored `.local` use the installed fixture's restore path, keep credentials out of output and never target production. Continue independent recovery coverage/key custody, delivered alerts, own-chat adapters, live pool/blue-green acceptance and device/load/store evidence. `Set-Location 'H:\Mento gpt\Mento'; gh run view 37230079217; git status --short --branch`.
+
+---
+
+## 2026-10-05 — Architecture book reviewed before staging
+
+**Done:** Reviewed the founder's original `H:\Mento gpt\Mento-Architecture-Book.html` (Edition 1, 20 September 2026; 45 sections). It covers the existing app and gaps, component alternatives, environment parity, Lean/Balanced/Resilient options, roadmap and launch gates, chosen architecture, expanded staff tooling, human-assistive AI, glossary and estimation method. Preserved the original. Updated the implementation crosswalk to distinguish successful PR66 candidate acceptance from historical exact-master failure and latest deployed staging.
+
+**Assessment:** Working v1 and tested growth/CI foundations exist; full Balanced/growth operation is incomplete. Both VPSes exist, but A remains the older production API/Postgres/Redis without a worker, while B has staging API/worker/Postgres/Valkey and monitoring. SDK 55, hardened identity and isolated local/staging controls supersede several September descriptions. Own chat is not connected to the live member/mentor UI; Caddy/blue-green, independent recovery/receipt durability, six-hour backups, delivered alerts, direct push, telemetry, expanded staff/AI work and store/device acceptance remain incomplete or unverified. Capacity, latency and recovery figures in the book are historical estimates, not accepted production performance. No overall completion percentage is defensible from differently sized work items.
+
+**Next / boundary:** PR66 head 0aa2f68 has successful API/Test/native workflows but remains draft/unmerged. Review and integrate, obtain full exact-master evidence, then stage the immutable candidate and accept migrations, worker execution, safety, two-party chat, recovery/deletion and rollback. Keep production disabled until operational acceptance. This request asked for the book assessment first; no merge or deployment performed. Documentation-only crosswalk/progress changes checked with diff review/whitespace validation and kept local.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 66; git status --short --branch; Get-Content PROGRESS.md -TotalCount 35`. Preserve both architecture-book files and local user settings.
+
+---
+
+## 2026-10-05 — Selective CI implementation passes all PR checks
+
+**Verified:** PR66 still points to `0aa2f6861f4948e1974a02db237d184f59d1dcde`. API 37226539496, Test 37226539524 and native 37226539502 completed successfully. Every reported check is green, including actual API tests, mobile/web, release tooling, receipt receiver, restricted-receiver isolation, all aggregates, the new native gate and all three full-suite markers. Dependabot configuration also passed. This verifies execution of the updated native Node/Java/Maestro workflow on the PR candidate.
+
+**Boundary / next:** PR success does not substitute for exact-master release evidence or staging acceptance. No merge, branch-protection change, staging deployment or production promotion was requested by this status check. Continue integration review, then exact-master checks and isolated staging before any promotion; existing operational and native reliability gates remain. This progress record stays local to avoid another PR run. Resume: `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 66; git status --short --branch`. Preserve the architecture book.
+
+---
+
 ## 2026-10-05 — Completed PR native checked; selective CI implemented and locally validated
+
+**Review handoff:** Pushed the locally accepted implementation as `0aa2f6861f4948e1974a02db237d184f59d1dcde` to draft [PR66](https://github.com/trendywink247-afk/mento-app/pull/66), with its title/description updated for the final scope. New API 37226539496, Test 37226539524 and native 37226539502 runs started. All three classifiers, API lint/aggregate, receipt receiver, restricted-receiver isolation and Dependabot configuration passed at inspection; API tests, web/release tooling and native remained running. No new-head full CI, merge or staging acceptance is claimed. This handoff record remains a local progress commit so it does not cancel/restart the active PR validation.
+
+**Selection boundary:** PR selection evaluates the complete base-to-head diff. A documentation-only update to an existing code PR still selects that PR's affected code suites; the optimization applies to documentation-only PRs and documentation-only master pushes. It does not reuse another commit's unverified evidence. Master/manual full validation remains the release boundary. Require new-head CI before integration; additional runtime failures must be investigated, not hidden by the old successful run.
 
 **Checked first:** PR66 head `8782194` has successful API/Test checks and native run 37223770725. The native job took about 22 minutes, including about 16 minutes for APK compilation. This does not erase the earlier exact-master 37220498522 failure, and no native UI patch or assertion/timeout weakening was made here.
 
