@@ -40,7 +40,13 @@ def seed_chat(s) -> SeededChat:
     )
     s.add_all([u, li])
     s.flush()
-    c = Conversation(type="anon", status=ConversationStatus.active, user_id=u.id, listener_id=li.id)
+    c = Conversation(
+        type="anon",
+        status=ConversationStatus.active,
+        user_id=u.id,
+        listener_id=li.id,
+        chat_backend="own",
+    )
     s.add(c)
     s.flush()
     c.stream_channel_id = c.id

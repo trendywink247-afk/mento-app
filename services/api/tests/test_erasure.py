@@ -514,3 +514,26 @@ def test_recovery_reconciliation_is_transactional(db_session):
         assert s.get(Conversation, mine["active"]).status == ConversationStatus.active
         assert s.get(ListenerProfile, lid).active_conversations == 1
         assert s.get(ErasureReceipt, recovery_digest(me)) is None
+
+
+def test_receipt_ack_failure_retains_account_for_retry(
+    client, db_session, stream_calls, monkeypatch
+):
+    from app.services import recovery_receipts
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        s.commit()
+
+    def unavailable(digest):
+        raise recovery_receipts.ReceiptUnavailable("synthetic")
+
+    monkeypatch.setattr(recovery_receipts, "acknowledge", unavailable)
+    assert client.delete("/api/v1/me", headers=_auth(me)).status_code == 503
+    with TestSession() as s:
+        assert s.get(User, me) is not None
+        assert s.get(ErasureReceipt, recovery_digest(me)) is None
+    seen = []
+    monkeypatch.setattr(recovery_receipts, "acknowledge", seen.append)
+    assert client.delete("/api/v1/me", headers=_auth(me)).status_code == 200
+    assert seen == [recovery_digest(me)]

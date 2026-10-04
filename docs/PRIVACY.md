@@ -6,7 +6,11 @@
 > policy shown in-app or on any public page) before publication. Update this file in the
 > same commit as any change to what data Mento collects or who can see it.
 
-**Last reconciled against the codebase:** 2026-09-19 (session 36 — account erasure, `DELETE /me`).
+**Latest scoped reconciliation:** 2026-10-04 — deletion, retained safety records,
+backup content and recovery-receipt preparation (§2 journals, §5 and §10).
+Other sections have not been fully re-audited in this update. Source behavior is
+not proof that a change is deployed; the operational distinctions in §5 must be
+verified again before publication.
 
 ---
 
@@ -42,8 +46,10 @@ person seeking support and the listener — appears only as an auto-assigned per
   cannot hold links, email addresses or phone numbers. You can change or remove it
   in Profile, and Start fresh erases it with the rest of your account.
 - **Journals** — mood, finance, gratitude entries, and mentor notes you save are
-  stored so you can read them back. They are private to you; no one else, including
-  listeners or admins, can read your journal. Start fresh deletes them (§5).
+  stored so you can read them back. The journal feature is restricted to your
+  account; mentors and admins do not have a journal-reading feature. Start fresh
+  deletes your journal entries from active application storage. Recovery archives
+  can contain saved entries; their treatment is described in §5.
 - **Sign-in sessions** — the app refreshes its sign-in every few minutes; we keep a
   record of each sign-in session (which device session it is, when it started and
   ends) as a one-way hash, never the token itself. Start fresh deletes them.
@@ -110,23 +116,31 @@ separate mentor-verification flow and does not apply to people seeking support).
 
 ## 5. Deletion — "Clean Wipe"
 
-Ending a conversation with Clean Wipe permanently deletes that conversation's
-messages and channel from our servers (via Stream Chat's API), not just from your
-device. This is a real, verified server-side delete — we do not claim on-device-only
-deletion anywhere, because that would not be true while messages are also stored on
-our messaging provider during an active conversation.
+Clean Wipe ends the conversation and requests deletion of its messages and channel
+from Stream Chat, the messaging provider used by the current client. The server
+also deletes any own-chat message rows for that conversation from the active
+application database. Own chat remains a separate, unfinished replacement; this
+draft does not describe it as the deployed client transport.
+
+Clean Wipe does not delete a journal note you separately saved from the chat or a
+report narrative kept for safety review. Those records can contain quotations from
+the conversation. Deletion from active storage also does not rewrite an existing
+recovery archive; the backup and recovery boundary is described below.
 
 You can also clear your Path community/stage preference at any time; doing so
 removes that soft-matching signal going forward.
 
 ### Erasing everything — "Start fresh"
 
-Profile → Start fresh erases your Mento account, on this device **and on our
-servers**, and you begin again with a new name. It is permanent: nobody, including
-the Mento team, can bring any of it back.
+When Start fresh completes, it removes your Mento account and its associated
+records listed below from active application storage, deletes its Stream account
+and conversations, and clears the account from the app. You begin again with a new
+account. It does not promise that every previously made backup has been rewritten
+or that retained safety records have become anonymous.
 
-**Deleted:** your account record (your persona name, date of birth, optional email,
-companion and its colour, and your Path choice); every journal entry, including
+**Deleted from active application storage:** your account record (your persona
+name, date of birth, optional email, companion and its colour, and your Path
+choice); every journal entry, including
 Mentor Notes you saved from a chat; your saved mentors and any "stay in touch"
 links (the mentor sees the link end); requests you sent to a mentor; your
 notification registration; the daily message counts; your end-of-chat reflections;
@@ -135,15 +149,22 @@ conversation — each open one is ended, and its messages and channel are
 hard-deleted from our messaging provider (Stream Chat) exactly as Clean Wipe does,
 together with your account there.
 
-**Kept, with nothing that points back to you:**
-- **Crisis-safety flags** raised by the automatic scan — which signal fired, the few
-  matched words that triggered it, and when; never the message itself. They stay so the safety team's review record is complete;
-  the link to your account is removed.
-- **Reports.** A report you made about a mentor stays (it protects other members)
-  without your account on it; a report a mentor made about a conversation with you
-  stays for review without your account on it.
-- **One line in the team's audit log** saying that an account was erased, with
-  counts of what was removed — not who.
+**Retained records:**
+
+- **Crisis-safety flags** retain the signal category, detection source, risk score
+  where supplied, timestamps and review information. The current signal-writing
+  path stores the signal label, not the message body or the words that matched.
+  Erasure removes the member-account link; conversation and message identifiers
+  can remain to group and deduplicate safety records.
+- **Reports** remain for safety review. Erasure clears the deleted member's
+  reporter/subject account reference, but keeps the narrative and conversation
+  reference. A narrative may contain quotations or identifying details supplied
+  by its author; removing the account reference does not anonymize that text.
+- **Audit records.** Existing staff audit records remain. Erasure adds an event
+  recording counts of removed records, without the member's identifier in that
+  new event.
+- **Deletion receipts in the prepared recovery system** are described below.
+  Their production activation is not established by this draft.
 
 If our messaging provider cannot confirm a deletion at that moment, the
 app says so and asks you to try again; it never tells you something was deleted when
@@ -153,6 +174,47 @@ it was not. Your open chats are ended either way.
 app while your mentor role is active — doing so would leave the people you support
 mid-conversation. Ask the Mento team to close your mentor side first; after that,
 Start fresh erases everything as above.
+
+### Backups and deletion receipts — activation still pending
+
+**Engineering deployment note, not a live guarantee:** the latest recorded
+operational evidence describes daily SQL backup copies. The prepared encrypted,
+content-filtered six-hour backup flow has not been activated. The independent
+deletion-receipt receiver has local synthetic test evidence, but is not deployed;
+the required remote-acknowledgement gate remains disabled. Recheck the live state
+before publishing this section as a statement of current practice.
+
+The approved content policy for the new encrypted recovery archives retains
+user-saved journal notes and moderation report narratives, while excluding chat
+history itself. Saved notes and reports can contain quoted chat text, so excluding
+the chat-history tables does not make an archive free of message-derived content.
+This selection policy does not establish the contents of older backup copies.
+
+Deleting an account from the active database does not edit every older archive.
+Before a restored database can serve users, the recovery procedure must apply
+deletion requests made after that snapshot and review restored background jobs
+with outbound delivery disabled. Complete deletion coverage, independent receipt
+recovery and the activation boundary still need operational acceptance; a restored
+snapshot must stay closed to traffic while those checks are incomplete.
+
+The prepared application code retains a one-way digest of the random account
+identifier and a timestamp after erasure. The separate receiver is designed to
+hold the corresponding deletion intent outside the primary database. These
+receipts contain no name, email, persona, chat body, journal text or report
+narrative, but can be matched to an account in a backup. They are pseudonymous
+records, not anonymous statistics.
+
+When the receiver gate is enabled, account deletion can finish only after the
+receiver confirms durable storage. A failed acknowledgement keeps the account
+available for retry and returns the incomplete-deletion response. A receipt may
+already be stored even if the response is lost or a later account-deletion step
+fails; it records the request, not proof that every deletion step completed.
+
+The prepared receipt store has no automatic pruning. Receipts must be preserved
+while a recoverable backup could reintroduce the account. This draft makes no new
+promise about a fixed backup expiry period or immediate erasure from all archives.
+Verified retention, archive access, recovery-key custody and provider-specific
+deletion boundaries remain publication and activation checks.
 
 ## 6. Crisis support
 
@@ -189,6 +251,13 @@ updated in the same change as any data-handling change described above.
 ## 10. Open items before this can be published
 
 - Founder + legal (India, DPDP Act 2023) sign-off.
+- Reconfirm the deployed application and backup behavior before turning §5's
+  preparation notes into public promises. Verify the backup inventory, retention
+  and access rules, recoverable external keys, deletion-receipt coverage and
+  primary-loss recovery. Keep the distinction between active deletion and archive
+  expiry explicit. See [backup content and recovery policy](BACKUP_CONTENT_POLICY.md).
+- Re-audit the rest of this draft against current source and deployed behavior;
+  the 4 October update covers only the scoped items noted at the top.
 - The install label, standing, terms acceptance and recovery-code bullets in §2
   (added with WS3, 2026-09-27) need the same sign-off; the full terms the house
   rules point to do not exist yet (T10.5).

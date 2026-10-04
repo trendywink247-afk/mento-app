@@ -198,8 +198,10 @@ def send(db: Session, sender_id: str, conversation_id: str, *, client_id: str, b
 def check_standing(db: Session, conversation_id: str, sender_id: str) -> tuple[Conversation, str]:
     convo = db.get(Conversation, conversation_id)
     kind = side_of(convo, sender_id) if convo is not None else None
-    if kind is None:
-        raise NotAllowed("not_a_participant")  # same answer for "no such chat"
+    if kind is None or convo.chat_backend != "own":
+        # Never let an internal caller establish a second write path for a Stream
+        # room. Keep the same opaque refusal as a missing or unauthorized room.
+        raise NotAllowed("not_a_participant")
     if not is_open(convo):
         raise NotAllowed("ended")
     if kind == "member":
@@ -447,7 +449,7 @@ def opening(db: Session, conversation_id: str, actor_id: str, after_seq: int) ->
     not a participant, or ended — one answer for all three)."""
     convo = db.get(Conversation, conversation_id)
     side = side_of(convo, actor_id) if convo is not None else None
-    if side is None or not is_open(convo):
+    if side is None or convo.chat_backend != "own" or not is_open(convo):
         return None
     return Opening(
         side=side,

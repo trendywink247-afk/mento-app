@@ -74,7 +74,7 @@ from app.models.request import ConversationRequest
 from app.models.safety import SafetyFlag
 from app.models.session import Session as AuthSession
 from app.models.user import User
-from app.services import conversations, stream
+from app.services import conversations, recovery_receipts, stream
 
 logger = logging.getLogger("mento.erasure")
 
@@ -299,6 +299,13 @@ def erase_member(db: Session, user_id: str) -> Erased | None:
     db.commit()
 
     _phase_b_stream(db, user_id, channels)
+
+    # No DB transaction held during the remote acknowledgement. A durable intent
+    # may outlive a subsequent local rollback; retries are idempotent by digest.
+    try:
+        recovery_receipts.acknowledge(recovery_digest(user_id))
+    except recovery_receipts.ReceiptUnavailable as exc:
+        raise EraseIncomplete from exc
 
     # Re-take the member row: a second request that raced us here finds it gone and
     # returns the no-op; only one of the two deletes and audits.

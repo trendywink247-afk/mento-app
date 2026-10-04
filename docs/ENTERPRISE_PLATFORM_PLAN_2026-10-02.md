@@ -2,6 +2,36 @@
 
 Prepared 2 October 2026 against checkout 229b997 and the current architecture review. This is a proposed execution plan, not a certification, deployment, App Store approval or measured capacity claim. Work remains exclusively under `H:\Mento gpt`. “RV” was a dictation error for “are we”; there is no RV component to migrate.
 
+**Execution scope updated 4 October 2026:** the founder now requests the full
+[pictured growth architecture](diagrams/mento-desired-architecture.png). Deliver
+it through accepted increments, using the Balanced pilot as the first deployment
+milestone. Historical snapshots and estimates below are dated context; use
+[PROGRESS.md](../PROGRESS.md) for current commits, blockers and release evidence.
+Professional mentoring remains a separately specified future domain, as the
+diagram itself states. Do not infer a payments, groups or audio/video launch from
+approval of the infrastructure target.
+
+### Evidence required for the full pictured target
+
+| Diagram component | Implementation and operational exit criteria |
+|---|---|
+| iOS, Android and web | Shared onboarding, member/mentor flows and scoped admin; physical-device and accessibility acceptance, signed native distribution and crash symbolication. |
+| Protected edge and static delivery | Trusted TLS and renewal, complete routes, abuse controls, static delivery and load distribution; authenticated WebSocket reconnect across upstream loss, with every acknowledged write preserved. |
+| Application and realtime replicas | Stateless application replicas using shared durable state and bounded coordination; per-conversation transport ownership; own-chat client/history/ack/replay/safety/erasure parity and accepted old-client/rollback behavior. Prove process loss and concurrent replica behavior. |
+| Operations and security | Release-tagged redacted telemetry, scoped audit, staff MFA, reasoned case access, independent delivered alerts, incident ownership and measured service objectives. Test failure of the monitor itself. |
+| PostgreSQL | Compatible migrations, enforced aggregate live connection budgets, encrypted recovery, replica lag and a rehearsed failover/fencing procedure with one writable primary. Document measured data-loss and recovery-time bounds; a backup VPS is not a standby by implication. |
+| Valkey | Shared presence/fan-out/rate limits with explicit memory bounds; restart, eviction and unavailability do not corrupt durable chat or matching state. |
+| Job workers | Transactional enqueue, bounded retries, idempotent consumers, backlog/failure visibility and scheduler ownership; prove worker crashes and real APNs/FCM delivery without duplicate user-visible effects. |
+| Independent encrypted backup and private file storage | Independently recoverable keys, integrity-verified copies, independently durable deletion receipts, coverage and primary-loss restore acceptance; private files require scoped authorization, expiring access, limits and deletion proof when introduced. No unreviewed attachment surface is implied. |
+| Release and verification pipeline | Local acceptance, exact-commit CI, immutable staging evidence, signed mobile/TestFlight acceptance where applicable and controlled production release. Rehearse application rollback without reverting acknowledged data. |
+
+For every row record source implementation, local results, staging artifact and
+production evidence separately. Select additional hosting and service capacity
+from measured workload and failure-domain requirements before provisioning it.
+First-rollout database budgets must include the running old release, not just the
+new Compose defaults. The corrected data-cutover contract is in
+[DEPLOYMENT_VPS.md](DEPLOYMENT_VPS.md#legacy-to-balanced-cutover--acceptance-contract).
+
 ## 1. Recommendation and current stage
 
 Keep the modular monolith. Establish one controlled release pipeline, finish native and operational acceptance, and launch a staffed, bounded pilot. Expand infrastructure against measured demand. Develop verified professional mentoring only after its identity, service and governance requirements are explicit.
@@ -109,16 +139,30 @@ The second diagram is a growth target, not deployed infrastructure. Multiple rep
 
 ## 6. Industry-standard engineering workflow
 
-### Concrete gaps in the current repository
+### Current CI evidence and remaining gaps — audited 5 October 2026
 
-- `api-ci.yml` runs real-Postgres tests, lint and migrations but is API-path filtered.
-- `api-deploy.yml` references a production environment and selected SHA; manual deployment does not show enforcement of all staging/native evidence.
-- `console-deploy.yml` deploys from main/master pushes independently. It uses runtime `ssh-keyscan` instead of pre-verified host trust, and lacks the complete staging/production gates.
-- Native CI exists, but the documented Android reply-rendering failure remains unresolved. No iOS acceptance pipeline was established by this review.
-- App config carries a preview update request header while EAS production names a production channel. Audit effective built configuration; this alone does not prove EAS misroutes builds.
-- All EAS profiles disable Sentry source-map upload. Production symbolication needs deliberate setup and verification.
+The former independent API/console deployment workflows have been replaced by staged artifact promotion. API CI runs real-Postgres tests, lint and migrations; Test CI covers web build/types, a hermetic age-gate browser flow, recovery receipts and release tooling. Staging requires successful exact-master API/Test/Android push runs, builds immutable API/web artifacts, and checks deployment, safety, recovery and two-party browser chat. Production requires that accepted artifact and an explicit enable flag, then promotes without rebuilding. Pinned SSH trust is configured by `scripts/ci/setup-ssh.sh`. The production enable flag was independently read as `false` in this audit. Production/preview update-channel separation and a resolved-config regression are implemented; signed-device acceptance is still separate.
 
-These are proposed repairs; this planning turn does not modify CI or server configuration. Repository-host branch protection and stored Apple/EAS credentials were not audited.
+- The CI selection change now exists in source: inert documentation-only PRs/pushes avoid heavy suites, relevant PR paths select checks, and unknown paths, non-documentation master pushes and manual runs select full coverage. Required aggregate names remain present. Native APK compilation has historically taken about 31 minutes; PR66 run 37223770725 completed successfully with about 16 minutes for compilation and 22 minutes for the native job. New workflow execution remains a separate acceptance gate.
+- Live master protection requires `lint`, `test` and `test-gate`, with strict branch freshness and admin enforcement. Native is a release gate, not a required merge check. Neither deployment environment currently has configured protection rules, and the review count is zero; independent human review is therefore a process requirement rather than an enforced approval gate.
+- Exact-master Android run 37220498522 failed with the composer beneath the keyboard and no observed send callback. PR66 native run 37223770725 passed, but no native UI fix was made by the CI policy change. Android CI exercises a member app against a mentor bot; native mentor UI, iOS and physical-device push remain unproven.
+- Native CI now selects Node 22, configures Java 17 before Gradle, and verifies a pinned Maestro 2.11.0 archive checksum before installation. Maestro telemetry is disabled. Dependabot now covers actions, npm and both pip services, with npm/pip major updates excluded from automatic version proposals pending staged compatibility work. Pending action updates and dependency/secret/image scan enforcement remain separate work.
+- Existing safety/recovery tests do not establish primary-loss recovery, external key custody, delivered alerts, live blue/green rollback, aggregate running-process database budgets or load/SLO acceptance.
+- Production symbolication needs deliberate setup and verification; signed mobile builds and Apple credentials were not audited.
+
+### Implemented test selection and release evidence policy
+
+1. Run relevant checks and touched normal/reduced-motion flows locally before pushing a completed change.
+2. Run an always-present PR aggregate gate that classifies changed paths and requires relevant clean-runner checks. Documentation-only changes should avoid native/database/recovery builds. Native acceptance remains required for relevant app/API/dependency changes.
+3. Run the full API/web/native suite once for the integrated immutable release candidate, with exact-SHA evidence. Build once and perform environment-specific acceptance on staging; local results cannot replace deployed migration, safety, networking and recovery checks.
+4. Promote the accepted artifacts to production without rebuilding or repeating the full suite. Verify readiness, safety, worker execution and rollout behavior.
+5. Run broad recovery/rollback/load checks periodically and whenever relevant infrastructure/schema changes. Keep destructive tests isolated from serving data.
+
+Source implements the classifier, always-present aggregate checks and coordinated release-gate validation, with local regression tests for changed code, docs-only changes, missing/skipped/failed evidence, git history ambiguity, renames and candidate provenance. Existing branch requirements are preserved; the new `native-gate` emits an explicit result but is not yet added to repository protection. Runtime acceptance of the changed workflows and any branch-protection activation must follow local validation and review.
+
+Each workflow emits a successful `full-suite` marker only after every actual suite passes. Release checks require that marker and the actual jobs from the exact SHA on master, via push or manual dispatch. PR results, docs-only skips, markerless historical checks, incomplete runs and truncated evidence cannot qualify. Newer failed attempts cannot be hidden by older successes finishing late. Historical candidates without these markers require a new candidate produced under the updated policy; no compatibility bypass is provided.
+
+To release the current master after a documentation-only push, run all three validation workflows manually at that same master commit (`gh workflow run api-ci.yml --ref master`, `gh workflow run test-ci.yml --ref master`, `gh workflow run maestro.yml --ref master`), wait for full success, and then request staging for that exact SHA. If master changes during those dispatches, obtain complete evidence for the selected SHA before proceeding. Staging and production continue reusing immutable candidate artifacts; production remains disabled until its operational gates close.
 
 ### Required delivery path
 

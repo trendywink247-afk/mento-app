@@ -20,7 +20,21 @@ defaults:
     working-directory: services/api
 
 jobs:
-  lint:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.classify.outputs.api }}
+      full: ${{ steps.classify.outputs.full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: classify
+        working-directory: .
+        run: python3 scripts/ci/change_policy.py
+  api-lint:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,7 +54,9 @@ jobs:
       - name: black --check
         run: python -m black --check .
 
-  test:
+  api-test:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
     env:
       # Matches the docker-compose Postgres published on localhost:5432.
@@ -75,3 +91,39 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down -v
+  lint:
+    if: always()
+    needs: [changes, api-lint]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the selected lint result
+        working-directory: .
+        env:
+          CLASSIFIED: ${{ needs.changes.result }}
+          SELECTED: ${{ needs.changes.outputs.api }}
+          RESULT: ${{ needs.api-lint.result }}
+        run: |
+          python3 -c 'import os; assert os.environ["CLASSIFIED"] == "success"; selected=os.environ["SELECTED"]; assert selected in ("true","false"); assert os.environ["RESULT"] == ("success" if selected == "true" else "skipped")'
+  test:
+    if: always()
+    needs: [changes, api-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the selected database test result
+        working-directory: .
+        env:
+          CLASSIFIED: ${{ needs.changes.result }}
+          SELECTED: ${{ needs.changes.outputs.api }}
+          RESULT: ${{ needs.api-test.result }}
+        run: |
+          python3 -c 'import os; assert os.environ["CLASSIFIED"] == "success"; selected=os.environ["SELECTED"]; assert selected in ("true","false"); assert os.environ["RESULT"] == ("success" if selected == "true" else "skipped")'
+  full-suite:
+    if: always() && needs.changes.outputs.full == 'true'
+    needs: [changes, api-lint, api-test, lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record complete API acceptance for release evidence
+        working-directory: .
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: python3 -c 'import json,os; assert all(v["result"] == "success" for v in json.loads(os.environ["RESULTS"]).values())'

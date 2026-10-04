@@ -1,10 +1,9 @@
 name: Maestro (native e2e)
 
-# The safety net for the Expo 52->57 upgrade (T6.2's own dependency rule: these
-# flows must exist and pass BEFORE that upgrade starts, and after every one of
-# its five steps). Runs against SDK 52 today — do not bump the emulator image
-# here as part of an unrelated change; T6.2 does that deliberately, one step
-# at a time, and re-runs this workflow after each one.
+# Native acceptance for the SDK 55 source. Keep the Android API 33 emulator as
+# a compatibility surface; newer OS and physical-device acceptance are separate.
+# PRs classify affected paths; non-documentation master pushes and manual runs
+# exercise the complete suite. Only full-suite success is release evidence.
 #
 # Builds a RELEASE APK (expo prebuild + gradlew assembleRelease — session 48,
 # run 12: a debug build never leaves expo-dev-client's own launcher screen in
@@ -20,10 +19,6 @@ on:
   push:
     branches: [main, master]
   pull_request:
-    paths:
-      - "apps/mobile/**"
-      - "services/api/**"
-      - ".github/workflows/maestro.yml"
   workflow_dispatch: {}
 
 permissions:
@@ -34,7 +29,20 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      native: ${{ steps.classify.outputs.native }}
+      full: ${{ steps.classify.outputs.full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: classify
+        run: python3 scripts/ci/change_policy.py
   check-secrets:
+    needs: changes
+    if: needs.changes.outputs.native == 'true'
     # A job-level `if:` can't read `secrets` directly (actionlint: "context secrets is
     # not allowed here") — only `needs`/`vars`/`inputs`/`github`. Publish it as an
     # output from a step instead, where `secrets` IS readable, and gate `maestro` on
@@ -55,7 +63,7 @@ jobs:
           STREAM_API_SECRET: ${{ secrets.STREAM_API_SECRET }}
 
   maestro:
-    needs: check-secrets
+    needs: [changes, check-secrets]
     # Skips visibly (shown as "skipped", not "failed") when the repo has no Stream
     # project wired up yet — onboarding-first-message.yaml and two-party-chat.yaml
     # both need a real Stream project to match and chat against. Also the natural behavior
@@ -78,6 +86,8 @@ jobs:
       STREAM_API_SECRET: ${{ secrets.STREAM_API_SECRET }}
       EXPO_PUBLIC_STREAM_API_KEY: ${{ secrets.STREAM_API_KEY }}
       EXPO_PUBLIC_API_URL: http://10.0.2.2:8000/api/v1 # the emulator's host-loopback address
+      MAESTRO_CLI_NO_ANALYTICS: "1"
+      MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED: "true"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -132,13 +142,18 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version: "20"
+          node-version: "22"
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
 
       - name: Install mobile dependencies
         working-directory: apps/mobile
         run: npm ci
+
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "17"
 
       - name: Prebuild + assemble release APK
         working-directory: apps/mobile
@@ -188,15 +203,16 @@ jobs:
           # emulator step starts.
           ./gradlew --stop
 
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
-        with:
-          distribution: temurin
-          java-version: "17"
-
       - name: Install Maestro CLI
         run: |
-          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          # Pin the release archive and its GitHub-published SHA-256 digest.
+          curl --fail --location --retry 3 -o "$RUNNER_TEMP/maestro.zip" https://github.com/mobile-dev-inc/Maestro/releases/download/cli-2.11.0/maestro.zip
+          printf '%s  %s\n' 5384593cb4e7a106489e75a821d157dd43f4e438df6bc308b72e82c685e1283a "$RUNNER_TEMP/maestro.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-cli"
+          test ! -e "$HOME/.maestro"
+          mv "$RUNNER_TEMP/maestro-cli/maestro" "$HOME/.maestro"
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+          "$HOME/.maestro/bin/maestro" --version
 
       # The matcher sends each new member to the LEAST-loaded online listener, so with the
       # seeded roster flow 1 lands on one listener, flow 2 on a different one — and
@@ -236,7 +252,7 @@ jobs:
       - name: Run the two flows on a real emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
-          api-level: 33 # SDK 52's target — do not bump here; T6.2 owns emulator-version changes
+          api-level: 33 # retained compatibility surface, not the SDK 55 target API
           arch: x86_64
           profile: pixel_6
           # NOT cores: 4 — tried that (session 48, run 4) on the strength of the
@@ -365,3 +381,33 @@ jobs:
         if: always()
         working-directory: services/api
         run: docker compose down -v
+  native-gate:
+    if: always()
+    needs: [changes, check-secrets, maestro]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Require selected native acceptance, including secrets
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          SELECTED: ${{ needs.changes.outputs.native }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, 'scripts/ci')
+          from change_policy import validate_results
+          results = json.loads(os.environ['RESULTS'])
+          assert results.pop('changes')['result'] == 'success'
+          selected = os.environ['SELECTED']
+          assert selected in ('true', 'false')
+          validate_results(dict.fromkeys(('check-secrets', 'maestro'), selected == 'true'), results)
+          PY
+  full-suite:
+    if: always() && needs.changes.outputs.full == 'true'
+    needs: [changes, check-secrets, maestro, native-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record complete native acceptance for release evidence
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: python3 -c 'import json,os; assert all(v["result"] == "success" for v in json.loads(os.environ["RESULTS"]).values())'

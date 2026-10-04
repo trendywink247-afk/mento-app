@@ -435,179 +435,90 @@ byte-for-byte against the raw stored event, not just the fields we expected to
 check); a plain unhandled exception arrives with its type and message intact
 (by design — only *request* data is stripped, not the error itself).
 
-### The cutover runbook (T1.10) — legacy → Balanced, same box
+### Legacy to Balanced cutover — acceptance contract
 
-**Not run yet.** `129.121.122.28` is the box — it's already the live one (DNS
-already points here), so this is **not** a two-box move with a DNS switch. It's an
-in-place conversion: legacy stack (host nginx, `docker-compose.prod.yml`) → Balanced
-stack (Caddy, `compose.base.yml` + `compose.prod.yml`). Read the whole thing before
-starting; steps 1–6 touch nothing live and are fully reversible, step 7 is the one
-that takes traffic, step 8 is the point of no easy return.
+**Not accepted for live execution.** The earlier procedure restored a snapshot into
+another database while the legacy application continued accepting writes, then
+switched traffic to the stale copy. Returning Nginx to the original database after
+new writes reached the copy also loses or hides accepted writes. That procedure is
+withdrawn. Row counts that are merely close are not acceptance evidence.
 
-Founder-only before starting: order/confirm nothing else needs to happen to the box
-itself (H1 is already satisfied — this box exists); decide how much downtime is
-acceptable if the cutover needs a retry (expect low seconds, not zero, for step 7).
+Separate the edge change from any database relocation. Use an exact accepted
+release artifact; do not reset a serving checkout to a moving branch as a release.
+Production promotion remains locked until the operational gates in
+[PROGRESS.md](../PROGRESS.md) are satisfied.
 
-**Prerequisites (all done as of session 47):** real secrets encrypted to
-`deploy/secrets/prod.env.sops.yaml`; `sops`/`age` installed on the box; the box's
-own age key at `~/.config/sops/age/keys.txt`. Confirm before starting:
+#### 1. Edge and application transition with one authoritative database
 
-```bash
-ssh mento-ops@129.121.122.28 'cd /opt/mento && bash deploy/decrypt-env.sh && echo OK'
-```
+- Inventory the serving database identity, data volume, schema revision, worker,
+  queue consumers, Stream webhook writers and scheduled jobs. Record identifiers
+  without exposing credentials. Inventory all Nginx virtual hosts before changing
+  the host service; unrelated sites must retain service.
+- Prepare Caddy and the accepted application against the **same authoritative
+  database**. The Compose defaults currently create another PostgreSQL service;
+  they are not a ready-made command for this transition. Validate the specific
+  network, credentials and configuration that reuse the serving database before
+  making a live change. Do not attach two database engines to one data directory.
+- Rehearse compatible forward migrations and both application versions against
+  that schema. Enforce the aggregate old/new API process and worker connection
+  budget, including auxiliary clients. Keep one authorized periodic scheduler and
+  prove idempotent queue processing during overlap.
+- Validate the complete edge route map, trusted HTTPS, certificate issuance and
+  renewal, authenticated WebSockets, message catch-up, admin access and external
+  safety hooks. Do not interpret internal TLS with verification disabled as public
+  certificate acceptance.
+- During a controlled maintenance window, transfer edge ownership using the
+  rehearsed configuration. Check synthetic writes immediately before and after
+  the switch, acknowledge them only after commit, and verify each remains readable.
+- Edge rollback returns to Nginx and the compatible previous application **using
+  the same database**. It does not restore an older database snapshot. Confirm
+  post-switch writes and erasures survive rollback. If the prior application is
+  incompatible with the migrated schema, remain in maintenance and use the
+  rehearsed forward fix or recovery procedure; do not improvise a downgrade.
 
-**1. Fresh backup, off this exact moment.**
+#### 2. Database relocation, if required, is a separate release
 
-```bash
-ssh mento-ops@129.121.122.28 'bash /opt/mento/deploy/backup-postgres.sh'
-# note the filename it prints — step 4 restores this one
-```
+Before relocation, choose and rehearse either a complete write freeze plus final
+consistent transfer, or an explicitly reconciled replication cutover. A background
+snapshot by itself is insufficient. The maintenance approach requires:
 
-**2. Move the box's checkout past this commit**, so `deploy.sh` starts reading the
-encrypted secrets and everything else T1.1–T1.9/WS2–WS4 shipped is present:
+1. Enter maintenance at all write entry points; prevent new API and WebSocket
+   writes, provider webhook writes, worker writes, scheduled jobs and operator
+   mutations. Drain accepted work and verify no old writer remains. Keep the source
+   database authoritative and unavailable for further writes.
+2. Record the final source checkpoint and create a verified transfer into an
+   isolated destination. A disaster-recovery archive intentionally excluding chat
+   history is **not** a complete database-migration archive. Define the transfer
+   dataset explicitly and preserve every record needed by live conversations.
+   Keep encryption, restricted access and deletion reconciliation requirements.
+3. Restore and migrate with workers and external integrations disabled. Verify
+   schema, constraints, final checkpoint/record equivalence, committed-message
+   sentinels, post-snapshot deletion receipts and pending-job inventory. Row counts
+   alone cannot prove equivalence or deletion safety.
+4. Fence the old writer, configure all application and worker processes for the
+   destination, verify the one-writer invariant and perform pre-opening acceptance.
+   If this fails before any destination write is accepted, return to the frozen
+   authoritative source using the rehearsed procedure.
+5. Open writes only after that acceptance. **Once the destination accepts a write,
+   it is authoritative.** An application rollback must continue using it. Returning
+   to the old database requires another write freeze and a complete, reconciled
+   reverse transfer, or a reviewed forward recovery; a proxy switch is insufficient.
+6. Verify backup targets, encrypted off-site copies, independent receipts, restore
+   drills, monitoring and worker health for the new database. Keep the old volume
+   isolated for the reviewed retention period. Do not remove it just because a
+   fixed number of days has passed.
 
-```bash
-ssh mento-ops@129.121.122.28 'cd /opt/mento && git fetch -q && git reset -q --hard origin/master'
-```
+#### 3. Evidence required before issuing live commands
 
-This alone changes nothing running — no compose command has touched the Balanced
-stack yet. The legacy containers keep serving on whatever image they already had.
-
-**3. Bring up the Balanced stack's data services only — nothing public yet.**
-Nothing here binds a host port (compose.prod.yml's `postgres`/`valkey` publish
-nothing), so this cannot collide with the legacy stack still running:
-
-```bash
-ssh mento-ops@129.121.122.28 '
-  cd /opt/mento
-  export MENTO_STACK=balanced
-  mkdir -p ~/.config/mento && echo balanced > ~/.config/mento/stack   # deploy.sh reads this too; belt and suspenders
-  export MENTO_ENV_FILE="$(deploy/decrypt-env.sh)"
-  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= "$MENTO_ENV_FILE" | cut -d= -f2-)"
-  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml up -d --wait postgres valkey
-'
-```
-
-**4. Restore step 1's backup into the new (still schema-less) database first —
-before migrations, not after.** `POSTGRES_DB=mento` makes the postgres image
-auto-create an empty `mento` database on first boot, but nothing has created a
-single table in it yet. Restore the backup now, while that's still true: it's a
-plain `pg_dump` (`CREATE TABLE ...` + data), so it needs empty tables to create,
-not ones already-created by a later `alembic upgrade` — run migrations first and
-this step turns into a wall of "already exists" errors on every restored table.
-**Each of these `ssh '...'` blocks is its own shell** — the env exports from step
-3 do not carry over; every step below repeats them:
-
-```bash
-ssh mento-ops@129.121.122.28 '
-  gunzip -c /opt/mento-backups/mento-<STAMP>.sql.gz \
-    | docker exec -i mento-postgres psql -v ON_ERROR_STOP=1 -U mento -d mento
-'
-```
-
-`-v ON_ERROR_STOP=1` matters here — without it psql logs an error and keeps going,
-so a real restore failure could pass silently instead of stopping the runbook.
-
-Sanity-check row counts match the legacy database before continuing (e.g.
-`SELECT count(*) FROM users` against both `mento-postgres-prod` and `mento-postgres`
-— they should be close; a live gap of a few rows from traffic since step 1
-is expected and fine).
-
-**5. Run migrations** — brings the just-restored, old-schema data up to what the
-new code (WS2/WS3/WS4 and everything since) expects:
-
-```bash
-ssh mento-ops@129.121.122.28 '
-  cd /opt/mento
-  export MENTO_ENV_FILE="$(deploy/decrypt-env.sh)"
-  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= "$MENTO_ENV_FILE" | cut -d= -f2-)"
-  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml \
-    --profile tools run --rm --no-deps migrate
-'
-```
-
-**6. Build and start the API on the Balanced stack — still not public.** This is
-the real test: does the app boot correctly against the restored data, with the new
-env file, before anything sees it?
-
-```bash
-ssh mento-ops@129.121.122.28 '
-  cd /opt/mento
-  export MENTO_STACK=balanced
-  export MENTO_ENV_FILE="$(deploy/decrypt-env.sh)"
-  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= "$MENTO_ENV_FILE" | cut -d= -f2-)"
-  export API_TAG=$(git rev-parse --short=12 HEAD)
-  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml build migrate
-  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml up -d --wait api_blue
-  docker exec mento-api_blue-1 python -c \
-    "import urllib.request as u; print(u.urlopen(\"http://127.0.0.1:8000/api/v1/health/ready\").status)"
-'
-```
-
-If this fails, **nothing public has changed** — fix it, or stop here and clean up
-(`docker compose -f compose.base.yml -f compose.prod.yml down`) with zero impact on
-the live legacy stack.
-
-**7. The actual cutover — this is the step that takes traffic.** Stop nginx (frees
-:80/:443), start Caddy (claims them, proxies to the now-healthy `api_blue`, issues
-its own Let's Encrypt certs on first boot — expect a few seconds of cert issuance
-before HTTPS answers cleanly, HTTP still redirects immediately):
-
-```bash
-ssh mento-ops@129.121.122.28 '
-  sudo systemctl stop nginx
-  cd /opt/mento
-  export MENTO_STACK=balanced
-  export MENTO_ENV_FILE="$(deploy/decrypt-env.sh)"
-  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= "$MENTO_ENV_FILE" | cut -d= -f2-)"
-  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml up -d --wait caddy
-'
-for u in https://api.mento.chat/api/v1/health https://app.mento.chat/ https://admin.mento.chat/admin; do
-  curl -sS -o /dev/null -w "$u -> %{http_code}\n" "$u"
-done
-```
-
-**If step 7 fails or the health checks come back wrong: roll back immediately.**
-Legacy containers were never stopped, so this is fast:
-
-```bash
-ssh mento-ops@129.121.122.28 '
-  cd /opt/mento
-  docker compose -f deploy/compose.base.yml -f deploy/compose.prod.yml stop caddy
-  sudo systemctl start nginx
-'
-```
-Then debug against the still-running Balanced stack (not in front of traffic) and
-retry step 7 when fixed. The legacy stack is untouched throughout steps 1–7 — it
-only stops mattering once step 7's health checks come back green and stay green.
-
-**8. Once stable (the plan says roughly a week, judgement call), retire the
-legacy stack:**
-
-```bash
-ssh mento-ops@129.121.122.28 '
-  cd /opt/mento
-  export POSTGRES_PASSWORD="$(grep ^POSTGRES_PASSWORD= services/api/.env | cut -d= -f2-)"
-  docker compose -f deploy/docker-compose.prod.yml down
-  sudo systemctl disable nginx
-'
-```
-After this, `deploy.sh` with no `MENTO_STACK` override defaults to `legacy` — but
-`~/.config/mento/stack` (set in step 3) overrides that default, so ordinary deploys
-keep targeting the Balanced stack without needing `MENTO_STACK=balanced` on every
-call. Confirm this before trusting it silently.
-
-**Not yet handled by this runbook, flag before relying on it fully:**
-- `deploy/backup-postgres.sh` still hard-codes `mento-postgres-prod` — after step 8
-  it will start failing (the container it targets is gone). Update it to
-  `mento-postgres` as part of step 8, not after.
-- No rehearsal of this exact sequence has happened — each step's commands are
-  individually proven (the compose files, the migrate/seed pattern, Caddy's host
-  map, decrypt-env.sh) but not run back-to-back as one script yet. Treat this as a
-  checklist to execute carefully by hand the first time, not a one-command deploy.
+Attach the exact source/destination configuration, accepted artifact SHA, schema
+compatibility result, tested maintenance and fencing mechanism, all-writer
+inventory, bounded connection calculation, before/after write and erasure proof,
+trusted HTTPS/WebSocket result, measured interruption window, rollback result and
+operator checklist. Run the entire sequence on isolated data first, then staging.
+The existing synthetic blue/green drill does not prove this database cutover.
+No live cutover, data migration or automatic failover is authorized by this document.
 
 ---
-
 ## Secrets (SOPS + age)
 
 **Status:** adopted (session 47) — `deploy/secrets/prod.env.sops.yaml` exists,

@@ -79,3 +79,20 @@ It neither contacts Stream nor publishes chat events. There is deliberately no
 public endpoint or automatic production invocation. A supplied set of digests is
 not evidence that all deletions were captured: durable replication and coverage
 verification remain required. Keep all restored jobs and serving processes off.
+### Off-primary acknowledgement gate (preparation)
+
+`RECOVERY_RECEIPT_REQUIRED` defaults to false until a dedicated receiver is deployed
+and accepted. When enabled, erasure sends only a version and member digest to
+`RECOVERY_RECEIPT_URL` over HTTPS with a separate `RECOVERY_RECEIPT_TOKEN`. It refuses
+redirects, environment proxies, missing credentials and nonmatching acknowledgements.
+The receiver must return HTTP 200 with the same digest, version 1 and `durable: true`
+only after its durable commit. The local account deletion then proceeds. A failed
+acknowledgement returns the existing retryable erasure error and retains the account.
+
+A remotely recorded deletion intent can survive a later local transaction rollback;
+that intent still represents the member's deletion request and must be included in
+recovery reconciliation. Retries must be idempotent by digest. Never use a staging
+application database as the production receiver. Receiver provisioning, durable
+storage/fsync acceptance, isolation, secret rotation, recovery export and complete
+coverage across the transition remain mandatory before enabling this flag. No
+receiver or replication is deployed by this client implementation.

@@ -15,6 +15,13 @@ production, isolated staging, and monitoring with explicit resource and data
 boundaries. Operational contract and current blockers: `docs/ENVIRONMENTS.md`.
 This changes delivery environments, not the v1 product scope.
 
+**Architecture direction, 2026-10-04:** the founder authorized the full pictured
+growth architecture, delivered through tested increments with Balanced as the first
+production milestone. Track local, staging and production evidence separately in
+`ARCHITECTURE_BOOK_ALIGNMENT.md` and `PROGRESS.md`. This authorizes implementation,
+not untested production activation or an unmeasured capacity claim. Professional
+mentoring remains separately scoped; no payments, groups or video launch is implied.
+
 ## Positioning decision (governs everything below)
 
 Mento is an **anonymous emotional-support app**. UPSC is the **first community**, not the product. Mentor-led UPSC *sessions* (PRD Module B) are **build-second**, after the anonymous chat (Module A) is solid. The UPSC **self-assessment** suite (Self-Reflection, The Mirror, Knowledge Assessment, Preparation Challenges) is **deferred** to a later, separately-specced module.

@@ -1,10 +1,10 @@
-"""A 1:1 conversation. Message bodies live in Stream Chat, not here (metadata only)."""
+"""A 1:1 conversation with one server-selected owner for its message transport."""
 
 from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -15,6 +15,7 @@ from app.models.mixins import TimestampMixin, UUIDMixin
 class Conversation(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "conversations"
     __table_args__ = (
+        CheckConstraint("chat_backend IN ('stream', 'own')", name="ck_conversations_chat_backend"),
         # My Chats: a member's conversations, newest first (T2.2).
         Index("ix_conversations_user_created", "user_id", "created_at"),
         # Mentor console list and seat accounting: a mentor's conversations by status.
@@ -24,6 +25,13 @@ class Conversation(UUIDMixin, TimestampMixin, Base):
     type: Mapped[ConversationType] = mapped_column(default=ConversationType.anon)
     status: Mapped[ConversationStatus] = mapped_column(
         default=ConversationStatus.active, index=True
+    )
+
+    # Ownership is persisted, never selected by a client or inferred from channel ids.
+    # Keep both defaults: older releases omit this column when inserting a room.
+    # Matching continues to create Stream rooms until a separate accepted cutover.
+    chat_backend: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="stream", server_default="stream"
     )
 
     # RESTRICT, both sides (T2.1): this row is the only handle on the Stream channel,

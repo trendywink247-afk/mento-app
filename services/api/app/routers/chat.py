@@ -207,7 +207,7 @@ async def _on_send(peer: Peer, conversation_id: str, me: str, frame: dict) -> No
 def messages(conversation_id: str, after: int = 0, who=Depends(current_member_or_listener)) -> dict:
     with SessionLocal() as db:
         convo = db.get(Conversation, conversation_id)
-        if convo is None or chat.side_of(convo, who[1]) is None:
+        if convo is None or convo.chat_backend != "own" or chat.side_of(convo, who[1]) is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "no such conversation")
         return {
             "messages": chat.history(db, conversation_id, after),
@@ -224,7 +224,7 @@ def wipe(conversation_id: str, who=Depends(current_member_or_listener)) -> dict:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "members only")
     with SessionLocal() as db:
         convo = conversations.lock(db, conversation_id)
-        if convo is None or convo.user_id != who[1]:
+        if convo is None or convo.chat_backend != "own" or convo.user_id != who[1]:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "no such conversation")
         deleted = conversations.clean_wipe(db, convo, ConversationEndedBy.member)
         db.commit()

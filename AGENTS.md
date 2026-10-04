@@ -24,3 +24,9 @@ Cross-tool brief for any AI agent or assistant working in this repo (Claude Code
 - **End every work session** by updating `PROGRESS.md`, committing with a clear message, and stating the resume command.
 
 If `CLAUDE.md` and this file ever disagree, `CLAUDE.md` wins.
+
+## Local validation before push (founder, 2026-10-04)
+- Finish implementation and relevant tests locally before pushing changes. Do not use GitHub CI as the first runtime validation.
+- Use scripts/local/workspace.ps1 and scripts/local/api.py for this checkout's isolated localhost app/API/test database. Do not run default pytest against the legacy localhost:5432 database.
+- If required local validation is unavailable, keep changes and progress commits local, record the blocker and repair the local environment. Do not push unvalidated changes.
+- CI, exact-master checks and staging remain additional gates after local acceptance; production remains locked until operational acceptance.
