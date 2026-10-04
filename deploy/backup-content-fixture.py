@@ -14,6 +14,9 @@ from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.moderation import ModerationEvent
 from app.models.user import User
+from app.models.erasure_receipt import ErasureReceipt
+from app.services.erasure import recovery_digest
+from app.services.recovery_reconciliation import reconcile_restored_members
 
 settings = get_settings()
 url = make_url(settings.database_url)
@@ -51,5 +54,29 @@ with SessionLocal() as db:
         assert db.get(User, note.user_id) is not None
         assert db.get(Conversation, report.conversation_id) is not None
         print("PASS: chat rows excluded; saved note, report and block state retained")
+    elif sys.argv[1] == "erase-source":
+        assert url.database == "source"
+        member = db.scalars(select(User)).one()
+        digest = recovery_digest(member.id)
+        assert reconcile_restored_members(db, {digest}) == 1
+        db.commit()
+        assert db.get(ErasureReceipt, digest) is not None
+        # Synthetic digest only: emulate receipt arriving after the snapshot.
+        print(digest)
+    elif sys.argv[1] == "reconcile":
+        assert url.database == "recovered"
+        digest = sys.argv[2]
+        assert db.get(ErasureReceipt, digest) is None  # snapshot predates deletion
+        assert reconcile_restored_members(db, {digest}) == 1
+        db.commit()
+        assert db.scalar(select(func.count()).select_from(User)) == 0
+        assert db.scalar(select(func.count()).select_from(JournalEntry)) == 0
+        assert db.scalar(select(func.count()).select_from(Conversation)) == 0
+        report = db.scalars(select(ModerationEvent)).one()
+        assert report.reporter_id is None
+        assert report.reason == "retained synthetic report" and report.blocked
+        assert db.get(ErasureReceipt, digest) is not None
+        assert reconcile_restored_members(db, {digest}) == 0
+        print("PASS: post-snapshot erasure replay removes restored account/notes and detaches report")
     else:
-        raise SystemExit("Expected seed or verify")
+        raise SystemExit("Unknown drill mode")
