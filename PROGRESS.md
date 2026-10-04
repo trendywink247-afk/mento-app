@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Background execution reauthorized; backup retention failures surfaced
+
+**Founder direction:** Explicitly authorized a new trigger to complete steps 1–5. Created ACTIVE complete-mento-implementation heartbeat every 30 minutes, attached to this chat, quiet for unchanged/running CI. It uses current PROGRESS and the five-phase scope instead of stale PR instructions.
+
+**Release:** Exact eb1a031 master API/Test/native gates passed (37165108469/37165108506/37165108494). Dispatched full staging 37187307738 for eb1a031; acceptance pending. Latest verified staging remains 8ee2f8c. Production locked.
+
+**Implementation:** Backup script now fails visibly when remote retention fails and skips local pruning. Added isolated synthetic expired-archive test verifying preservation on remote failure and removal only after successful retry. Bash syntax/whitespace passed; Linux CI pending. No production archives or schedules changed. Retention errors were previously suppressed by || true; this did not satisfy operational failure reporting.
+
+**Next:** Inspect current PR Linux tests and staging acceptance, fix failures and independently verify artifact identity. Continue actual phase 1 gates: encrypted snapshot-safe exporter, independent recovery custody, deletion reconciliation and coordinated schema/worker/safety acceptance. Remaining phases stay on the active worklist, not marked complete. Resume H:\Mento gpt\Mento; preserve untracked architecture book.
+
+---
 ## 2026-10-04 — Reminder permanently deleted; live monitoring probes validated
 
 **Founder direction:** Deleted continue-mento-architecture-delivery through the app; tool confirmed deleted, not paused. Do not recreate it or schedule another reminder. Continue authorized five-phase engineering in this chat; no new chat created.
