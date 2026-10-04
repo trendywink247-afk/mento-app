@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Native regression fix merged; extra database clients budgeted
+
+**Integrated:** PR59 exact head 1e6a359 passed API 37207521707, Test 37207521736 and native 37207521772. Reviewed and merged as c1fa271. Both native flows and deterministic invalid-coordinate replay passed. Master still needs its own release gates/full staging; latest independently accepted staging remains 80054fb, production disabled. Do not declare all device/keyboard combinations proven.
+
+**Implemented:** PR60 9ae4f2a requires an explicit other_connections allowance in the offline PostgreSQL calculator, includes it in aggregate required capacity and updates the operator example. Five local unit tests pass, including extra-client boundary and negative-input rejection; whitespace passed. This supports the Balanced shared-server audit (optional GlitchTip included) but does not discover rendered Compose settings or prove load capacity. CI pending.
+
+**Next:** Inspect c1fa271 master checks then run full staging/independent verification; inspect PR60 exact-head checks. Continue phase-1 durable deletion reconciliation and off-device custody, then effective Balanced resource/pool acceptance and remaining phases. Resume H:\Mento gpt\Mento on current implementation branch, preserve book and Desktop; no production activation. Five phases remain incomplete.
+
+---
 ## 2026-10-04 — Native fix passed first emulator run; deterministic regression added
 
 **Evidence:** PR59 d1dfda8 API 37205731664, Test 37205731677 and native 37205731660 all passed. Native logs did not exercise the invalid 48.76 coordinate this time, so a green run alone was insufficient regression evidence.
