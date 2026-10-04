@@ -1,6 +1,6 @@
 """Admin dashboard API (spec 2026-07-13). Web-only console; token-link auth with
 per-request revocation; every mutation + conversation view is audit-logged.
-Anonymity holds: personas only, message bodies never stored."""
+Anonymity holds: personas only; the admin view never persists message-body copies."""
 
 from __future__ import annotations
 
@@ -76,6 +76,7 @@ from app.services import (
 from app.services.categories import availability_note, ordered_times
 from app.services.links import admin_link, mentor_console_link
 from app.services.matching import reconcile_listener_capacity
+from app.services.moderation_reader import own_messages
 from app.services.persona import generate_persona
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -279,7 +280,7 @@ def conversation_messages(
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> list[AdminMessageItem]:
-    """Read-only live view for crisis review. Fetched from Stream, never stored.
+    """Read-only live view for crisis review from the stored transport owner.
 
     Scoped (T3.12): only while the conversation has an open case — an unreviewed
     safety flag or an unresolved report on it — and only with a stated reason. The
@@ -298,7 +299,7 @@ def conversation_messages(
             "no_open_case",
             "This conversation has no open flag or report, so it cannot be opened.",
         )
-    if convo.chat_backend != "stream":
+    if convo.chat_backend not in {"stream", "own"}:
         raise ApiProblem(
             status.HTTP_409_CONFLICT,
             "moderation_transport_not_supported",
@@ -313,7 +314,11 @@ def conversation_messages(
         meta={"reason": reason, "case": case},
     )
     db.commit()
-    msgs = stream.fetch_channel_messages(convo.stream_channel_id or "")
+    msgs = (
+        own_messages(db, convo)
+        if convo.chat_backend == "own"
+        else stream.fetch_channel_messages(convo.stream_channel_id or "")
+    )
     return [AdminMessageItem(**m) for m in msgs]
 
 

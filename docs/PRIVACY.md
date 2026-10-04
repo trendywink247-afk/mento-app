@@ -101,6 +101,18 @@ separate mentor-verification flow and does not apply to people seeking support).
   audit trail (who viewed what, when). This is the one deliberate exception to
   "no one reads your chat," and it exists to keep people safe during a crisis or
   policy violation — not for general monitoring.
+  The reader requires an active staff account, an unresolved report or unreviewed
+  safety flag on that exact conversation, and a stated reason recorded in the
+  audit. It shows at most the latest 100 surviving messages, labelled by persona;
+  it does not copy message bodies into the audit or case record. The locally
+  gated own-chat implementation reads encrypted live application rows under
+  these same limits, excluding wiped rooms; it cannot recover deleted messages
+  from backups or expired partitions. This implementation is not evidence of
+  deployment or provider cutover, and does not set a new retention period.
+  The view returns stored delivery text, without reconstructing a pre-redaction
+  original. Redaction is best-effort: its existing fail-open behavior can deliver
+  and store original text when the filter fails, so this view does not guarantee
+  that message text is free of identifying information.
 - **AI processing (opt-in only):** if you turn on AI journal note-sorting, your
   journal text is sent to a third-party AI model (Google Gemini) to organize it —
   this is off by default and only runs on journals, never on live chat messages.
