@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     terms_version: str = "2026-09-27"
     terms_gate_enforced: bool = False
 
+    # Enable only after the independent receipt sink and coverage are accepted.
+    recovery_receipt_required: bool = False
+    recovery_receipt_url: str = ""
+    recovery_receipt_token: str = ""
+
     database_url: str = "postgresql+psycopg://mento:mento@localhost:5432/mento"
     # Sized for a single process: workers × (pool_size + max_overflow) must stay
     # under Postgres max_connections (default 100). pool_timeout fails fast — a
