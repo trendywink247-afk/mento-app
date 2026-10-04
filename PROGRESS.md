@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Native failure correlated with invalid keyboard bound; fix candidate pushed
+
+**Verified staging:** Full run 37203899333 passed for input 80054fb; restricted receiver independently verified full SHA 80054fba2a529f1146d1c8d866d2025f3d1d9f9c. This is latest accepted staging. Master 452a854 API/Test passed but native 37203886067 failed; do not release that master.
+
+**Diagnosis/implementation:** Failed first-message flow could not locate composer-send. Geometry logs showed valid keyboardTop 571.05, then hide/show reporting 48.76 while header remained 92.19: existing code sets the entire thread height to zero. PR59 d1dfda8 rejects bounds above the header and retains the last valid coordinate across transient hide/show, with cache invalidation on actual screen-size changes (not IME window resize). Invalid initial bounds no longer collapse the thread. No test assertion weakened. Bash-independent whitespace check passed; local TypeScript still running at this log entry and fresh API/web/native CI pending. Do not claim acceptance or all keyboard cases fixed; first-ever invalid coordinates without a previous bound remain a validation case.
+
+**Next:** Inspect PR59 exact-head typecheck/native evidence, verify first-message plus mentor reply, and fix remaining failures. Production remains locked; recovery custody/deletion reconciliation and later phases remain unfinished. Resume H:\Mento gpt\Mento on codex/native-keyboard-transient; preserve book and Desktop. Continue existing automation.
+
+---
 ## 2026-10-04 — Copy overlap protection accepted; next staging candidate in acceptance
 
 **Integrated:** PR58 da5d12e passed API 37202195403/Test 37202195404, including real Linux lock contention followed by successful retry and ciphertext regression checks. Merged as 452a854; current master requires fresh release gates. No production schedule or data changed.
