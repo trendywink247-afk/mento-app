@@ -28,6 +28,7 @@ import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { ensureListenerConnected, getListenerStreamClient } from '@/lib/listenerStreamClient';
 import { leaveToMentorHome } from '@/lib/leaveToChats';
+import { requireNativeStreamOwner } from '@/lib/nativeChatOwner';
 import { mentorFaces } from '@/lib/mentorFaces';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
@@ -155,6 +156,9 @@ export default function MentorChatScreen() {
     const setup = async () => {
       try {
         setError(false);
+        if (!id) throw new Error('conversation_required');
+        await requireNativeStreamOwner(() => listenerApi.brief(id));
+        if (cancelled) return;
         const me = await listenerApi.me();
         mentorFaces.setSelf(me.companion_animal, me.companion_colour);
         setMine((me.companion_animal as CompanionAnimal | undefined) ?? 'Owl');
@@ -187,7 +191,7 @@ export default function MentorChatScreen() {
         activeChannel?.off('user.watching.stop', onWatch);
       }
     };
-  }, [channelId, surfaceCrisis, attempt]);
+  }, [id, channelId, surfaceCrisis, attempt]);
 
   const endNow = async () => {
     if (ending) return;
