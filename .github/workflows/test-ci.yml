@@ -52,6 +52,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Validate release policy tests
         run: python3 -m unittest discover -s scripts/ci -p 'test_*.py'
+      - name: Validate rendered Balanced local-production parity
+        run: bash deploy/test-parity.sh
       - name: Validate worker startup rollback control flow
         run: bash deploy/test-worker-rollback.sh
       - name: Validate backup failure handling

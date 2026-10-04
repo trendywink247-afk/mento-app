@@ -57,6 +57,20 @@ def normalise(path):
                 vol.pop("bind", None)  # create_host_path etc. follow the source
     return cfg
 
+# Inspect actual rendered inheritance before normalisation removes environment.
+rendered = json.load(open(sys.argv[2]))["services"]
+application_pools = 0
+for name in ("api_blue", "api_green", "worker"):
+    env = rendered[name]["environment"]
+    size, overflow = int(env["DB_POOL_SIZE"]), int(env["DB_MAX_OVERFLOW"])
+    assert size > 0 and overflow >= 0, f"{name}: unbounded connection pool"
+    application_pools += size + overflow
+# One process per color and one worker: reserve queue/migration/ops slots.
+# Optional GlitchTip still requires a separately measured budget before rollout.
+limit = next(int(arg.split("=", 1)[1]) for arg in rendered["postgres"]["command"]
+             if arg.startswith("max_connections="))
+assert application_pools + 4 + 1 + 3 + 5 <= limit, "Balanced core overlap exceeds DB budget"
+print("PASS: rendered core pool overlap fits; optional clients still require acceptance")
 local, prod = (normalise(p) for p in sys.argv[1:3])
 diffs = []
 
