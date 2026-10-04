@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Post-snapshot deletion replay added to encrypted recovery drill
+
+**Implementation:** PR63 d85b631 is stacked on PR62. The isolated drill now takes the encrypted snapshot, erases the synthetic source account afterward, carries its digest receipt separately, restores the older snapshot and replays the receipt. Assertions require removal of restored account/journal/conversation, retention of detached report/block state, and idempotence. The pre-replay verify still proves permitted notes/reports were actually restored. No real user data or network integration touched.
+
+**Validation:** Bash syntax, Python compilation and whitespace passed. Linux runtime CI pending; this is not yet runtime acceptance. PR62 latest API/Test remain green; native 37214408916 running at inspection. PR63 synthetic digest handoff does not establish durable off-primary replication or complete receipt coverage. Never merge it into master ahead of PR62 acceptance.
+
+**Next:** Inspect both exact-head runs, fix runtime failures and integrate in dependency order after green checks. Keep phase 1 priority: durable independent receipts, recovery-key custody, six-hour scheduling/alerts and coordinated API/worker release gates remain incomplete. Production disabled; verified staging c1fa271. Resume H:\Mento gpt\Mento on codex/recovery-snapshot-replay, preserve book and Desktop.
+
+---
 ## 2026-10-04 — Phase 1 focused execution: deletion replay and real inter-VPS recovery transport
 
 **Founder direction:** Finish phase 1 before later phases. Asked for recovery vault location; founder said create it on VPS. No vault/private key was installed on either VPS: a VPS-hosted vault alone cannot establish recovery independent of both servers; an independently held unlock/recovery secret remains necessary. Existing identity is Windows-user DPAPI protected, not independently recoverable custody.
