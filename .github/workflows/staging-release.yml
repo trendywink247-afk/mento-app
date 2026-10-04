@@ -108,6 +108,7 @@ jobs:
         env:
           MENTO_WEB: https://staging.mento.chat
           MENTO_API: https://staging.mento.chat/api/v1
+          MENTO_EXTENDED_ACCEPTANCE: '1'
         run: |
           ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "fixture $SHA" > "$RUNNER_TEMP/fixture.json"
           export MENTO_LISTENER_URL="$(jq -r .url "$RUNNER_TEMP/fixture.json")"

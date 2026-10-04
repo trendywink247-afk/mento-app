@@ -29,6 +29,7 @@ import { useI18n } from '@/lib/i18n';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
+import { mergeRecoveredMessages, subscribeToRecoveredMessages } from '@/lib/streamRecovery';
 import { mentorFaces } from '@/lib/mentorFaces';
 import { getSessionToken } from '@/lib/session';
 import { leaveToMentorHome } from '@/lib/leaveToChats';
@@ -155,6 +156,7 @@ export default function MentorChatScreenWeb() {
 
   useEffect(() => {
     let cancelled = false;
+    const unsubscribe: Array<() => void> = [];
 
     const setup = async () => {
       try {
@@ -186,25 +188,33 @@ export default function MentorChatScreenWeb() {
           void ch.markRead().catch(() => {});
         };
         markRead();
-        ch.on('message.new', (e: Event) => {
+        unsubscribe.push(ch.on('message.new', (e: Event) => {
           if (e.message) {
             appendMessage(e.message as RawMsg);
             surfaceCrisis(e.message as CrisisCarrier);
           }
           if (e.user && e.user.id !== client.userID) markRead();
-        });
-        ch.on('message.read', () => setReadTick((t) => t + 1));
+        }).unsubscribe);
+        unsubscribe.push(subscribeToRecoveredMessages(client, ch, recovered => {
+          setMessages(previous => mergeRecoveredMessages(previous, recovered.map(m => toMsg(m as RawMsg))));
+          recovered.forEach(m => surfaceCrisis(m as CrisisCarrier));
+          setTyping(null);
+          setReadTick(t => t + 1);
+          setHere(others());
+          markRead();
+        }));
+        unsubscribe.push(ch.on('message.read', () => setReadTick((t) => t + 1)).unsubscribe);
         // "here now" = the member is watching this channel (presence only, never content).
         const others = () => Object.values(ch.state.watchers ?? {}).some((u) => u?.id && u.id !== client.userID);
         setHere(others());
-        ch.on('user.watching.start', () => setHere(others()));
-        ch.on('user.watching.stop', () => setHere(others()));
-        ch.on('typing.start', (e: Event) => {
+        unsubscribe.push(ch.on('user.watching.start', () => setHere(others())).unsubscribe);
+        unsubscribe.push(ch.on('user.watching.stop', () => setHere(others())).unsubscribe);
+        unsubscribe.push(ch.on('typing.start', (e: Event) => {
           if (e.user && e.user.id !== client.userID) setTyping(e.user.name ?? memberName);
-        });
-        ch.on('typing.stop', (e: Event) => {
+        }).unsubscribe);
+        unsubscribe.push(ch.on('typing.stop', (e: Event) => {
           if (e.user && e.user.id !== client.userID) setTyping(null);
-        });
+        }).unsubscribe);
         setReady(true);
       } catch {
         // Never surface raw error internals to the listener — one calm, actionable line.
@@ -215,8 +225,9 @@ export default function MentorChatScreenWeb() {
     void setup();
     return () => {
       cancelled = true;
+      unsubscribe.forEach(stop => stop());
     };
-  }, [channelId, appendMessage, surfaceCrisis, memberName, attempt]);
+  }, [channelId, appendMessage, surfaceCrisis, memberName, attempt, toMsg]);
 
   const onTyping = useCallback(() => {
     // stream-chat throttles keystroke() internally; guard anyway — typing signals
