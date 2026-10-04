@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Encrypted export integration tested; master native failure blocks release
+
+**Implementation:** PR55 adds create-encrypted-recovery.sh: nonblocking archive-directory lock, private temporary snapshot, age encryption accepting public recipients only, cleanup on success/failure and non-overwriting encrypted publication. Both baseline/current application recovery drills now exercise wrapper and malformed-recipient cleanup. Test CI 37193861619 passed including integrated encrypted export cleanup and database restore. PR remains open; no live backup activation.
+
+**Release blocker:** Master Android 37192446116 failed two-party mentor reply. Artifact .local/native-failure-37192446116 shows composer under keyboard again, no send callback and mentor helper saw zero member messages. Expo log reports NoUpdatesAvailable; do not blame OTA without evidence. Previous keyboard fix passed some runs but intermittent failure is real. Do not promote or dismiss as flaky. Latest accepted staging remains 781ccd3.
+
+**Next priority:** Native keyboard event/measurement diagnosis across second cold launch; add safe geometry-only instrumentation or reproduce locally, fix actual cause, require unchanged first-message and two-party acceptance. Then integrate tested PR55 and exact master release gates. Independent key custody, off-host verification and deletion reconciliation still block live encrypted backup activation. Five-phase automation active; production locked. Resume H:\Mento gpt\Mento; preserve book.
+
+---
 ## 2026-10-04 — Contested partition DDL and exporter failure recovery proven
 
 **Implemented:** PR54 adds test-snapshot-ddl.sh to Linux release-tooling. An actual isolated PostgreSQL container is paused immediately before pg_dump with the exporter locks/snapshot active. Concurrent attach, detach and rename must fail specifically with lock timeout; normal inserts must succeed. Restored accounts exclude a post-snapshot insert, and excluded chat sentinels are absent. Injected dump failure must leave no final/partial archive and allow subsequent DDL, proving lock release.
