@@ -11,6 +11,14 @@
 **Blocking CI finding:** Master native run 37192446116 FAILED on two-party reply. Downloaded evidence to ignored .local/native-failure-37192446116. Mentor helper reports zero member messages; screenshot again shows composer obscured by keyboard and logs show no send callback. Previous green runs did not eliminate intermittent keyboard behavior. Do not rerun blindly or promote this master; next native work must diagnose keyboard event/measurement state across the second cold launch and test both flows. Latest accepted staging remains 781ccd3; production disabled.
 
 **Next:** Validate integrated export CI independently; investigate native regression before any new staging. Add targeted keyboard-boundary metrics diagnostics if needed rather than weaken send assertions. Remaining backup custody/deletion and five-phase gates still open. Resume H:\Mento gpt\Mento; preserve user book; automation active.
+---
+## 2026-10-04 — Native keyboard lifecycle instrumented for CI diagnosis
+
+**Implementation:** Added opt-in EXPO_PUBLIC_NATIVE_LAYOUT_DIAGNOSTICS geometry logs for hook mount/unmount, keyboard show/hide and applied top/boundary changes. Logs contain only event labels, dimensions and keyboard visibility/metrics; no drafts, identity or channel values. Enabled only in native CI build and preserved tagged lines on both pass/fail so successful versus failed cold launches can be compared. No timeout increase or assertion weakening, no speculative layout change.
+
+**Validation:** TypeScript, actionlint and whitespace checks passed locally. Native execution pending. Existing evidence from master 37192446116 still blocks release: second flow no send callback, member text never reached mentor and keyboard obscures composer. PR55 encrypted export checks are green but integration held for native diagnosis. Latest accepted staging 781ccd3, production locked.
+
+**Next:** Inspect current instrumented native run and compare mount/show/hide/measurement transitions between both flows; fix demonstrated cause, then require exact-head native acceptance. Do not declare green diagnostic run alone a permanent fix for intermittent behavior. Work only H:\Mento gpt\Mento; preserve book. Five-phase automation active.
 
 ---
 ## 2026-10-04 — Snapshot-coordinated chat-excluding exporter implemented
