@@ -13,7 +13,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      mobile: ${{ steps.classify.outputs.mobile }}
+      tooling: ${{ steps.classify.outputs.tooling }}
+      recovery: ${{ steps.classify.outputs.recovery }}
+      receiver: ${{ steps.classify.outputs.receiver }}
+      full: ${{ steps.classify.outputs.full }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - id: classify
+        run: python3 scripts/ci/change_policy.py
   mobile-web:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -48,6 +64,8 @@ jobs:
           for i in {1..30}; do curl -fsS http://127.0.0.1:18081/ >/dev/null && break; sleep 1; done
           NODE_PATH="$RUNNER_TEMP/browser-tools/node_modules" MENTO_WEB=http://127.0.0.1:18081 node e2e/age-gate.e2e.js
   release-tooling:
+    needs: changes
+    if: needs.changes.outputs.tooling == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -81,6 +99,8 @@ jobs:
       - name: Validate shell syntax
         run: while IFS= read -r -d '' file; do bash -n "$file"; done < <(find deploy scripts/ci -name '*.sh' -print0)
   recovery-receipts:
+    needs: changes
+    if: needs.changes.outputs.recovery == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -96,6 +116,8 @@ jobs:
       - name: Verify independent receipt durability and request contract
         run: python -m pytest -c services/recovery_receiver/pyproject.toml services/recovery_receiver/tests -q
   receiver-isolation:
+    needs: changes
+    if: needs.changes.outputs.receiver == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -106,11 +128,32 @@ jobs:
         run: docker run --rm --network none --mount "type=bind,source=$PWD,target=/work,readonly" mento-installer-test /work/deploy/test-production-installer.sh
   test-gate:
     if: always()
-    needs: [mobile-web, release-tooling, receiver-isolation, recovery-receipts]
+    needs: [changes, mobile-web, release-tooling, receiver-isolation, recovery-receipts]
     runs-on: ubuntu-latest
     steps:
-      - name: Require every test job
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Require every selected test job
         env:
           RESULTS: ${{ toJSON(needs) }}
+          SELECTED: ${{ toJSON(needs.changes.outputs) }}
         run: |
-          python3 -c 'import json,os; assert all(v["result"] == "success" for v in json.loads(os.environ["RESULTS"]).values()), "A required test job did not pass"'
+          python3 - <<'PY'
+          import json, os, sys
+          sys.path.insert(0, 'scripts/ci')
+          from change_policy import validate_results
+          results = json.loads(os.environ['RESULTS'])
+          assert results.pop('changes')['result'] == 'success'
+          flags = json.loads(os.environ['SELECTED'])
+          names = {'mobile-web': 'mobile', 'release-tooling': 'tooling', 'receiver-isolation': 'receiver', 'recovery-receipts': 'recovery'}
+          assert all(flags.get(flag) in ('true', 'false') for flag in names.values())
+          validate_results({job: flags[flag] == 'true' for job, flag in names.items()}, results)
+          PY
+  full-suite:
+    if: always() && needs.changes.outputs.full == 'true'
+    needs: [changes, mobile-web, release-tooling, receiver-isolation, recovery-receipts, test-gate]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record complete test acceptance for release evidence
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: python3 -c 'import json,os; assert all(v["result"] == "success" for v in json.loads(os.environ["RESULTS"]).values())'

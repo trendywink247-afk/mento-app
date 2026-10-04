@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: Full SHA on master with green API, web and native push checks
+        description: Full SHA on master with complete API, web and native push or manual checks
         required: true
       reuse_build_run_id:
         description: Optional completed staging run whose immutable build should be retried
@@ -29,7 +29,7 @@ jobs:
         with:
           ref: master
           fetch-depth: 0
-      - name: Require exact-commit master checks
+      - name: Require exact-commit complete master checks
         run: |
           mkdir candidate
           python3 scripts/ci/release_gate.py checks "$SHA" > "$RUNNER_TEMP/current-checks.json"

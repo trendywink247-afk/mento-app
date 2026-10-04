@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-10-05 — Completed PR native checked; selective CI implemented and locally validated
+
+**Checked first:** PR66 head `8782194` has successful API/Test checks and native run 37223770725. The native job took about 22 minutes, including about 16 minutes for APK compilation. This does not erase the earlier exact-master 37220498522 failure, and no native UI patch or assertion/timeout weakening was made here.
+
+**Implemented:** Shared fail-closed change classification selects affected suites for PRs; unknown paths, ambiguous/missing/shallow Git history, every non-documentation push and every manual validation select all suites. Inert documentation-only changes skip heavy jobs. Rename/deletion detection includes old and new paths. Existing `lint`, `test` and `test-gate` merge check names remain always present, and selected jobs must succeed while unselected jobs must explicitly skip. New `native-gate` makes missing credentials/skipped selected native acceptance fail explicitly; it is not yet added to GitHub branch protection.
+
+**Release coordination:** Each API/Test/native workflow emits `full-suite` only after all real jobs pass. Release policy requires complete exact-SHA master push or manual evidence, including actual jobs/markers, rejecting PR results, docs skips, historical markerless runs, truncated evidence and incomplete trusted runs. Attempt start order prevents old slow passes masking newer failures. Documentation-only current master can receive full manual API/Test/native validation before staging. Older markerless candidates need a new candidate under this policy; no provenance bypass was added. Staging/production artifact reuse and production lock remain intact.
+
+**Tool maintenance:** Native Node now matches web/release at 22; Java 17 setup precedes Gradle. Replaced mutable installer execution with pinned Maestro 2.11.0 ZIP and GitHub-published SHA-256, corrected nested archive layout, and disabled CLI analytics. Dependabot adds npm and both pip services, excludes automatic major version proposals and retains action updates. Existing action PRs, scan enforcement and full device/iOS coverage remain separate work.
+
+**Local acceptance:** Final Python CI-policy suite ran 62 tests: 58 passed/four Linux-only cases skipped on Windows. The same suite passed all 62 in a disposable network-disabled Linux container; pinned Maestro checksum and extraction/startup returned 2.11.0. Linux validation used the available Java 21 runtime because the local image repositories do not offer Java 17; the changed CI Java 17/Node 22 Android build still requires runner acceptance. Ruff on the four policy/test Python files, actionlint across all workflows and whitespace checks pass. Two focused implementers and independent read-only wiring reviews caught and resolved archive-layout and run-ordering issues. No serving databases, provider webhooks, source app flows or production configuration were changed.
+
+**Next / resume:** Commit and push this validated increment to draft PR66, then require new-head API/Test/native checks; the old green PR66 head cannot accept these changes. Verify docs-only skip behavior after integration without treating it as release proof. Configure required `native-gate` only after the updated workflow is integrated/accepted. Continue native geometry reliability, operational recovery/alerts, live pool/rollback and measured workload acceptance; architecture delivery remains incomplete. `Set-Location 'H:\Mento gpt\Mento'; git status --short --branch; gh pr checks 66`. Preserve architecture book/local user settings; no merge or production promotion in this increment.
+
+---
+
 ## 2026-10-05 — Staging access restored; parallel CI and architecture audit
 
 **Done:** Founder authorized proceeding with the access fix and parallel review. Added only the current SSH-verified operator IPv4 to VPS B's staging allowlist, retaining existing rules and `deny all`. Saved a timestamped configuration backup on B, validated `nginx -t` and reloaded Nginx. External homepage and readiness requests both returned 200. The remote wrapper reported a trailing carriage-return command error after successful validation/reload; direct external verification confirmed the change succeeded. No rendered access configuration or operator address is committed.
