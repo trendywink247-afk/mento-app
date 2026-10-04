@@ -42,4 +42,21 @@ if bash "$root/deploy/encrypt-backup.sh" "$temp/source.gz" "$temp/bad-recipient"
 fi
 test ! -e "$temp/bad.age"
 test -z "$(find "$temp" -name '.encrypted-backup.*' -print)"
+# Actual rclone local backend exercises content naming, readback and immutable
+# rejection without contacting a VPS. It is transport-tool proof, not off-host DR.
+mkdir "$temp/offsite"
+bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp/offsite"
+bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp/offsite"
+digest=$(sha256sum "$temp/archive.age"); digest=${digest%% *}
+cmp "$temp/archive.age" "$temp/offsite/$digest.age"
+printf 'corrupt synthetic remote object' > "$temp/offsite/$digest.age"
+if bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp/offsite"; then
+  echo 'FAIL: corrupt existing ciphertext accepted'; exit 1
+fi
+test "$(cat "$temp/offsite/$digest.age")" = 'corrupt synthetic remote object'
+test -s "$temp/archive.age"
+if bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/source.gz" ":local:$temp/offsite"; then
+  echo 'FAIL: plaintext accepted for upload'; exit 1
+fi
+echo 'PASS: verified ciphertext copy, idempotent retry and corrupt-target/plaintext rejection'
 echo 'PASS: encrypted round-trip, private permissions, overwrite refusal and failure cleanup'
