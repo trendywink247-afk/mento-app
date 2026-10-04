@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Native fix passed first emulator run; deterministic regression added
+
+**Evidence:** PR59 d1dfda8 API 37205731664, Test 37205731677 and native 37205731660 all passed. Native logs did not exercise the invalid 48.76 coordinate this time, so a green run alone was insufficient regression evidence.
+
+**Implementation/testing:** Added keyboard-boundary.test.cjs executing the actual transpiled hook with mocked React lifecycle/native events. Replays valid-show, hide, invalid-show and requires the prior usable height rather than zero; tests same-screen resize, rotation invalidation, invalid initial coordinates and listener cleanup. Local regression passed; wired into Test CI. Whitespace/actionlint passed. PR59 updated with test commit; fresh exact-head checks required before merge. This harness is not a substitute for device acceptance. Production remains locked; verified staging remains 80054fb.
+
+**Next:** Inspect updated PR59 checks, integrate only green; run exact master gates/full staging and independently verify artifact. Continue recovery custody/deletion reconciliation and remaining phases. Resume H:\Mento gpt\Mento on codex/native-keyboard-transient; preserve book and Desktop. No routine decision required.
+
+---
 ## 2026-10-04 — Native failure correlated with invalid keyboard bound; fix candidate pushed
 
 **Verified staging:** Full run 37203899333 passed for input 80054fb; restricted receiver independently verified full SHA 80054fba2a529f1146d1c8d866d2025f3d1d9f9c. This is latest accepted staging. Master 452a854 API/Test passed but native 37203886067 failed; do not release that master.
