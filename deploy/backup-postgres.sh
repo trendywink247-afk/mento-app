@@ -35,7 +35,10 @@ echo "[backup] wrote ${FILE}"
 OFFSITE_KEEP_DAYS=30
 if rclone copy "${FILE}" oldbox:/opt/mento-backups/from-new-box/; then
   echo "[backup] copied ${FILE} off-box"
-  rclone delete oldbox:/opt/mento-backups/from-new-box/ --min-age "${OFFSITE_KEEP_DAYS}d" || true
+  if ! rclone delete oldbox:/opt/mento-backups/from-new-box/ --min-age "${OFFSITE_KEEP_DAYS}d"; then
+    echo '[backup] ERROR: off-box retention failed; preserving local backups' >&2
+    exit 1
+  fi
 else
   echo "[backup] ERROR: off-box copy failed — preserving local backups; remote redundancy unverified" >&2
   exit 1
