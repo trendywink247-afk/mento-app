@@ -3,6 +3,7 @@
 No foreign key: a receipt must survive account deletion. Replication and retention
 must cover every recoverable backup before this can establish disaster recovery.
 """
+
 from datetime import datetime
 
 from sqlalchemy import DateTime, String

@@ -4,6 +4,7 @@ The caller must isolate the restored DB and keep API, workers and outbound
 integrations disabled. A supplied receipt set is NOT proof of complete coverage.
 The caller owns the transaction and must separately clear/review restored jobs.
 """
+
 import re
 
 from sqlalchemy import select
@@ -27,10 +28,15 @@ def reconcile_restored_members(db: Session, digests: set[str]) -> int:
     if any(is_live_mentor(db, member.id) for member in targets):
         raise MentorActive
     for member in targets:
-        active = db.scalars(select(Conversation).where(
-            Conversation.user_id == member.id,
-            Conversation.status == ConversationStatus.active,
-        ).order_by(Conversation.id).with_for_update()).all()
+        active = db.scalars(
+            select(Conversation)
+            .where(
+                Conversation.user_id == member.id,
+                Conversation.status == ConversationStatus.active,
+            )
+            .order_by(Conversation.id)
+            .with_for_update()
+        ).all()
         for conversation in active:
             # Database-only seat accounting: do not emit sockets or call Stream.
             release_listener_slot(db, conversation)
