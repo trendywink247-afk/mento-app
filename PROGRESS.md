@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Android send/reply regression fixed and merged
+
+**Verified:** PR42 exact head 0d164f6bbad10b5f9ff4a5e4edc7bd12069d76f1 passed API 37163716073, Test 37163716061 and real Android 37163716076. Logs confirm Send completed and mentor reply visible. Merged as 2544792addbc8a5fd364263ddf6a784dcbe6b90c. Explicit thread height resolves the prior max-height collapse; unchanged send/reply assertions passed.
+
+**In progress:** Master push checks 37164937437/API, 37164937416/Test and 37164937404/native. Updated PR50 against merged master without conflict (8cbfee1); fresh current-head checks required. Latest independently verified staging remains 8ee2f8c via successful full run 37163737229, not yet the newer keyboard fix. No production promotion.
+
+**Next:** Integrate PR50 only when green, then exact resulting master checks/full staging and independent artifact verification. Continue operational phase 1 gates; remaining phases are not complete. No reminder recreated. Resume H:\Mento gpt\Mento; git status --short; gh pr view 50 --json headRefOid,mergeStateStatus,statusCheckRollup.
+
+---
 ## 2026-10-04 — Full staging accepted and independently verified
 
 **Done:** Exact master gate passed for 8ee2f8ce4c311d81709ecf951300844fb6601403 (API 37159175026, Test 37159175024, native 37159175029). Full Staging Release 37163737229 passed including browser acceptance; restricted receiver independently verified that exact candidate. This is now the latest accepted staging. It includes merged backup recovery/overlap tooling, not an activated live backup schedule.
