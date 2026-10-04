@@ -23,6 +23,14 @@ render compose.local.yml "$TMP/local.json"
 MENTO_ENV_FILE="$TMP/api.env" POSTGRES_PASSWORD=parity-check GLITCHTIP_SECRET_KEY=parity-check \
     render compose.prod.yml "$TMP/prod.json"
 
+# Core topology fixture only: optional GlitchTip is not activated by this test.
+# Runtime approval additionally needs an established allowance for every other
+# DB client and the old release's effective pool/process settings during overlap.
+python3 "$HERE/../scripts/ci/effective_database_budget.py" "$TMP/prod.json" \
+    --queue-pool 4 --migration-connections 1 --reserved 3 --headroom 5 \
+    --other-connections 0
+echo 'PASS: rendered core overlap fits; other clients and live overlap require acceptance'
+
 python3 - "$TMP/local.json" "$TMP/prod.json" <<'EOF'
 import json, sys
 

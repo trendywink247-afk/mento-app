@@ -1,5 +1,5 @@
 import unittest
-from database_budget import budget
+from database_budget import aggregate_budget, budget
 
 
 class DatabaseBudgetTests(unittest.TestCase):
@@ -33,3 +33,13 @@ class DatabaseBudgetTests(unittest.TestCase):
         for change in ({"pool_size": 0}, {"max_overflow": -1}, {"headroom": -1}):
             with self.assertRaises(ValueError):
                 self.calculate(**change)
+
+    def test_asymmetric_old_new_and_worker_pools(self):
+        result = aggregate_budget(pools=[
+            dict(processes=2, pool_size=5, max_overflow=5, queue_pool=0),
+            dict(processes=2, pool_size=5, max_overflow=0, queue_pool=0),
+            dict(processes=1, pool_size=2, max_overflow=1, queue_pool=4),
+        ], migration_connections=1, reserved=3, headroom=5,
+            max_connections=50, other_connections=4)
+        self.assertEqual(result["required"], 50)
+        self.assertTrue(result["fits"])
