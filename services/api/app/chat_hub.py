@@ -152,7 +152,9 @@ class Hub:
 
     def send_to(self, peer: Peer, frame: dict) -> None:
         """A frame for this one socket (pong, an error, a held note), through its queue."""
-        self._offer(peer, frame, conversation_id=None)
+        # An idempotent retry is an explicit reply, even when its stored sequence
+        # was already replayed. Only room broadcasts participate in replay dedup.
+        self._offer(peer, {**frame, "_direct": True}, conversation_id=None)
 
     def room_size(self, conversation_id: str) -> int:
         return len(self._rooms.get(conversation_id, {}))
@@ -168,7 +170,8 @@ class Hub:
                             peer.ws.close(code=frame["_close"]), _CLOSE_TIMEOUT_S
                         )
                     return
-                if frame.get("t") == "message" and _seq(frame) <= peer.replayed_to:
+                direct = frame.pop("_direct", False)
+                if not direct and frame.get("t") == "message" and _seq(frame) <= peer.replayed_to:
                     continue  # the replay already carried it
                 await peer.ws.send_json(frame)
         except asyncio.CancelledError:
