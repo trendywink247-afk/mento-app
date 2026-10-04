@@ -2,6 +2,36 @@
 
 Prepared 2 October 2026 against checkout 229b997 and the current architecture review. This is a proposed execution plan, not a certification, deployment, App Store approval or measured capacity claim. Work remains exclusively under `H:\Mento gpt`. “RV” was a dictation error for “are we”; there is no RV component to migrate.
 
+**Execution scope updated 4 October 2026:** the founder now requests the full
+[pictured growth architecture](diagrams/mento-desired-architecture.png). Deliver
+it through accepted increments, using the Balanced pilot as the first deployment
+milestone. Historical snapshots and estimates below are dated context; use
+[PROGRESS.md](../PROGRESS.md) for current commits, blockers and release evidence.
+Professional mentoring remains a separately specified future domain, as the
+diagram itself states. Do not infer a payments, groups or audio/video launch from
+approval of the infrastructure target.
+
+### Evidence required for the full pictured target
+
+| Diagram component | Implementation and operational exit criteria |
+|---|---|
+| iOS, Android and web | Shared onboarding, member/mentor flows and scoped admin; physical-device and accessibility acceptance, signed native distribution and crash symbolication. |
+| Protected edge and static delivery | Trusted TLS and renewal, complete routes, abuse controls, static delivery and load distribution; authenticated WebSocket reconnect across upstream loss, with every acknowledged write preserved. |
+| Application and realtime replicas | Stateless application replicas using shared durable state and bounded coordination; per-conversation transport ownership; own-chat client/history/ack/replay/safety/erasure parity and accepted old-client/rollback behavior. Prove process loss and concurrent replica behavior. |
+| Operations and security | Release-tagged redacted telemetry, scoped audit, staff MFA, reasoned case access, independent delivered alerts, incident ownership and measured service objectives. Test failure of the monitor itself. |
+| PostgreSQL | Compatible migrations, enforced aggregate live connection budgets, encrypted recovery, replica lag and a rehearsed failover/fencing procedure with one writable primary. Document measured data-loss and recovery-time bounds; a backup VPS is not a standby by implication. |
+| Valkey | Shared presence/fan-out/rate limits with explicit memory bounds; restart, eviction and unavailability do not corrupt durable chat or matching state. |
+| Job workers | Transactional enqueue, bounded retries, idempotent consumers, backlog/failure visibility and scheduler ownership; prove worker crashes and real APNs/FCM delivery without duplicate user-visible effects. |
+| Independent encrypted backup and private file storage | Independently recoverable keys, integrity-verified copies, independently durable deletion receipts, coverage and primary-loss restore acceptance; private files require scoped authorization, expiring access, limits and deletion proof when introduced. No unreviewed attachment surface is implied. |
+| Release and verification pipeline | Local acceptance, exact-commit CI, immutable staging evidence, signed mobile/TestFlight acceptance where applicable and controlled production release. Rehearse application rollback without reverting acknowledged data. |
+
+For every row record source implementation, local results, staging artifact and
+production evidence separately. Select additional hosting and service capacity
+from measured workload and failure-domain requirements before provisioning it.
+First-rollout database budgets must include the running old release, not just the
+new Compose defaults. The corrected data-cutover contract is in
+[DEPLOYMENT_VPS.md](DEPLOYMENT_VPS.md#legacy-to-balanced-cutover--acceptance-contract).
+
 ## 1. Recommendation and current stage
 
 Keep the modular monolith. Establish one controlled release pipeline, finish native and operational acceptance, and launch a staffed, bounded pilot. Expand infrastructure against measured demand. Develop verified professional mentoring only after its identity, service and governance requirements are explicit.
