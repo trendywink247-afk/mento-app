@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Contested partition DDL and exporter failure recovery proven
+
+**Implemented:** PR54 adds test-snapshot-ddl.sh to Linux release-tooling. An actual isolated PostgreSQL container is paused immediately before pg_dump with the exporter locks/snapshot active. Concurrent attach, detach and rename must fail specifically with lock timeout; normal inserts must succeed. Restored accounts exclude a post-snapshot insert, and excluded chat sentinels are absent. Injected dump failure must leave no final/partial archive and allow subsequent DDL, proving lock release.
+
+**Verified:** Exact head 1a310d71cc28a75c9713514ea9d53f25798c992f passed API CI 37192249359 and Test CI 37192249375. Linux log: partition DDL blocked, writes allowed, snapshot stable, failure unpublished and locks released. Merged PR54 after all current-head checks green. No live data touched or backup activation. Master d7b23cb prior API/Test/native also green; newest merged master needs fresh release evidence.
+
+**Next implementation:** Integrate snapshot export with encrypted archive publication/off-host verification in isolated rehearsal; preserve plaintext/current live archives until independent key custody and deletion replay gates pass. Do not activate six-hour scheduling yet. Production stays locked. Latest accepted staging remains 781ccd3; full staging required for any new accepted candidate. Resume H:\Mento gpt\Mento with current master checks; preserve untracked book; automation active.
+
+---
 ## 2026-10-04 — Snapshot exporter passed real database recovery and merged
 
 **Implemented:** PR53 adds export-recovery-snapshot.sh using an explicit locking transaction, recursively protected exclusion roots, exported snapshot imported by pg_dump, bounded waits and non-overwriting gzip publication. Integrated into both existing encrypted database recovery cases. No live backup/export/schedule activation.
