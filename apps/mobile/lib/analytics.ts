@@ -8,30 +8,13 @@
  * (T&S #10: crisis sessions never feed engagement dashboards).
  */
 import { Platform } from 'react-native';
+import { createPrivateAnalytics, mayCaptureFirstMessage, type EventMap, type WaitBucket } from './analyticsPolicy';
+
+export type { WaitBucket } from './analyticsPolicy';
 
 const KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '';
 const HOST = process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
 const ID_KEY = 'mento.analytics_id';
-
-/** Every event Mento may ever send, with the only props each may carry. */
-type EventMap = {
-  landing_viewed: undefined;
-  onboarding_started: undefined;
-  role_chosen: { role: 'mentee' | 'mentor' }; // the fork choice only — never identity
-  onboarding_age_passed: undefined;
-  onboarding_email_step: { skipped: boolean };
-  onboarding_companion_chosen: { companion: string };
-  onboarding_completed: undefined;
-  path_chosen: { community: string };
-  match_requested: { mode: 'general' | 'personal' };
-  match_found: { wait_bucket: WaitBucket };
-  chat_first_message_sent: undefined;
-  reflection_submitted: undefined; // no energy value — reflection is private
-  mentor_profile_viewed: undefined; // "Two in the room" — never the listener id
-  mentor_favourited: { on: boolean };
-};
-
-export type WaitBucket = '<5s' | '5-15s' | '15-60s' | '>60s';
 
 /** Raw wait times never leave the device — only the bucket. */
 export function waitBucket(ms: number): WaitBucket {
@@ -73,7 +56,23 @@ async function loadOrCreateId(): Promise<string> {
   return fresh;
 }
 
-let distinctId: Promise<string> | null = null;
+const privateAnalytics = createPrivateAnalytics({
+  enabled: Boolean(KEY),
+  loadOrCreateId,
+  forgetId: async () => {
+    if (Platform.OS === 'web') {
+      globalThis.localStorage?.removeItem(ID_KEY);
+      return;
+    }
+    const SecureStore = await import('expo-secure-store');
+    await SecureStore.deleteItemAsync(ID_KEY);
+  },
+  send: (event, properties, id) => fetch(`${HOST}/capture/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ api_key: KEY, event, distinct_id: id, properties }),
+  }),
+});
 
 /** Fire-and-forget. Never throws, never blocks UI, returns synchronously and
  * does no storage/network work at all while the key is empty (dark mode). */
@@ -81,36 +80,16 @@ export function capture<E extends keyof EventMap>(
   event: E,
   ...props: EventMap[E] extends undefined ? [] : [EventMap[E]]
 ): void {
-  if (!KEY) return;
-  distinctId ??= loadOrCreateId();
-  distinctId
-    .then((id) =>
-      fetch(`${HOST}/capture/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          api_key: KEY,
-          event,
-          distinct_id: id,
-          properties: props[0] ?? {},
-        }),
-      }),
-    )
-    .catch(() => {});
+  privateAnalytics.capture(event, props[0]);
+}
+
+/** Suppress flagged first-message retention without emitting a crisis event. */
+export function captureFirstMessage(message: unknown): void {
+  if (mayCaptureFirstMessage(message)) capture('chat_first_message_sent');
 }
 
 /** Start fresh: the next identity on this device gets a new analytics id, so the funnel can
  * never join the old persona's events to the new one's (T&S #7 / #10). */
 export async function forgetAnalyticsId(): Promise<void> {
-  distinctId = null;
-  try {
-    if (Platform.OS === 'web') {
-      globalThis.localStorage?.removeItem(ID_KEY);
-      return;
-    }
-    const SecureStore = await import('expo-secure-store');
-    await SecureStore.deleteItemAsync(ID_KEY);
-  } catch {
-    /* best-effort: a stale id is dark-mode-harmless and never carries identity */
-  }
+  await privateAnalytics.forget();
 }

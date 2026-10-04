@@ -26,11 +26,11 @@ class SelectionTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(classify_paths([path]), all_flags())
 
-    def test_api_including_schema_selects_recovery_tooling_and_native(self):
+    def test_api_including_schema_selects_browser_tooling_and_native(self):
         for path in ("services/api/app/main.py", "services/api/migrations/versions/schema.py",
                      "services/api/requirements.txt", "services/api/Dockerfile"):
             flags = classify_paths([path])
-            self.assertEqual({k for k, v in flags.items() if v}, {"api", "tooling", "native"})
+            self.assertEqual({k for k, v in flags.items() if v}, {"api", "mobile", "tooling", "native"})
 
     def test_mobile_and_receipt_changes_compose_selectively(self):
         flags = classify_paths(["apps/mobile/app/index.tsx", "services/recovery_receiver/receiver.py"])
@@ -38,7 +38,7 @@ class SelectionTests(unittest.TestCase):
 
     def test_api_receipt_parser_selects_real_receiver_export_contract(self):
         flags = classify_paths(["services/api/app/services/recovery_manifest.py"])
-        self.assertEqual({k for k, v in flags.items() if v}, {"api", "tooling", "native", "recovery"})
+        self.assertEqual({k for k, v in flags.items() if v}, {"api", "mobile", "tooling", "native", "recovery"})
 
     def test_non_doc_push_is_full_and_manual_is_always_full(self):
         self.assertEqual(classify_paths(["services/api/app/main.py"], "push"), all_flags())

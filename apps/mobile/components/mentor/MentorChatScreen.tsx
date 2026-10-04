@@ -250,7 +250,7 @@ export default function MentorChatScreen() {
                 additionalKeyboardAvoidingViewProps={{ style: { flex: 1 } }}>
                 <MessageList additionalFlatListProps={listProps} />
                 {/* Your companion over the message field, seated on the footer's edge. */}
-                <MentorPeek animal={mine} label={t('mentorChatPage.companionA11y')} />
+                {!crisis && !error ? <MentorPeek animal={mine} label={t('mentorChatPage.companionA11y')} /> : null}
                 <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
                   <MentorComposerHint />
                   <MessageComposer />

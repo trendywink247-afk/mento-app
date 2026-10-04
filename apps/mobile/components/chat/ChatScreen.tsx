@@ -38,7 +38,7 @@ import { MentoBubble } from '@/components/chat/MentoBubble';
 import { MessageText, OwnBubbleToneContext } from '@/components/chat/MessageText';
 import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
-import { capture } from '@/lib/analytics';
+import { captureFirstMessage } from '@/lib/analytics';
 import { api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
@@ -330,7 +330,7 @@ export default function ChatScreen() {
       void refreshAllowance(); // counted server-side, in the before-send hook
       if (!firstSentRef.current) {
         firstSentRef.current = true;
-        capture('chat_first_message_sent'); // funnel tail — no content, ever
+        captureFirstMessage(resp.message); // flagged responses never feed retention
       }
       try {
         surfaceCrisis(resp.message as CrisisCarrier);

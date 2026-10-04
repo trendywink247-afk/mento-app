@@ -28,6 +28,9 @@ import { SageSky } from '@/components/motion/SageSky';
 import { useI18n } from '@/lib/i18n';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
+import { createAuthenticatedOwnChat } from '@/lib/ownChatApi';
+import { selectChatTransport } from '@/lib/ownChatAdapter';
+import { createOwnChatScreenController } from '@/lib/ownChatScreenController';
 import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
 import { mergeRecoveredMessages, subscribeToRecoveredMessages } from '@/lib/streamRecovery';
 import { mentorFaces } from '@/lib/mentorFaces';
@@ -118,6 +121,7 @@ export default function MentorChatScreenWeb() {
     };
   }, [id]);
   const channelRef = useRef<ChannelType | null>(null);
+  const ownRef = useRef<ReturnType<typeof createOwnChatScreenController> | null>(null);
   const shownRef = useRef<Set<string>>(new Set());
 
   // A device with a member session open is the in-app console (back → Mentor Home);
@@ -157,15 +161,45 @@ export default function MentorChatScreenWeb() {
   useEffect(() => {
     let cancelled = false;
     const unsubscribe: Array<() => void> = [];
+    setReady(false);
+    setMessages([]);
+    setCrisis(null);
+    setTyping(null);
+    channelRef.current = null;
 
     const setup = async () => {
       try {
-        if (!channelId) throw new Error('Missing channel.');
         // /listener/me returns a fresh Stream token for this listener identity.
-        const me = await listenerApi.me();
+        const [me, context] = await Promise.all([listenerApi.me(), listenerApi.brief(id)]);
+        if (cancelled) return;
+        setBrief(context);
         setOnline(me.status === 'online');
         mentorFaces.setSelf(me.companion_animal, me.companion_colour);
         setMine((me.companion_animal as CompanionAnimal | undefined) ?? 'Owl');
+        if (selectChatTransport(context.chat_backend, process.env.EXPO_PUBLIC_OWN_CHAT_ACCEPTED === '1') === 'own') {
+          const scope = { actorId: me.id, conversationId: id, role: 'mentor' as const };
+          const own = createOwnChatScreenController(scope,
+            onChange => createAuthenticatedOwnChat(scope, { transport: 'own', ownAccepted: true }, onChange),
+            (snapshot, rows) => {
+              if (cancelled) return;
+              setMessages(rows.map(row => ({ id: row.id, text: row.text, mine: row.user.id === me.id, at: row.created_at })));
+              rows.forEach(surfaceCrisis);
+              setReady(snapshot.status === 'ready');
+              setTyping(snapshot.peerTyping ? memberName : null);
+              setHere(snapshot.peerOnline);
+              setReadTick(value => value + 1);
+              if (snapshot.status === 'ready') ownRef.current?.markRead();
+              if (snapshot.status === 'terminal') {
+                setCrisis(null);
+                setError(t('mentor.chat.errOpen'));
+              }
+            });
+          ownRef.current = own;
+          unsubscribe.push(() => { own.dispose(); ownRef.current = null; });
+          await own.start();
+          return;
+        }
+        if (!channelId) throw new Error('Missing channel.');
         const client = await ensureListenerConnected(
           { id: me.id, name: me.persona_name },
           me.stream_token,
@@ -227,12 +261,13 @@ export default function MentorChatScreenWeb() {
       cancelled = true;
       unsubscribe.forEach(stop => stop());
     };
-  }, [channelId, appendMessage, surfaceCrisis, memberName, attempt, toMsg]);
+  }, [id, channelId, appendMessage, surfaceCrisis, memberName, attempt, toMsg]);
 
   const onTyping = useCallback(() => {
     // stream-chat throttles keystroke() internally; guard anyway — typing signals
     // are best-effort and must never surface an error in the composer.
     try {
+      if (ownRef.current) { ownRef.current.typing(); return; }
       void channelRef.current?.keystroke().catch(() => {});
     } catch {
       /* best-effort typing signal */
@@ -241,12 +276,13 @@ export default function MentorChatScreenWeb() {
 
   const send = async () => {
     const body = draft.trim();
-    if (!body || !channelRef.current || sending) return;
+    if (!body || (!channelRef.current && !ownRef.current) || sending) return;
     setSending(true);
     try {
       // Listener messages pass through the same server-side crisis scan (sender-agnostic).
-      const resp = await channelRef.current.sendMessage({ text: body });
-      appendMessage(resp.message as RawMsg);
+      const resp = ownRef.current ? await ownRef.current.sendMessage({ text: body }) :
+        await channelRef.current!.sendMessage({ text: body });
+      if (!ownRef.current) appendMessage(resp.message as RawMsg);
       surfaceCrisis(resp.message as CrisisCarrier);
       // Clear only after the server accepted it — a failed send keeps their words.
       setDraft('');
@@ -275,6 +311,7 @@ export default function MentorChatScreenWeb() {
   const isRead = useCallback(
     (m: Msg): boolean => {
       void readTick;
+      if (ownRef.current) return ownRef.current.isRead(m.id);
       const ch = channelRef.current;
       const me = getListenerStreamClient().userID;
       if (!ch) return false;
@@ -400,7 +437,7 @@ export default function MentorChatScreenWeb() {
           {crisis ? <CrisisCard crisis={crisis} audience="mentor" onDismiss={() => setCrisis(null)} /> : null}
 
           {/* Presence-only typing line — calm register, no animation needed. */}
-          {typing ? (
+          {typing && !crisis ? (
             <View style={styles.typingRow} testID="listener-typing-indicator">
               <View style={[styles.typingPill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 {[1, 0.6, 0.35].map((o) => (
@@ -412,7 +449,7 @@ export default function MentorChatScreenWeb() {
           ) : null}
 
           {/* Your companion over the message field (board A35), seated on the footer's edge. */}
-          <MentorPeek animal={mine} label={t('mentorChatPage.companionA11y')} />
+          {!crisis && !error && !sendError ? <MentorPeek animal={mine} label={t('mentorChatPage.companionA11y')} /> : null}
           <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
             <MentorComposerHint />
             {sendError ? (

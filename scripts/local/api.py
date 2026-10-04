@@ -1,6 +1,7 @@
 """Run this checkout against isolated local data, without loading copied .env files.
 
 Usage: services/api/.venv/Scripts/python.exe scripts/local/api.py init|serve|worker|test|check
+Offline own-chat acceptance: init-own-chat|serve-own-chat|own-fixture (never loads Stream keys).
 The legacy Desktop stack and all external service credentials remain untouched.
 """
 
@@ -17,8 +18,14 @@ API = ROOT / "services" / "api"
 
 def main() -> None:
     action = sys.argv[1] if len(sys.argv) > 1 else "serve"
-    if action not in {"init", "serve", "worker", "test", "check"}:
-        raise SystemExit("Expected init, serve, worker, test, or check")
+    if action not in {"init", "serve", "worker", "test", "check", "init-own-chat", "serve-own-chat", "own-fixture"}:
+        raise SystemExit("Expected init, serve, worker, test, check, init-own-chat, serve-own-chat, or own-fixture")
+    temporary = ROOT / ".local" / "tmp"
+    if not temporary.resolve().is_relative_to(ROOT):
+        raise SystemExit("Local temporary storage must remain inside this checkout")
+    temporary.mkdir(parents=True, exist_ok=True)
+    for key in ("TMP", "TEMP", "TMPDIR", "PYTEST_DEBUG_TEMPROOT"):
+        os.environ[key] = str(temporary)
     os.chdir(API)
     sys.path.insert(0, str(API))
     from app.config import Settings
@@ -50,7 +57,7 @@ def main() -> None:
         # Explicit opt-in file for a verified development-only Stream application.
         # Tests always remain hermetic. Never read the copied application .env here.
         stream_file = ROOT / ".local" / "stream.env"
-        if stream_file.exists():
+        if action not in {"init-own-chat", "serve-own-chat", "own-fixture"} and stream_file.exists():
             from dotenv import dotenv_values
 
             values = dotenv_values(stream_file)
@@ -58,12 +65,15 @@ def main() -> None:
                 if not values.get(key):
                     raise SystemExit(f"Dedicated local Stream config missing {key}")
                 os.environ[key] = values[key]
+    if action == "own-fixture":
+        runpy.run_path(str(ROOT / "scripts/local/own_chat_fixture.py"), run_name="__main__")
+        return
     if action == "test":
         import pytest
 
         os.environ["MENTO_PG_CONTAINER"] = "mento-h-dev-postgres-1"
         raise SystemExit(pytest.main(sys.argv[2:] or ["-q"]))
-    if action in {"init", "check"}:
+    if action in {"init", "init-own-chat", "check"}:
         from alembic import command
         from alembic.config import Config
 

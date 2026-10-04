@@ -5,7 +5,7 @@
  *  - "Yes" makes a link the member can read (GET /in-touch with the member's token);
  *  - "Not now" closes it (the member's standing reads not_now) and the row goes;
  *  - the brief's ask row returns to Mentor Home with that ask's sheet open;
- *  - Helplines shows exactly Tele-MANAS 14416 and KIRAN 1800-599-0019 as tel: links;
+ *  - Helplines shows exactly Tele-MANAS 14416 and Tele-MANAS (alternate number) 1800-89-14416 as tel: links;
  *  - the mentor composer has the "reply when you are free" line and no allowance meter;
  *  - the public apply page shows no animal art.
  * Needs MENTO_ADMIN_TOKEN (approves the mentor). 390×844, headless, 0 page errors. */
@@ -211,13 +211,13 @@ async function pass(browser, reduced) {
     [...document.querySelectorAll('[data-testid="helplines-sheet"] a[href]')].map((a) => a.getAttribute('href'))
   );
   expect(
-    tels.length === 2 && tels.includes('tel:14416') && tels.includes('tel:18005990019'),
+    tels.length === 2 && tels.includes('tel:14416') && tels.includes('tel:18008914416'),
     `${label}: helplines are not exactly the two tel: links: ${JSON.stringify(tels)}`
   );
   const helpText = await tid('helplines-sheet').innerText();
-  expect(helpText.includes('14416') && helpText.includes('1800-599-0019'), `${label}: helpline numbers not shown`);
+  expect(helpText.includes('14416') && helpText.includes('1800-89-14416'), `${label}: helpline numbers not shown`);
   await tid('helplines-close').click();
-  console.log(`${label}: OK Helplines shows exactly Tele-MANAS 14416 and KIRAN 1800-599-0019 as tel: links (A35)`);
+  console.log(`${label}: OK Helplines shows exactly Tele-MANAS 14416 and Tele-MANAS (alternate number) 1800-89-14416 as tel: links (A35)`);
 
   await tid('mentor-composer-hint').waitFor({ timeout: 15000 });
   const meter = await page.evaluate(() => {

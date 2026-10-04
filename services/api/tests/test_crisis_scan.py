@@ -86,3 +86,16 @@ def test_severity_order_suicidal_wins() -> None:
 def test_empty_text_is_untriggered() -> None:
     assert not crisis.scan("").triggered
     assert not crisis.scan("   ").triggered
+
+
+def test_default_helplines_use_current_tele_manas_numbers():
+    """DGHS lists two numbers for one service; KIRAN was phased out in 2024."""
+    import json
+
+    from app.config import Settings
+
+    lines = json.loads(Settings.model_fields["crisis_helplines_json"].default)
+    assert lines == [
+        {"name": "Tele-MANAS", "number": "14416", "hours": "24x7"},
+        {"name": "Tele-MANAS (alternate number)", "number": "1800-89-14416", "hours": "24x7"},
+    ]

@@ -3,6 +3,7 @@
  * a token). Native: OS secure store; web: localStorage (same split as lib/session.ts). */
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import { forgetOwnChats } from './ownChatLifecycle';
 
 const TOKEN_KEY = 'mento.listener.session_token';
 
@@ -25,6 +26,7 @@ const webStore: Store = {
 const store: Store = Platform.OS === 'web' ? webStore : SecureStore;
 
 export async function saveListenerToken(token: string): Promise<void> {
+  forgetOwnChats('mentor');
   await store.setItemAsync(TOKEN_KEY, token);
 }
 
@@ -33,5 +35,6 @@ export async function getListenerToken(): Promise<string | null> {
 }
 
 export async function clearListenerSession(): Promise<void> {
+  forgetOwnChats('mentor');
   await store.deleteItemAsync(TOKEN_KEY);
 }

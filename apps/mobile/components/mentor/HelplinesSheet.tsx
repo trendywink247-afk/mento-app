@@ -5,16 +5,10 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { HELPLINES, telHref } from '@/lib/helplines';
 import { useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, space, type } from '@/theme/tokens';
-
-/** Verified India crisis helplines (T&S #1) — exactly these two, re-verified session 29,
- * see docs/PRIVACY.md sourcing. */
-const HELPLINES = [
-  { key: 'teleManas', number: '14416' },
-  { key: 'kiran', number: '1800-599-0019' },
-] as const;
 
 /** Board A35's still panel: "Helplines to point to". Nothing in it moves — a heavy
  * moment gets stillness (T&S #11). Each number is a real `tel:` link: an <a href> on
@@ -50,9 +44,9 @@ export function HelplinesSheet({ onClose }: { onClose: () => void }) {
       </View>
       <Text style={[type.bodySmall, styles.body, { color: colors.ink }]}>{t('mentorChatPage.helplinesBody')}</Text>
       <View style={styles.rows}>
-        {HELPLINES.map(({ key, number }) => {
+        {HELPLINES.map(({ key, display: number }) => {
           const name = t(`mentorChatPage.${key}` as TKey);
-          const tel = `tel:${number.replace(/-/g, '')}`;
+          const tel = telHref(number);
           // reason: react-native-web renders a Text with `href` as a real <a href>; the
           // prop is not in RN's Text types. Native has no href, so it opens via Linking.
           const link =

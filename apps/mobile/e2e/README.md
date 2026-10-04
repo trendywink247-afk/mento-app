@@ -1,5 +1,43 @@
 # E2E scripts (Playwright, Expo web at 390x844)
 
+## Isolated own-chat browser acceptance
+
+From `H:\Mento gpt\Mento`, use separate PowerShell terminals:
+
+```powershell
+scripts/local/workspace.ps1 api -OwnChatAcceptance
+scripts/local/workspace.ps1 web -OwnChatAcceptance
+```
+
+These opt-ins serve only localhost :18000/:18081, enable the own screen branch
+only in this local web process, and skip `.local/stream.env` entirely. Isolated
+Postgres :15432 and Valkey :16379 must already be healthy. The fixture command
+refuses a remote, production, legacy-port, or Stream-configured database session:
+
+```powershell
+services/api/.venv/Scripts/python.exe scripts/local/api.py own-fixture
+$env:NODE_PATH = (Resolve-Path .local/browser-tools/node_modules).Path
+$env:PLAYWRIGHT_BROWSERS_PATH = (Resolve-Path .local/playwright-browsers).Path
+node apps/mobile/e2e/own-chat-browser.e2e.cjs
+```
+
+It creates fresh synthetic adults and approved mentors in `mento_dev`; it never
+uses real accounts or exposes a seeding endpoint. The ignored private manifest is
+`.local/own-chat-fixture.json`. Reseed before each invocation because the suite
+wipes its rooms. Existing development data is preserved. The normal and reduced
+motion passes verify real two-party delivery/read state, saved notes, reload,
+forced socket reconnect, server crisis cards, and UI wipe clearing both sides.
+They require zero page errors and block all external traffic, including the
+ambient CanvasKit CDN so its offline fallback is exercised. Accepted and failure
+screenshots remain under ignored `.local/own-chat-browser`.
+
+Stream production/staging cutover, native own screens, durable device outbox,
+provider parity under real Stream, and the own moderation reader are separate
+acceptance gates. Stop these local processes before starting the standard web
+launcher, which clears the own-chat acceptance flag by default.
+
+## Other scripts
+
 Prereqs: backend on :8000 (seeded), Expo web on :8081.
 
 Run:  NODE_PATH=<playwright install>/node_modules node e2e/<script>.js

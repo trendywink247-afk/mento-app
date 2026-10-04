@@ -23,6 +23,7 @@ export type ListenerMe = {
 
 /** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
 export type MemberBrief = {
+  chat_backend?: 'stream' | 'own';
   persona_name: string;
   persona_avatar: string;
   companion_animal: string | null;
@@ -48,6 +49,7 @@ export type ListenerConversation = {
   user_persona_name: string;
   user_persona_avatar: string;
   stream_channel_id: string | null;
+  chat_backend?: 'stream' | 'own';
   /** True while the member has a Panda Mask set — shown as "Away right now". */
   member_masked: boolean;
   created_at: string;

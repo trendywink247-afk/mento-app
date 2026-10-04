@@ -16,6 +16,9 @@ const BASE_URL =
   (Constants.expoConfig?.extra?.apiUrl as string | undefined) ??
   'http://localhost:8000/api/v1';
 
+/** Shared HTTP origin for the inactive own-chat adapter. Never includes a bearer. */
+export const API_BASE_URL = BASE_URL;
+
 export type Persona = { id: string; persona_name: string; persona_avatar: string };
 
 /** `GET /me` and the answer to `PUT /me/companion`: the persona plus the companion the
@@ -207,6 +210,7 @@ export type ConversationListItem = {
   listener_persona_name: string;
   listener_persona_avatar: string;
   stream_channel_id: string | null;
+  chat_backend?: 'stream' | 'own';
   is_locked: boolean;
   created_at: string;
   ended_at: string | null;
@@ -229,6 +233,8 @@ export type ConversationListItem = {
 export type ConversationState = {
   id: string;
   status: string;
+  /** Server-owned transport; omitted only by older Stream-only servers. */
+  chat_backend?: 'stream' | 'own';
   is_locked: boolean;
   is_paused: boolean;
   status_mask: string | null;
@@ -558,7 +564,7 @@ async function upgradeLegacySession(): Promise<void> {
 }
 
 /** The member bearer to send now — refreshed first when it is about to lapse. */
-async function currentMemberToken(): Promise<string | null> {
+export async function currentMemberToken(): Promise<string | null> {
   const token = await getSessionToken();
   if (token && expiringSoon(token) && (await getRefreshToken())) {
     await refreshSession(token);
@@ -648,6 +654,7 @@ export const api = {
     request<ScanResult>('/safety/scan', { method: 'POST', body: JSON.stringify(body) }, true),
 
   listConversations: () => request<ConversationListItem[]>('/conversations', {}, true),
+  conversationState: (id: string) => request<ConversationState>(`/conversations/${encodeURIComponent(id)}/state`, {}, true),
 
   // --- Paths (Communities) ---
   pathTree: () => request<PathTree>('/paths/tree'),
