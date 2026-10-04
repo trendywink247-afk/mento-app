@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-05 — Bitwarden recovery key retrieval verified
+
+**Done:** Founder saved the age identity as text in a free Bitwarden Secure Note and recreated `identity-restored.agekey` from that saved note. After the file became available, its derived public recipient matched the original and it decrypted the encrypted canary byte-for-byte (SHA-256 comparison). No private key or decrypted contents were displayed. The restored file inherits access only for the operator's Windows account and SYSTEM from the restricted custody directory. Private files remain ignored and outside Git.
+
+**Remaining:** Independently encrypted offline custody is not yet confirmed; the earlier folder backup alone did not establish it. This canary establishes retrieval of the correct key, not database restoration, deletion-receipt coverage or operational backup readiness. No backup schedule or production activation occurred. PR77's reconnect fix still needs final native/exact-master/staging acceptance; consult live check results before proceeding.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 77; git status --short --branch`. Continue the release gates and isolated recovery work; preserve the original and retrieved identities privately.
+
+---
+
 ## 2026-10-05 — Staging reconnect gap reproduced and locally repaired
 
 **Accepted foundations:** Staging release 37230079217 successfully deployed exact master `9e6aaa741a20a0f93ec325ab3422e5f5fdfc3dce`. Standard migration, safety, restore and normal/reduced-motion two-party checks passed; running API/worker revision was independently verified. PR73 maintenance checks passed and merged as `998e680b6947a158755df83ff2421348d07fcecf`. Two additional merged remote references were deleted with expected-tip leases, bringing cautious cleanup to 35; local branches and unique history remain. Production stays disabled.
