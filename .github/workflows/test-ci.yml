@@ -94,7 +94,17 @@ jobs:
           EXPO_PUBLIC_POSTHOG_KEY: ''
           EXPO_PUBLIC_SENTRY_DSN: ''
           APP_VARIANT: development
-        run: npx expo export --platform web --output-dir dist-own
+        run: |
+          # Metro can reuse inlined public environment values across exports.
+          # Changing the acceptance flag requires a fresh transform cache.
+          npx expo export --platform web --output-dir dist-own --clear
+          python - <<'PY'
+          from pathlib import Path
+          standard = list(Path('dist/_expo/static/js/web').glob('entry-*.js'))
+          own = list(Path('dist-own/_expo/static/js/web').glob('entry-*.js'))
+          assert len(standard) == len(own) == 1, 'Expected one entry bundle per variant'
+          assert standard[0].read_bytes() != own[0].read_bytes(), 'Own-chat export reused the default bundle'
+          PY
       - name: Own-chat member and mentor acceptance in both motion modes
         run: |
           kill "$(cat "$RUNNER_TEMP/mento-web.pid")"

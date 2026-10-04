@@ -2,6 +2,12 @@
 
 > Restart-from-anywhere log. Newest entry on top. Each entry: Done / In-progress / Next / Open decisions / How to resume.
 
+## 2026-10-05 — PR78 clean-export CI correction locally verified
+
+**Evidence:** Initial PR78 API CI passed all 795 tests; release tooling, receipt and receiver-isolation jobs passed. Web acceptance failed because Metro reused the default export's inlined public environment values for the own-chat export: CI emitted identical entry bundles. Reproduced that cache reuse locally, then added `--clear` to the second export and a byte-comparison guard. Clean local exports now differ; normal and reduced-motion own-chat browser acceptance both pass, including send/read/save, reload, reconnect, terminal authorization, crisis resources and wipe, with zero page errors or external provider requests. Actionlint passed. Native CI was still pending at this checkpoint.
+
+**Next / resume:** Push this locally validated CI repair on PR78, require complete checks on its new head and integrated master, then staging acceptance. Push-policy and scoped own-chat moderation follow-ups remain isolated and uncommitted. A local same-candidate classic/Balanced topology rehearsal passed eight database-identity, worker, write/erase and rollback checks; it is not old-production compatibility or live edge-cutover proof. Production remains locked. `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 78; git status --short --branch`.
+
 ---
 
 ## 2026-10-05 — Architecture increment locally accepted; CI publication next
