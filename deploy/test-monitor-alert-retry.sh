@@ -23,6 +23,11 @@ printf '%s' "$PROBE_CODE"
 MOCK
 chmod +x "$temp/bin/curl"
 export PATH="$temp/bin:$PATH"
+if NTFY_TOPIC=__NTFY_TOPIC__ bash "$root/deploy/external-monitor.sh"; then
+  echo 'FAIL: unconfigured notification destination accepted'; exit 1
+fi
+test ! -e "$ALERT_LOG"
+test ! -e "$STATE_DIR"
 export MONITOR_CHECK_ONLY=1
 if bash "$root/deploy/external-monitor.sh"; then
   echo 'FAIL: probe-only mode accepted unhealthy endpoint'; exit 1

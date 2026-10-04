@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — VPS B probe-only validation and missing-destination guard
+
+**Verified:** Exact master 781ccd3 gates passed (API 37187568994, Test 37187569014, native 37187568977). Full staging 37188958287 dispatched; pending acceptance. Executed current monitor/classifier from a temporary bundle on VPS B with MONITOR_CHECK_ONLY=1: API health/readiness, app/admin and semantic crisis probes all passed. Temporary bundle removed; permanent script/cron not replaced. This is external reachability, not delivered alerts or safety processing proof.
+
+**Execution correction:** First temporary bundle mistakenly came from the older progress branch, which lacked CHECK_ONLY support. It exited zero without probe output; it may have updated deduplication state and attempted placeholder-topic alerts. No configured notification destination/credential was supplied, and delivery is not verified. Do not claim that first invocation was read-only. Switched to current master, verified mode exists and reran explicitly with successful probe output. No private data or keys were included.
+
+**Fix:** Unconfigured notification topic now fails before probes or state creation in normal mode; explicit probe-only mode remains usable without a destination. Fake-curl failure/recovery/state-preservation tests passed locally including the new guard; whitespace passed. Linux CI pending. This prevents executing a template monitor as though alerts were configured.
+
+**Next:** Review current PR checks and staging acceptance; independently verify deployed candidate. Continue phase 1 snapshot-safe encryption/deletion/custody and coordinated worker gates; production remains locked. Background automation complete-mento-implementation remains active. Resume H:\Mento gpt\Mento; preserve architecture book.
+
+---
 ## 2026-10-04 — Background execution reauthorized; backup retention failures surfaced
 
 **Founder direction:** Explicitly authorized a new trigger to complete steps 1–5. Created ACTIVE complete-mento-implementation heartbeat every 30 minutes, attached to this chat, quiet for unchanged/running CI. It uses current PROGRESS and the five-phase scope instead of stale PR instructions.

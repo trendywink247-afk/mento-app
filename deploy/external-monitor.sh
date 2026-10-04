@@ -13,6 +13,10 @@ STATE_DIR=${STATE_DIR:-/opt/mento-backups/.monitor-state}
 # changes to notification deduplication state. Invalid values fail closed.
 CHECK_ONLY=${MONITOR_CHECK_ONLY:-0}
 case "$CHECK_ONLY" in 0|1) ;; *) echo 'Invalid MONITOR_CHECK_ONLY' >&2; exit 2 ;; esac
+if [ "$CHECK_ONLY" = 0 ] && { [ -z "$NTFY_TOPIC" ] || [ "$NTFY_TOPIC" = __NTFY_TOPIC__ ]; }; then
+  echo 'Notification topic is not configured; use MONITOR_CHECK_ONLY=1 for probes' >&2
+  exit 2
+fi
 if [ "$CHECK_ONLY" = 0 ]; then mkdir -p "$STATE_DIR"; fi
 
 alert() {
