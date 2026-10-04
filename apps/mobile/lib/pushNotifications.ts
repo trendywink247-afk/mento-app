@@ -19,9 +19,19 @@ let lastToken: string | null = null;
  * remount (e.g. Mentor Home re-focusing) doesn't re-POST an unchanged token. */
 let registered: { token: string; role: PushRole } | null = null;
 
+function projectIdForPush(): string | null {
+  const extra = Constants.expoConfig?.extra;
+  // Local acceptance has no provider: do not even read permissions or prompt.
+  if (extra?.localAcceptance) return null;
+  const projectId = extra?.eas?.projectId;
+  return typeof projectId === 'string' && projectId.trim() ? projectId.trim() : null;
+}
+
 async function currentToken(options: { prompt?: boolean } = {}): Promise<string | null> {
   const { prompt = true } = options;
   if (Platform.OS === 'web' || !Device.isDevice) return null;
+  const projectId = projectIdForPush();
+  if (!projectId) return null;
   const { status: existing } = await Notifications.getPermissionsAsync();
   let status = existing;
   if (status !== 'granted') {
@@ -29,12 +39,12 @@ async function currentToken(options: { prompt?: boolean } = {}): Promise<string 
     ({ status } = await Notifications.requestPermissionsAsync());
   }
   if (status !== 'granted') return null;
-  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-  const { data } = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+  const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
   return data;
 }
 
 export async function registerPush(role: PushRole): Promise<void> {
+  if (!projectIdForPush()) return;
   try {
     const token = await currentToken();
     if (!token) return;
@@ -52,6 +62,7 @@ export async function registerPush(role: PushRole): Promise<void> {
 /** Start Fresh: stop the old persona's device from receiving anything. Never prompts
  * for permission — if it was never granted there's no token to delete anyway. */
 export async function unregisterPush(): Promise<void> {
+  if (!projectIdForPush()) return;
   try {
     const token = lastToken ?? (await currentToken({ prompt: false }));
     if (!token) return;
