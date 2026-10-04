@@ -6,7 +6,7 @@ class DatabaseBudgetTests(unittest.TestCase):
     def calculate(self, **overrides):
         inputs = dict(api_processes=2, worker_processes=1, pool_size=10,
                       max_overflow=10, queue_pool=4, migration_connections=1,
-                      reserved=3, headroom=5, max_connections=50)
+                      reserved=3, headroom=5, max_connections=50, other_connections=0)
         return budget(**(inputs | overrides))
 
     def test_defaults_exceed_balanced_overlap_budget(self):
@@ -21,6 +21,13 @@ class DatabaseBudgetTests(unittest.TestCase):
         self.assertTrue(self.calculate(max_connections=73)["fits"])
         self.assertFalse(self.calculate(max_connections=72)["fits"])
         self.assertEqual(self.calculate(worker_processes=2)["required"], 97)
+
+    def test_other_clients_consume_shared_server_budget(self):
+        # Explicit illustrative allowance, not measured GlitchTip configuration.
+        self.assertTrue(self.calculate(pool_size=5, max_overflow=5, other_connections=7)["fits"])
+        self.assertFalse(self.calculate(pool_size=5, max_overflow=5, other_connections=8)["fits"])
+        with self.assertRaises(ValueError):
+            self.calculate(other_connections=-1)
 
     def test_unbounded_or_invalid_values_rejected(self):
         for change in ({"pool_size": 0}, {"max_overflow": -1}, {"headroom": -1}):

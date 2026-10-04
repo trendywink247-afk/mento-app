@@ -198,7 +198,7 @@ Before scaling or changing pool settings, run the offline connection-budget chec
 with effective settings, including both API colors during rollout. For example:
 
 ```sh
-python scripts/ci/database_budget.py --api-processes 2 --worker-processes 1 --pool-size 5 --max-overflow 5 --queue-pool 4 --migration-connections 1 --reserved 3 --headroom 5 --max-connections 50
+python scripts/ci/database_budget.py --api-processes 2 --worker-processes 1 --pool-size 5 --max-overflow 5 --queue-pool 4 --migration-connections 1 --reserved 3 --headroom 5 --max-connections 50 --other-connections 0
 ```
 
 This example budgets 43 connections including reserves; it is not installed tuning
@@ -248,3 +248,10 @@ and worker replicas behind a load balancer with bounded aggregate database pools
 Keep monitoring and backup failure domains independent. Use measured saturation
 and availability targets to trigger these moves. See
 `ENTERPRISE_PLATFORM_PLAN_2026-10-02.md` for the broader product/iOS programme.
+
+The database budget requires an explicit `--other-connections` allowance for
+non-Mento clients sharing PostgreSQL (including GlitchTip web/background processes
+when enabled). Zero in the example assumes none are running; it is not a valid
+GlitchTip deployment allowance. Derive the aggregate ceiling from the effective
+service/process/pool settings before rollout. The calculator does not discover
+Compose services and is not capacity or load-test evidence.
