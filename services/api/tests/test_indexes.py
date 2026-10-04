@@ -72,6 +72,7 @@ def test_index_exists_with_the_right_columns(name):
 COMPETING = {
     "ix_conversations_user_created": "ix_conversations_user_id",
     "ix_conversations_listener_status": "ix_conversations_listener_id",
+    "ix_conversation_requests_target_status": "ix_conversation_requests_status",
     "ix_journal_entries_user_created": "ix_journal_entries_user_id",
     "uq_mentor_links_live_pair": "ix_mentor_links_user_id",
 }
