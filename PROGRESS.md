@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Retention candidate staging accepted; monitor guard merged
+
+**Verified:** Staging run 37188958287 completed successfully for 781ccd3a70e9c8a98da63d5f6505c955ab77b3e4; restricted receiver independently verified it. Latest accepted staging now 781ccd3. PR52 exact head 4bde811 passed all checks and merged as 7dd812b8ecd99f18c0abf67577e0347bca0e8759. Unconfigured normal-mode monitor now fails before state changes; probe-only mode passed from VPS B against all five production endpoints. No permanent monitor or backup schedule activation.
+
+**Correction recorded:** Initial temporary monitor bundle was from the stale progress branch lacking probe-only support, returned no output and could have updated state/attempted placeholder-topic alerts. No configured destination was supplied; actual delivery not established. Repeated validation from current source after verifying mode support; current probes passed and temporary files removed. Do not repeat the stale-source invocation or claim it was read-only.
+
+**Next:** Stop cycling documentation-only releases. Implement substantive phase-1 snapshot-safe export/deletion-recovery/custody and coordinated worker acceptance. Master 7dd812b checks need inspection before later staging. Production remains locked; all five phases not complete. Automation active. Resume H:\Mento gpt\Mento with current Git status and PROGRESS; preserve user book.
+
+---
 ## 2026-10-04 — Current native/monitor candidate accepted on staging; retention fix merged
 
 **Verified:** Full Staging Release 37187307738 succeeded for eb1a031cb797c6f3f98cc839809e2c9bc2c32504. Independent restricted receiver verify passed. This supersedes 8ee2f8c as accepted staging and includes the Android keyboard fix and probe-only monitoring source; live monitoring installation is not implied.
