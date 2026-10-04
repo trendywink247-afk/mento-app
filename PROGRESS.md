@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-05 — Selective CI implementation passes all PR checks
+
+**Verified:** PR66 still points to `0aa2f6861f4948e1974a02db237d184f59d1dcde`. API 37226539496, Test 37226539524 and native 37226539502 completed successfully. Every reported check is green, including actual API tests, mobile/web, release tooling, receipt receiver, restricted-receiver isolation, all aggregates, the new native gate and all three full-suite markers. Dependabot configuration also passed. This verifies execution of the updated native Node/Java/Maestro workflow on the PR candidate.
+
+**Boundary / next:** PR success does not substitute for exact-master release evidence or staging acceptance. No merge, branch-protection change, staging deployment or production promotion was requested by this status check. Continue integration review, then exact-master checks and isolated staging before any promotion; existing operational and native reliability gates remain. This progress record stays local to avoid another PR run. Resume: `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 66; git status --short --branch`. Preserve the architecture book.
+
+---
+
 ## 2026-10-05 — Completed PR native checked; selective CI implemented and locally validated
 
 **Review handoff:** Pushed the locally accepted implementation as `0aa2f6861f4948e1974a02db237d184f59d1dcde` to draft [PR66](https://github.com/trendywink247-afk/mento-app/pull/66), with its title/description updated for the final scope. New API 37226539496, Test 37226539524 and native 37226539502 runs started. All three classifiers, API lint/aggregate, receipt receiver, restricted-receiver isolation and Dependabot configuration passed at inspection; API tests, web/release tooling and native remained running. No new-head full CI, merge or staging acceptance is claimed. This handoff record remains a local progress commit so it does not cancel/restart the active PR validation.
