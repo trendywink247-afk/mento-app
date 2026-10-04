@@ -10,6 +10,10 @@
 x-api-env: &api-env
   DATABASE_URL: postgresql+psycopg://mento:${POSTGRES_PASSWORD:?exported by deploy.sh}@postgres:5432/mento
   REDIS_URL: redis://valkey:6379/0
+  # Both API colors and the worker each get a bounded SQLAlchemy pool.
+  # Optional clients still require their own aggregate budget before activation.
+  DB_POOL_SIZE: "5"
+  DB_MAX_OVERFLOW: "0"
 
 x-logging: &logging
   logging:
