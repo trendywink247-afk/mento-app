@@ -140,6 +140,21 @@ def test_open_flag_with_reason_reads_and_audits_the_reason(client, db_session, f
 
 
 @requires_postgres
+def test_own_room_open_case_never_uses_stream_or_claims_a_successful_view(
+    client, db_session, fetched
+):
+    admin_id, uid, _, convo_id = _world(db_session)
+    db_session.get(Conversation, convo_id).chat_backend = "own"
+    db_session.add(SafetyFlag(user_id=uid, conversation_id=convo_id, signal=SafetySignal.suicidal))
+    db_session.commit()
+    response = _read(client, admin_id, convo_id)
+    assert response.status_code == 409
+    assert response.json()["code"] == "moderation_transport_not_supported"
+    assert fetched == []
+    assert _views(convo_id) == []
+
+
+@requires_postgres
 def test_open_report_is_an_open_case(client, db_session, fetched):
     admin_id, uid, lid, convo_id = _world(db_session)
     db_session.add(

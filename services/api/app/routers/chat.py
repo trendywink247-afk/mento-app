@@ -22,16 +22,27 @@ from collections.abc import Callable
 from typing import TypeVar
 
 import anyio.to_thread
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 from fastapi.security import HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.chat_hub import Peer, hub
 from app.config import get_settings
-from app.db import SessionLocal
+from app.db import SessionLocal, get_db
+from app.errors import ApiProblem
 from app.models.conversation import Conversation
-from app.models.enums import ConversationEndedBy
-from app.security import current_member_or_listener
+from app.models.enums import ConversationEndedBy, VettingStatus
+from app.models.listener import ListenerProfile
+from app.models.user import User
+from app.security import _bearer, current_member_or_listener, current_user_id
 from app.services import chat, conversations
 
 logger = logging.getLogger("mento.chat.router")
@@ -45,6 +56,7 @@ _HELLO_TIMEOUT_S = 5.0
 MAX_FRAME_BYTES = 16 * 1024
 CLOSE_TOO_BIG = 1009
 CLOSE_IDLE = 4408
+AUTH_RECHECK_S = 15.0
 
 
 async def _db(fn: Callable[..., T], *args, **kwargs) -> T:
@@ -57,19 +69,61 @@ async def _db(fn: Callable[..., T], *args, **kwargs) -> T:
     return await anyio.to_thread.run_sync(_run)
 
 
-def _identify(token: object) -> str | None:
+def _authorized_identity(db: Session, creds: HTTPAuthorizationCredentials) -> tuple[str, str]:
+    """Token role plus live account standing, for every own-chat read and socket."""
+    role, subject = current_member_or_listener(creds)
+    if role == "member":
+        current_user_id(creds, db)
+        if db.get(User, subject) is None:
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "unknown session")
+    else:
+        mentor = db.get(ListenerProfile, subject)
+        if mentor is None or mentor.vetting_status != VettingStatus.approved:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "listener access revoked")
+    return role, subject
+
+
+def _current_chat_identity(
+    creds: HTTPAuthorizationCredentials = Depends(_bearer),
+    db: Session = Depends(get_db),
+) -> tuple[str, str]:
+    return _authorized_identity(db, creds)
+
+
+def _token_identity(token: object) -> tuple[str, str] | None:
     """Member or mentor id from a session JWT; None if invalid. The same check as the
     HTTP routes (`security.current_member_or_listener`): signature per role, expiry,
     iss/aud, legacy windows. Admin tokens never work."""
     if not isinstance(token, str) or not token:
         return None
     try:
-        _, subject = current_member_or_listener(
+        who = current_member_or_listener(
             HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
         )
-    except HTTPException:
+    except (HTTPException, ApiProblem):
         return None
-    return subject
+    return who
+
+
+def _identify(db: Session, token: object) -> tuple[str, str] | None:
+    if not isinstance(token, str) or not token:
+        return None
+    try:
+        return _authorized_identity(
+            db, HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        )
+    except (HTTPException, ApiProblem):
+        return None
+
+
+def _authorized_opening(db: Session, conversation_id: str, token: object, who, after: int):
+    """One database round for standing and replay after the paused subscription."""
+    if _identify(db, token) != who:
+        return None
+    convo = db.get(Conversation, conversation_id)
+    if convo is None or chat.side_of(convo, who[1]) != who[0]:
+        return None
+    return chat.opening(db, conversation_id, who[1], after)
 
 
 @router.websocket("/chat/ws/{conversation_id}")
@@ -81,10 +135,12 @@ async def chat_ws(ws: WebSocket, conversation_id: str) -> None:
         await _close(ws, 4400)
         return
     first = first if isinstance(first, dict) else {}
-    me = _identify(first.get("token")) if first.get("t") == "hello" else None
-    if me is None:
+    token = first.get("token")
+    who = _token_identity(token) if first.get("t") == "hello" else None
+    if who is None:
         await _close(ws, 4403)
         return
+    role, me = who
     try:
         after = max(0, int(first.get("after") or 0))
     except (TypeError, ValueError):
@@ -94,8 +150,8 @@ async def chat_ws(ws: WebSocket, conversation_id: str) -> None:
     # the writer skips what the replay carries (hub docstring).
     peer = hub.join(conversation_id, ws, me)
     try:
-        opened = await _db(chat.opening, conversation_id, me, after)
-        if opened is None:
+        opened = await _db(_authorized_opening, conversation_id, token, who, after)
+        if opened is None or opened.side != role:
             await hub.leave(conversation_id, ws)
             await _close(ws, 4403)  # same answer for "no such chat", "not yours", "ended"
             return
@@ -117,14 +173,32 @@ async def chat_ws(ws: WebSocket, conversation_id: str) -> None:
         )
 
         settings = get_settings()
+        last_frame_at = asyncio.get_running_loop().time()
         while not peer.closed:
             try:
-                raw = await asyncio.wait_for(ws.receive_text(), settings.chat_idle_deadline_s)
+                remaining = settings.chat_idle_deadline_s - (
+                    asyncio.get_running_loop().time() - last_frame_at
+                )
+                raw = await asyncio.wait_for(
+                    ws.receive_text(), min(AUTH_RECHECK_S, max(0, remaining))
+                )
             except TimeoutError:
-                await _close(ws, CLOSE_IDLE)  # no ping in time: a dead or frozen client
-                return
+                if await _db(_identify, token) != who:
+                    await _close(ws, 4403)
+                    return
+                if (
+                    asyncio.get_running_loop().time() - last_frame_at
+                    >= settings.chat_idle_deadline_s
+                ):
+                    await _close(ws, CLOSE_IDLE)  # no ping in time: a dead or frozen client
+                    return
+                continue
+            last_frame_at = asyncio.get_running_loop().time()
             if len(raw.encode("utf-8")) > MAX_FRAME_BYTES:
                 await _close(ws, CLOSE_TOO_BIG)
+                return
+            if await _db(_identify, token) != who:
+                await _close(ws, 4403)
                 return
             try:
                 frame = json.loads(raw)
@@ -142,7 +216,11 @@ async def chat_ws(ws: WebSocket, conversation_id: str) -> None:
             if not await _within_rate(me):
                 hub.send_to(
                     peer,
-                    {"t": "error", "code": "rate_limited", "client_id": frame.get("client_id")},
+                    {
+                        "t": "error",
+                        "code": "rate_limited",
+                        "client_id": frame.get("client_id"),
+                    },
                 )
                 continue
             if kind == "send":
@@ -150,7 +228,12 @@ async def chat_ws(ws: WebSocket, conversation_id: str) -> None:
             elif kind == "typing":
                 await hub.publish(
                     conversation_id,
-                    {"t": "typing", "from": me, "on": bool(frame.get("on")), "_skip": me},
+                    {
+                        "t": "typing",
+                        "from": me,
+                        "on": bool(frame.get("on")),
+                        "_skip": me,
+                    },
                 )
             elif kind == "read":
                 try:
@@ -168,7 +251,8 @@ async def chat_ws(ws: WebSocket, conversation_id: str) -> None:
         await hub.leave(conversation_id, ws)
         if was_present and not await hub.is_connected(conversation_id, me):
             await hub.publish(
-                conversation_id, {"t": "presence", "user": me, "online": False, "_skip": me}
+                conversation_id,
+                {"t": "presence", "user": me, "online": False, "_skip": me},
             )
 
 
@@ -204,10 +288,10 @@ async def _on_send(peer: Peer, conversation_id: str, me: str, frame: dict) -> No
 
 
 @router.get("/chat/{conversation_id}/messages")
-def messages(conversation_id: str, after: int = 0, who=Depends(current_member_or_listener)) -> dict:
+def messages(conversation_id: str, after: int = 0, who=Depends(_current_chat_identity)) -> dict:
     with SessionLocal() as db:
         convo = db.get(Conversation, conversation_id)
-        if convo is None or convo.chat_backend != "own" or chat.side_of(convo, who[1]) is None:
+        if convo is None or convo.chat_backend != "own" or chat.side_of(convo, who[1]) != who[0]:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "no such conversation")
         return {
             "messages": chat.history(db, conversation_id, after),
@@ -216,7 +300,7 @@ def messages(conversation_id: str, after: int = 0, who=Depends(current_member_or
 
 
 @router.post("/chat/{conversation_id}/wipe")
-def wipe(conversation_id: str, who=Depends(current_member_or_listener)) -> dict:
+def wipe(conversation_id: str, who=Depends(_current_chat_identity)) -> dict:
     """Clean Wipe for an own-chat conversation — the same service as
     POST /conversations/{id}/wipe (services/conversations.clean_wipe): bodies deleted,
     the chat ended, the sockets told `wiped` then `ended` once it commits."""

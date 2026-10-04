@@ -243,7 +243,7 @@ def test_hello_is_one_database_round(client, room, monkeypatch):
     monkeypatch.setattr(chat_router, "_db", counting)
     cm, _ = _open(client, room, "member")
     cm.__exit__(None, None, None)
-    assert calls == ["opening"]
+    assert calls == ["_authorized_opening"]
 
 
 def test_a_message_and_its_allowance_count_commit_together(db_session, monkeypatch):

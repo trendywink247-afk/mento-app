@@ -22,6 +22,7 @@ from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
 from app.jobs import tasks
+from app.models.chat_message import ChatMessage
 from app.models.conversation import Conversation
 from app.models.enums import (
     ConversationEndedBy,
@@ -340,6 +341,7 @@ def my_conversations(
             user_persona_name=user.persona_name,
             user_persona_avatar=user.persona_avatar,
             stream_channel_id=convo.stream_channel_id,
+            chat_backend=convo.chat_backend,
             member_masked=convo.status_mask is not None,
             created_at=convo.created_at.isoformat(),
             ended_at=convo.ended_at.isoformat() if convo.ended_at else None,
@@ -507,11 +509,19 @@ def member_brief(
         .where(SafetyFlag.conversation_id == convo.id, SafetyFlag.reviewed.is_(False))
     ).scalar_one()
 
-    last_message_at = (
-        stream.channel_last_message_at(convo.stream_channel_id) if convo.stream_channel_id else None
-    )
+    if convo.chat_backend == "own":
+        last_message_at = db.scalar(
+            select(func.max(ChatMessage.created_at)).where(ChatMessage.conversation_id == convo.id)
+        )
+    else:
+        last_message_at = (
+            stream.channel_last_message_at(convo.stream_channel_id)
+            if convo.stream_channel_id
+            else None
+        )
 
     return MemberBriefOut(
+        chat_backend=convo.chat_backend,
         persona_name=member.persona_name,
         persona_avatar=member.persona_avatar,
         companion_animal=member.companion_animal,

@@ -74,6 +74,7 @@ class ListenerConversationItem(BaseModel):
     user_persona_name: str
     user_persona_avatar: str
     stream_channel_id: str | None
+    chat_backend: Literal["stream", "own"] = "stream"
     member_masked: bool
     created_at: str
     ended_at: str | None
@@ -102,6 +103,7 @@ class MemberBriefOut(BaseModel):
     `ListenerConversationItem` carries: the listener sees "away", never why."""
 
     persona_name: str
+    chat_backend: Literal["stream", "own"] = "stream"
     persona_avatar: str
     companion_animal: str | None
     companion_colour: str | None
