@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-10-04 — Read-only monitoring validation merged
+
+**Done:** PR50 current head 8cbfee1dce90d79b55bb06917a9a750e069c86ed passed API 37164966018 and Test CI 37164965991; merged as eb1a031cb797c6f3f98cc839809e2c9bc2c32504. Both native keyboard fix and probe-only monitoring are now on master. No VPS monitor installation or alert delivery claimed.
+
+**Next:** Exact eb1a031 master push checks must pass, including Android, before full staging. Latest accepted staging remains 8ee2f8c; production remains disabled. Do not keep merging dependencies while this release candidate validates. Phase 1 still needs live backup/custody/deletion and coordinated schema/worker/safety acceptance; phases 2–5 are not complete. Resume using current master workflow results, not historical PR42/50. Reminder stays deleted.
+
+---
 ## 2026-10-04 — Android send/reply regression fixed and merged
 
 **Verified:** PR42 exact head 0d164f6bbad10b5f9ff4a5e4edc7bd12069d76f1 passed API 37163716073, Test 37163716061 and real Android 37163716076. Logs confirm Send completed and mentor reply visible. Merged as 2544792addbc8a5fd364263ddf6a784dcbe6b90c. Explicit thread height resolves the prior max-height collapse; unchanged send/reply assertions passed.
