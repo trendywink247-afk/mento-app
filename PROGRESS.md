@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Ciphertext transport verification and native reproduction instrumentation
+
+**Implemented:** PR57 adds content-addressed encrypted archive copying with bounded rclone transfer and SHA-256 byte readback; source retained, no pruning, no private identity, no live activation. Initial Linux run 37197154124 caught a real defect: --immutable alone replaced the corrupt synthetic object. Fixed with --ignore-existing plus readback and strengthened regression to same-size/same-time corruption. Current head 66d338d is pushed; bash syntax/whitespace passed, new Linux CI pending. Local-backend rehearsal is not off-host recovery or custody proof; age header check is a format guard, not authentication. Concurrent writers/server-enforced immutability are not established.
+
+**Native:** PR56 adds CI-only geometry diagnostics without message/user data. Current head 99e0351 first native attempt passed (37195459709); deliberately requested second attempt to investigate intermittent keyboard coverage. Attempt 2 still running. Successful geometry had measured top 92.19 and keyboard top 571.05, including a hide/show transition. No demonstrated root cause or permanent fix yet. Master 63edde2 native failure remains a release blocker; staging still accepted 781ccd3. PR55 integration tests green, held for release sequencing.
+
+**Next:** Inspect PR57 exact-head Linux regression and fix failures; inspect PR56 attempt 2 geometry and diagnose actual native failure without bypassing unchanged send/reply acceptance. Then integrate green changes and run master/full staging acceptance. Production disabled; off-device key custody, deletion reconciliation, six-hour activation and remaining phases unfinished. Resume H:\Mento gpt\Mento, switch from this log-only branch to current implementation branch before running source scripts; preserve untracked book. No VPS data or Desktop changed.
+
+---
 ## 2026-10-04 — Encrypted export integration tested; master native failure blocks release
 
 **Implementation:** PR55 adds create-encrypted-recovery.sh: nonblocking archive-directory lock, private temporary snapshot, age encryption accepting public recipients only, cleanup on success/failure and non-overwriting encrypted publication. Both baseline/current application recovery drills now exercise wrapper and malformed-recipient cleanup. Test CI 37193861619 passed including integrated encrypted export cleanup and database restore. PR remains open; no live backup activation.
