@@ -455,3 +455,32 @@ def test_recovery_receipt_rolls_back_with_account_deletion(db_session):
     with TestSession() as s:
         assert s.get(User, me) is not None
         assert s.get(ErasureReceipt, recovery_digest(me)) is None
+
+
+def test_isolated_recovery_reconciles_old_snapshot_without_provider_calls(db_session, monkeypatch):
+    from app.services import chat_events
+    from app.services.recovery_reconciliation import reconcile_restored_members
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Recovery must not contact serving integrations")
+
+    monkeypatch.setattr(stream, "delete_user", forbidden)
+    monkeypatch.setattr(stream, "erase_channel", forbidden)
+    monkeypatch.setattr(chat_events, "after_commit", forbidden)
+    with TestSession() as s:
+        me, other = _user(s, "Quiet Cove"), _user(s, "Other Cove")
+        lid = _listener(s, "Open River", active=2)
+        mine = _world(s, me, lid, "me")
+        theirs = _world(s, other, lid, "them")
+        s.commit()
+    # Receipt arrived after this restored snapshot was taken.
+    with TestSession() as s:
+        assert reconcile_restored_members(s, {recovery_digest(me)}) == 1
+        s.commit()
+    with TestSession() as s:
+        assert all(v == 0 for v in _rows_for(s, me, list(mine.values())).values())
+        assert s.get(User, other) is not None
+        assert s.get(Conversation, theirs["active"]).status == ConversationStatus.active
+        assert s.get(ListenerProfile, lid).active_conversations == 1
+        assert reconcile_restored_members(s, {recovery_digest(me)}) == 0
+        assert s.get(ErasureReceipt, recovery_digest(me)) is not None
