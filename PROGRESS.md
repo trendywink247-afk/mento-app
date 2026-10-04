@@ -33,6 +33,50 @@
 **Next:** Require CI proof of baseline restore/forward migration before integration; continue production readiness without bypassing gates. Resume in H:\Mento gpt\Mento; preserve architecture book and current-head native tests on #42.
 
 ---
+## 2026-10-04 — Release-channel CI pending native; artifact upgrade rehearsal started
+
+**Verified:** PR #42 head 43932941947adbbdbdf0974ea11edb755fccb779 API and Test CI passed; Android run 37155962519 remains in progress. No merge while native acceptance is pending. Local TypeScript validation from the preceding turn completed successfully.
+
+**Independent review:** New Dependabot PRs #43 setup-python, #44 upload-artifact and #45 free-disk-space appeared. Reviewed #44 diff and pinned upstream action metadata: archive defaults true, overwrite false, hidden files excluded, Node24 runtime. Dispatched isolated both-stack rollback rehearsal 37156940142 on #44 head 435908ae019d239b5d8bc82dbdecebfdad69de40 to verify actual upload/download compatibility before integration. Inspect its artifact rather than assuming a green upload proves recoverability. No VPS touched.
+
+**Review note:** #45 upstream v2 renames tool-cache to preinstalled-runtimes (old input temporarily supported), defaults swap preservation and changes specific-option precedence. Our workflow must continue preserving Android SDK, runtimes and swap; full native evidence required. No new dependency PR merged. #43 review remains due.
+
+**Next:** Inspect #42 native and #44 rehearsal/artifact, then current-head checks before any merge. Accepted staging remains fe6c2e6; production remains locked. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
+## 2026-10-04 — Local production update channel aligned with EAS profile
+
+**Done:** Official Expo guidance confirms non-EAS prebuilds use updates.requestHeaders, while EAS uses the build profile channel (https://docs.expo.dev/eas-update/getting-started/). Updated dynamic config so APP_VARIANT=production uses the production header; preview retains preview. This addresses the local Android release script path without publishing any OTA or changing installed binaries.
+
+**Validation:** Added resolved Expo config test comparing production/preview channels with eas.json and checking Android cleartext separation plus bundle identity. Local config test passed; actionlint and git diff --check passed. CI now runs this regression test. No signed iOS build, store submission, paid build or runtime-channel proof is claimed.
+
+**Next:** Require current PR API/web/native checks before integration, inspect actual signed-build configuration before distribution, and keep production gates intact. Latest accepted VPS staging remains fe6c2e6. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
+## 2026-10-04 — Latest master staging accepted; native update configuration audited
+
+**Done:** Full staging 37153495894 succeeded for fe6c2e6aa74ca35f8b97765e97543ee3e976520b; independent restricted receiver verification passed. No open PRs at inspection. This is the latest accepted and verified staging candidate.
+
+**Native audit:** Read app.json, app.config.ts and eas.json. EAS production declares channel=production, but shared app.json hard-codes expo-channel-name=preview. Local `APP_VARIANT=production EXPO_NO_DOTENV=1 expo config --type public --json` resolves bundle com.mento.app, appVersion runtime policy, updates enabled and preview header. Only these allowlisted fields were displayed; no credentials printed. This is local resolved config, not proof of the channel embedded by EAS in a signed binary. No build purchase, store submission or OTA publication occurred.
+
+**Next:** Reconcile local/native production channel semantics with EAS-generated configuration and test variant separation before changing rollout behavior. Production remains locked; live monitor installation, worker/safety proof, backup custody/content/deletion and device gates remain outstanding. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
+## 2026-10-04 — Connection-budget master cleared release gate
+
+**Done:** Exact-commit release gate passed for fe6c2e6aa74ca35f8b97765e97543ee3e976520b with API 37151116571, Test CI 37151116467 and actual Android 37151116427. No open PRs. Dispatched full Staging Release 37153495894 for that exact SHA; pending acceptance. Production enable flag independently remains false.
+
+**Next:** Inspect 37153495894 and independently verify fe6c2e6 through the restricted receiver after success. Latest accepted/verified staging remains dd0edb0 until then. Remaining gates are unchanged: live worker and safety acceptance, monitor installation/delivered-alert evidence, backup custody/content/deletion/schedule, measured capacity and iOS/device readiness. Do not equate green release tooling with completion of those gates. Resume in H:\Mento gpt\Mento; preserve architecture book.
+
+---
+## 2026-10-04 — Connection-budget utility reviewed and integrated
+
+**Done:** PR #41 exact head bd047cb91c28b505e5cc51607c6e492071f26562 passed required Test CI 37149923860 and API CI 37149923798; merged as fe6c2e6aa74ca35f8b97765e97543ee3e976520b. Review confirmed separate per-worker queue allocation, shared-pool assumption and reserved/headroom accounting. Executed documented CLI example: required 43/50, exit 0. Oversized source-default overlap: required 73/50, exit 1 as expected.
+
+**Limits:** Manual budget tool only; no automatic deployment enforcement and no live pool changes. Latest independently verified staging remains dd0edb0. Capacity, production worker/safety acceptance, real backup key custody/content/deletion handling and iOS/device gates remain unresolved.
+
+**Next:** Inspect fe6c2e6 exact master checks before staging it. Continue bounded rollout preparation without enabling production. Resume in H:\Mento gpt\Mento; preserve architecture book.
+---
 ## 2026-10-04 — Step 1 prioritized; production schema and backup decisions
 
 **Founder direction:** Complete steps 1–5 sequentially, beginning with production readiness. Retain saved journal notes and moderation narratives in encrypted backups; exclude chat history. Recovery key belongs in an existing external password manager/secure vault; destination identification pending, no private key requested in chat.

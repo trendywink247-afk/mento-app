@@ -43,6 +43,7 @@ import { api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
+import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { chatFaceKey } from '@/lib/originStore';
 import { pendingOption } from '@/lib/pendingOption';
@@ -162,6 +163,7 @@ export default function ChatScreen() {
 
   const [channel, setChannel] = useState<ChannelType | null>(null);
   const [keyboardOffset, setKeyboardOffset] = useState(0);
+  const keyboardBoundary = useChatKeyboardBoundary(keyboardOffset);
   const [crisis, setCrisis] = useState<CrisisPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [optionsOpen, setOptionsOpen] = useState(false);
@@ -480,7 +482,7 @@ export default function ChatScreen() {
           <Text style={[type.body, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
         </View>
       ) : channel ? (
-        <View style={{ flex: 1 }} testID="chat-ready"
+        <View style={[{ flex: 1 }, keyboardBoundary]} testID="chat-ready"
           onLayout={(event) => event.currentTarget.measureInWindow((_x, y) => setKeyboardOffset(y))}>
           <Chat client={getStreamClient()} style={streamTheme}>
             {/* Baloo message text + Android measure/draw fix (components/chat/MessageText.tsx),
@@ -516,6 +518,7 @@ export default function ChatScreen() {
             >
             <Channel
               channel={channel}
+              disableKeyboardCompatibleView={Platform.OS === 'android'}
               // The thread starts below our header, not at screen origin. Stream's
               // default Android offset (-300) leaves the composer under the IME.
               keyboardVerticalOffset={keyboardOffset}

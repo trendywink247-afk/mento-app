@@ -287,7 +287,7 @@ jobs:
             # making worse on an already 2-core-constrained box, for no further
             # diagnostic value now that the real cause (CPU contention, not a hang)
             # is proven.
-            maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
+            maestro test apps/mobile/e2e/maestro/onboarding-first-message.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; adb exec-out screencap -p > "$GITHUB_WORKSPACE/maestro-debug/device-screen.png" 2>/dev/null; adb shell uiautomator dump /sdcard/mento-failure.xml >/dev/null 2>&1; adb exec-out cat /sdcard/mento-failure.xml > "$GITHUB_WORKSPACE/maestro-debug/device-hierarchy.xml" 2>/dev/null; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
             # A beat for the system to settle (GC, window teardown) before the next
             # cold launch — flow 2's own "id: start is visible" has twice hit a
             # system-level "Quickstep isn't responding" ANR / been bounced clean back
@@ -317,7 +317,7 @@ jobs:
             # 480s covers the observed 296s with real margin; the job timeout above was
             # raised to match.
             setsid sh -c 'node apps/mobile/e2e/maestro/mentor-bot.mjs --token "$LISTENER_TOKEN" --api http://localhost:8000/api/v1 --timeout 480; echo $? > mentor-bot.exitcode' > mentor-bot.log 2>&1 & echo $! > mentor-bot.pid
-            maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
+            maestro test apps/mobile/e2e/maestro/two-party-chat.yaml || { adb logcat -d > "$GITHUB_WORKSPACE/logcat.txt" 2>/dev/null; mkdir -p "$GITHUB_WORKSPACE/maestro-debug"; adb exec-out screencap -p > "$GITHUB_WORKSPACE/maestro-debug/device-screen.png" 2>/dev/null; adb shell uiautomator dump /sdcard/mento-failure.xml >/dev/null 2>&1; adb exec-out cat /sdcard/mento-failure.xml > "$GITHUB_WORKSPACE/maestro-debug/device-hierarchy.xml" 2>/dev/null; find "$HOME" -mmin -10 \( -iname "*.png" -o -iname "hierarchy.txt" -o -iname "maestro.log" \) -exec cp {} "$GITHUB_WORKSPACE/maestro-debug/" \; 2>/dev/null; cp mentor-bot.log mentor-bot.exitcode "$GITHUB_WORKSPACE/maestro-debug/" 2>/dev/null; exit 1; }
             i=0; while [ ! -f mentor-bot.exitcode ] && [ $i -lt 500 ]; do sleep 1; i=$((i + 1)); done
             [ -f mentor-bot.exitcode ] && [ "$(cat mentor-bot.exitcode)" = "0" ] || { echo "::error::mentor-bot.mjs failed"; cat mentor-bot.log; exit 1; }
             # crisis-card.yaml is deliberately NOT run here. The crisis card is drawn from a
