@@ -151,6 +151,7 @@ jobs:
           # sentry-react-native's own sentry.gradle.kts (shouldSentryAutoUploadGeneral)
           # that this env var is the real, intended way to skip it, not a guess.
           SENTRY_DISABLE_AUTO_UPLOAD: "true"
+          EXPO_PUBLIC_NATIVE_LAYOUT_DIAGNOSTICS: "1"
         run: |
           npx expo prebuild --platform android --no-install
           # T6.2 step 3 (SDK 55): the default generated org.gradle.jvmargs
@@ -349,6 +350,11 @@ jobs:
             maestro-debug/
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Preserve geometry-only keyboard diagnostics on every outcome
+        if: always()
+        run: |
+          if [ -f rnjs.log ]; then grep -F '[ChatKeyboard]' rnjs.log || true; fi
 
       - name: API log (always, for debugging)
         if: always()
