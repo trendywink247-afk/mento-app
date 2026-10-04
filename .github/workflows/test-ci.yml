@@ -33,6 +33,7 @@ jobs:
       - run: npm run typecheck
       - name: Verify native release configuration separation
         run: node e2e/release-config.test.cjs
+      - run: node e2e/keyboard-boundary.test.cjs
       - run: npm run test:route && npm run test:question && npm run test:placement && npm run test:bubble
       - run: npx expo export --platform web
       - name: Install isolated browser test tools
