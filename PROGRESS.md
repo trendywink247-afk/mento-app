@@ -6,6 +6,8 @@
 
 ## 2026-10-04 — Local access restored; recovery and own-chat foundations runtime accepted
 
+**Review handoff:** Pushed the locally validated source and opened draft [PR66](https://github.com/trendywink247-afk/mento-app/pull/66). Initial CI passed the new Linux recovery-receipt job and restricted-receiver isolation; other checks were still running at handoff. No exact-head all-green or staging acceptance is claimed. Resume by querying PR66's current head and checks before merge or deployment. The submission step below is complete.
+
 **Done:** Root session now has working Docker Desktop 29.2.0 and Python 3.12.10 access. No Docker reset or volume deletion was needed. Isolated workspace initialization applied `ea01chat0001`; Alembic reports no new upgrade operations. All **757 API tests passed** through `scripts/local/api.py test -q -n 4`, using isolated test databases on :15432. The earlier targeted subset passed 122 tests. API Ruff and Black pass (238 files unchanged).
 
 **Implemented and locally verified:** `d6afa6a` adds a separate digest-only receipt receiver with authenticated bounded requests, SQLite WAL/FULL commit-before-ack, idempotent retries, explicit store provisioning and operator-only consistent exports. **41 tests passed**, including abrupt process exit after commit, response loss/retry, commit failure and concurrent writes/export; Ruff passes. Export coverage remains explicitly unverified. It is not deployed, is not automatically ingested by recovery replay, and does not establish host power-loss durability or primary-loss recovery.
