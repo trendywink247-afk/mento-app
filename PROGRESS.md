@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-05 — Architecture increment locally accepted; CI publication next
+
+**Final local evidence:** Frozen application candidate `f1b1e27` passed all 795 API tests against isolated `mento_test_gw_root_combined` (5m58s), API-wide Ruff/Black, TypeScript, 57 frontend chat/privacy/resource regressions, resolved release-profile checks, 62 receiver/manifest tests, nine offline receipt-tool tests, 94 Linux CI/tooling tests and two pure deployed-safety assertion tests. Actual PostgreSQL snapshot/partition-lock and resource-limited receiver restart drills passed. Exported own-chat SPA passed normal and reduced motion against a restarted API: both participants send/read/save, reload without duplicates, reconnect, terminal 4403 without automatic retry, explicit member retry with fresh authorization, current crisis resources/stillness and UI wipe. Screenshots confirm the alternate helpline label and number are fully visible. No external provider traffic or page errors occurred in that local flow.
+
+**Review fixes:** Destructive receipt replay and CLI verification now require a trusted checkpoint covering the entire export, rejecting invented appended deletions before database access; prefix continuity alone is insufficient. Backup cancellation gives shell cleanup time, kills descendants before releasing its lock and bounds pg_dump inside its container. One hello database-round regression was repaired. A subsequent suite invocation mixed an already-loaded old parser with a newly edited CLI; the final frozen 795-test run supersedes that invalid mixed-source attempt. Local launcher now confines temporary files to `.local/tmp`.
+
+**Safety/configuration:** Current resources are Tele-MANAS 14416 and alternate 1800-89-14416, verified against DGHS and the Ministry's KIRAN phase-out announcement (links in `docs/PRIVACY.md`). Staging acceptance checks actual augmented crisis payload numbers. Read-only inspection found no staging override and an explicit production override; update that configuration before any production promotion. No helplines were called, old transcripts rewritten or encrypted production secrets decrypted. Stream remains the serving default, analytics stays dark, and production stays locked.
+
+**Next / resume:** Publish this locally accepted increment, require complete PR checks and exact-master evidence, then deploy and accept staging including existing Stream regression. Remaining operational packages are not complete: live receipt coverage and primary-loss restoration, six-hour backup operations/delivered alerts, measured same-database edge transition/load/rollback, native own-chat/moderation, direct push/private telemetry and physical-device/store acceptance. Android is the founder's available device; no connected device or iPhone evidence yet. Local synthetic API and exported own-chat SPA remain on 18000/18081. `Set-Location 'H:\Mento gpt\Mento'; git status --short --branch; gh pr list --head codex/architecture-completion`.
+
+---
+
 ## 2026-10-05 — Custody confirmed; combined architecture validation underway
 
 **Founder evidence:** The founder confirms an independently encrypted offline recovery-key copy is saved, in addition to Bitwarden. Bitwarden retrieval and synthetic database decryption were previously tested; offline-copy retrieval has not been independently tested. Physical acceptance hardware is Android only; no authorized Android device was connected during read-only ADB discovery. Physical iPhone acceptance remains outstanding.
