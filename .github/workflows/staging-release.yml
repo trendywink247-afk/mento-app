@@ -81,7 +81,7 @@ jobs:
           PY
           (cd candidate && sha256sum api-image.tar.gz web-staging.tar.gz web-production.tar.gz release.json checks.json image-id.txt > SHA256SUMS)
       - name: Preserve build for retries (not production acceptance)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: built-candidate
           path: candidate/
@@ -130,7 +130,7 @@ jobs:
       - name: Confirm staging still serves this candidate
         run: ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "verify $SHA"
       - name: Publish only an accepted candidate
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: release-candidate
           path: candidate/
