@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Founder requires local acceptance before any further push
+
+**Direction:** Implement and finish relevant local tests before pushing. Last already-running push completed as PR65 7c02640; no further push after the new instruction. Added rule to AGENTS.md. Updated complete-mento-implementation prompt to local-first validation, preserving its observed PAUSED status and 30-minute schedule. Do not resume automatically.
+
+**Local status:** No listeners on workspace ports 18081/18000/15432/16379 at inspection; Docker Linux engine unavailable. Started Docker Desktop hidden, but backend log reported startup failure initializing dockerInference Unix socket (file cannot be accessed). WSL reported no running distributions. No reset, volume removal or Docker configuration mutation performed. Source remains H:\Mento gpt\Mento; Desktop checkout untouched.
+
+**Work held:** PR65 acknowledgement client and database failure/retry tests await complete acceptance. Six HTTP mock cases passed directly; standard local pytest failed at PostgreSQL fixture setup, not assertions. Receipt sink is not deployed, gate is disabled and phase 1 incomplete. Latest independently verified staging 1441a9b; production locked. Resolve local Docker startup, then run isolated workspace init/tests and app end-to-end before any further push. This progress/AGENTS commit stays local.
+
+---
 ## 2026-10-04 — Integrated encrypted export candidate; native regression reopened
 
 **Implementation:** create-encrypted-recovery.sh composes snapshot export and age publication under a nonblocking lock with private temporary workspace cleanup on success/failure. Accepts public recipients only; no private identity, cron, retention or offsite activation. Both real-schema recovery drills now call the wrapper and assert cleanup on malformed recipient failure. Bash syntax/whitespace passed; Linux CI pending.
