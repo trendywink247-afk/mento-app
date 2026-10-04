@@ -70,6 +70,8 @@ jobs:
           BASELINE_REVISION=c13a0seen001 RESTORE_IMAGE=mento-backup-drill bash deploy/test-encrypted-database-restore.sh
       - name: Validate snapshot locks against concurrent partition DDL
         run: bash deploy/test-snapshot-ddl.sh
+      - name: Validate isolated erasure receipt export
+        run: bash deploy/test-erasure-receipt-export.sh
       - name: Validate all GitHub workflows
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -shellcheck=
       - name: Validate shell syntax
