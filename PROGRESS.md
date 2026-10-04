@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Full staging accepted and independently verified
+
+**Done:** Exact master gate passed for 8ee2f8ce4c311d81709ecf951300844fb6601403 (API 37159175026, Test 37159175024, native 37159175029). Full Staging Release 37163737229 passed including browser acceptance; restricted receiver independently verified that exact candidate. This is now the latest accepted staging. It includes merged backup recovery/overlap tooling, not an activated live backup schedule.
+
+**Native investigation:** Run 37162188103 still failed. Screenshot shows keyboard no longer covering composer but maxHeight leaves the percentage-sized thread collapsed. PR42 head 0d164f6 changes Android bound to definite height/flex:0. TypeScript passed, API/Test CI passed; native 37163716076 still running. No native acceptance claimed yet.
+
+**Production preflight repeated live:** API readiness, release symlink, prior tag, operator and disk passed; safety freshness, running worker and queue tables failed. Production remains disabled. User asks to continue steps 1–5 and check CI; deleted interrupting reminder has not been recreated. Next inspect exact native outcome, fix demonstrated failures, integrate only green checks; continue operational gates without claiming the whole architecture complete. Resume in H:\Mento gpt\Mento; preserve untracked book.
+
+---
 ## 2026-10-04 — Android composer obstruction identified and fix pushed
 
 **Evidence:** Native run 37160525351 failed first-message send. Direct screenshot shows keyboard covering composer; device hierarchy places Send at y2054–2146 within keyboard area. React Native logs contain no press callback. API, Test CI and master 8ee2f8c native checks passed independently; no bypass of PR failure.
