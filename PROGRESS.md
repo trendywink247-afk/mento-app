@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Encrypted deletion replay integrated; receipt export startup race fixed
+
+**Integrated:** PR63 refreshed 0998fb4 passed API/Test 37216826095/37216826108 and merged as 5d6d3e3. Master 1441a9b API/Test/native passed 37216815923/37216815926/37216815924; dispatched full Staging Release 37218670432 for 1441a9b2859c0e301e1404340269860caeebc38a. Acceptance/independent verification pending; latest verified staging remains c1fa271. Production locked.
+
+**Failure and fix:** PR64 release-tooling 37216895579 failed because socket pg_isready accepted PostgreSQL's temporary initdb server just before its restart. Changed readiness to final TCP listener and added explicit timeout-exhaustion failure. Also added real age encryption, rclone local-backend copy/readback, authenticated decrypt and exact-byte comparison for the exported receipt manifest. New head ca12b09; bash syntax/whitespace passed, Linux runtime CI pending. Refreshed branch from master; no failed checks bypassed.
+
+**Next:** Verify PR64 exact-head export/transport tests, integrate after green, validate master/full staging artifact. Receipt point-in-time snapshots still do not establish synchronous off-primary durability or complete post-snapshot coverage. Continue phase 1 only: custody, coverage, six-hour activation/alerts and coordinated worker migration remain open. Resume H:\Mento gpt\Mento on codex/export-erasure-receipts; preserve book and Desktop.
+
+---
 ## 2026-10-04 — Erasure receipts merged; encrypted post-snapshot replay passed
 
 **Accepted:** PR62 exact 41e652b passed API/Test/native (37214408935/37214408969/37214408916); merged as 1441a9b. Master gates pending. PR63 d85b631 Linux Test 37214997498 explicitly passed post-snapshot erasure replay against the encrypted restored DB. Retargeted PR63 to master after parent merge, refreshed branch as 0998fb4; fresh current-head checks required.
