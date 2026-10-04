@@ -68,6 +68,14 @@ fi
 test ! -e "$temp/failed.age"
 test -z "$(find "$temp" -name '.recovery-work.*' -o -name '.encrypted-backup.*')"
 echo 'PASS: integrated encrypted export cleans private workspace after success and failure'
+# Capture a deletion AFTER the immutable encrypted snapshot, before recovery.
+# This synthetic handoff is replay proof, not durable off-primary replication.
+if [ -n "${RESTORE_IMAGE:-}" ] && [ "${BASELINE_REVISION:-head}" = head ]; then
+  receipt=$(docker run --rm -i --network "container:$name" --memory 256m \
+    -e ENV=dev -e DATABASE_URL=postgresql+psycopg://drill@127.0.0.1:5432/source \
+    "$RESTORE_IMAGE" python - erase-source < "$root/deploy/backup-content-fixture.py")
+  [[ "$receipt" =~ ^[0-9a-f]{64}$ ]]
+fi
 docker exec "$name" createdb -U drill recovered
 gzip -dc "$temp/recovered.sql.gz" | docker exec -i "$name" psql -X -v ON_ERROR_STOP=1 -U drill -d recovered >/dev/null
 result=$(docker exec "$name" psql -X -At -U drill -d recovered -c 'SELECT count(*) FROM drill_accounts JOIN drill_memberships ON id=account_id;')
@@ -89,6 +97,9 @@ if [ -n "${RESTORE_IMAGE:-}" ]; then
     docker run --rm -i --network "container:$name" --memory 256m \
       -e ENV=dev -e DATABASE_URL=postgresql+psycopg://drill@127.0.0.1:5432/recovered \
       "$RESTORE_IMAGE" python - verify < "$root/deploy/backup-content-fixture.py"
+    docker run --rm -i --network "container:$name" --memory 256m \
+      -e ENV=dev -e DATABASE_URL=postgresql+psycopg://drill@127.0.0.1:5432/recovered \
+      "$RESTORE_IMAGE" python - reconcile "$receipt" < "$root/deploy/backup-content-fixture.py"
   fi
   # Upgrade only the isolated recovered copy, never the source or a live server.
   docker run --rm --network "container:$name" --memory 256m \
