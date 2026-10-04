@@ -54,3 +54,28 @@ An orchestrator must serialize the complete creation/copy operation. The creatio
 Linux Test CI `37198829141` verified the integrated snapshot/encryption utility on both current and production-baseline schemas. Test CI `37198830809` verified actual rclone local-backend round trips, idempotent retry, plaintext rejection and detection of corrupted ciphertext even when size and modification time match. Earlier `--immutable`-only handling failed the corrupt-target regression; the corrected implementation skips existing objects and verifies their bytes. These tests do not establish live SFTP acceptance, off-device identity custody or operational six-hour backups.
 
 Account erasure currently deliberately records counts without a member identifier (`services/erasure.py`). Those audit rows cannot be used to reconstruct a post-snapshot deletion list. Recovery must remain closed to traffic until a separate durable deletion-reconciliation mechanism is implemented and tested, including loss of the primary after erasure. Do not claim replay coverage from the existing audit log.
+### Deletion receipt preparation
+
+The candidate schema adds `erasure_receipts`: a domain-separated SHA-256 digest
+of the random member UUID and a timestamp, without a foreign key or raw identity.
+The same transaction writes it and removes the account; rollback removes both
+changes. These are pseudonymous, linkable-to-a-backup records, not anonymous data.
+They contain no chat, journal, report narrative, email or persona.
+
+This is the first part of deletion reconciliation, not completed disaster recovery.
+Receipts must be replicated durably outside the primary before recovery can rely
+on them; receipt export, independent durability, complete-coverage checks and
+isolated replay still require implementation and acceptance. Do not acknowledge
+that an old snapshot is safe to serve merely because it contains this table.
+Do not automatically prune receipts until every backup that could resurrect the
+associated account has expired and expiry is verified. A downgrade refuses to
+drop a nonempty receipt table. No live migration or new backup schedule is enabled
+by this change. The public erasure policy needs reconciliation before activation.
+`services/recovery_reconciliation.py` supplies database-only replay for an
+isolated restored database. It validates digest syntax before changing rows,
+refuses live mentor identities for separate review, adjusts active seats, and
+uses the existing deletion/detachment inventory. The caller owns the transaction.
+It neither contacts Stream nor publishes chat events. There is deliberately no
+public endpoint or automatic production invocation. A supplied set of digests is
+not evidence that all deletions were captured: durable replication and coverage
+verification remain required. Keep all restored jobs and serving processes off.

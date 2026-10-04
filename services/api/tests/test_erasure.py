@@ -32,6 +32,7 @@ from app.models.enums import (
     SafetySignal,
     VettingStatus,
 )
+from app.models.erasure_receipt import ErasureReceipt
 from app.models.favourite import FavouriteListener
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
@@ -45,6 +46,7 @@ from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.security import issue_listener_token, issue_session_token
 from app.services import stream
+from app.services.erasure import recovery_digest
 
 from .conftest import TestSession, requires_postgres, test_engine
 
@@ -285,6 +287,10 @@ def test_erase_empties_every_table_frees_seats_and_leaves_others_alone(
         assert audit[0].subject_id is None
         assert me not in str(audit[0].meta) and "Quiet Cove" not in str(audit[0].meta)
         assert audit[0].meta["conversations"] == 3
+        receipts = s.scalars(select(ErasureReceipt)).all()
+        assert len(receipts) == 1
+        assert receipts[0].member_digest == recovery_digest(me)
+        assert receipts[0].member_digest != me
 
     # Stream: every channel still on Stream (not the one Clean Wipe already deleted),
     # then the Stream user.
@@ -434,3 +440,77 @@ def test_a_suspended_mentor_side_does_not_block_erasure(client, db_session, stre
         assert s.get(User, me) is None
         assert _count(s, ListenerApplication, ListenerApplication.user_id == me) == 0
         assert s.get(ListenerProfile, mentor_side) is not None
+
+
+def test_recovery_receipt_rolls_back_with_account_deletion(db_session):
+    from app.services.erasure import _phase_c_delete
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        s.commit()
+        _phase_c_delete(s, me)
+        s.flush()
+        assert s.get(ErasureReceipt, recovery_digest(me)) is not None
+        s.rollback()
+    with TestSession() as s:
+        assert s.get(User, me) is not None
+        assert s.get(ErasureReceipt, recovery_digest(me)) is None
+
+
+def test_isolated_recovery_reconciles_old_snapshot_without_provider_calls(db_session, monkeypatch):
+    from app.services import chat_events
+    from app.services.recovery_reconciliation import reconcile_restored_members
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Recovery must not contact serving integrations")
+
+    monkeypatch.setattr(stream, "delete_user", forbidden)
+    monkeypatch.setattr(stream, "erase_channel", forbidden)
+    monkeypatch.setattr(chat_events, "after_commit", forbidden)
+    with TestSession() as s:
+        me, other = _user(s, "Quiet Cove"), _user(s, "Other Cove")
+        lid = _listener(s, "Open River", active=2)
+        mine = _world(s, me, lid, "me")
+        theirs = _world(s, other, lid, "them")
+        s.commit()
+    # Receipt arrived after this restored snapshot was taken.
+    with TestSession() as s:
+        assert reconcile_restored_members(s, {recovery_digest(me)}) == 1
+        s.commit()
+    with TestSession() as s:
+        assert all(v == 0 for v in _rows_for(s, me, list(mine.values())).values())
+        assert s.get(User, other) is not None
+        assert s.get(Conversation, theirs["active"]).status == ConversationStatus.active
+        assert s.get(ListenerProfile, lid).active_conversations == 1
+        assert reconcile_restored_members(s, {recovery_digest(me)}) == 0
+        assert s.get(ErasureReceipt, recovery_digest(me)) is not None
+
+
+def test_recovery_rejects_malformed_receipts_before_changes(db_session):
+    from app.services.recovery_reconciliation import reconcile_restored_members
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        s.commit()
+        with pytest.raises(ValueError):
+            reconcile_restored_members(s, {recovery_digest(me), "bad"})
+        assert s.get(User, me) is not None
+        assert s.get(ErasureReceipt, recovery_digest(me)) is None
+
+
+def test_recovery_reconciliation_is_transactional(db_session):
+    from app.services.recovery_reconciliation import reconcile_restored_members
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        lid = _listener(s, "Open River", active=1)
+        mine = _world(s, me, lid, "me")
+        s.commit()
+        reconcile_restored_members(s, {recovery_digest(me)})
+        s.flush()
+        s.rollback()
+    with TestSession() as s:
+        assert s.get(User, me) is not None
+        assert s.get(Conversation, mine["active"]).status == ConversationStatus.active
+        assert s.get(ListenerProfile, lid).active_conversations == 1
+        assert s.get(ErasureReceipt, recovery_digest(me)) is None
