@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Integrated encrypted export candidate; native regression reopened
+
+**Implementation:** create-encrypted-recovery.sh composes snapshot export and age publication under a nonblocking lock with private temporary workspace cleanup on success/failure. Accepts public recipients only; no private identity, cron, retention or offsite activation. Both real-schema recovery drills now call the wrapper and assert cleanup on malformed recipient failure. Bash syntax/whitespace passed; Linux CI pending.
+
+**Blocking CI finding:** Master native run 37192446116 FAILED on two-party reply. Downloaded evidence to ignored .local/native-failure-37192446116. Mentor helper reports zero member messages; screenshot again shows composer obscured by keyboard and logs show no send callback. Previous green runs did not eliminate intermittent keyboard behavior. Do not rerun blindly or promote this master; next native work must diagnose keyboard event/measurement state across the second cold launch and test both flows. Latest accepted staging remains 781ccd3; production disabled.
+
+**Next:** Validate integrated export CI independently; investigate native regression before any new staging. Add targeted keyboard-boundary metrics diagnostics if needed rather than weaken send assertions. Remaining backup custody/deletion and five-phase gates still open. Resume H:\Mento gpt\Mento; preserve user book; automation active.
+
+---
 ## 2026-10-04 — Snapshot-coordinated chat-excluding exporter implemented
 
 **Implementation:** Added export-recovery-snapshot.sh. One psql transaction recursively locks excluded roots against partition DDL, exports its snapshot and enumerates descendants while locks remain held. pg_dump imports that snapshot; gzip is validated and published without overwrite only after dump and transaction succeed. Three-second lock timeout and bounded dump/idle transaction protect migration contention. Default root public.chat_messages; drill supports explicitly validated additional roots. No schedule, live export, encryption activation or pruning.
