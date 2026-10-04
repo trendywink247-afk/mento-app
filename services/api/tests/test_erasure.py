@@ -32,6 +32,7 @@ from app.models.enums import (
     SafetySignal,
     VettingStatus,
 )
+from app.models.erasure_receipt import ErasureReceipt
 from app.models.favourite import FavouriteListener
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
@@ -45,6 +46,7 @@ from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.security import issue_listener_token, issue_session_token
 from app.services import stream
+from app.services.erasure import recovery_digest
 
 from .conftest import TestSession, requires_postgres, test_engine
 
@@ -285,6 +287,10 @@ def test_erase_empties_every_table_frees_seats_and_leaves_others_alone(
         assert audit[0].subject_id is None
         assert me not in str(audit[0].meta) and "Quiet Cove" not in str(audit[0].meta)
         assert audit[0].meta["conversations"] == 3
+        receipts = s.scalars(select(ErasureReceipt)).all()
+        assert len(receipts) == 1
+        assert receipts[0].member_digest == recovery_digest(me)
+        assert receipts[0].member_digest != me
 
     # Stream: every channel still on Stream (not the one Clean Wipe already deleted),
     # then the Stream user.
@@ -434,3 +440,18 @@ def test_a_suspended_mentor_side_does_not_block_erasure(client, db_session, stre
         assert s.get(User, me) is None
         assert _count(s, ListenerApplication, ListenerApplication.user_id == me) == 0
         assert s.get(ListenerProfile, mentor_side) is not None
+
+
+def test_recovery_receipt_rolls_back_with_account_deletion(db_session):
+    from app.services.erasure import _phase_c_delete
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        s.commit()
+        _phase_c_delete(s, me)
+        s.flush()
+        assert s.get(ErasureReceipt, recovery_digest(me)) is not None
+        s.rollback()
+    with TestSession() as s:
+        assert s.get(User, me) is not None
+        assert s.get(ErasureReceipt, recovery_digest(me)) is None

@@ -159,7 +159,7 @@ def db_session():
         with test_engine.begin() as conn:
             conn.execute(
                 text(
-                    "TRUNCATE conversations, listener_profiles, users, safety_flags, "
+                    "TRUNCATE erasure_receipts, conversations, listener_profiles, users, safety_flags, "
                     "moderation_events, journal_entries, conversation_reflections, "
                     "conversation_requests, push_tokens, message_allowance_days, mentor_links, "
                     "listener_name_history, product_feedback, procrastinate_jobs "

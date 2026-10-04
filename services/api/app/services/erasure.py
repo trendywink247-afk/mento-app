@@ -38,6 +38,7 @@ Idempotent: a caller whose member row is already gone gets `None` (the router an
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -60,6 +61,7 @@ from app.models.enums import (
     RequestStatus,
     VettingStatus,
 )
+from app.models.erasure_receipt import ErasureReceipt
 from app.models.favourite import FavouriteListener
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
@@ -208,6 +210,11 @@ def _phase_b_stream(db: Session, user_id: str, channels: list[tuple[str, str | N
         raise EraseIncomplete from exc
 
 
+def recovery_digest(user_id: str) -> str:
+    """Domain-separated digest of a random account UUID; still pseudonymous data."""
+    return hashlib.sha256(f"mento:member-erasure:v1:{user_id}".encode()).hexdigest()
+
+
 def _phase_c_delete(db: Session, user_id: str) -> dict[str, int]:
     """Delete and detach the rest in ONE transaction; the caller commits."""
     convo_ids = select(Conversation.id).where(Conversation.user_id == user_id).scalar_subquery()
@@ -259,6 +266,9 @@ def _phase_c_delete(db: Session, user_id: str) -> dict[str, int]:
             .values(subject_id=None)
         ),
     }
+    digest = recovery_digest(user_id)
+    if db.get(ErasureReceipt, digest) is None:
+        db.add(ErasureReceipt(member_digest=digest))
     gone(delete(User).where(User.id == user_id))
     # THAT an erasure happened, with counts — no member id, no persona, nothing to re-link.
     db.add(
