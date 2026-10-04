@@ -40,3 +40,17 @@ Saved notes and report narratives are retained by the founder decision above.
 Implementation must now prove chat-history exclusion alongside recovery of these
 retained records and safety enforcement. Vault destination, key recovery and
 deletion reconciliation remain acceptance gates. Production promotion remains disabled.
+
+## Prepared operator sequence (not activated)
+
+The repository now separates snapshot creation from transport verification:
+
+1. `deploy/create-encrypted-recovery.sh CONTAINER DB_USER DB_NAME PUBLIC_RECIPIENTS NEW_ARCHIVE.age` locks the output directory, exports a consistent snapshot excluding chat table data and descendants, encrypts it, and cleans its newly created temporary plaintext. It does not remove existing backups. Supply an existing private output directory and a new output name. Only a public recipient file belongs on the source VPS.
+2. `deploy/copy-encrypted-recovery.sh NEW_ARCHIVE.age RCLONE_REMOTE_DIRECTORY` uploads under its SHA-256 filename, skips existing targets, reads back bytes and compares both the remote and current local digest. A mismatch fails and preserves the local archive. A matching age header is only a format check; it does not authenticate a file or prove that the recovery identity works.
+3. On an isolated recovery machine, authenticate/decrypt using the separately held identity and run the documented database recovery drill. Keep external integrations and workers disabled until deletion reconciliation and queued-job review pass.
+
+An orchestrator must serialize the complete creation/copy operation. The creation lock ends before copying. Configure one writer per remote prefix; these utilities do not implement server-enforced object locks or protection against a concurrent privileged writer. Do not interpret rclone flags as immutable storage. No retention deletion or scheduler is added by these commands.
+
+Linux Test CI `37198829141` verified the integrated snapshot/encryption utility on both current and production-baseline schemas. Test CI `37198830809` verified actual rclone local-backend round trips, idempotent retry, plaintext rejection and detection of corrupted ciphertext even when size and modification time match. Earlier `--immutable`-only handling failed the corrupt-target regression; the corrected implementation skips existing objects and verifies their bytes. These tests do not establish live SFTP acceptance, off-device identity custody or operational six-hour backups.
+
+Account erasure currently deliberately records counts without a member identifier (`services/erasure.py`). Those audit rows cannot be used to reconstruct a post-snapshot deletion list. Recovery must remain closed to traffic until a separate durable deletion-reconciliation mechanism is implemented and tested, including loss of the primary after erasure. Do not claim replay coverage from the existing audit log.
