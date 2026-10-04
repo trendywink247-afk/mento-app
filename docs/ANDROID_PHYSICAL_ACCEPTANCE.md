@@ -1,8 +1,9 @@
 # Android physical-device acceptance
 
-The founder has an Android phone. No authorized device was detected by the
-read-only `adb devices -l` check on 2026-10-05. This is preparation, not a device
-pass. iOS physical-device, signing and TestFlight acceptance remain pending.
+The founder's Android phone was paired through authorized wireless ADB on
+2026-10-05: model A063, Android 16/API 36. Mento is already installed. Connection
+is preparation, not a device pass. iOS physical-device, signing and TestFlight
+acceptance remain pending. Never commit pairing codes, addresses or device IDs.
 
 Run this after the current screens and local browser acceptance pass, using a
 reviewed APK built from the exact candidate commit under `H:\Mento gpt\Mento`.
@@ -11,9 +12,10 @@ promotion, publish an OTA, enable push, or change production release settings.
 
 ## Candidate and device prerequisites
 
-1. Enable USB debugging on the test phone, connect its USB cable and approve the
-   workstation's debugging prompt. Read-only discovery is `adb devices -l`.
-   Require exactly one authorized target and use `adb -d` for that USB device.
+1. Enable USB debugging and approve the workstation, or explicitly pair wireless
+   debugging using the phone's temporary pairing dialog. Read-only discovery is
+   `adb devices -l`. Require exactly one authorized target and pin commands with
+   `adb -s SERIAL` (or `adb -d` for an exclusively USB-connected target).
    Keep serial numbers and account/device credentials out of committed evidence.
 2. Record the full source SHA, APK SHA-256, build variant, embedded API origin,
    application ID, version/build number, update channel/runtime and signing
@@ -41,6 +43,29 @@ promotion, publish an OTA, enable push, or change production release settings.
    updates to repair a failing candidate.
 
 ## Manual acceptance matrix
+
+### Separate synthetic local installation
+
+`MENTO_LOCAL_ACCEPTANCE=1` resolves a separate **Mento Acceptance** application,
+ID `com.mento.acceptance` and scheme `mento-acceptance`, so it does not replace
+`com.mento.app`. Configuration fails unless all of these settings hold:
+
+- `APP_VARIANT=development`, `EXPO_NO_DOTENV=1`, no EAS build profile.
+- `EXPO_PUBLIC_API_URL=http://localhost:18000/api/v1`.
+- Both `EXPO_PUBLIC_OWN_CHAT_ACCEPTED=1` and
+  `EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED=1`.
+- Stream, PostHog and Sentry public credentials are empty.
+
+The resolved configuration removes Firebase files and the EAS project binding,
+disables updates and omits the update URL. Before building, verify the resolved
+config, then inspect the generated native manifest and final APK. Configure
+`adb -s SERIAL reverse tcp:18000 tcp:18000` for this isolated API; remove that
+specific forwarding rule after testing. Do not clear or uninstall the existing
+Mento app. Use only synthetic accounts in the acceptance app.
+
+This local variant does not establish production signing, push/Firebase,
+store-distribution, update-channel or iOS acceptance. Native own-chat screens
+and the exact binary still need the matrix below; flags are not evidence.
 
 Record Android version/model (no device serial), candidate SHA/hash, API origin,
 runtime/channel and pass/fail evidence for each row. Use synthetic text and mask
