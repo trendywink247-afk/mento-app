@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Erasure receipts merged; encrypted post-snapshot replay passed
+
+**Accepted:** PR62 exact 41e652b passed API/Test/native (37214408935/37214408969/37214408916); merged as 1441a9b. Master gates pending. PR63 d85b631 Linux Test 37214997498 explicitly passed post-snapshot erasure replay against the encrypted restored DB. Retargeted PR63 to master after parent merge, refreshed branch as 0998fb4; fresh current-head checks required.
+
+**Implemented:** PR64 d20c27a adds a private gzip receipt manifest export using one bounded PostgreSQL statement, sorted digests, timestamp/version and non-overwriting publication. Added disposable network-isolated PostgreSQL tests for empty/populated manifests, permissions, overwrite refusal and failure cleanup. Shell syntax, actionlint and whitespace passed; runtime CI pending. No live receipt export or schedule. A manifest timestamp cannot prove complete coverage of deletions after that timestamp: durable replication/acknowledgement remains open.
+
+**Next:** Inspect PR63/64 current checks, merge green in order, run exact master/full staging and independent artifact verification. Phase 1 remains priority; key custody independent of both servers, receipt durability/coverage, six-hour activation and operational gates remain incomplete. Production disabled, latest verified staging c1fa271. Resume H:\Mento gpt\Mento on codex/export-erasure-receipts; preserve book and Desktop.
+
+---
 ## 2026-10-04 — Post-snapshot deletion replay added to encrypted recovery drill
 
 **Implementation:** PR63 d85b631 is stacked on PR62. The isolated drill now takes the encrypted snapshot, erases the synthetic source account afterward, carries its digest receipt separately, restores the older snapshot and replays the receipt. Assertions require removal of restored account/journal/conversation, retention of detached report/block state, and idempotence. The pre-replay verify still proves permitted notes/reports were actually restored. No real user data or network integration touched.
