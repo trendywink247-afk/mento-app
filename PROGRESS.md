@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Native master green; Balanced pool bound candidate
+
+**Release:** c1fa271 exact master API/Test/native passed (37209305428/37209305419/37209305422). Full staging 37211166211 dispatched for c1fa27166e3dae8204db12ce0f22d4690823e2b0; acceptance pending. Verified staging remains 80054fb. PR60 exact 9ae4f2a passed API/Test 37209341650/37209341662 and merged as 7197ca1.
+
+**Implementation:** PR61 dd61701 explicitly configures Balanced production SQLAlchemy pools at five with zero overflow, inherited by both API colors and worker, replacing unsafe 10+10 defaults against PostgreSQL max_connections=50. Offline calculator gives 28 including four queue, one migration, three reserve and five headroom connections, with zero optional clients assumed. Remaining 22 is not certified capacity: actual GlitchTip/operations/process settings and load acceptance remain gates. Whitespace and calculator checks passed; CI/parity pending. No live server settings changed.
+
+**Next:** Inspect PR61 exact-head CI and ensure rendered Compose parity/budget validation before integration. Verify staging candidate independently once full run passes. Production stays disabled; durable deletion reconciliation, off-device key custody, scheduling and later phases unfinished. Resume H:\Mento gpt\Mento on codex/balanced-bounded-pools; preserve book and Desktop.
+
+---
 ## 2026-10-04 — Native regression fix merged; extra database clients budgeted
 
 **Integrated:** PR59 exact head 1e6a359 passed API 37207521707, Test 37207521736 and native 37207521772. Reviewed and merged as c1fa271. Both native flows and deterministic invalid-coordinate replay passed. Master still needs its own release gates/full staging; latest independently accepted staging remains 80054fb, production disabled. Do not declare all device/keyboard combinations proven.
