@@ -27,6 +27,16 @@ assert data['receipts'] == ['a'*64, 'b'*64]
 assert set(data) == {'version', 'exported_at', 'receipts'}
 PY
 test "$(stat -c '%a' "$temp/receipts.gz")" = 600
+# The manifest can use the same authenticated encrypted transport as snapshots.
+age-keygen -o "$temp/identity" >/dev/null 2>&1
+age-keygen -y "$temp/identity" > "$temp/recipients"
+bash "$root/deploy/encrypt-backup.sh" "$temp/receipts.gz" "$temp/recipients" "$temp/receipts.age"
+mkdir "$temp/offsite"
+bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/receipts.age" ":local:$temp/offsite"
+digest=$(sha256sum "$temp/receipts.age"); digest=${digest%% *}
+bash "$root/deploy/decrypt-backup.sh" "$temp/offsite/$digest.age" "$temp/identity" "$temp/restored.gz"
+cmp "$temp/receipts.gz" "$temp/restored.gz"
+echo 'PASS: exported receipt manifest survives authenticated encrypted copy and recovery'
 before=$(sha256sum "$temp/receipts.gz")
 if bash "$root/deploy/export-erasure-receipts.sh" "$name" postgres postgres "$temp/receipts.gz"; then exit 1; fi
 test "$before" = "$(sha256sum "$temp/receipts.gz")"
