@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Staging independently verified; encrypted-copy integration complete
+
+**Release evidence:** Full Staging Release 37200457941 succeeded for input SHA 7f6b350e1e2d3bd79fc375aa250b3ede55badbcc (workflow runner head c402c8b is not the deployed input). Independently invoked restricted staging receiver verify for the full input SHA: Staging candidate verified. Latest accepted staging is now 7f6b350. Production unchanged and locked.
+
+**Integrated:** PR57 exact head 50dc907 passed API 37200501051/Test 37200500958 and merged as 80054fb. Preceding master c402c8b API/Test/native also passed (37200444547/37200444462/37200444544). New master needs its own gates before staging.
+
+**Implementation:** PR58 da5d12e adds a persistent per-archive-directory flock held through encrypted transfer and readback, rejecting cooperating overlapping transfers before remote writes. Added real Linux lock-contention/no-publication assertion before existing rclone round-trip/corruption tests. Local bash syntax/whitespace passed; Linux CI pending. This does not coordinate different hosts/directories or establish WORM storage, nor activate backup schedules.
+
+**Next:** Verify PR58 current-head Linux tests and master 80054fb gates, integrate only green and run full staging for the final candidate. Continue recovery deletion reconciliation, off-device key custody and operational activation; native intermittent geometry still needs demonstrated resolution. Five phases are not complete. Resume H:\Mento gpt\Mento on codex/recovery-copy-lock; preserve book, production and Desktop. No user input needed for these pending checks.
+
+---
 ## 2026-10-04 — Integrated encrypted snapshot merged; full staging dispatched
 
 **Integrated:** PR55 exact head 099ea38 passed refreshed API/Test (37198829116/37198829141) and merged as c402c8b. Current master gates are running. PR57 head dba7339 passed refreshed API/Test; after PR55 integration its branch was updated to master, then recovery-policy operator instructions added as 50dc907. Fresh checks are required before merge. No failed checks bypassed.
