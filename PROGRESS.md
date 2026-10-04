@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-10-04 — Current native/monitor candidate accepted on staging; retention fix merged
+
+**Verified:** Full Staging Release 37187307738 succeeded for eb1a031cb797c6f3f98cc839809e2c9bc2c32504. Independent restricted receiver verify passed. This supersedes 8ee2f8c as accepted staging and includes the Android keyboard fix and probe-only monitoring source; live monitoring installation is not implied.
+
+**Implementation:** PR51 head 7b51bf4 passed API 37187374640 and Test 37187374617 including Linux retention-failure/retry test; merged as 781ccd3a70e9c8a98da63d5f6505c955ab77b3e4. Offsite pruning failure now reports failure and preserves local archives. Not activated on production; no live archives deleted.
+
+**Background authorization:** Founder explicitly reauthorized a trigger. ACTIVE automation complete-mento-implementation runs every 30 minutes in this chat with the current five-phase worklist, quiet on unchanged CI. The older reminder remains deleted; this newer authorization supersedes earlier no-recreate instruction. Do not create duplicates.
+
+**Next implementation:** Phase 1 remains incomplete: snapshot/DDL-safe encrypted exporter; independent off-device recovery custody (local DPAPI alone insufficient); deletion-compatible recovery; coordinated production schema/worker/safety acceptance. Follow with Balanced rollout, own-chat parity, product/accessibility/admin and native/iOS readiness. Refresh master 781ccd3 checks before next staging; do not confuse merged tooling with active operations or claim all phases complete. Work only H:\Mento gpt\Mento and preserve book. Production locked.
+
+---
 ## 2026-10-04 — Read-only monitoring validation merged
 
 **Done:** PR50 current head 8cbfee1dce90d79b55bb06917a9a750e069c86ed passed API 37164966018 and Test CI 37164965991; merged as eb1a031cb797c6f3f98cc839809e2c9bc2c32504. Both native keyboard fix and probe-only monitoring are now on master. No VPS monitor installation or alert delivery claimed.
