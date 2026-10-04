@@ -41,6 +41,7 @@ import { chatFaceKey } from '@/lib/originStore';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected, getStreamClient } from '@/lib/streamClient';
+import { mergeRecoveredMessages, subscribeToRecoveredMessages } from '@/lib/streamRecovery';
 import { CRISIS_EXEMPT_MS, noteFor, useAllowance, type HeldAllowance } from '@/lib/useAllowance';
 import { useChatHeader } from '@/lib/useChatHeader';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -293,6 +294,7 @@ export default function ChatScreenWeb() {
 
   useEffect(() => {
     let cancelled = false;
+    const unsubscribe: Array<() => void> = [];
 
     const setup = async () => {
       try {
@@ -323,7 +325,7 @@ export default function ChatScreenWeb() {
           void ch.markRead().catch(() => {});
         };
         markRead();
-        ch.on('message.new', (e: Event) => {
+        unsubscribe.push(ch.on('message.new', (e: Event) => {
           if (e.message) {
             appendMessage(e.message as RawMsg);
             surfaceCrisis(e.message as CrisisCarrier);
@@ -333,14 +335,22 @@ export default function ChatScreenWeb() {
             markRead(); // it arrived while they were reading it
             void refreshAllowance(); // the mentor wrote: the member's run starts over
           }
-        });
-        ch.on('message.read', () => setReadTick((t) => t + 1));
-        ch.on('typing.start', (e: Event) => {
+        }).unsubscribe);
+        unsubscribe.push(subscribeToRecoveredMessages(client, ch, recovered => {
+          setMessages(previous => mergeRecoveredMessages(previous, recovered.map(m => toMsg(m as RawMsg))));
+          recovered.forEach(m => surfaceCrisis(m as CrisisCarrier));
+          setTyping(null);
+          setReadTick(t => t + 1);
+          markRead();
+          void refreshAllowance();
+        }));
+        unsubscribe.push(ch.on('message.read', () => setReadTick((t) => t + 1)).unsubscribe);
+        unsubscribe.push(ch.on('typing.start', (e: Event) => {
           if (e.user && e.user.id !== client.userID) setTyping(e.user.name ?? listenerName);
-        });
-        ch.on('typing.stop', (e: Event) => {
+        }).unsubscribe);
+        unsubscribe.push(ch.on('typing.stop', (e: Event) => {
           if (e.user && e.user.id !== client.userID) setTyping(null);
-        });
+        }).unsubscribe);
         setReady(true);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : t('chat.errOpen'));
@@ -350,10 +360,11 @@ export default function ChatScreenWeb() {
     void setup();
     return () => {
       cancelled = true;
+      unsubscribe.forEach(stop => stop());
     };
     // reason: `t` is intentionally not a trigger — a locale flip must not re-run channel setup
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelId, appendMessage, surfaceCrisis, listenerName, refreshAllowance]);
+  }, [channelId, appendMessage, surfaceCrisis, listenerName, refreshAllowance, toMsg]);
 
   const send = useCallback(
     async (body: string) => {

@@ -29,6 +29,12 @@
  */
 const { chromium } = require('playwright');
 const WEB = process.env.MENTO_WEB || 'http://localhost:8081';
+const API = process.env.MENTO_API || 'http://localhost:8000/api/v1';
+const EXTENDED = process.env.MENTO_EXTENDED_ACCEPTANCE === '1';
+if (EXTENDED && (WEB !== 'https://staging.mento.chat' || API !== `${WEB}/api/v1`)) {
+  throw new Error('Extended acceptance is staging-only');
+}
+let cleanupMemberToken;
 // Run a second invocation with MENTO_REDUCED_MOTION=1 for accessibility coverage.
 const motion = process.env.MENTO_REDUCED_MOTION === '1' ? { reducedMotion: 'reduce' } : {};
 // Staging uses a real mentor token URL supplied privately; never print it.
@@ -88,6 +94,9 @@ async function onboardMember(page, tid) {
   mpage.on('pageerror', (e) => errors.member.push(String(e)));
   const mtid = (id) => mpage.locator(`[data-testid="${id}"]`);
   await onboardMember(mpage, mtid);
+  if (EXTENDED) {
+    cleanupMemberToken = await mpage.evaluate(() => localStorage.getItem('mento.session_token'));
+  }
   const conversationId = new URL(mpage.url()).pathname.split('/').filter(Boolean).pop();
   console.log('OK member onboarded + in chat');
 
@@ -148,6 +157,11 @@ async function onboardMember(page, tid) {
   await mpage.waitForSelector(`text=${LISTENER_ENTER_MSG}`, { timeout: 30000 });
   console.log('OK listener Enter-to-send works, clears the field, and delivers');
 
+  if (EXTENDED) {
+    await require('./chat-recovery-acceptance.cjs').acceptRecovery({ web: WEB, api: API,
+      memberContext: mctx, member: mpage, mentorContext: lctx, mentor: lpage, conversationId });
+    cleanupMemberToken = undefined;
+  }
   await browser.close();
   const total = errors.member.length + errors.listener.length;
   if (total) {
@@ -156,7 +170,14 @@ async function onboardMember(page, tid) {
     process.exit(1);
   }
   console.log('\nTWO-PARTY LIVE CHAT PASSED — both directions delivered, 0 page errors');
-})().catch((e) => {
+})().catch(async (e) => {
+  if (cleanupMemberToken) {
+    try {
+      const cleanup = await fetch(`${API}/me`, { method: 'DELETE',
+        headers: { Authorization: `Bearer ${cleanupMemberToken}` } });
+      if (cleanup.status !== 200) console.error('Synthetic failure cleanup requires inspection');
+    } catch { console.error('Synthetic failure cleanup unavailable'); }
+  }
   console.error('TWO-PARTY FAILED:', e.message);
   console.error('member errors:', errors.member, 'listener errors:', errors.listener);
   process.exit(1);

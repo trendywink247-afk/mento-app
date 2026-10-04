@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-05 — Staging reconnect gap reproduced and locally repaired
+
+**Accepted foundations:** Staging release 37230079217 successfully deployed exact master `9e6aaa741a20a0f93ec325ab3422e5f5fdfc3dce`. Standard migration, safety, restore and normal/reduced-motion two-party checks passed; running API/worker revision was independently verified. PR73 maintenance checks passed and merged as `998e680b6947a158755df83ff2421348d07fcecf`. Two additional merged remote references were deleted with expected-tip leases, bringing cautious cleanup to 35; local branches and unique history remain. Production stays disabled.
+
+**New gap / fix:** Extended staging acceptance exposed messages missing from the web thread after an offline recipient reconnected. Stream refreshes channel state without emitting message.new for missed history. Both member and mentor screens now subscribe to recovered state, merge messages by ID/time while preserving older loaded history, refresh crisis/read/presence state, and unsubscribe on cleanup. Added five SDK-backed regression tests and staging-only acceptance for both offline directions, reload, server wipe, erasure and rejected old credentials. Future staging releases run these checks in both motion modes.
+
+**Local evidence:** TypeScript, five recovery tests, web export, script syntax, actionlint and whitespace checks passed. A private browser served the locally built frontend against the isolated staging API; both directions, reload, wipe and erasure passed in normal and reduced motion with zero page errors. Fixture cleanup restored availability and revoked synthetic mentor access. This validates the local fix, not a deployed replacement: the new branch still needs PR checks, exact-master checks and staging acceptance.
+
+**Recovery custody:** Founder selected password-manager custody plus an encrypted offline copy and reports both saved/exported. Generated an ignored, Windows-ACL-restricted age identity and verified a local encrypted canary. The expected separately exported identity-restored.agekey is absent from the agreed folder at inspection; retrieval verification remains pending the actual file path. No private key is committed, displayed or copied to either VPS; encrypted backup activation remains pending independent recovery evidence.
+
+**Next / resume:** Publish the locally validated reconnect fix, require all new-head checks, merge and stage the exact accepted master. Verify the separately retrieved key without displaying it, then continue independent recovery/receipt coverage and alerts. `Set-Location 'H:\Mento gpt\Mento'; git status --short --branch; gh pr list --state open`. Architecture-book files and local user settings remain untouched.
+
+---
+
 ## 2026-10-05 — Priority staging integration and cautious PR/branch cleanup
 
 **Done:** Founder authorized steps 1–4 first, followed by remaining architecture work and cautious cleanup. Reviewed and merged PR66's locally accepted, green head 0aa2f68 with an exact-head condition. Integrated master is `9e6aaa741a20a0f93ec325ab3422e5f5fdfc3dce`; API 37228796693, Test 37228796723 and Android 37228796778 all passed, including actual suites and full-suite markers. The release gate independently accepted that exact SHA. Staging run 37230079217 is building/deploying it; acceptance is not yet claimed. Android job took 18m57s, with APK build 12m32s and emulator flows 3m19s. Added the integrated `native-gate` to required master checks, preserving strict mode and existing GitHub Actions check identities. Production enable flag remains false.

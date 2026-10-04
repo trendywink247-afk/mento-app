@@ -50,6 +50,8 @@ jobs:
       - name: Verify native release configuration separation
         run: node e2e/release-config.test.cjs
       - run: node e2e/keyboard-boundary.test.cjs
+      - name: Verify missed web messages after Stream reconnect
+        run: node --test e2e/stream-recovery.test.cjs
       - name: Verify inactive own-chat protocol client
         run: node --test e2e/own-chat-client.test.cjs
       - run: npm run test:route && npm run test:question && npm run test:placement && npm run test:bubble
