@@ -4,6 +4,34 @@
 
 ---
 
+## 2026-10-05 — Staging access restored; parallel CI and architecture audit
+
+**Done:** Founder authorized proceeding with the access fix and parallel review. Added only the current SSH-verified operator IPv4 to VPS B's staging allowlist, retaining existing rules and `deny all`. Saved a timestamped configuration backup on B, validated `nginx -t` and reloaded Nginx. External homepage and readiness requests both returned 200. The remote wrapper reported a trailing carriage-return command error after successful validation/reload; direct external verification confirmed the change succeeded. No rendered access configuration or operator address is committed.
+
+**Live architecture:** Read-only container/resource inventory confirms production A still runs API image `92b8f57a5cd3`, Postgres 16 and Redis, with no worker container. Staging B serves `1441a9b2859c`, has API/worker/Postgres/Valkey, and also hosts Kuma and the legacy stack. A reported 3,909 MiB RAM with 2,954 MiB available, load 0.14/0.16/0.17 and 89 GiB disk free. B reported 1,918 MiB RAM with 1,062 MiB available, load 1.05/0.49/0.35, 190 MiB swap used and 14 GiB disk free. These are single operational snapshots, not concurrency, latency, failover or capacity acceptance.
+
+**CI audit:** Two read-only reviewers inspected architecture/performance evidence and all six workflows. PR66 API/Test checks passed at head `8782194`; native run 37223770725 was still building at inspection. Exact-master native 37220498522 remains failed. Master protection is strict with admin enforcement and requires `lint`, `test`, `test-gate`; native is enforced by release tooling rather than merge protection. Required review count is zero, staging/production environment protection rules are empty, and production environment enable flag is `false`. No GitHub settings, workflow triggers, release gates, merge or promotion changed.
+
+**Findings / actions:** Local checks remain the first gate; clean-runner PR checks and integrated exact-candidate release evidence remain necessary. Unconditional master API/Test/native runs waste work on documentation commits. Implement an always-present classifier/aggregate gate and a matching exact-candidate release-gate policy together; path filters alone conflict with the existing fail-closed gate. Preserve full staging migration/safety/two-party/recovery acceptance and promote accepted artifacts without another rebuild/full suite. Align native Node/Java setup, pin Maestro, address pending action updates and explicitly scope npm/pip/security maintenance. Resolve composer-under-keyboard acceptance, complete live pool/rollback and independent recovery/alerts, connect own-chat screens/adapters, and measure workload/SLOs before capacity claims.
+
+**Documentation corrections:** Removed the false exact-master native-success statement in architecture alignment; replaced obsolete direct-production workflow/channel findings in the enterprise plan with current controls, gaps and proposed efficient policy. Repaired `mento-verify` to require the isolated API launcher instead of default pytest/reseeding legacy data. Source tests were not rerun for these documentation-only changes; whitespace/diff review is the relevant local check. The current workflow behavior is preserved pending separately tested redesign.
+
+**Next / resume:** `Set-Location 'H:\Mento gpt\Mento'; git status --short --branch; Get-Content PROGRESS.md -TotalCount 45`. Inspect PR66 native result, reproduce and fix the demonstrated native geometry failure, then implement/test CI classification and candidate provenance as one increment. Staging now opens from the current operator network; an IP change still requires an explicit restricted-access update. Preserve user files and the architecture book. Audit/progress commit stays local.
+
+---
+
+## 2026-10-04 — Staging 403 traced to operator IP mismatch
+
+**Done:** Read-only live checks reproduced Nginx 403 at `https://staging.mento.chat/`. DNS resolves to the expected VPS B. The installed staging virtual host allows one previously configured operator IPv4 address and loopback, then denies all other clients. The current workstation's source address, verified through `SSH_CONNECTION`, differs from that operator entry. No address values or rendered access configuration are committed here.
+
+**Verification:** Public `/api/v1/health/ready` returned 200 with `status=ok`, database/cache healthy and Stream configured. An HTTPS homepage request on B using `--resolve staging.mento.chat:443:127.0.0.1` returned 200. Together with the live Nginx access rules, this confirms the current workstation's homepage denial is the operator IP restriction. No application, deployment, access-rule or production changes were made.
+
+**Next / open:** Restore operator access by explicitly updating the staging allowlist to the verified current connection, preserving restricted access, then validate Nginx and recheck externally. This diagnostic request did not change access policy. Dynamic operator addresses will require another update when the connection changes; the existing private-network/tunnel option remains available. PR66 and prior release gates are unaffected.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; ssh -F deploy/ssh.config mento-staging`. Consult `deploy/staging/README.md` before an access change. Diagnostic progress commit stays local; existing untracked user files are preserved.
+
+---
+
 ## 2026-10-04 — Local access restored; recovery and own-chat foundations runtime accepted
 
 **Review handoff:** Pushed the locally validated source and opened draft [PR66](https://github.com/trendywink247-afk/mento-app/pull/66). Initial CI passed the new Linux recovery-receipt job and restricted-receiver isolation; other checks were still running at handoff. No exact-head all-green or staging acceptance is claimed. Resume by querying PR66's current head and checks before merge or deployment. The submission step below is complete.

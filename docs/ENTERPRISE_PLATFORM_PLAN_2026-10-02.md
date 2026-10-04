@@ -139,16 +139,26 @@ The second diagram is a growth target, not deployed infrastructure. Multiple rep
 
 ## 6. Industry-standard engineering workflow
 
-### Concrete gaps in the current repository
+### Current CI evidence and remaining gaps — audited 5 October 2026
 
-- `api-ci.yml` runs real-Postgres tests, lint and migrations but is API-path filtered.
-- `api-deploy.yml` references a production environment and selected SHA; manual deployment does not show enforcement of all staging/native evidence.
-- `console-deploy.yml` deploys from main/master pushes independently. It uses runtime `ssh-keyscan` instead of pre-verified host trust, and lacks the complete staging/production gates.
-- Native CI exists, but the documented Android reply-rendering failure remains unresolved. No iOS acceptance pipeline was established by this review.
-- App config carries a preview update request header while EAS production names a production channel. Audit effective built configuration; this alone does not prove EAS misroutes builds.
-- All EAS profiles disable Sentry source-map upload. Production symbolication needs deliberate setup and verification.
+The former independent API/console deployment workflows have been replaced by staged artifact promotion. API CI runs real-Postgres tests, lint and migrations; Test CI covers web build/types, a hermetic age-gate browser flow, recovery receipts and release tooling. Staging requires successful exact-master API/Test/Android push runs, builds immutable API/web artifacts, and checks deployment, safety, recovery and two-party browser chat. Production requires that accepted artifact and an explicit enable flag, then promotes without rebuilding. Pinned SSH trust is configured by `scripts/ci/setup-ssh.sh`. The production enable flag was independently read as `false` in this audit. Production/preview update-channel separation and a resolved-config regression are implemented; signed-device acceptance is still separate.
 
-These are proposed repairs; this planning turn does not modify CI or server configuration. Repository-host branch protection and stored Apple/EAS credentials were not audited.
+- API/Test CI and native master pushes still run for documentation-only commits. Native APK compilation has historically taken about 31 minutes. Change classification and release evidence must be redesigned together: `release_gate.py` currently rejects absent/skipped exact-master jobs, so path filters alone would strand release candidates.
+- Live master protection requires `lint`, `test` and `test-gate`, with strict branch freshness and admin enforcement. Native is a release gate, not a required merge check. Neither deployment environment currently has configured protection rules, and the review count is zero; independent human review is therefore a process requirement rather than an enforced approval gate.
+- Exact-master Android run 37220498522 failed with the composer beneath the keyboard and no observed send callback. PR success does not resolve this. Android CI exercises a member app against a mentor bot; native mentor UI, iOS and physical-device push remain unproven.
+- Native CI uses Node 20 while web/release use Node 22, configures Java 17 after Gradle compilation, and downloads a mutable Maestro installer. Pin and align tools after compatibility validation. Dependabot covers actions only; npm/pip maintenance and dependency/secret/image scanning need an explicit policy.
+- Existing safety/recovery tests do not establish primary-loss recovery, external key custody, delivered alerts, live blue/green rollback, aggregate running-process database budgets or load/SLO acceptance.
+- Production symbolication needs deliberate setup and verification; signed mobile builds and Apple credentials were not audited.
+
+### Proposed efficient test policy
+
+1. Run relevant checks and touched normal/reduced-motion flows locally before pushing a completed change.
+2. Run an always-present PR aggregate gate that classifies changed paths and requires relevant clean-runner checks. Documentation-only changes should avoid native/database/recovery builds. Native acceptance remains required for relevant app/API/dependency changes.
+3. Run the full API/web/native suite once for the integrated immutable release candidate, with exact-SHA evidence. Build once and perform environment-specific acceptance on staging; local results cannot replace deployed migration, safety, networking and recovery checks.
+4. Promote the accepted artifacts to production without rebuilding or repeating the full suite. Verify readiness, safety, worker execution and rollout behavior.
+5. Run broad recovery/rollback/load checks periodically and whenever relevant infrastructure/schema changes. Keep destructive tests isolated from serving data.
+
+This policy is proposed, not implemented. Workflow triggers, always-present aggregate checks, branch requirements and `release_gate.py` must change together with tests for changed-code, docs-only, missing/skipped/failed evidence and candidate provenance. Preserve current gates until that replacement is locally validated.
 
 ### Required delivery path
 
