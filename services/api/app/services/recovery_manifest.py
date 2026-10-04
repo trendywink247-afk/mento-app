@@ -141,11 +141,15 @@ def checkpoint_receipt_export(raw: bytes) -> dict:
     }
 
 
-def verify_receipt_export(raw: bytes, checkpoint: dict) -> frozenset[str]:
+def verify_receipt_export(
+    raw: bytes, checkpoint: dict, *, require_full_checkpoint: bool = False
+) -> frozenset[str]:
     """Reject corruption, wrong stores, rollback and changed witnessed history.
 
-    Only returns validated digests; caller must prove complete activation/failure
-    coverage independently and isolate the restored database before replaying them.
+    Default mode proves only witnessed-prefix continuity; it cannot authenticate
+    unseen appended receipts. Destructive replay and operator verification MUST
+    require_full_checkpoint=True so the independently trusted witness binds every
+    returned digest. Historical deletion coverage remains separately unverified.
     """
     value = _parse(raw)
     if not isinstance(checkpoint, dict) or set(checkpoint) != CHECKPOINT_FIELDS:
@@ -153,6 +157,8 @@ def verify_receipt_export(raw: bytes, checkpoint: dict) -> frozenset[str]:
     if type(checkpoint["version"]) is not int or checkpoint["version"] != 1:
         _fail()
     high_water = _number(checkpoint["high_water"])
+    if require_full_checkpoint and high_water != value["high_water"]:
+        _fail()
     if (
         checkpoint["store_id"] != value["store_id"]
         or high_water > value["high_water"]

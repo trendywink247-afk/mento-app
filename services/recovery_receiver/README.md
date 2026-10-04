@@ -130,6 +130,16 @@ authenticates who produced it: anyone knowing the public age recipient can
 encrypt different content. Preserve authenticated retrieval and independent
 checkpoint custody as separate acceptance evidence.
 
+Operator `verify` and offline reconciliation require a checkpoint whose high-water
+mark covers the **entire export**, binding every receipt to the independently held
+hash. An older prefix checkpoint cannot authorize appended deletions even when the
+export's unkeyed SHA-256 is correct. For a newer legitimate export, retrieve it
+through the accepted authenticated source, create a new checkpoint there, and
+retain its hash independently before replay. Never create that replacement witness
+from a suspect recovered export merely to make verification pass. The lower-level
+prefix-continuity mode remains available for structural append checks; it does not
+authenticate an unwitnessed suffix and cannot authorize account deletion.
+
 `tests/test_recovery_receipt_drill.py` exercises synthetic stale-row restoration
 on the isolated API test database: independently recorded erasure receipts remove
 resurrected saved notes, credentials and conversations, preserve another member,

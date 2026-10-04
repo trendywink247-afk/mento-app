@@ -30,6 +30,34 @@ def snapshot_row(row):
     return {column.name: getattr(row, column.name) for column in row.__table__.columns}
 
 
+def test_forged_appended_receipt_refused_before_any_database_access(monkeypatch, tmp_path):
+    import hashlib
+    from unittest.mock import Mock
+
+    from app.services.recovery_manifest import checkpoint_receipt_export
+
+    root = Path(__file__).resolve().parents[3]
+    monkeypatch.syspath_prepend(str(root / "services"))
+    from recovery_receiver.store import Store, canonical, initialize
+
+    database = tmp_path / "synthetic-receipts.sqlite3"
+    initialize(database)
+    receiver = Store(database)
+    receiver.record("a" * 64)
+    value = receiver.export()
+    checkpoint = checkpoint_receipt_export(canonical(value))
+    value.pop("sha256")
+    value["receipts"].append(
+        dict(sequence=2, member_digest="b" * 64, recorded_at=value["receipts"][0]["recorded_at"])
+    )
+    value["high_water"] = value["receipt_count"] = 2
+    value["sha256"] = hashlib.sha256(canonical(value)).hexdigest()
+    db = Mock()
+    with pytest.raises(ValueError):
+        reconcile_restored_export(db, canonical(value), checkpoint)
+    assert db.mock_calls == []
+
+
 def test_independent_receipts_remove_resurrected_notes_and_credentials(
     db_session, monkeypatch, tmp_path
 ):

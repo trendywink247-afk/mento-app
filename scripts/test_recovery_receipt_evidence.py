@@ -33,7 +33,7 @@ class ReceiptEvidenceTests(unittest.TestCase):
         self.store.record("a" * 64)
         self.export.write_bytes(canonical(self.store.export()))
 
-    def test_checkpoint_roundtrip_and_append_preserves_witnessed_prefix(self):
+    def test_operator_verify_requires_checkpoint_covering_entire_export(self):
         trusted = checkpoint(self.export, self.witness)
         self.assertEqual(trusted, hashlib.sha256(self.witness.read_bytes()).hexdigest())
         self.assertEqual(
@@ -41,7 +41,42 @@ class ReceiptEvidenceTests(unittest.TestCase):
         )
         self.store.record("b" * 64)
         self.export.write_bytes(canonical(self.store.export()))
-        self.assertEqual(len(verify(self.export, self.witness, trusted)), 2)
+        with self.assertRaises(ValueError):
+            verify(self.export, self.witness, trusted)
+        fresh = self.directory / "fresh-checkpoint.json"
+        fresh_trusted = checkpoint(self.export, fresh)
+        self.assertEqual(len(verify(self.export, fresh, fresh_trusted)), 2)
+
+    def test_forged_appended_suffix_rejected_by_cli(self):
+        trusted = checkpoint(self.export, self.witness)
+        value = json.loads(self.export.read_bytes())
+        value.pop("sha256")
+        value["receipts"].append(
+            dict(
+                sequence=2,
+                member_digest="b" * 64,
+                recorded_at=value["receipts"][0]["recorded_at"],
+            )
+        )
+        value["high_water"] = value["receipt_count"] = 2
+        value["sha256"] = hashlib.sha256(canonical(value)).hexdigest()
+        self.export.write_bytes(canonical(value))
+        stderr, stdout = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stderr(stderr), contextlib.redirect_stdout(stdout):
+            result = main(
+                [
+                    "verify",
+                    "--export",
+                    str(self.export),
+                    "--checkpoint",
+                    str(self.witness),
+                    "--trusted-checkpoint-sha256",
+                    trusted,
+                ]
+            )
+        self.assertEqual(result, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertNotIn("b" * 64, stderr.getvalue())
 
     def test_checkpoint_publication_refuses_overwrite_and_cleans_temporary(self):
         checkpoint(self.export, self.witness)

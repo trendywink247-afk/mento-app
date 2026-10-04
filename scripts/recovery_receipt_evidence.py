@@ -100,7 +100,9 @@ def verify(
     export_path: Path, checkpoint_path: Path, trusted_sha256: str
 ) -> frozenset[str]:
     witness = trusted_checkpoint(checkpoint_path, trusted_sha256)
-    return verify_receipt_export(read_evidence(export_path, MAX_BYTES), witness)
+    return verify_receipt_export(
+        read_evidence(export_path, MAX_BYTES), witness, require_full_checkpoint=True
+    )
 
 
 def main(argv=None) -> int:

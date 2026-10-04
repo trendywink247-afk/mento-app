@@ -38,6 +38,24 @@ def test_empty_store_witness_allows_first_receipt(store):
     assert verify_receipt_export(canonical(store.export()), checkpoint) == {"a" * 64}
 
 
+def test_complete_witness_required_for_replay_of_forged_appended_receipts(store):
+    store.record("a" * 64)
+    value = store.export()
+    checkpoint = checkpoint_receipt_export(canonical(value))
+    assert verify_receipt_export(canonical(value), checkpoint, require_full_checkpoint=True) == {
+        "a" * 64
+    }
+    value["receipts"].append(
+        dict(sequence=2, member_digest="b" * 64, recorded_at=value["receipts"][0]["recorded_at"])
+    )
+    value["high_water"] = value["receipt_count"] = 2
+    forged = encode(value)
+    # Structural continuity remains available, but cannot authorize the suffix.
+    assert verify_receipt_export(forged, checkpoint) == {"a" * 64, "b" * 64}
+    with pytest.raises(ValueError):
+        verify_receipt_export(forged, checkpoint, require_full_checkpoint=True)
+
+
 def test_older_export_refused_against_independent_watermark(store):
     old = canonical(store.export())
     store.record("a" * 64)
