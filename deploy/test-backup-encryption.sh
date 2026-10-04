@@ -49,11 +49,15 @@ bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp
 bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp/offsite"
 digest=$(sha256sum "$temp/archive.age"); digest=${digest%% *}
 cmp "$temp/archive.age" "$temp/offsite/$digest.age"
-printf 'corrupt synthetic remote object' > "$temp/offsite/$digest.age"
+# Preserve size/time so metadata equality cannot substitute for byte readback.
+cp "$temp/archive.age" "$temp/expected-corrupt.age"
+printf 'X' | dd of="$temp/expected-corrupt.age" bs=1 seek=0 conv=notrunc status=none
+cp "$temp/expected-corrupt.age" "$temp/offsite/$digest.age"
+touch -r "$temp/archive.age" "$temp/offsite/$digest.age"
 if bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/archive.age" ":local:$temp/offsite"; then
   echo 'FAIL: corrupt existing ciphertext accepted'; exit 1
 fi
-test "$(cat "$temp/offsite/$digest.age")" = 'corrupt synthetic remote object'
+cmp "$temp/expected-corrupt.age" "$temp/offsite/$digest.age"
 test -s "$temp/archive.age"
 if bash "$root/deploy/copy-encrypted-recovery.sh" "$temp/source.gz" ":local:$temp/offsite"; then
   echo 'FAIL: plaintext accepted for upload'; exit 1
