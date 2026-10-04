@@ -11,8 +11,10 @@ test "$header" = age-encryption.org/v1 || { echo 'Expected binary age archive' >
 digest=$(sha256sum -- "$source_file"); digest=${digest%% *}
 destination="${remote_directory%/}/$digest.age"
 # Content-addressed names avoid reusing a timestamp/name for different archives.
-# Immutable refuses replacement. No prune/delete or plaintext upload operation.
-timeout 300 rclone copyto "$source_file" "$destination" --immutable --retries 1 --low-level-retries 1 --timeout 30s
+# Skip existing objects, then verify their bytes below. Immutable alone did not
+# prevent replacement with the supported rclone version in the regression drill.
+# No prune/delete or plaintext upload operation.
+timeout 300 rclone copyto "$source_file" "$destination" --ignore-existing --immutable --retries 1 --low-level-retries 1 --timeout 30s
 remote_digest=$(timeout 300 rclone cat "$destination" --retries 1 --low-level-retries 1 --timeout 30s | sha256sum)
 remote_digest=${remote_digest%% *}
 current_digest=$(sha256sum -- "$source_file"); current_digest=${current_digest%% *}
