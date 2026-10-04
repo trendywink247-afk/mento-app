@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-05 — Reconnect PR77 checks all passed
+
+**Verified:** PR77 remains open and mergeable at exact head `60db344e601a6929e1c1c5e0fd46cd25105befcb`. API, mobile/web, Android Maestro, release tooling, receiver isolation, recovery receipts, aggregate gates and all three full-suite markers completed successfully. Production enable flag remains false. Two preceding local documentation commits record architecture status and verified Bitwarden retrieval; they are not part of the checked PR head.
+
+**Next / resume:** Integrate the accepted PR head, require full checks on the resulting master SHA, then deploy that immutable candidate to staging and require the new reconnect/wipe/erasure acceptance in both motion modes. This status check did not merge or deploy; staging still requires the reconnect fix. `Set-Location 'H:\Mento gpt\Mento'; gh pr view 77; git status --short --branch`. Offline encrypted key custody and remaining operational recovery gates remain open.
+
+---
+
 ## 2026-10-05 — Bitwarden recovery key retrieval verified
 
 **Done:** Founder saved the age identity as text in a free Bitwarden Secure Note and recreated `identity-restored.agekey` from that saved note. After the file became available, its derived public recipient matched the original and it decrypted the encrypted canary byte-for-byte (SHA-256 comparison). No private key or decrypted contents were displayed. The restored file inherits access only for the operator's Windows account and SYSTEM from the restricted custody directory. Private files remain ignored and outside Git.
