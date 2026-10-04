@@ -1,0 +1,29 @@
+# Independent lifecycle: never include in app/staging Compose projects or resets.
+# Provision the private directory (UID10001, mode0700) and initialize explicitly.
+# Serving refuses missing storage. Use an accepted immutable image tag/digest.
+name: mento-recovery
+services:
+  receiver:
+    image: ${RECOVERY_RECEIVER_IMAGE:?accepted immutable receiver image required}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 192m
+    cpus: '0.50'
+    ports: ['127.0.0.1:18090:18090']
+    env_file: ${RECOVERY_RECEIVER_ENV_FILE:?private receiver credential file required}
+    volumes:
+      - type: bind
+        source: ${RECOVERY_RECEIVER_DATA_DIR:?independent private local directory required}
+        target: /data
+        bind:
+          create_host_path: false
+    tmpfs: ['/tmp:size=8m,mode=1777']
+    logging:
+      driver: json-file
+      options:
+        max-size: 2m
+        max-file: '2'

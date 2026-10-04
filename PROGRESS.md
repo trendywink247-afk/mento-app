@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-05 — Nine-package completion programme in progress
+
+**Authorization / scope:** Founder requested packages 1–9 without stopping, followed by integrated testing. Continue implementation with local checks before push and staging before deployment; final integrated acceptance does not replace those gates. Work proceeds on `codex/architecture-completion`, preserving the previous local documentation commits and merging accepted master 09347f5. Parallel workers own monitoring/infrastructure, identity/telemetry/mobile configuration and own-chat integration; root owns recovery, reconciliation and release coordination. No production unlock, new purchase, store submission or live provider cutover is implied by unfinished code.
+
+**Recovery increment locally accepted:** Strict receiver-export verification against an independently retained checkpoint rejects corrupt/duplicate/gapped records, wrong stores, rollback and changed witnessed history. It deliberately cannot certify historical coverage or sender authenticity. Offline transactional replay consumes only verified digests. Tests: 61 receiver/manifest cases; isolated Postgres integration plus own-room erasure/bulk-seal cases passed (4). Own room aliases no longer reach Stream from account erasure or bulk safety ending; Stream-user cleanup remains required because current onboarding provisions that identity.
+
+**Backup/receiver preparation:** Added a Linux flock across encrypted export plus verified copy, private atomic success/attempt markers and failure preservation; five Linux orchestration tests passed. New receiver image and separate resource-limited Compose template passed a real no-network/no-host-port container drill: missing-store refusal, authentication, no public reads, idempotence and persisted receipt after restart. Synthetic container/volume removed. No receiver installation or backup schedule activated; offline key copy, independently authenticated checkpoints, complete activation/failure coverage and external recovery remain pending.
+
+**Other packages active:** Monitoring probes/retry tests, fail-closed blue/green state handling, own-chat ongoing authorization, backend ownership and acknowledgement-aware client adapters, runtime telemetry privacy/erasure fencing and mobile environment/channel separation have focused local evidence. Screen integration, same-authoritative-database transition and further acceptance remain under active implementation; do not promote these partial changes. A concurrent gw0 test-fixture collision was identified; root reran on dedicated `mento_test_gw_root_recovery` and passed. Use unique test-worker identities for simultaneous API runs.
+
+**Next / resume:** Continue all nine packages against the recorded acceptance gates, review combined changes, validate locally, then publish reviewable increments for CI/staging. Keep Stream and telemetry defaults unchanged until their respective acceptance gates. Founder questions about physical test devices and encrypted offline custody are pending; continue independent work. `Set-Location 'H:\Mento gpt\Mento'; git status --short --branch; Get-Content PROGRESS.md -TotalCount 28`.
+
+---
+
 ## 2026-10-05 — Remaining architecture reassessed after staging acceptance
 
 **Review:** Re-read the founder's original architecture book, especially chapters 7.1–7.5, against the latest release evidence and implementation crosswalk. Preserve the original HTML. Immediate integration/exact-master/reconnect staging acceptance is complete; production and full growth architecture are not. Updated the crosswalk with latest Android, worker and Bitwarden synthetic database recovery evidence.

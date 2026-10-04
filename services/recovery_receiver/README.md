@@ -40,7 +40,9 @@ python -m recovery_receiver serve --database /private/receiver/receipts.sqlite3
 python -m recovery_receiver export --database /private/receiver/receipts.sqlite3 --output /private/receiver/export-NEW.json
 ```
 
-The server binds only `127.0.0.1:18090`; `--port` overrides the port. A separately
+The server defaults to `127.0.0.1:18090`; `--port` overrides the port. Container
+deployment explicitly uses `--host 0.0.0.0` inside its private network namespace;
+the Compose host port is published only on loopback. A separately
 accepted HTTPS edge must expose `/receipts`, limit body/header size, preserve the
 authorization header, and avoid logging headers/bodies. No TLS certificate or edge
 route is installed here. `RECEIVER_PREVIOUS_TOKEN` optionally permits one previous
@@ -61,8 +63,17 @@ exports as ordinary logs or publish them with build artifacts.
 Every export explicitly says `coverage: "unverified"`. A fresh store cannot know
 deletions that happened before activation. A count/high-water value alone cannot
 prove a complete history, detect replacing the database with an older copy of the
-same store, or establish which snapshots are safe to serve. Existing API replay
-does not yet consume or verify this manifest automatically. The operator must
+same store, or establish which snapshots are safe to serve. The API's offline
+`reconcile_restored_export` entry point now validates this manifest against an
+independently retained checkpoint before transactional replay. It rejects corrupt
+checksums, duplicate fields/digests, missing sequences, wrong stores, older exports
+and changes to previously witnessed records. The parser accepts at most 100,000
+receipts and 32 MiB; larger exports fail closed pending a reviewed capacity change.
+
+`app.services.recovery_manifest.checkpoint_receipt_export` creates a witness from
+an export; retain/authenticate it independently of the receiver. Never create a
+replacement checkpoint from a suspect export during recovery. Checkpoints and
+checksums are not signatures and do not establish sender identity. The operator must
 establish store identity, backfill, activation boundary, accepted backup baseline,
 and independently witnessed export watermarks before recovery is opened to traffic.
 
@@ -90,3 +101,24 @@ request rejection and consistent exports. They do not simulate host power loss,
 lying storage hardware, corruption recovery, loss of both VPSes, throughput limits,
 or completed primary-loss recovery. Windows tests also do not establish Linux
 directory-fsync behavior; the target Linux host still needs acceptance.
+
+## Container preparation (not installed on either VPS)
+
+Build from this directory's Dockerfile. `deploy/compose.recovery-receiver.yml`
+uses a separate project, UID 10001, read-only root, dropped capabilities, a
+192 MiB memory cap, 0.5 CPU and loopback-only host publication. Supply an accepted
+immutable image, a private credential env file and an existing private data
+directory owned by UID 10001. Compose refuses to create a missing host directory.
+Do not reuse an application/staging database or a staging-reset volume.
+
+Initialize a new store explicitly with the image's `init --database
+/data/receipts.sqlite3` command while mounting only the approved receiver data
+directory. Serving deliberately does not initialize it. Capture the store identity
+and first export checkpoint through the independent recovery procedure before
+accepting application acknowledgements. Keep only public backup recipients here.
+
+`deploy/test-recovery-receiver-container.py IMAGE` exercises the real container
+with no host ports and no external network: missing-store refusal, authenticated
+commit, forbidden public reads, idempotent retry and persistence after restart.
+It removes only its uniquely named synthetic container/volume. Passing this drill
+does not establish live TLS, primary-loss coverage or storage-hardware durability.

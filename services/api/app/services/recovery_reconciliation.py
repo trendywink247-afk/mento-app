@@ -15,6 +15,16 @@ from app.models.enums import ConversationStatus
 from app.models.user import User
 from app.services.erasure import MentorActive, _phase_c_delete, is_live_mentor, recovery_digest
 from app.services.matching import release_listener_slot
+from app.services.recovery_manifest import verify_receipt_export
+
+
+def reconcile_restored_export(db: Session, raw: bytes, checkpoint: dict) -> int:
+    """Validate an export against an independent witness before offline replay.
+
+    Caller must still prove activation/failure coverage and isolate the database.
+    Neither a valid checksum nor a checkpoint supplies those operational facts.
+    """
+    return reconcile_restored_members(db, set(verify_receipt_export(raw, checkpoint)))
 
 
 def reconcile_restored_members(db: Session, digests: set[str]) -> int:

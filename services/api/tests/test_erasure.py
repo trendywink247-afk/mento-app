@@ -442,6 +442,68 @@ def test_a_suspended_mentor_side_does_not_block_erasure(client, db_session, stre
         assert s.get(ListenerProfile, mentor_side) is not None
 
 
+def test_erasure_does_not_send_own_room_aliases_to_stream(db_session, monkeypatch):
+    from app.models.chat_message import ChatMessage
+    from app.services.erasure import erase_member
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Own room alias must never be sent to Stream")
+
+    monkeypatch.setattr(stream, "erase_channel", forbidden)
+    # Current onboarding provisions a Stream identity even before owning a room;
+    # that identity must still be erased during the staged provider transition.
+    removed_users = []
+    monkeypatch.setattr(stream, "delete_user", removed_users.append)
+    with TestSession() as s:
+        me = _user(s, "Synthetic owner")
+        lid = _listener(s, "Synthetic mentor", active=2)
+        rooms = _world(s, me, lid, "own")
+        for room in s.scalars(select(Conversation).where(Conversation.user_id == me)):
+            room.chat_backend = "own"
+        s.add(
+            ChatMessage(
+                conversation_id=rooms["active"],
+                sender_kind="member",
+                sender_id=me,
+                seq=1,
+                client_id="synthetic",
+                body=b"synthetic ciphertext",
+                key_id="test",
+            )
+        )
+        s.commit()
+        assert erase_member(s, me) is not None
+    with TestSession() as s:
+        assert s.get(User, me) is None
+        assert (
+            s.scalar(
+                select(func.count()).select_from(ChatMessage).where(ChatMessage.sender_id == me)
+            )
+            == 0
+        )
+    assert removed_users == [me]
+
+
+@pytest.mark.parametrize("owner_kind", ["member", "listener"])
+def test_bulk_safety_end_never_returns_own_room_alias(db_session, owner_kind):
+    from app.services import conversations
+
+    with TestSession() as s:
+        me = _user(s, "Synthetic owner")
+        lid = _listener(s, "Synthetic mentor", active=2)
+        rooms = _world(s, me, lid, "own")
+        for room in s.scalars(select(Conversation).where(Conversation.user_id == me)):
+            room.chat_backend = "own"
+        s.commit()
+        if owner_kind == "member":
+            channels = conversations.end_all_for_member(s, me)
+        else:
+            channels = conversations.end_all_for_listener(s, lid)
+        assert channels and all(channel is None for channel in channels)
+        s.commit()
+        assert s.get(Conversation, rooms["active"]).status == ConversationStatus.ended
+
+
 def test_recovery_receipt_rolls_back_with_account_deletion(db_session):
     from app.services.erasure import _phase_c_delete
 
@@ -514,6 +576,43 @@ def test_recovery_reconciliation_is_transactional(db_session):
         assert s.get(Conversation, mine["active"]).status == ConversationStatus.active
         assert s.get(ListenerProfile, lid).active_conversations == 1
         assert s.get(ErasureReceipt, recovery_digest(me)) is None
+
+
+def test_independent_receiver_export_verified_before_database_replay(
+    db_session, monkeypatch, tmp_path
+):
+    from pathlib import Path
+
+    from app.services.recovery_manifest import checkpoint_receipt_export
+    from app.services.recovery_reconciliation import reconcile_restored_export
+
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[2]))
+    from recovery_receiver.store import Store, canonical, initialize
+
+    store_path = tmp_path / "independent-receipts.sqlite3"
+    initialize(store_path)
+    receiver = Store(store_path)
+    old_export = canonical(receiver.export())
+    with TestSession() as s:
+        me, other = _user(s, "Synthetic erased"), _user(s, "Synthetic retained")
+        s.commit()
+    receiver.record(recovery_digest(me))
+    recovered_export = canonical(receiver.export())
+    witness = checkpoint_receipt_export(recovered_export)
+    with TestSession() as s:
+        with pytest.raises(ValueError):
+            reconcile_restored_export(s, old_export, witness)
+        assert s.get(User, me) is not None
+        assert reconcile_restored_export(s, recovered_export, witness) == 1
+        s.rollback()
+    with TestSession() as s:
+        assert s.get(User, me) is not None
+        assert reconcile_restored_export(s, recovered_export, witness) == 1
+        s.commit()
+    with TestSession() as s:
+        assert s.get(User, me) is None
+        assert s.get(User, other) is not None
+        assert reconcile_restored_export(s, recovered_export, witness) == 0
 
 
 def test_receipt_ack_failure_retains_account_for_retry(

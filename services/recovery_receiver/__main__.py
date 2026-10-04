@@ -13,6 +13,7 @@ def main() -> None:
     parser.add_argument("--database", required=True, type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--port", type=int, default=18090)
+    parser.add_argument("--host", choices=["127.0.0.1", "0.0.0.0"], default="127.0.0.1")
     arguments = parser.parse_args()
     if arguments.command == "init":
         initialize(arguments.database)
@@ -34,7 +35,9 @@ def main() -> None:
         )
         # TLS/authenticated routing belongs to the separately accepted edge config.
         # No request access log: only the generic startup/shutdown server messages.
-        uvicorn.run(app, host="127.0.0.1", port=arguments.port, access_log=False)
+        # Container deployment explicitly binds its private interface; the host
+        # publication remains loopback-only. Standalone serving defaults loopback.
+        uvicorn.run(app, host=arguments.host, port=arguments.port, access_log=False)
 
 
 if __name__ == "__main__":
