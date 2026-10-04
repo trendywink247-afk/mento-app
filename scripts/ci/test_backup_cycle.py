@@ -129,6 +129,19 @@ class BackupCycleTests(unittest.TestCase):
         time.sleep(0.5)
         self.assertFalse(marker.exists(), "Timed-out child continued writing")
 
+    def test_timeout_allows_shell_cleanup_before_releasing_lock(self):
+        marker = self.directory / "cleanup-completed"
+        with self.assertRaises(subprocess.TimeoutExpired):
+            cycle.run_step(
+                [
+                    "bash", "-c",
+                    'trap \'printf cleaned > "$1"; exit 143\' TERM; sleep 30 & wait',
+                    "bash", str(marker),
+                ],
+                timeout=0.2,
+            )
+        self.assertEqual(marker.read_text(), "cleaned")
+
 
 if __name__ == "__main__":
     unittest.main()

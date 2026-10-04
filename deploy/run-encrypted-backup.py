@@ -29,6 +29,15 @@ def run_step(command, *, timeout):
                 raise subprocess.CalledProcessError(code, command)
         except BaseException:
             try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                pass
+            # A shell can exit before its grandchildren; always reap the group.
+            try:
                 os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass

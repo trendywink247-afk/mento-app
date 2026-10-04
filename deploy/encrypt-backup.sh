@@ -15,6 +15,8 @@ fi
 gzip -t "$source_file"
 partial=$(mktemp "$(dirname "$destination")/.encrypted-backup.XXXXXX")
 trap 'rm -f -- "$partial"' EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 age --encrypt --recipients-file "$recipients" --output "$partial" "$source_file"
 test -s "$partial"
 # A hard link publishes without overwriting an existing destination, including

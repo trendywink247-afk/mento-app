@@ -102,6 +102,44 @@ lying storage hardware, corruption recovery, loss of both VPSes, throughput limi
 or completed primary-loss recovery. Windows tests also do not establish Linux
 directory-fsync behavior; the target Linux host still needs acceptance.
 
+## Independently retained checkpoint tooling
+
+`scripts/recovery_receipt_evidence.py` provides offline checkpoint/verification
+commands. It does not retrieve data, authenticate a receiver, read private keys,
+open an application database or establish deletion coverage. First retrieve a
+receiver export through an operator-authenticated procedure (for example pinned
+SSH from the accepted independent receiver host). Create a checkpoint only from
+that accepted source; never create a fresh checkpoint from a suspect backup.
+
+From the repository root, with input/output in an operator-private directory:
+
+```powershell
+& services/api/.venv/Scripts/python.exe scripts/recovery_receipt_evidence.py checkpoint --export PRIVATE_EXPORT.json --output NEW_PRIVATE_CHECKPOINT.json --authenticated-retrieval-confirmed
+& services/api/.venv/Scripts/python.exe scripts/recovery_receipt_evidence.py verify --export RECOVERED_EXPORT.json --checkpoint RETAINED_CHECKPOINT.json --trusted-checkpoint-sha256 INDEPENDENTLY_HELD_SHA256
+```
+
+The first command publishes a private non-overwriting checkpoint and reports its
+SHA-256. Retain that hash independently of the checkpoint/backup and receiver,
+using the accepted operator trust/custody channel. The second command checks the
+checkpoint against this trust anchor before validating export integrity, store
+identity, monotonic sequence and witnessed history. It reports only receipt count
+and `coverage: "unverified"`; it never prints member digests. Passing the explicit
+retrieval flag is an operator acknowledgement, not cryptographic proof of origin.
+Neither a hash supplied alongside an untrusted file nor age encryption alone
+authenticates who produced it: anyone knowing the public age recipient can
+encrypt different content. Preserve authenticated retrieval and independent
+checkpoint custody as separate acceptance evidence.
+
+`tests/test_recovery_receipt_drill.py` exercises synthetic stale-row restoration
+on the isolated API test database: independently recorded erasure receipts remove
+resurrected saved notes, credentials and conversations, preserve another member,
+free the mentor seat and reject old refresh reuse without contacting serving
+integrations. Run through `scripts/local/api.py test -n 1`, never default pytest
+against a serving database. This logical drill does not prove a real PostgreSQL
+archive restoration, complete activation/failure coverage or recovery after
+losing the primary host. Keep installation, receipt-required flags and backup
+scheduling disabled until those additional operational gates pass.
+
 ## Container preparation (not installed on either VPS)
 
 Build from this directory's Dockerfile. `deploy/compose.recovery-receiver.yml`

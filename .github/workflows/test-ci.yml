@@ -119,6 +119,8 @@ jobs:
       - run: python -m ruff format --check services/recovery_receiver
       - name: Verify independent receipt durability and request contract
         run: python -m pytest -c services/recovery_receiver/pyproject.toml services/recovery_receiver/tests -q
+      - name: Verify independently pinned offline receipt evidence
+        run: python -m unittest discover -s scripts -p test_recovery_receipt_evidence.py
       - name: Verify resource-limited receiver restart and persistent storage
         run: |
           docker build -t mento-receipt-drill services/recovery_receiver
