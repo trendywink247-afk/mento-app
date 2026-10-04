@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Snapshot-coordinated chat-excluding exporter implemented
+
+**Implementation:** Added export-recovery-snapshot.sh. One psql transaction recursively locks excluded roots against partition DDL, exports its snapshot and enumerates descendants while locks remain held. pg_dump imports that snapshot; gzip is validated and published without overwrite only after dump and transaction succeed. Three-second lock timeout and bounded dump/idle transaction protect migration contention. Default root public.chat_messages; drill supports explicitly validated additional roots. No schedule, live export, encryption activation or pruning.
+
+**Validation:** Replaced the isolated full-schema/baseline drill's uncoordinated discovery/dump with this exporter. Existing renamed/future/default partition, retained-note/report, FK and forward-migration assertions now exercise its output. Bash syntax and whitespace passed. Linux runtime CI and explicit concurrent-DDL acceptance remain pending; do not yet claim concurrency proof. Master 7dd812b prior API/Test/native checks are green; latest accepted staging 781ccd3.
+
+**Next:** Inspect exporter CI and fix failures, add concurrent DDL rejection/timeout evidence before production use. Off-device key custody and deletion reconciliation remain separate activation gates; production stays disabled. Resume H:\Mento gpt\Mento on current exporter PR, preserve untracked book. Automation remains active; five phases not complete.
+
+---
 ## 2026-10-04 — VPS B probe-only validation and missing-destination guard
 
 **Verified:** Exact master 781ccd3 gates passed (API 37187568994, Test 37187569014, native 37187568977). Full staging 37188958287 dispatched; pending acceptance. Executed current monitor/classifier from a temporary bundle on VPS B with MONITOR_CHECK_ONLY=1: API health/readiness, app/admin and semantic crisis probes all passed. Temporary bundle removed; permanent script/cron not replaced. This is external reachability, not delivered alerts or safety processing proof.
