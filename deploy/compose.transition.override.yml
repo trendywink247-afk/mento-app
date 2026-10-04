@@ -1,0 +1,30 @@
+# Preparation only: never pass this to the current deploy.sh, which explicitly
+# starts postgres. Transition activation needs its own reviewed orchestration.
+# Compose >=2.24.4 is required for !reset. No DB volume is attached to a new engine.
+services:
+  postgres:
+    profiles: !override [transition-unmanaged]
+  valkey:
+    profiles: !override [transition-unmanaged]
+  glitchtip:
+    profiles: !override [transition-unmanaged]
+  glitchtip-init-db:
+    profiles: !override [transition-unmanaged]
+  api_blue:
+    depends_on: !reset {}
+    environment: &authoritative
+      DATABASE_URL: ${MENTO_AUTHORITATIVE_DATABASE_URL:?operator supplied authoritative DB URL}
+      REDIS_URL: ${MENTO_AUTHORITATIVE_REDIS_URL:?operator supplied existing cache URL}
+  api_green:
+    depends_on: !reset {}
+    environment: *authoritative
+  worker:
+    depends_on: !reset {}
+    environment: *authoritative
+  migrate:
+    depends_on: !reset {}
+    environment: *authoritative
+networks:
+  default:
+    external: true
+    name: ${MENTO_AUTHORITATIVE_NETWORK:?operator verified network name}

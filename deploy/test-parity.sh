@@ -86,3 +86,4 @@ if diffs:
     sys.exit(1)
 print(f"parity: {len(local['services'])} services identical beyond env, ports, limits, hostnames and host paths")
 EOF
+bash "$HERE/test-transition-preflight.sh"

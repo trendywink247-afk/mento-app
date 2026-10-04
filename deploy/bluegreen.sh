@@ -12,7 +12,8 @@
 #    upstream and retries a request that finds the old colour gone, so no request
 #    fails during the swap.
 # If step 1 fails, the new colour is removed and the old one is untouched.
-# Prints the new live colour on success. Exit non-zero = nothing changed.
+# Prints the new live colour on success. A readiness failure preserves the old
+# colour; failures after activation require inspection, not a no-change claim.
 set -euo pipefail
 
 TAG="${1:?usage: bluegreen.sh <image-tag>}"
@@ -29,10 +30,23 @@ dc() { docker compose ${MENTO_ENV_FILE:+--env-file "$MENTO_ENV_FILE"} --profile 
 
 running() { dc ps --status running --services 2>/dev/null | grep -qx "$1"; }
 
+# State storage must be available before starting/removing any API containers.
+mkdir -p "$STATE_DIR"
+state_tmp=$(mktemp "$STATE_DIR/.live-colour.XXXXXX")
+trap 'rm -f -- "$state_tmp"' EXIT
 live=""
 if running api_blue && running api_green; then
     # An interrupted earlier swap: trust the recorded colour, else keep blue.
-    live="$(cat "$STATE_DIR/live-colour" 2>/dev/null || echo api_blue)"
+    if [ -e "$STATE_DIR/live-colour" ]; then
+        live="$(cat "$STATE_DIR/live-colour" 2>/dev/null)" \
+            || { log 'Cannot read interrupted-swap state; inspect both APIs before retrying'; exit 1; }
+    else
+        live=api_blue
+    fi
+    case "$live" in
+        api_blue|api_green) ;;
+        *) log 'Invalid interrupted-swap colour state; inspect both APIs before retrying'; exit 1 ;;
+    esac
 elif running api_blue; then live=api_blue
 elif running api_green; then live=api_green
 fi
@@ -57,7 +71,7 @@ if [ -n "$live" ]; then
     dc rm -f "$live" >/dev/null
 fi
 
-mkdir -p "$STATE_DIR"
-echo "$idle" > "$STATE_DIR/live-colour"
+printf '%s\n' "$idle" > "$state_tmp"
+mv -f -- "$state_tmp" "$STATE_DIR/live-colour"
 log "live: $idle on mento-api:$TAG"
 echo "$idle"

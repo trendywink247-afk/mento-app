@@ -46,3 +46,4 @@ test "$(restore_worker_state unknown)" = 'start:unknown'
 printf 'invalid\n' > "$STATE_DIR/worker-state/bad"
 if restore_worker_state bad; then echo 'FAIL: invalid worker metadata accepted'; exit 1; fi
 echo 'PASS: absent/stopped/running worker baseline recovery and legacy-state fallback'
+bash "$root/deploy/test-bluegreen-state.sh"
