@@ -19,5 +19,7 @@ export function useChatKeyboardBoundary(top: number): ViewStyle | undefined {
     return () => { show.remove(); hide.remove(); };
   }, []);
   if (Platform.OS !== 'android' || keyboardTop === undefined) return undefined;
-  return { maxHeight: Math.max(0, keyboardTop - top) };
+  // Channel contains a height:'100%' child: maxHeight alone leaves its percentage
+  // basis indefinite under Yoga and can collapse the thread's hit-test bounds.
+  return { flex: 0, height: Math.max(0, keyboardTop - top) };
 }
