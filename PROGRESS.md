@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-05 — Architecture book reviewed before staging
+
+**Done:** Reviewed the founder's original `H:\Mento gpt\Mento-Architecture-Book.html` (Edition 1, 20 September 2026; 45 sections). It covers the existing app and gaps, component alternatives, environment parity, Lean/Balanced/Resilient options, roadmap and launch gates, chosen architecture, expanded staff tooling, human-assistive AI, glossary and estimation method. Preserved the original. Updated the implementation crosswalk to distinguish successful PR66 candidate acceptance from historical exact-master failure and latest deployed staging.
+
+**Assessment:** Working v1 and tested growth/CI foundations exist; full Balanced/growth operation is incomplete. Both VPSes exist, but A remains the older production API/Postgres/Redis without a worker, while B has staging API/worker/Postgres/Valkey and monitoring. SDK 55, hardened identity and isolated local/staging controls supersede several September descriptions. Own chat is not connected to the live member/mentor UI; Caddy/blue-green, independent recovery/receipt durability, six-hour backups, delivered alerts, direct push, telemetry, expanded staff/AI work and store/device acceptance remain incomplete or unverified. Capacity, latency and recovery figures in the book are historical estimates, not accepted production performance. No overall completion percentage is defensible from differently sized work items.
+
+**Next / boundary:** PR66 head 0aa2f68 has successful API/Test/native workflows but remains draft/unmerged. Review and integrate, obtain full exact-master evidence, then stage the immutable candidate and accept migrations, worker execution, safety, two-party chat, recovery/deletion and rollback. Keep production disabled until operational acceptance. This request asked for the book assessment first; no merge or deployment performed. Documentation-only crosswalk/progress changes checked with diff review/whitespace validation and kept local.
+
+**Resume:** `Set-Location 'H:\Mento gpt\Mento'; gh pr checks 66; git status --short --branch; Get-Content PROGRESS.md -TotalCount 35`. Preserve both architecture-book files and local user settings.
+
+---
+
 ## 2026-10-05 — Selective CI implementation passes all PR checks
 
 **Verified:** PR66 still points to `0aa2f6861f4948e1974a02db237d184f59d1dcde`. API 37226539496, Test 37226539524 and native 37226539502 completed successfully. Every reported check is green, including actual API tests, mobile/web, release tooling, receipt receiver, restricted-receiver isolation, all aggregates, the new native gate and all three full-suite markers. Dependabot configuration also passed. This verifies execution of the updated native Node/Java/Maestro workflow on the PR candidate.
