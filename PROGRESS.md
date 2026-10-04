@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-04 — Desired GitHub architecture inspected with three focused reviewers
+
+**Done:** Founder asked to resume with sub-agents and confirm the desired GitHub architecture. Started three read-only reviews (recovery, Balanced infrastructure, own-chat); root handled source reconciliation and local checks. Visually inspected docs/diagrams/mento-desired-architecture.png and verified its local blob hash equals GitHub master (29c592ec1c3f5a2a3134bd95427f49f9316dda55). Read the current remote alignment, Balanced design and growth plan. The image explicitly depicts the later growth target; the alignment document keeps Balanced as the near-term baseline. Six phases must establish the Balanced pilot and measured expansion gates, not claim replicas, automatic database failover, new independent infrastructure, private file storage or professional mentoring already exist.
+
+**Validation:** Local production/preview Expo resolved-config regression passed again. Remote master 2d87f65 and PR65 native checks were still running at inspection; API/Test checks remain green. Docker engine access is denied. The API virtual environment also cannot launch its referenced Python 3.12 base interpreter; full local backend acceptance is unavailable. No push, merge, deployment, production unlock or automation activation occurred.
+
+**Review findings to resolve before rollout:** PR61's parity calculation assumes one API process per color while the image/entrypoint default to two: proposed five-connection pools yield a 38/50 core overlap budget, not 28/50, before optional clients. Require effective-config enforcement. DEPLOYMENT_VPS.md's historical separate-database cutover accepts missing writes since snapshot and offers rollback to the divergent legacy DB; this recipe must be corrected before use. Preserve database identity for an edge-only move, or rehearse a final synchronized data cutover. PR65 parses its configured URL outside its error handler, permitting malformed URLs to bypass the intended retryable error; add regression coverage when Python is restored. Receiver persistence/primary-loss/activation-coverage evidence remains absent.
+
+**Own-chat sequence:** Add server-authoritative conversation transport selection and route introductions through the same own-chat write path before connecting member/mentor clients. Audit push presence, staff history and crisis health, which still have Stream-specific dependencies; paginate catch-up beyond 200 messages. Preserve transport ownership and rollback compatibility rather than removing Stream imports at the start. Verify history/ack/dedup/reconnect/offline and safety/redaction/erasure across both clients before cutover.
+
+**Next:** Repair permitted local test prerequisites, finish the focused fixes and local acceptance for PR65/61, then integrate gated operational work. Track every diagram component with source, staging proof, production proof and remaining acceptance; growth features require measured need and separately scoped implementation. External vault custody and real-device/Apple signing remain dependencies, not tasks an agent can certify from CI alone. Resume from this entry plus current GitHub exact-head results.
+
+---
+
 ## 2026-10-04 — GitHub status reconciled and Balanced delivery resume plan
 
 **Done:** Read-only GitHub inspection confirms PR42 merged as 2544792 (production update channel and initial keyboard fix); follow-up keyboard correction PR59 merged as c1fa271. Current remote master is 2d87f6563a885ad76ac6dd62e52770d39a94491a. API 37220498436 and Test 37220498440 passed; native 37220498522 remained in progress at inspection. PR65 head 7c02640 has green API/Test (37220638646/37220638647), native 37220638693 pending. PR61 remains open and behind master, with green API/Test for b3cab0e. Dependency PRs 43/44/45 remain open and secondary to delivery.
