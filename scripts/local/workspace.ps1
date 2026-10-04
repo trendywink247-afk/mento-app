@@ -1,6 +1,7 @@
 param(
     [ValidateSet('init', 'api', 'worker', 'web', 'check', 'test', 'status', 'stop-infra')]
-    [string]$Action = 'status'
+    [string]$Action = 'status',
+    [switch]$OwnChatAcceptance
 )
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -13,9 +14,13 @@ try {
         'init' {
             & docker compose -f $compose up -d --wait
             if ($LASTEXITCODE -ne 0) { throw 'Workspace infrastructure failed' }
-            & $python $launcher init
+            if ($OwnChatAcceptance) { & $python $launcher init-own-chat }
+            else { & $python $launcher init }
         }
-        'api' { & $python $launcher serve }
+        'api' {
+            if ($OwnChatAcceptance) { & $python $launcher serve-own-chat }
+            else { & $python $launcher serve }
+        }
         'worker' { & $python $launcher worker }
         'check' { & $python $launcher check }
         'test' { & $python $launcher test }
@@ -24,8 +29,9 @@ try {
             $env:EXPO_NO_DOTENV = '1'
             $env:EXPO_PUBLIC_API_URL = 'http://localhost:18000/api/v1'
             $env:EXPO_PUBLIC_STREAM_API_KEY = ''
+            $env:EXPO_PUBLIC_OWN_CHAT_ACCEPTED = if ($OwnChatAcceptance) { '1' } else { '' }
             $streamFile = Join-Path $repoRoot '.local/stream.env'
-            if (Test-Path $streamFile) {
+            if (-not $OwnChatAcceptance -and (Test-Path $streamFile)) {
                 $keyLine = Get-Content $streamFile | Where-Object { $_ -match '^STREAM_API_KEY=' } | Select-Object -First 1
                 if (-not $keyLine) { throw 'Dedicated local Stream config missing API key' }
                 $env:EXPO_PUBLIC_STREAM_API_KEY = $keyLine.Substring('STREAM_API_KEY='.Length)

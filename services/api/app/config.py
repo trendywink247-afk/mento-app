@@ -184,10 +184,12 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-1.5-flash"
 
+    # Tele-MANAS primary and alternate number, one service (DGHS verified 2026-10-05).
+    # https://dghs.mohfw.gov.in/national-mental-health-programme.php
     # Raw JSON string from env; parsed via `helplines`.
     crisis_helplines_json: str = (
         '[{"name":"Tele-MANAS","number":"14416","hours":"24x7"},'
-        '{"name":"KIRAN","number":"1800-599-0019","hours":"24x7"}]'
+        '{"name":"Tele-MANAS (alternate number)","number":"1800-89-14416","hours":"24x7"}]'
     )
 
     @property

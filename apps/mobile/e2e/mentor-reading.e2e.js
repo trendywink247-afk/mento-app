@@ -123,7 +123,7 @@ async function pass(browser, reduced, lang) {
     if (n < PAGES) await tid('reading-next').click();
   }
   expect(new Set(seen).size === PAGES, `[${label}] two pages read the same`);
-  expect(/14416/.test(seen[5]) && /1800-599-0019/.test(seen[5]), `[${label}] the crisis page is missing a helpline`);
+  expect(/14416/.test(seen[5]) && /1800-89-14416/.test(seen[5]), `[${label}] the crisis page is missing a helpline`);
   console.log(`[${label}] OK ${PAGES} pages, dots follow, the crisis page carries both helplines`);
 
   // Back walks them backwards…

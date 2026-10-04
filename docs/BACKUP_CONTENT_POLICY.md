@@ -8,8 +8,15 @@ Founder decision, 4 October 2026: retain user-saved journal notes and moderation
 report narratives in encrypted recovery archives; exclude chat history itself.
 Consequently these archives can contain user-saved quotations of chat messages:
 do not describe them as containing no message-derived content. Recovery identity
-custody will be an existing password manager/secure vault outside both VPSes.
-The destination and verified key storage/recovery remain to be established.
+custody uses Bitwarden outside both VPSes. On 5 October 2026 the founder saved
+the identity in a free Secure Note, retrieved it into a separate local file,
+and the operator verified both its public recipient and exact canary decryption.
+The same retrieved key also passed a synthetic local PostgreSQL archive restore,
+including row preservation and foreign-key enforcement, with no serving database
+or production data involved. The isolated container and volume were removed.
+Private key contents were not displayed or committed. The separate encrypted
+offline copy remains unconfirmed. This establishes key retrieval, not database
+restoration, independent deletion coverage or backup activation readiness.
 
 | Source | What the source establishes | Recovery boundary |
 |---|---|---|
@@ -38,8 +45,11 @@ PR #35 and Test CI run `37122366037` proved encrypted recovery of the migrated a
 
 Saved notes and report narratives are retained by the founder decision above.
 Implementation must now prove chat-history exclusion alongside recovery of these
-retained records and safety enforcement. Vault destination, key recovery and
-deletion reconciliation remain acceptance gates. Production promotion remains disabled.
+retained records and safety enforcement. Bitwarden key retrieval is verified;
+the founder confirmed the separately encrypted offline copy on 2026-10-05.
+Retrieval from that offline copy is not independently tested. Synthetic database
+recovery passed; operational recovery and deletion reconciliation remain
+acceptance gates. Production promotion remains disabled.
 
 ## Prepared operator sequence (not activated)
 
@@ -49,7 +59,7 @@ The repository now separates snapshot creation from transport verification:
 2. `deploy/copy-encrypted-recovery.sh NEW_ARCHIVE.age RCLONE_REMOTE_DIRECTORY` uploads under its SHA-256 filename, skips existing targets, reads back bytes and compares both the remote and current local digest. A mismatch fails and preserves the local archive. A matching age header is only a format check; it does not authenticate a file or prove that the recovery identity works.
 3. On an isolated recovery machine, authenticate/decrypt using the separately held identity and run the documented database recovery drill. Keep external integrations and workers disabled until deletion reconciliation and queued-job review pass.
 
-An orchestrator must serialize the complete creation/copy operation. The creation lock ends before copying. Configure one writer per remote prefix; these utilities do not implement server-enforced object locks or protection against a concurrent privileged writer. Do not interpret rclone flags as immutable storage. No retention deletion or scheduler is added by these commands.
+`deploy/run-encrypted-backup.py CONTAINER USER DATABASE PUBLIC_RECIPIENTS PRIVATE_DIRECTORY RCLONE_DESTINATION` now serializes the full creation/copy operation with a Linux flock. It requires an existing operator-owned 0700 directory, creates a uniquely named archive, and publishes a private atomic `backup-success.json` only after verified copying. `backup-result.json` records the last attempt; failure preserves prior success and retained archives. Configure the monitor to read both markers. Lower-level creation/copy utilities retain their own locks. Configure one writer per remote prefix; these utilities do not implement server-enforced object locks or protection against a concurrent privileged writer. Do not interpret rclone flags as immutable storage. No retention deletion or scheduler is added by these commands; operational recovery/custody gates still precede activation.
 
 Linux Test CI `37198829141` verified the integrated snapshot/encryption utility on both current and production-baseline schemas. Test CI `37198830809` verified actual rclone local-backend round trips, idempotent retry, plaintext rejection and detection of corrupted ciphertext even when size and modification time match. Earlier `--immutable`-only handling failed the corrupt-target regression; the corrected implementation skips existing objects and verifies their bytes. These tests do not establish live SFTP acceptance, off-device identity custody or operational six-hour backups.
 

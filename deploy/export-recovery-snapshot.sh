@@ -28,6 +28,8 @@ cleanup() {
   rm -f -- "$partial"
 }
 trap cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 # Hold recursive relation locks until pg_dump finishes. These permit ordinary
 # reads/writes but exclude attach/detach/rename/drop DDL on the protected tree.
 # A bounded lock timeout fails instead of holding up a production migration.
@@ -50,7 +52,7 @@ while IFS= read -r relation <&"$reader"; do
 done
 test "${relation:-}" = EXCLUSIONS_DONE
 test "${#exclusions[@]}" -ge "${#roots[@]}"
-timeout 840 docker exec "$container" pg_dump -U "$user" -d "$database" \
+timeout 840 docker exec "$container" timeout 830 pg_dump -U "$user" -d "$database" \
   --snapshot="$snapshot" "${exclusions[@]}" | gzip > "$partial"
 gzip -t "$partial"
 printf 'COMMIT;\n\\echo SNAPSHOT_RELEASED\n' >&"$writer"

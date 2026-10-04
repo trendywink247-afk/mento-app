@@ -8,7 +8,7 @@
  *     database — counting itself happens in Stream's before-send hook, which a local stack
  *     does not receive) the STILL note appears with the mentor's name, the send key is
  *     quietly disabled while the FIELD STAYS LIVE (neither the key nor Enter sends, the
- *     words stay), the Helplines toggle opens exactly tel:14416 and tel:18005990019, and
+ *     words stay), the Helplines toggle opens exactly tel:14416 and tel:18008914416, and
  *     nothing on the note moves;
  *   - the note NEVER shows when the API says the conversation is crisis-exempt (the
  *     allowance response is patched in flight, as chat-header.e2e.js does for the topic);
@@ -159,9 +159,9 @@ async function run(browser, reduced) {
     // The quiet Helplines toggle: exactly the two verified lines.
     await tid('allowance-helplines-toggle').click();
     await tid('allowance-call-14416').waitFor({ timeout: 5000 });
-    await tid('allowance-call-18005990019').waitFor({ timeout: 5000 });
+    await tid('allowance-call-18008914416').waitFor({ timeout: 5000 });
     await page.waitForSelector('text=Anything urgent is never held back or counted.', { timeout: 5000 });
-    console.log(`[${label}] OK A22 note at three in a row: still, names ${mentor}, send key disabled, field live, the urgent promise in plain sight, helplines 14416 + 1800-599-0019`);
+    console.log(`[${label}] OK A22 note at three in a row: still, names ${mentor}, send key disabled, field live, the urgent promise in plain sight, helplines 14416 + 1800-89-14416`);
 
     // Crisis-exempt (the API says so): never a note, the key is live again.
     const allowanceRoute = /\/conversations\/[^/]+\/allowance$/;
@@ -233,7 +233,7 @@ async function run(browser, reduced) {
         signal: 'self_harm',
         helplines: [
           { name: 'Tele-MANAS', number: '14416', hours: '24x7' },
-          { name: 'KIRAN', number: '1800-599-0019', hours: '24x7' },
+          { name: 'Tele-MANAS (alternate number)', number: '1800-89-14416', hours: '24x7' },
         ],
       };
       await route.fulfill({ response: res, json: body });
@@ -249,14 +249,14 @@ async function run(browser, reduced) {
       'You deserve more support than a chat can give right now.',
       'Tele-MANAS',
       '14416',
-      'KIRAN',
-      '1800-599-0019',
+      'Tele-MANAS (alternate number)',
+      '1800-89-14416',
       `${mentor} is still here with you. Mentors are peers, not therapists.`,
     ]) {
       if (!card.includes(words)) throw new Error(`[${label}] crisis card is missing "${words}": ${card}`);
     }
     await tid('crisis-call-14416').waitFor({ timeout: 5000 });
-    await tid('crisis-call-18005990019').waitFor({ timeout: 5000 });
+    await tid('crisis-call-18008914416').waitFor({ timeout: 5000 });
     await assertStill(page, 'crisis-card', label);
     await tid('crisis-why').click();
     await tid('crisis-why-body').waitFor({ timeout: 5000 });
@@ -414,14 +414,14 @@ async function run(browser, reduced) {
   await tid('feedback-text').fill('I want to end my life');
   await tid('feedback-send').click();
   await tid('crisis-card').waitFor({ timeout: 20000 });
-  for (const n of ['14416', '18005990019']) {
+  for (const n of ['14416', '18008914416']) {
     if ((await tid(`crisis-call-${n}`).count()) !== 1) throw new Error(`[${label}] feedback crisis answer lacks ${n}`);
   }
   if (await tid('feedback-sent').count()) throw new Error(`[${label}] crisis words got a thank-you`);
   await assertStill(page, 'crisis-card', `[${label}] feedback crisis card`);
   await tid('feedback-close').click();
   await page.waitForSelector('[data-testid="feedback-sheet"]', { state: 'detached', timeout: 15000 });
-  console.log(`[${label}] OK A11 feedback: posts (200 received, screen=reflection, no ids), crisis words → still helplines 14416 + 1800-599-0019`);
+  console.log(`[${label}] OK A11 feedback: posts (200 received, screen=reflection, no ids), crisis words → still helplines 14416 + 1800-89-14416`);
 
   // Done → My Chats, one tab navigator; the sentence went to the Journal.
   // Unique per run: the dev database is shared across runs, so a fixed sentence would count old rows too.

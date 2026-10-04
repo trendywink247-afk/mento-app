@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -33,6 +35,7 @@ class ConversationListItem(BaseModel):
     listener_persona_name: str
     listener_persona_avatar: str
     stream_channel_id: str | None
+    chat_backend: Literal["stream", "own"] = "stream"
     is_locked: bool
     created_at: str
     ended_at: str | None
@@ -64,6 +67,7 @@ class ConversationState(BaseModel):
 
     id: str
     status: str
+    chat_backend: Literal["stream", "own"] = "stream"
     is_locked: bool
     is_paused: bool
     status_mask: str | None = None

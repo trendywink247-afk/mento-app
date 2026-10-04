@@ -1,6 +1,6 @@
 /**
- * Dynamic layer over app.json (Expo passes app.json in as `config`). One job today:
- * Android cleartext (plain http://) traffic is allowed only outside production.
+ * Dynamic layer over app.json: explicit profile channels and production cleartext
+ * policy. Default preview preserves local/CI builds without an explicit variant.
  *
  * Development talks to a LAN API over http:// (CLAUDE.md "Phone testing"), so every
  * non-production build keeps cleartext on. A production build — the EAS `production`
@@ -9,9 +9,18 @@
  */
 import type { ConfigContext, ExpoConfig } from 'expo/config';
 
-const isProduction = process.env.APP_VARIANT === 'production';
-
 export default ({ config }: ConfigContext): ExpoConfig => {
+  const variant = process.env.APP_VARIANT ?? 'preview';
+  if (!['development', 'preview', 'production'].includes(variant)) {
+    throw new Error('APP_VARIANT must be development, preview or production');
+  }
+  const easProfile = process.env.EAS_BUILD_PROFILE;
+  const profileVariant = easProfile === 'staging' ? 'preview' : easProfile;
+  if (profileVariant && ['development', 'preview', 'production'].includes(profileVariant)
+      && process.env.APP_VARIANT !== profileVariant) {
+    throw new Error('APP_VARIANT must match the selected EAS_BUILD_PROFILE');
+  }
+  const isProduction = variant === 'production';
   const plugins = (config.plugins ?? []).map((plugin) => {
     if (!Array.isArray(plugin) || plugin[0] !== 'expo-build-properties') return plugin;
     const [name, props = {}] = plugin;
@@ -19,10 +28,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   });
   // reason: `config` is app.json, which always carries name + slug; ConfigContext types
   // it as Partial<ExpoConfig> only because a bare app.config.ts may have no app.json.
-  // Local prebuilds do not receive EAS Build's channel injection. Keep production
-  // binaries on the same channel declared by the production EAS profile.
-  const updates = isProduction
-    ? { ...config.updates, requestHeaders: { ...config.updates?.requestHeaders, 'expo-channel-name': 'production' } }
-    : config.updates;
+  // Local prebuilds do not receive EAS Build's channel injection. Every profile
+  // must resolve the same channel locally and on EAS; development never inherits
+  // app.json's preview channel. Runtime policy and native identities stay stable.
+  const updates = {
+    ...config.updates,
+    requestHeaders: { ...config.updates?.requestHeaders, 'expo-channel-name': variant },
+  };
   return { ...config, plugins, updates } as ExpoConfig;
 };

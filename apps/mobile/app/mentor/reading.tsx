@@ -29,8 +29,8 @@ import { radius, space, type } from '@/theme/tokens';
  *
  * Content rules (the drafts were written to them, and they stay): no personal anecdotes,
  * no third-party names, no money, mentor vocabulary (mentor / member), and the crisis page
- * carries Mento's own T&S line — the helplines are Tele-MANAS 14416 and KIRAN
- * 1800-599-0019, the mentor points to them and is never the counsellor.
+ * carries Mento's own T&S line — the helplines are Tele-MANAS 14416 and Tele-MANAS (alternate number)
+ * 1800-89-14416, the mentor points to them and is never the counsellor.
  *
  * Motion: each page arrives through `Entrance` (transform + opacity, reduced-motion aware)
  * by re-mounting on the page key; the owl breathes and goes still under reduced motion.

@@ -85,5 +85,51 @@ count=$(wc -l < "$ALERT_LOG")
 MONITOR_CHECK_ONLY=1 bash "$root/deploy/external-monitor.sh"
 test "$(find "$STATE_DIR" -type f -exec sha256sum {} \; | sort)" = "$before"
 test "$(wc -l < "$ALERT_LOG")" = "$count"
+cat > "$temp/bin/operational-probe" <<'PROBE'
+#!/usr/bin/env bash
+python3 - <<'PY'
+import json, os, time
+print(json.dumps(dict(version=1, observed_at=int(time.time()), host_available=True,
+                     memory_available_mib=256, disk_free_mib=2048, load_per_cpu=0.5,
+                     queue=dict(available=True, worker_alive=os.environ.get('OPERATIONAL_FAIL') != '1',
+                                oldest_queued_seconds=None, failed_24h=0),
+                     backup=dict(version=1, completed_at=int(time.time()), archive_sha256='a'*64))))
+PY
+# Healthy stdout must not hide a failed SSH/probe process.
+exit "${OPERATIONAL_EXIT:-0}"
+PROBE
+chmod +x "$temp/bin/operational-probe"
+export MONITOR_OPERATIONAL_PROBE="$temp/bin/operational-probe" OPERATIONAL_FAIL=0
+MONITOR_CHECK_ONLY=1 bash "$root/deploy/external-monitor.sh"
+test ! -e "$STATE_DIR/operational-health"
+export OPERATIONAL_EXIT=7
+if MONITOR_CHECK_ONLY=1 bash "$root/deploy/external-monitor.sh"; then
+  echo 'FAIL: operational transport exit hidden by healthy stdout'; exit 1
+fi
+export OPERATIONAL_EXIT=0 OPERATIONAL_FAIL=1 ALERT_FAIL=1
+if bash "$root/deploy/external-monitor.sh"; then
+  echo 'FAIL: failed operational alert accepted'; exit 1
+fi
+test ! -e "$STATE_DIR/operational-health"
+export ALERT_FAIL=0
+bash "$root/deploy/external-monitor.sh"
+test "$(cat "$STATE_DIR/operational-health")" = down
+count=$(wc -l < "$ALERT_LOG")
+bash "$root/deploy/external-monitor.sh"
+test "$(wc -l < "$ALERT_LOG")" = "$count"
+export OPERATIONAL_FAIL=0 ALERT_FAIL=1
+if bash "$root/deploy/external-monitor.sh"; then
+  echo 'FAIL: failed operational recovery accepted'; exit 1
+fi
+test "$(cat "$STATE_DIR/operational-health")" = down
+export ALERT_FAIL=0
+bash "$root/deploy/external-monitor.sh"
+test "$(cat "$STATE_DIR/operational-health")" = up
+before=$(find "$STATE_DIR" -type f -exec sha256sum {} \; | sort)
+count=$(wc -l < "$ALERT_LOG")
+MONITOR_CHECK_ONLY=1 bash "$root/deploy/external-monitor.sh"
+test "$(find "$STATE_DIR" -type f -exec sha256sum {} \; | sort)" = "$before"
+test "$(wc -l < "$ALERT_LOG")" = "$count"
 echo 'PASS: failed outage/recovery alerts retry; delivered states deduplicate'
 echo 'PASS: probe-only checks report failures without alerts or state changes'
+echo 'PASS: operational failures/recoveries retry and deduplicate without leaking payloads'

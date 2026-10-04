@@ -1,7 +1,7 @@
 """The before-send hook must never lose the helpline card to an infrastructure fault.
 
 Stream fails OPEN on a non-2xx from us: the message is delivered exactly as sent.
-So a 500 on a crisis message means the member sees no Tele-MANAS / KIRAN card
+So a 500 on a crisis message means the member sees no Tele-MANAS / Tele-MANAS (alternate number) card
 (audit F1). The lexical scan needs no database; only the flag write does — and the
 retried async `message.new` webhook persists whatever the sync hook could not.
 """

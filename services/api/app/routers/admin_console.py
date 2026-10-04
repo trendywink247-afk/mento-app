@@ -298,6 +298,12 @@ def conversation_messages(
             "no_open_case",
             "This conversation has no open flag or report, so it cannot be opened.",
         )
+    if convo.chat_backend != "stream":
+        raise ApiProblem(
+            status.HTTP_409_CONFLICT,
+            "moderation_transport_not_supported",
+            "This message provider is not available in the moderation reader yet.",
+        )
     audit.record(
         db,
         admin,

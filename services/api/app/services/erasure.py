@@ -183,7 +183,9 @@ def _phase_a_end_everything_live(db: Session, user_id: str) -> list[tuple[str, s
     return [
         (c.id, c.stream_channel_id)
         for c in convos
-        if c.stream_channel_id and c.status != ConversationStatus.wiped
+        if c.chat_backend == "stream"
+        and c.stream_channel_id
+        and c.status != ConversationStatus.wiped
     ]
 
 
@@ -320,7 +322,8 @@ def erase_member(db: Session, user_id: str) -> Erased | None:
             or_(
                 Conversation.status == ConversationStatus.active,
                 (Conversation.status != ConversationStatus.wiped)
-                & Conversation.stream_channel_id.is_not(None),
+                & Conversation.stream_channel_id.is_not(None)
+                & (Conversation.chat_backend == "stream"),
             ),
         )
     )

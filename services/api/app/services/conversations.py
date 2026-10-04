@@ -101,7 +101,11 @@ def end_all_for_listener(db: Session, listener_id: str) -> list[str | None]:
         .scalars()
         .all()
     )
-    return [c.stream_channel_id for c in convos if end(db, c, ConversationEndedBy.system)]
+    return [
+        c.stream_channel_id if c.chat_backend == "stream" else None
+        for c in convos
+        if end(db, c, ConversationEndedBy.system)
+    ]
 
 
 def end_all_for_member(db: Session, user_id: str) -> list[str | None]:
@@ -121,7 +125,11 @@ def end_all_for_member(db: Session, user_id: str) -> list[str | None]:
         .scalars()
         .all()
     )
-    return [c.stream_channel_id for c in convos if end(db, c, ConversationEndedBy.system)]
+    return [
+        c.stream_channel_id if c.chat_backend == "stream" else None
+        for c in convos
+        if end(db, c, ConversationEndedBy.system)
+    ]
 
 
 def seal(channel_id: str | None) -> None:

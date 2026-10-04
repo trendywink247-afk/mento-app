@@ -20,6 +20,8 @@ cleanup() {
   rmdir -- "$work"
 }
 trap cleanup EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT
 bash "$root/export-recovery-snapshot.sh" "$container" "$user" "$database" "$work/snapshot.sql.gz" "$@"
 bash "$root/encrypt-backup.sh" "$work/snapshot.sql.gz" "$recipients" "$destination"
 echo 'Encrypted snapshot published; off-host verification and recovery acceptance still required'

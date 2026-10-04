@@ -35,7 +35,7 @@ mkdir "$temp/bin"
 cat > "$temp/bin/docker" <<'WRAPPER'
 #!/usr/bin/env bash
 set -euo pipefail
-if [ "${1:-}" = exec ] && [ "${3:-}" = pg_dump ]; then
+if [ "${1:-}" = exec ] && [ "${3:-}" = timeout ] && [ "${5:-}" = pg_dump ]; then
   touch "$BARRIER/ready"
   for _ in $(seq 1 300); do
     if [ -e "$BARRIER/release" ]; then

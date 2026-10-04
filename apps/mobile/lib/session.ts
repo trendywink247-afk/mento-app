@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 import { screenCache } from './screenCache';
+import { forgetOwnChats } from './ownChatLifecycle';
 
 const SESSION_KEY = 'mento.session_token';
 /** T3.2: present once the session refreshes (a short access token in SESSION_KEY). A
@@ -46,6 +47,7 @@ export async function saveSession(
   persona: Persona,
   refreshToken?: string | null,
 ): Promise<void> {
+  forgetOwnChats('member');
   // A new identity never inherits the previous one's last-loaded tab data.
   screenCache.clear();
   await store.setItemAsync(SESSION_KEY, sessionToken);
@@ -111,6 +113,7 @@ export async function getRole(): Promise<Role> {
 }
 
 export async function clearSession(): Promise<void> {
+  forgetOwnChats('member');
   screenCache.clear();
   // Tear down the Stream websocket too — otherwise the singleton keeps the old
   // identity connected and the next persona's first chat fails.

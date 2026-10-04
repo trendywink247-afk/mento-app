@@ -8,6 +8,20 @@ from app.db import SessionLocal
 from app.models.safety import SafetyFlag
 from app.services import stream
 
+
+def assert_current_crisis_helplines(payload):
+    """Check the actual augmentation, including deployed environment overrides."""
+    lines = payload.get("helplines", []) if isinstance(payload, dict) else []
+    assert isinstance(lines, list), "crisis helpline list malformed"
+    numbers = {
+        "".join(char for char in str(line.get("number", "")) if char.isdigit())
+        for line in lines
+        if isinstance(line, dict)
+    }
+    assert {"14416", "18008914416"} <= numbers, "current Tele-MANAS numbers missing"
+    assert "18005990019" not in numbers, "retired KIRAN number still configured"
+
+
 assert get_settings().env == "staging"
 client = stream._client()
 user = str(uuid.uuid4())
@@ -20,6 +34,7 @@ try:
     crisis = channel.send_message({"text": "honestly I want to die"}, user)["message"]
     assert not benign.get("crisis"), "benign message was flagged"
     assert crisis.get("crisis", {}).get("signal") == "suicidal", "crisis augmentation missing"
+    assert_current_crisis_helplines(crisis.get("crisis"))
     time.sleep(4)
     with SessionLocal() as db:
         for msg, expected in [(benign, 0), (crisis, 1)]:

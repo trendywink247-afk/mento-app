@@ -17,6 +17,7 @@ import type { Channel as ChannelType, Event } from 'stream-chat';
 import { AllowanceNote } from '@/components/chat/AllowanceNote';
 import { AllowanceRow } from '@/components/chat/AllowanceRow';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import {
   ComposerChromeContext,
   ComposerField,
@@ -31,8 +32,11 @@ import { TypingDots } from '@/components/chat/TypingDots';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
-import { capture } from '@/lib/analytics';
+import { captureFirstMessage } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import { createAuthenticatedOwnChat } from '@/lib/ownChatApi';
+import { OwnChatSendError, selectChatTransport } from '@/lib/ownChatAdapter';
+import { createOwnChatScreenController } from '@/lib/ownChatScreenController';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TFunc } from '@/lib/i18n';
@@ -233,6 +237,8 @@ export default function ChatScreenWeb() {
   // under that message and scrolls away with it — no dismiss, nothing to tap it shut.
   const [crisis, setCrisis] = useState<{ payload: CrisisPayload; messageId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [ownRetryable, setOwnRetryable] = useState(false);
+  const [ownAttempt, setOwnAttempt] = useState(0);
   const [sendFailed, setSendFailed] = useState(false);
   // An older mentor bubble the member tapped: its save key is open too (the mentor's
   // latest message always carries one). `saved` = kept during this visit (the chip settles
@@ -245,6 +251,7 @@ export default function ChatScreenWeb() {
   const listRef = useRef<FlatList<Msg>>(null);
   const [readTick, setReadTick] = useState(0); // bumps on message.read to refresh ✓✓
   const channelRef = useRef<ChannelType | null>(null);
+  const ownRef = useRef<ReturnType<typeof createOwnChatScreenController> | null>(null);
   const shownRef = useRef<Set<string>>(new Set());
   // Funnel: chat_first_message_sent fires once per screen mount.
   const firstSentRef = useRef(false);
@@ -295,11 +302,64 @@ export default function ChatScreenWeb() {
   useEffect(() => {
     let cancelled = false;
     const unsubscribe: Array<() => void> = [];
+    setReady(false);
+    setMessages([]);
+    setCrisis(null);
+    setTyping(null);
+    setOwnRetryable(false);
+    channelRef.current = null;
 
     const setup = async () => {
       try {
-        const [persona, token] = await Promise.all([getPersona(), getStreamToken()]);
-        if (!persona || !token) throw new Error(t('chat.errMissingSession'));
+        const [persona, token, state] = await Promise.all([
+          getPersona(), getStreamToken(), api.conversationState(conversationId),
+        ]);
+        if (cancelled) return;
+        if (!persona) throw new Error(t('chat.errMissingSession'));
+        let transport;
+        try {
+          transport = selectChatTransport(state.chat_backend, process.env.EXPO_PUBLIC_OWN_CHAT_ACCEPTED === '1');
+        } catch {
+          throw new Error(t('chat.errOpen'));
+        }
+        if (transport === 'own') {
+          const scope = { actorId: persona.id, conversationId, role: 'member' as const };
+          let lastAfter = -1;
+          const own = createOwnChatScreenController(scope,
+            onChange => createAuthenticatedOwnChat(scope, { transport: 'own', ownAccepted: true }, onChange),
+            (snapshot, rows) => {
+              if (cancelled) return;
+              setMessages(previous => {
+                if (loadedAtRef.current) for (const row of rows) {
+                  if (!previous.some(old => old.id === row.id)) freshIds.current.add(row.id);
+                }
+                return rows.map(row => ({ id: row.id, text: row.text, mine: row.user.id === persona.id, at: row.created_at }));
+              });
+              rows.forEach(surfaceCrisis);
+              setReady(snapshot.status === 'ready');
+              setTyping(snapshot.peerTyping ? listenerName : null);
+              setReadTick(value => value + 1);
+              if (snapshot.status === 'ready') {
+                loadedAtRef.current ||= Date.now();
+                ownRef.current?.markRead();
+                if (snapshot.after !== lastAfter) {
+                  lastAfter = snapshot.after;
+                  void refreshAllowance();
+                }
+              }
+              if (snapshot.status === 'terminal' || snapshot.status === 'stopped') {
+                setCrisis(null);
+                setOwnRetryable(state.status === 'active' &&
+                  (snapshot.reason === 'not_authorized' || snapshot.status === 'stopped'));
+                setError(t('chat.errOpen'));
+              }
+            });
+          ownRef.current = own;
+          unsubscribe.push(() => { own.dispose(); ownRef.current = null; });
+          await own.start();
+          return;
+        }
+        if (!token) throw new Error(t('chat.errMissingSession'));
         if (!channelId) throw new Error(t('chat.errMissingChannel'));
 
         const client = await ensureConnected(
@@ -364,14 +424,24 @@ export default function ChatScreenWeb() {
     };
     // reason: `t` is intentionally not a trigger — a locale flip must not re-run channel setup
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelId, appendMessage, surfaceCrisis, listenerName, refreshAllowance, toMsg]);
+  }, [conversationId, channelId, appendMessage, surfaceCrisis, listenerName, refreshAllowance, toMsg, ownAttempt]);
 
   const send = useCallback(
     async (body: string) => {
-      if (!channelRef.current) return;
+      if (!channelRef.current && !ownRef.current) throw new Error('chat_not_ready');
       // Server scans this in the before-send webhook and augments crisis messages; the
       // augmented message comes back on the response (no message.new fires for our own).
-      const resp = await channelRef.current.sendMessage({ text: body });
+      let resp;
+      try {
+        resp = ownRef.current ? await ownRef.current.sendMessage({ text: body }) :
+          await channelRef.current!.sendMessage({ text: body });
+      } catch (error) {
+        if (error instanceof OwnChatSendError && error.allowance) {
+          await applyHeld(error.allowance as HeldAllowance);
+          throw new HeldSend();
+        }
+        throw error;
+      }
       const sent = resp.message as RawMsg;
       if (sent.type === 'error') {
         // Stream did not keep it (board-port API §B1): ANY error reply means "re-read the
@@ -383,9 +453,9 @@ export default function ChatScreenWeb() {
       }
       if (!firstSentRef.current) {
         firstSentRef.current = true;
-        capture('chat_first_message_sent'); // funnel tail — no content, ever
+        captureFirstMessage(resp.message); // flagged responses never feed retention
       }
-      appendMessage(resp.message as RawMsg);
+      if (!ownRef.current) appendMessage(resp.message as RawMsg);
       surfaceCrisis(resp.message as CrisisCarrier);
       void refreshAllowance(); // counted server-side, in the before-send hook
     },
@@ -396,6 +466,7 @@ export default function ChatScreenWeb() {
     // stream-chat throttles keystroke() internally; guard anyway — typing signals
     // are best-effort and must never surface an error in the composer.
     try {
+      if (ownRef.current) { ownRef.current.typing(); return; }
       void channelRef.current?.keystroke().catch(() => {});
     } catch {
       /* best-effort typing signal */
@@ -406,6 +477,7 @@ export default function ChatScreenWeb() {
   const isRead = useCallback(
     (m: Msg): boolean => {
       void readTick; // re-evaluate when a read event arrives
+      if (ownRef.current) return ownRef.current.isRead(m.id);
       const ch = channelRef.current;
       const me = getStreamClient().userID;
       if (!ch) return false;
@@ -526,6 +598,14 @@ export default function ChatScreenWeb() {
         <View style={styles.center}>
           <Ionicons name="cloud-offline-outline" size={36} color={colors.inkMuted} />
           <Text style={[type.body, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
+          {ownRetryable ? <PrimaryButton
+            label={t('common.retry')}
+            testID="own-chat-retry"
+            onPress={() => {
+              setError(null);
+              setOwnAttempt(attempt => attempt + 1);
+            }}
+          /> : null}
         </View>
       ) : !ready ? (
         <View style={styles.center}>
@@ -598,7 +678,7 @@ export default function ChatScreenWeb() {
             }}
           />
           {/* Presence only: three dots rising in turn, and who it is. */}
-          {typing ? <TypingDots testID="typing-indicator" label={t('chat.typing', { name: typing })} /> : null}
+          {typing && !crisis ? <TypingDots testID="typing-indicator" label={t('chat.typing', { name: typing })} /> : null}
 
           <ComposerPerchContext.Provider value={note ? null : COMPOSER_PERCH}>
             <ComposerChromeContext.Provider value={chrome}>

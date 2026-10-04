@@ -56,8 +56,11 @@ def classify_paths(paths, event_name="pull_request"):
         if event_name == "push":
             return all_flags()
         if path.startswith("services/api/"):
-            for flag in ("api", "tooling", "native"):
+            # The mobile job also exercises real own-chat API/browser contracts.
+            for flag in ("api", "mobile", "tooling", "native"):
                 selected[flag] = True
+            if path == "services/api/app/services/recovery_manifest.py":
+                selected["recovery"] = True
         elif path.startswith("apps/mobile/"):
             selected["mobile"] = selected["native"] = True
         elif path.startswith("services/recovery_receiver/"):

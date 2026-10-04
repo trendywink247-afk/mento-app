@@ -219,12 +219,13 @@ deletion boundaries remain publication and activation checks.
 ## 6. Crisis support
 
 If a message you send is flagged by our automated crisis-signal scan, you'll be shown
-these India helplines (re-verified 2026-09-04):
-
-- **Tele-MANAS — 14416** (or 1-800-891-4416), Ministry of Health & Family Welfare,
-  24/7, free. [telemanas.mohfw.gov.in](https://telemanas.mohfw.gov.in/)
-- **KIRAN — 1800-599-0019**, Ministry of Social Justice & Empowerment, 24/7, free,
-  13 languages.
+Tele-MANAS, India's 24/7 toll-free mental health support service (numbers re-verified
+2026-10-05): **14416** or the alternate number **1800-89-14416**. Both numbers
+reach the same service, not two independent providers.
+[DGHS, Ministry of Health & Family Welfare](https://dghs.mohfw.gov.in/national-mental-health-programme.php)
+lists both current numbers. The former KIRAN helpline was merged into Tele-MANAS
+and scheduled for phase-out in 2024.
+[Ministry announcement, 15 February 2024](https://www.pib.gov.in/PressReleasePage.aspx?PRID=2006265&lang=2&reg=48)
 
 Being flagged for a crisis signal is designed to help you leave the conversation with
 real support, not to retain you in the app — and these sessions are excluded from our

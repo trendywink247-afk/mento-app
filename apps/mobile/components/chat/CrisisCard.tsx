@@ -1,7 +1,7 @@
 /**
  * Crisis support card (board A21) — renders the SERVER-injected crisis payload. The client
  * never scans: the helplines here are whatever the server's scan attached to the message
- * (Tele-MANAS 14416 and KIRAN 1800-599-0019, T&S #1).
+ * (Tele-MANAS 14416 and Tele-MANAS (alternate number) 1800-89-14416, T&S #1).
  *
  * Support-and-refer, not alarm: a warm, deeper-oat card (never red), one plain sentence,
  * two LARGE call keys, and the reminder that the mentor is still here and is a peer, not a
@@ -86,7 +86,7 @@ export function CrisisCard({ crisis, mentorName, audience = 'member', onDismiss,
           >
             <IconBadge icon="call-outline" tone="green" size={36} />
             <View style={styles.callText}>
-              <Text style={[styles.callName, { color: colors.ink }]} numberOfLines={1}>
+              <Text style={[styles.callName, { color: colors.ink }]} numberOfLines={3}>
                 {h.name}
               </Text>
               <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
@@ -146,7 +146,8 @@ const styles = StyleSheet.create({
   lead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   leadText: { flex: 1, fontFamily: font.sansBold, fontSize: 16, lineHeight: 22 },
   callKey: {
-    height: 56,
+    minHeight: 56,
+    paddingVertical: 10,
     paddingLeft: 10,
     paddingRight: 14,
     flexDirection: 'row',
@@ -156,7 +157,7 @@ const styles = StyleSheet.create({
   },
   callText: { flex: 1, minWidth: 0 },
   callName: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 20 },
-  callNumber: { fontFamily: font.sansHeavy, fontSize: 19, lineHeight: 24, letterSpacing: 0.2 },
+  callNumber: { flexShrink: 0, fontFamily: font.sansHeavy, fontSize: 19, lineHeight: 24, letterSpacing: 0.2 },
   foot: { alignItems: 'flex-start' },
   why: { paddingTop: space.sm },
   links: { flexDirection: 'row', alignItems: 'center', gap: space.md },

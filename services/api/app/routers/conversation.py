@@ -91,10 +91,21 @@ def _state(convo: Conversation) -> ConversationState:
     return ConversationState(
         id=convo.id,
         status=convo.status.value,
+        chat_backend=convo.chat_backend,
         is_locked=convo.is_locked,
         is_paused=convo.is_paused,
         status_mask=convo.status_mask,
     )
+
+
+@router.get("/{convo_id}/state", response_model=ConversationState)
+def conversation_state(
+    convo_id: str,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ConversationState:
+    """Authoritative provider and privacy state for this member's route."""
+    return _state(_owned(db, convo_id, user_id))
 
 
 @router.get(
@@ -160,6 +171,7 @@ def list_conversations(
                 listeners[c.listener_id].persona_avatar if c.listener_id in listeners else ""
             ),
             stream_channel_id=c.stream_channel_id,
+            chat_backend=c.chat_backend,
             is_locked=c.is_locked,
             created_at=c.created_at.isoformat(),
             ended_at=c.ended_at.isoformat() if c.ended_at else None,
@@ -334,10 +346,9 @@ def wipe_conversation(
     Wiping an already-ended chat still wipes, but only an ACTIVE chat releases the
     listener's slot (it was already released when the chat ended)."""
     convo = _owned(db, convo_id, user_id, lock=True)
-    if convo.stream_channel_id:
-        # erase_channel, not wipe_channel: an own-chat conversation's stream_channel_id
-        # is a channel-key alias (chat.channel_key), never a real Stream channel once
-        # T5.10 lands — that 404 must count as already-wiped, not fail the whole request.
+    if convo.chat_backend == "stream" and convo.stream_channel_id:
+        # Own-chat channel keys are aliases, never Stream resources. Stored
+        # ownership selects the erase provider even if keys happen to collide.
         stream.erase_channel(convo.stream_channel_id)
     conversations.clean_wipe(db, convo, ConversationEndedBy.member)
     db.commit()
@@ -415,7 +426,7 @@ def report_conversation(
 ) -> OkResult:
     convo = _owned(db, convo_id, user_id, lock=True)
     _file_moderation_and_end(db, convo, user_id, payload.reason, blocked=False)
-    channel_id = convo.stream_channel_id
+    channel_id = convo.stream_channel_id if convo.chat_backend == "stream" else None
     db.commit()
     conversations.seal(channel_id)
     return OkResult(status="reported")
@@ -432,7 +443,7 @@ def block_conversation(
     listener can never be re-matched to this user (enforced in services/matching)."""
     convo = _owned(db, convo_id, user_id, lock=True)
     _file_moderation_and_end(db, convo, user_id, payload.reason, blocked=True)
-    channel_id = convo.stream_channel_id
+    channel_id = convo.stream_channel_id if convo.chat_backend == "stream" else None
     db.commit()
     conversations.seal(channel_id)
     return OkResult(status="blocked")

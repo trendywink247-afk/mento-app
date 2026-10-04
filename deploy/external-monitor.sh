@@ -7,6 +7,7 @@
 # Install as a cron job on the OLD box:
 #   */5 * * * * /opt/mento-backups/external-monitor.sh >> /opt/mento-backups/external-monitor.log 2>&1
 set -u
+set -o pipefail
 NTFY_TOPIC="${NTFY_TOPIC:-__NTFY_TOPIC__}"
 STATE_DIR=${STATE_DIR:-/opt/mento-backups/.monitor-state}
 # Explicit probe-only mode for deployment acceptance: no alert delivery and no
@@ -60,6 +61,32 @@ check web-admin   https://admin.mento.chat/admin               200 || failures=1
 # PROGRESS.md). Degraded, malformed and unexpected HTTP responses are failures.
 # Install the classifier beside this script; missing Python/helper fails closed.
 monitor_dir=$(cd "$(dirname "$0")" && pwd)
+# Optional trusted executable wrapper (for example, pinned read-only SSH to A).
+# No shell evaluation; stdout is bounded, classified, and never logged verbatim.
+# Not configured means operational acceptance is still outstanding.
+operational_check() {
+  if [ -z "${MONITOR_OPERATIONAL_PROBE:-}" ]; then
+    [ "$CHECK_ONLY" != 1 ] || echo 'SKIP operational probes (not configured)'
+    return 0
+  fi
+  local ok=0 labels state_file="$STATE_DIR/operational-health" prev="unknown"
+  if labels=$(timeout 20 "$MONITOR_OPERATIONAL_PROBE" 2>/dev/null | "${PYTHON:-python3}" "$monitor_dir/classify-operational-health.py" 2>/dev/null); then
+    ok=1
+  fi
+  if [ "$CHECK_ONLY" = 1 ]; then
+    if [ -n "$labels" ]; then printf '%s\n' "$labels"; else echo 'FAIL operational probe'; fi
+    [ "$ok" = 1 ] || echo 'FAIL operational execution or evidence'
+    [ "$ok" = 1 ]; return
+  fi
+  [ ! -f "$state_file" ] || prev=$(cat "$state_file")
+  if [ "$ok" = 1 ]; then
+    if [ "$prev" = down ]; then alert 'RECOVERED: operational host/worker/backlog/backup probes' || return 1; fi
+    echo up > "$state_file"
+  else
+    if [ "$prev" != down ]; then alert 'DOWN: operational host/worker/backlog/backup probe failed' || return 1; fi
+    echo down > "$state_file"
+  fi
+}
 crisis_ok=0
 if crisis_response=$(curl -sS --max-filesize 65536 -w '\n%{http_code}' -m 10 https://api.mento.chat/api/v1/health/crisis 2>/dev/null) && printf '%s' "$crisis_response" | "${PYTHON:-python3}" "$monitor_dir/classify-crisis-health.py" 2>/dev/null; then
   crisis_ok=1
@@ -71,6 +98,7 @@ if [ "$CHECK_ONLY" = 1 ]; then
     echo 'FAIL crisis-health semantic probe'
     failures=1
   fi
+  operational_check || failures=1
   exit "$failures"
 fi
 crisis_state_file="$STATE_DIR/api-crisis-reachable"
@@ -83,4 +111,5 @@ else
   if [ "$prev_crisis" = "down" ]; then alert "RECOVERED: crisis-health probe returns an expected status (fresh or idle)" || exit 1; fi
   echo "up" > "$crisis_state_file"
 fi
+operational_check || failures=1
 exit "$failures"
