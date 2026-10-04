@@ -37,6 +37,7 @@ import { KitTyping } from '@/components/chat/KitTyping';
 import { MentoBubble } from '@/components/chat/MentoBubble';
 import { MessageText, OwnBubbleToneContext } from '@/components/chat/MessageText';
 import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
+import { NativeChatProvider } from '@/components/chat/NativeChatProvider';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { captureFirstMessage } from '@/lib/analytics';
 import { api } from '@/lib/api';
@@ -143,6 +144,10 @@ function StarterSeed({ text }: { text?: string }) {
 }
 
 export default function ChatScreen() {
+  return <NativeChatProvider role="member" stream={<StreamChatScreen />} />;
+}
+
+function StreamChatScreen() {
   const router = useRouter();
   // If the session vanishes (Start-fresh elsewhere), every conversation option would
   // 403 with only a small inline error — route back to landing instead.

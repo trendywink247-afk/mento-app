@@ -1,10 +1,17 @@
-/** Native's current renderer is the Stream kit. Verify the persisted owner before
- * opening that provider; route channel aliases and web acceptance flags are not
- * authorization to create a second transport for an own room.
- * Own native rendering must land with its own acceptance gate before this guard
- * gains an own branch. No implicit fallback is safe for an unknown owner.
+/** Native selects its renderer from the authenticated persisted owner. Route
+ * aliases and web acceptance alone cannot authorize a second transport. Own
+ * rendering additionally requires explicit native acceptance; unknown owners
+ * never fall back. Stream-specific setup retains its stricter owner guard.
  */
 export class NativeChatOwnerError extends Error {}
+
+export function nativeChatRenderer(owner: string | undefined, acceptance: {
+  own?: string; native?: string;
+}): 'stream' | 'own' {
+  if (owner === 'stream') return 'stream';
+  if (owner === 'own' && acceptance.own === '1' && acceptance.native === '1') return 'own';
+  throw new NativeChatOwnerError(owner === 'own' ? 'own_native_not_accepted' : 'unknown_chat_owner');
+}
 
 export async function requireNativeStreamOwner(
   load: () => Promise<{ chat_backend?: string }>,

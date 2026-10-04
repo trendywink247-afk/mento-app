@@ -12,6 +12,7 @@ type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
 import { Composer } from '@/components/chat/Composer';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
+import { NativeChatProvider } from '@/components/chat/NativeChatProvider';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { HelplinesSheet } from '@/components/mentor/HelplinesSheet';
 import { MentorChatHeader } from '@/components/mentor/MentorChatHeader';
@@ -58,6 +59,10 @@ function RenderNothing() {
 }
 
 export default function MentorChatScreen() {
+  return <NativeChatProvider role="mentor" stream={<StreamMentorChatScreen />} />;
+}
+
+function StreamMentorChatScreen() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
