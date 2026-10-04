@@ -15,8 +15,10 @@ The same retrieved key also passed a synthetic local PostgreSQL archive restore,
 including row preservation and foreign-key enforcement, with no serving database
 or production data involved. The isolated container and volume were removed.
 Private key contents were not displayed or committed. The separate encrypted
-offline copy remains unconfirmed. This establishes key retrieval, not database
-restoration, independent deletion coverage or backup activation readiness.
+offline copy was confirmed by the founder on 2026-10-05; its retrieval has not
+been independently tested. This establishes key retrieval and synthetic database
+restoration, not operational recovery, independent deletion coverage or backup
+activation readiness.
 
 | Source | What the source establishes | Recovery boundary |
 |---|---|---|

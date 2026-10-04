@@ -67,6 +67,14 @@ This local variant does not establish production signing, push/Firebase,
 store-distribution, update-channel or iOS acceptance. Native own-chat screens
 and the exact binary still need the matrix below; flags are not evidence.
 
+After committing and locally validating the native candidate, run
+`pwsh -File scripts/local/android-acceptance.ps1` from its isolated checkout.
+The script builds only ARM64, writes the APK/config/hash manifest under
+`.local/physical-acceptance/<SHA>/`, and never installs or publishes it. Inspect
+the generated APK's package, permissions, update settings, embedded API origin
+and signing certificate before installation. Its manifest deliberately leaves
+binary verification and device acceptance pending.
+
 Record Android version/model (no device serial), candidate SHA/hash, API origin,
 runtime/channel and pass/fail evidence for each row. Use synthetic text and mask
 credentials, recovery codes, tokens and private content in screenshots/logs.
