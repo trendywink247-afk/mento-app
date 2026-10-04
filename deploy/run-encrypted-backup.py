@@ -10,12 +10,35 @@ import argparse
 import hashlib
 import json
 import os
+import signal
 import stat
 import subprocess
 import tempfile
 import time
 import uuid
 from pathlib import Path
+
+
+def run_step(command, *, timeout):
+    # Bash pipelines spawn grandchildren. Kill the whole isolated process group
+    # before releasing the cycle lock, including on operator interruption.
+    with subprocess.Popen(command, start_new_session=True) as process:
+        try:
+            code = process.wait(timeout=timeout)
+            if code:
+                raise subprocess.CalledProcessError(code, command)
+        except BaseException:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            process.wait()
+            raise
+
+
+def interrupted(signum, _frame):
+    # Raise through the same cleanup/finally path as Ctrl+C and step timeouts.
+    raise SystemExit(128 + signum)
 
 
 def publish(path, value):
@@ -63,7 +86,7 @@ def cycle(container, user, database, recipients, directory, destination):
         result = {"version": 1, "status": "failed", "attempted_at": attempted}
         try:
             archive = directory / f"recovery-{attempted}-{uuid.uuid4().hex}.age"
-            subprocess.run(
+            run_step(
                 [
                     "bash",
                     str(scripts / "create-encrypted-recovery.sh"),
@@ -73,17 +96,15 @@ def cycle(container, user, database, recipients, directory, destination):
                     str(recipients),
                     str(archive),
                 ],
-                check=True,
                 timeout=900,
             )
-            subprocess.run(
+            run_step(
                 [
                     "bash",
                     str(scripts / "copy-encrypted-recovery.sh"),
                     str(archive),
                     destination,
                 ],
-                check=True,
                 timeout=660,
             )
             with archive.open("rb") as encrypted:
@@ -105,6 +126,7 @@ def cycle(container, user, database, recipients, directory, destination):
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, interrupted)
     parser = argparse.ArgumentParser(description=__doc__)
     for argument in (
         "container",

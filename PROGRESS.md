@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-10-05 — Custody confirmed; combined architecture validation underway
+
+**Founder evidence:** The founder confirms an independently encrypted offline recovery-key copy is saved, in addition to Bitwarden. Bitwarden retrieval and synthetic database decryption were previously tested; offline-copy retrieval has not been independently tested. Physical acceptance hardware is Android only; no authorized Android device was connected during read-only ADB discovery. Physical iPhone acceptance remains outstanding.
+
+**Implementation:** Member/mentor web screens now have an explicitly gated, server-selected own-chat path with acknowledgement-aware sends and current-account authorization. Stream remains the default. Monitoring now includes bounded host/queue/backup probes and retry-safe alerts; same-database transition configuration validates exact database/cache identity and overlap budgets. Mobile profiles explicitly bind environment/channel/variant, including a preview-channel store staging profile; identifiers remain shared and signing/store/device acceptance is still pending. Analytics rejects unapproved runtime payloads and fences erasure races, but stays disabled pending complete crisis-session exclusion.
+
+**Current checks:** Combined TypeScript and 56 chat/reconnect/privacy Node tests passed. CI path classification passed 17 tests. Linux backup, monitoring and transition focused cases passed; a read-only test-fixture path prevented five Git-range cases in the first invocation, then all 17 path cases passed from disposable writable storage. Removed duplicate receiver CI execution and added the screen-controller tests to CI. Full isolated API suite and local two-party own-chat browser acceptance are running or being prepared. No new deployment, production unlock, provider cutover or backup schedule is claimed.
+
+**Next / resume:** Finish combined local validation, primary-loss replay tooling/drill, real browser acceptance, and locked transition preparation. Publish only locally validated increments, then require exact-candidate CI and staging acceptance. `Set-Location 'H:\Mento gpt\Mento'; git status --short --branch; Get-Content PROGRESS.md -TotalCount 35`.
+
+---
+
 ## 2026-10-05 — Nine-package completion programme in progress
 
 **Authorization / scope:** Founder requested packages 1–9 without stopping, followed by integrated testing. Continue implementation with local checks before push and staging before deployment; final integrated acceptance does not replace those gates. Work proceeds on `codex/architecture-completion`, preserving the previous local documentation commits and merging accepted master 09347f5. Parallel workers own monitoring/infrastructure, identity/telemetry/mobile configuration and own-chat integration; root owns recovery, reconciliation and release coordination. No production unlock, new purchase, store submission or live provider cutover is implied by unfinished code.

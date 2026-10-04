@@ -58,6 +58,8 @@ def classify_paths(paths, event_name="pull_request"):
         if path.startswith("services/api/"):
             for flag in ("api", "tooling", "native"):
                 selected[flag] = True
+            if path == "services/api/app/services/recovery_manifest.py":
+                selected["recovery"] = True
         elif path.startswith("apps/mobile/"):
             selected["mobile"] = selected["native"] = True
         elif path.startswith("services/recovery_receiver/"):

@@ -52,8 +52,10 @@ jobs:
       - run: node e2e/keyboard-boundary.test.cjs
       - name: Verify missed web messages after Stream reconnect
         run: node --test e2e/stream-recovery.test.cjs
+      - name: Verify telemetry runtime privacy and erasure fencing
+        run: node --test e2e/analytics-privacy.test.cjs
       - name: Verify inactive own-chat protocol client
-        run: node --test e2e/own-chat-client.test.cjs
+        run: node --test e2e/own-chat-client.test.cjs e2e/own-chat-adapter.test.cjs e2e/own-chat-screen-controller.test.cjs
       - run: npm run test:route && npm run test:question && npm run test:placement && npm run test:bubble
       - run: npx expo export --platform web
       - name: Install isolated browser test tools
@@ -117,6 +119,10 @@ jobs:
       - run: python -m ruff format --check services/recovery_receiver
       - name: Verify independent receipt durability and request contract
         run: python -m pytest -c services/recovery_receiver/pyproject.toml services/recovery_receiver/tests -q
+      - name: Verify resource-limited receiver restart and persistent storage
+        run: |
+          docker build -t mento-receipt-drill services/recovery_receiver
+          python deploy/test-recovery-receiver-container.py mento-receipt-drill
   receiver-isolation:
     needs: changes
     if: needs.changes.outputs.receiver == 'true'

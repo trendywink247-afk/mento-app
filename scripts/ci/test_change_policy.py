@@ -36,6 +36,10 @@ class SelectionTests(unittest.TestCase):
         flags = classify_paths(["apps/mobile/app/index.tsx", "services/recovery_receiver/receiver.py"])
         self.assertEqual({k for k, v in flags.items() if v}, {"mobile", "native", "recovery"})
 
+    def test_api_receipt_parser_selects_real_receiver_export_contract(self):
+        flags = classify_paths(["services/api/app/services/recovery_manifest.py"])
+        self.assertEqual({k for k, v in flags.items() if v}, {"api", "tooling", "native", "recovery"})
+
     def test_non_doc_push_is_full_and_manual_is_always_full(self):
         self.assertEqual(classify_paths(["services/api/app/main.py"], "push"), all_flags())
         self.assertEqual(classify_event("workflow_dispatch", {}), all_flags())

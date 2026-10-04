@@ -46,8 +46,10 @@ PR #35 and Test CI run `37122366037` proved encrypted recovery of the migrated a
 Saved notes and report narratives are retained by the founder decision above.
 Implementation must now prove chat-history exclusion alongside recovery of these
 retained records and safety enforcement. Bitwarden key retrieval is verified;
-the encrypted offline copy, full database recovery and deletion reconciliation
-remain acceptance gates. Production promotion remains disabled.
+the founder confirmed the separately encrypted offline copy on 2026-10-05.
+Retrieval from that offline copy is not independently tested. Synthetic database
+recovery passed; operational recovery and deletion reconciliation remain
+acceptance gates. Production promotion remains disabled.
 
 ## Prepared operator sequence (not activated)
 
