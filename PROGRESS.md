@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Native keyboard lifecycle instrumented for CI diagnosis
+
+**Implementation:** Added opt-in EXPO_PUBLIC_NATIVE_LAYOUT_DIAGNOSTICS geometry logs for hook mount/unmount, keyboard show/hide and applied top/boundary changes. Logs contain only event labels, dimensions and keyboard visibility/metrics; no drafts, identity or channel values. Enabled only in native CI build and preserved tagged lines on both pass/fail so successful versus failed cold launches can be compared. No timeout increase or assertion weakening, no speculative layout change.
+
+**Validation:** TypeScript, actionlint and whitespace checks passed locally. Native execution pending. Existing evidence from master 37192446116 still blocks release: second flow no send callback, member text never reached mentor and keyboard obscures composer. PR55 encrypted export checks are green but integration held for native diagnosis. Latest accepted staging 781ccd3, production locked.
+
+**Next:** Inspect current instrumented native run and compare mount/show/hide/measurement transitions between both flows; fix demonstrated cause, then require exact-head native acceptance. Do not declare green diagnostic run alone a permanent fix for intermittent behavior. Work only H:\Mento gpt\Mento; preserve book. Five-phase automation active.
+
+---
 ## 2026-10-04 — Snapshot-coordinated chat-excluding exporter implemented
 
 **Implementation:** Added export-recovery-snapshot.sh. One psql transaction recursively locks excluded roots against partition DDL, exports its snapshot and enumerates descendants while locks remain held. pg_dump imports that snapshot; gzip is validated and published without overwrite only after dump and transaction succeed. Three-second lock timeout and bounded dump/idle transaction protect migration contention. Default root public.chat_messages; drill supports explicitly validated additional roots. No schedule, live export, encryption activation or pruning.
