@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-10-05 — Remaining architecture reassessed after staging acceptance
+
+**Review:** Re-read the founder's original architecture book, especially chapters 7.1–7.5, against the latest release evidence and implementation crosswalk. Preserve the original HTML. Immediate integration/exact-master/reconnect staging acceptance is complete; production and full growth architecture are not. Updated the crosswalk with latest Android, worker and Bitwarden synthetic database recovery evidence.
+
+**Remaining order:** (1) encrypted offline key copy, independent deletion receipt durability/coverage, primary-loss restoration and six-hour encrypted backup operations; (2) install/accept monitoring fixes and prove delivered alerts/dead-man monitoring; (3) measured workload, aggregate database pools, worker failure/backlog and real Caddy/blue-green transition before production promotion; (4) own-chat member/mentor/native integration and safe provider cutover; (5) remaining identity/member-control acceptance, direct push, private telemetry and refined staff/safety tools; (6) physical-device/iOS/signing/store/policy acceptance; (7) measured replicas/failover and independent operations for the authorized growth target. Existing code is not treated as live acceptance; the book's historical capacity/time/cost estimates are not current guarantees. Nine dependency PRs and controlled runner-version adoption remain maintenance work.
+
+**Validation / resume:** Documentation-only status reconciliation; diff/whitespace review is sufficient. No application changes, deployment, new infrastructure purchase or production unlock in this review. `Set-Location 'H:\Mento gpt\Mento'; Get-Content docs/ARCHITECTURE_BOOK_ALIGNMENT.md; git status --short --branch`.
+
+---
+
 ## 2026-10-05 — Reconnect fix accepted on staging; recovery key database drill passed
 
 **Done:** Merged PR77 using the exact checked head `60db344e601a6929e1c1c5e0fd46cd25105befcb`; integrated master is `09347f505278920fcfd2b478d8951efdfa7f41c4`. API 37234130030, Test 37234130056 and Android 37234130064 all passed; the native job took 16m22s. The release gate independently accepted all actual jobs and full-suite markers for this exact SHA. Staging release 37235348400 succeeded. Preflight found staging API/Postgres healthy, worker running, about 1,083 MiB available RAM and 14 GiB free disk. Production enable flag was rechecked as false after acceptance.
