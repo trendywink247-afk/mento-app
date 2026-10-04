@@ -53,14 +53,21 @@ if [ -n "${RESTORE_IMAGE:-}" ] && [ "${BASELINE_REVISION:-head}" = head ]; then
     "$RESTORE_IMAGE" python - seed < "$root/deploy/backup-content-fixture.py"
   roots+=(public.chat_messages)
 fi
-bash "$root/deploy/export-recovery-snapshot.sh" "$name" drill source "$temp/source.sql.gz" "${roots[@]}"
-if gzip -dc "$temp/source.sql.gz" | grep 'EXCLUDED_SENTINEL'; then
-  echo 'FAIL: message sentinel leaked into dump'; exit 1
-fi
 age-keygen -o "$temp/identity" >/dev/null 2>&1
 age-keygen -y "$temp/identity" > "$temp/recipients"
-bash "$root/deploy/encrypt-backup.sh" "$temp/source.sql.gz" "$temp/recipients" "$temp/archive.age"
+bash "$root/deploy/create-encrypted-recovery.sh" "$name" drill source "$temp/recipients" "$temp/archive.age" "${roots[@]}"
+test -z "$(find "$temp" -name '.recovery-work.*' -print)"
 bash "$root/deploy/decrypt-backup.sh" "$temp/archive.age" "$temp/identity" "$temp/recovered.sql.gz"
+if gzip -dc "$temp/recovered.sql.gz" | grep 'EXCLUDED_SENTINEL'; then
+  echo 'FAIL: message sentinel leaked into dump'; exit 1
+fi
+printf 'invalid-recipient\n' > "$temp/invalid-recipient"
+if bash "$root/deploy/create-encrypted-recovery.sh" "$name" drill source "$temp/invalid-recipient" "$temp/failed.age" "${roots[@]}"; then
+  echo 'FAIL: invalid encryption destination accepted'; exit 1
+fi
+test ! -e "$temp/failed.age"
+test -z "$(find "$temp" -name '.recovery-work.*' -o -name '.encrypted-backup.*')"
+echo 'PASS: integrated encrypted export cleans private workspace after success and failure'
 docker exec "$name" createdb -U drill recovered
 gzip -dc "$temp/recovered.sql.gz" | docker exec -i "$name" psql -X -v ON_ERROR_STOP=1 -U drill -d recovered >/dev/null
 result=$(docker exec "$name" psql -X -At -U drill -d recovered -c 'SELECT count(*) FROM drill_accounts JOIN drill_memberships ON id=account_id;')

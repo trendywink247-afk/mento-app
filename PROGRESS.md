@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-10-04 — Integrated encrypted export candidate; native regression reopened
+
+**Implementation:** create-encrypted-recovery.sh composes snapshot export and age publication under a nonblocking lock with private temporary workspace cleanup on success/failure. Accepts public recipients only; no private identity, cron, retention or offsite activation. Both real-schema recovery drills now call the wrapper and assert cleanup on malformed recipient failure. Bash syntax/whitespace passed; Linux CI pending.
+
+**Blocking CI finding:** Master native run 37192446116 FAILED on two-party reply. Downloaded evidence to ignored .local/native-failure-37192446116. Mentor helper reports zero member messages; screenshot again shows composer obscured by keyboard and logs show no send callback. Previous green runs did not eliminate intermittent keyboard behavior. Do not rerun blindly or promote this master; next native work must diagnose keyboard event/measurement state across the second cold launch and test both flows. Latest accepted staging remains 781ccd3; production disabled.
+
+**Next:** Validate integrated export CI independently; investigate native regression before any new staging. Add targeted keyboard-boundary metrics diagnostics if needed rather than weaken send assertions. Remaining backup custody/deletion and five-phase gates still open. Resume H:\Mento gpt\Mento; preserve user book; automation active.
+---
 ## 2026-10-04 — Native keyboard lifecycle instrumented for CI diagnosis
 
 **Implementation:** Added opt-in EXPO_PUBLIC_NATIVE_LAYOUT_DIAGNOSTICS geometry logs for hook mount/unmount, keyboard show/hide and applied top/boundary changes. Logs contain only event labels, dimensions and keyboard visibility/metrics; no drafts, identity or channel values. Enabled only in native CI build and preserved tagged lines on both pass/fail so successful versus failed cold launches can be compared. No timeout increase or assertion weakening, no speculative layout change.
