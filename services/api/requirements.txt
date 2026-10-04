@@ -4,7 +4,7 @@ uvicorn[standard]==0.34.0
 pydantic==2.10.4
 email-validator==2.2.0
 pydantic-settings==2.7.1
-sqlalchemy==2.0.54
+sqlalchemy==2.1.1
 alembic==1.14.0
 psycopg[binary]==3.2.3
 procrastinate==3.10.0  # job queue on our own Postgres (WS4); its schema ships via Alembic
