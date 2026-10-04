@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Snapshot exporter passed real database recovery and merged
+
+**Implemented:** PR53 adds export-recovery-snapshot.sh using an explicit locking transaction, recursively protected exclusion roots, exported snapshot imported by pg_dump, bounded waits and non-overwriting gzip publication. Integrated into both existing encrypted database recovery cases. No live backup/export/schedule activation.
+
+**Verified:** Exact PR head 70963666203d915d9536a453db75528cafe45a9f passed all checks. Test CI 37190674694 logs confirm successful snapshot exports for both baselines, actual chat rows excluded while saved notes/reports/block state survived, and forward migration/schema checks passed. API CI 37190674714 green. Merged PR53 after current-head green evidence.
+
+**Next concrete implementation:** Add concurrent partition attach/detach/rename and exporter failure/lock-release acceptance before activating this exporter. Current tests prove coordinated export/recovery but not contested DDL. Then wire encryption/off-host verification only after durable independent custody and deletion reconciliation. Production locked; latest accepted staging still 781ccd3. Inspect new master exact checks before staging; don't claim exporter is live. Resume H:\Mento gpt\Mento; preserve untracked architecture book. Background five-phase task remains active.
+
+---
 ## 2026-10-04 — Retention candidate staging accepted; monitor guard merged
 
 **Verified:** Staging run 37188958287 completed successfully for 781ccd3a70e9c8a98da63d5f6505c955ab77b3e4; restricted receiver independently verified it. Latest accepted staging now 781ccd3. PR52 exact head 4bde811 passed all checks and merged as 7dd812b8ecd99f18c0abf67577e0347bca0e8759. Unconfigured normal-mode monitor now fails before state changes; probe-only mode passed from VPS B against all five production endpoints. No permanent monitor or backup schedule activation.
