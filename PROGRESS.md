@@ -4,6 +4,15 @@
 
 ---
 
+## 2026-10-04 — Native fix staged and verified; rendered Balanced validation added
+
+**Verified:** Full Staging Release 37211166211 succeeded for c1fa27166e3dae8204db12ce0f22d4690823e2b0. Restricted receiver independently verified that exact artifact. Latest accepted staging is c1fa271, including the keyboard fix. Production remains disabled.
+
+**Implementation:** PR61 initial dd61701 passed API/Test 37211209090/37211209088, but Test CI did not execute test-parity.sh. Added the rendered Compose parity check to required release-tooling and assertions on actual inherited DB_POOL_SIZE/DB_MAX_OVERFLOW for both API colors and worker against rendered PostgreSQL limit. Includes explicit queue/migration/reserve/headroom assumptions; optional clients remain separate acceptance. New head b3cab0e needs fresh Linux CI; local bash syntax/actionlint/whitespace passed. Do not claim rendered parity passed yet.
+
+**Next:** Diagnose any new parity failure rather than bypass it, then accept only green exact head. Continue durable deletion reconciliation/off-device custody and operational gates before production; later phases unfinished. Resume H:\Mento gpt\Mento on codex/balanced-bounded-pools; preserve untracked book and Desktop.
+
+---
 ## 2026-10-04 — Native master green; Balanced pool bound candidate
 
 **Release:** c1fa271 exact master API/Test/native passed (37209305428/37209305419/37209305422). Full staging 37211166211 dispatched for c1fa27166e3dae8204db12ce0f22d4690823e2b0; acceptance pending. Verified staging remains 80054fb. PR60 exact 9ae4f2a passed API/Test 37209341650/37209341662 and merged as 7197ca1.
