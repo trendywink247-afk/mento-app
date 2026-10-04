@@ -8,8 +8,15 @@ Founder decision, 4 October 2026: retain user-saved journal notes and moderation
 report narratives in encrypted recovery archives; exclude chat history itself.
 Consequently these archives can contain user-saved quotations of chat messages:
 do not describe them as containing no message-derived content. Recovery identity
-custody will be an existing password manager/secure vault outside both VPSes.
-The destination and verified key storage/recovery remain to be established.
+custody uses Bitwarden outside both VPSes. On 5 October 2026 the founder saved
+the identity in a free Secure Note, retrieved it into a separate local file,
+and the operator verified both its public recipient and exact canary decryption.
+The same retrieved key also passed a synthetic local PostgreSQL archive restore,
+including row preservation and foreign-key enforcement, with no serving database
+or production data involved. The isolated container and volume were removed.
+Private key contents were not displayed or committed. The separate encrypted
+offline copy remains unconfirmed. This establishes key retrieval, not database
+restoration, independent deletion coverage or backup activation readiness.
 
 | Source | What the source establishes | Recovery boundary |
 |---|---|---|
@@ -38,8 +45,9 @@ PR #35 and Test CI run `37122366037` proved encrypted recovery of the migrated a
 
 Saved notes and report narratives are retained by the founder decision above.
 Implementation must now prove chat-history exclusion alongside recovery of these
-retained records and safety enforcement. Vault destination, key recovery and
-deletion reconciliation remain acceptance gates. Production promotion remains disabled.
+retained records and safety enforcement. Bitwarden key retrieval is verified;
+the encrypted offline copy, full database recovery and deletion reconciliation
+remain acceptance gates. Production promotion remains disabled.
 
 ## Prepared operator sequence (not activated)
 

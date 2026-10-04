@@ -4,6 +4,20 @@
 
 ---
 
+## 2026-10-05 — Reconnect fix accepted on staging; recovery key database drill passed
+
+**Done:** Merged PR77 using the exact checked head `60db344e601a6929e1c1c5e0fd46cd25105befcb`; integrated master is `09347f505278920fcfd2b478d8951efdfa7f41c4`. API 37234130030, Test 37234130056 and Android 37234130064 all passed; the native job took 16m22s. The release gate independently accepted all actual jobs and full-suite markers for this exact SHA. Staging release 37235348400 succeeded. Preflight found staging API/Postgres healthy, worker running, about 1,083 MiB available RAM and 14 GiB free disk. Production enable flag was rechecked as false after acceptance.
+
+**Live acceptance:** Migration/schema, safety and isolated restore checks passed. Normal and reduced-motion browser runs each passed offline member and mentor reconnect, reload, server wipe, account erasure and refusal of previous credentials, with zero page errors. Fixture availability was restored and synthetic mentor access revoked; its state file is absent. Independently invoked the installed receiver's exact-candidate verification and confirmed API/worker image `mento-api:09347f505278`, healthy API/Postgres and matching current SHA. Built manifest image is `sha256:9faf4c21f7667d65c62abddee6c27b3027984193116d68ecf7623a47480a3a42`; receiver-recorded classic-Docker runtime image is `sha256:4a1bc6815b8c186a483bb9636dc86b48208c63b3e0fd82b660faac446218946b`. The receiver verifies archive/revision and both running image identities; these different representations are not assumed equal. A further staging-only probe passed worker heartbeat and committed job execution, synthetic journal/export, recovery identity, refresh revocation, account/journal deletion and rejected credential/recovery reuse.
+
+**Recovery evidence:** The separately retrieved Bitwarden identity decrypted a synthetic PostgreSQL gzip archive; restoration into a separate, network-isolated local database preserved rows and enforced foreign keys. The uniquely named test container and anonymous volume were removed. This extends the earlier canary proof but does not prove production data recovery, independent deletion coverage, offline custody or scheduled backups. Private identities stayed on this workstation and out of logs/Git/VPSes. No serving databases or production data were used.
+
+**Maintenance:** Nine open dependency PRs remain for compatibility review. Deleted PR77's remote branch only after checking merged status, exact head, master ancestry and an expected-tip lease; total cautious remote cleanup is now 36. All local branches/commits remain. Recorded the official Ubuntu 24.04-to-26.04 runner migration notice and controlled-adoption follow-up in the enterprise plan; this release's workflow is unchanged. Preserve local documentation commits and both architecture-book files.
+
+**Next / resume:** Immediate reconnect release acceptance is complete; remaining production and architecture gates are not. Confirm encrypted offline key custody, install/accept independent deletion receipts with complete transition coverage, prove primary-loss reconciliation, then six-hour encrypted backup operations and delivered alerts. Continue measured load/pool/live-cutover acceptance, own-chat UI and device/iOS/store evidence. No production promotion or backup schedule was enabled. Documentation updates remain local so this accepted release SHA stays unchanged. `Set-Location 'H:\Mento gpt\Mento'; gh run view 37235348400; git status --short --branch`.
+
+---
+
 ## 2026-10-05 — Reconnect PR77 checks all passed
 
 **Verified:** PR77 remains open and mergeable at exact head `60db344e601a6929e1c1c5e0fd46cd25105befcb`. API, mobile/web, Android Maestro, release tooling, receiver isolation, recovery receipts, aggregate gates and all three full-suite markers completed successfully. Production enable flag remains false. Two preceding local documentation commits record architecture status and verified Bitwarden retrieval; they are not part of the checked PR head.

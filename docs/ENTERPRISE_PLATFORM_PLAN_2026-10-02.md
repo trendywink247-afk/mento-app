@@ -141,6 +141,14 @@ The second diagram is a growth target, not deployed infrastructure. Multiple rep
 
 ### Current CI evidence and remaining gaps — audited 5 October 2026
 
+Runner maintenance follow-up: the accepted candidate uses `ubuntu-latest`. GitHub's
+[runner migration notice](https://github.com/actions/runner-images/issues/14748)
+announces a staged move from Ubuntu 24.04 to 26.04 starting 19 October 2026 and
+finishing 19 November. Keep this release candidate unchanged; subsequently test
+26.04 explicitly and choose a versioned runner label for controlled adoption.
+Native compilation remains the dominant cost; investigate measured Gradle-cache
+benefit separately without reusing another commit's acceptance evidence.
+
 The former independent API/console deployment workflows have been replaced by staged artifact promotion. API CI runs real-Postgres tests, lint and migrations; Test CI covers web build/types, a hermetic age-gate browser flow, recovery receipts and release tooling. Staging requires successful exact-master API/Test/Android push runs, builds immutable API/web artifacts, and checks deployment, safety, recovery and two-party browser chat. Production requires that accepted artifact and an explicit enable flag, then promotes without rebuilding. Pinned SSH trust is configured by `scripts/ci/setup-ssh.sh`. The production enable flag was independently read as `false` in this audit. Production/preview update-channel separation and a resolved-config regression are implemented; signed-device acceptance is still separate.
 
 - The CI selection change now exists in source: inert documentation-only PRs/pushes avoid heavy suites, relevant PR paths select checks, and unknown paths, non-documentation master pushes and manual runs select full coverage. Required aggregate names remain present. Native APK compilation has historically taken about 31 minutes; PR66 run 37223770725 completed successfully with about 16 minutes for compilation and 22 minutes for the native job. New workflow execution remains a separate acceptance gate.
