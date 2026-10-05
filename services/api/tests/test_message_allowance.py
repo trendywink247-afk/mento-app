@@ -447,6 +447,46 @@ def test_allowance_is_scoped_to_the_member(client, db_session):
     assert client.get("/api/v1/me/allowance", headers=mentor_token).status_code == 401
 
 
+# --- own-chat: find_conversation must resolve the real, unset-stream_channel_id shape ---
+
+
+@requires_postgres
+def test_own_chat_counts_through_the_real_write_path(client, db_session, enforced):
+    """`matching.py` never sets `stream_channel_id` on a fresh conversation — it stays
+    NULL until a Stream channel is created, and an own-chat room never gets one at all.
+    `chat.channel_key` then falls back to the conversation's own id, so
+    `allowance.find_conversation` must resolve THAT shape too, not only a channel row
+    whose `stream_channel_id` happens to be pre-set (as every other fixture in this
+    file, and `tests/chat_helpers.seed_chat`, conveniently does)."""
+    from app.services import chat
+
+    u = User(persona_name="Quiet Cove", persona_avatar="x", dob=date(1996, 1, 1), age_at_signup=30)
+    li = ListenerProfile(
+        persona_name="Open River", persona_avatar="river", categories=[],
+        status=ListenerStatus.online, vetting_status=VettingStatus.approved,
+    )
+    db_session.add_all([u, li])
+    db_session.flush()
+    c = Conversation(user_id=u.id, listener_id=li.id, status=ConversationStatus.active, chat_backend="own")
+    db_session.add(c)
+    db_session.commit()
+    assert c.stream_channel_id is None  # the real shape this test exists to cover
+
+    for i in range(3):
+        chat.send(db_session, u.id, c.id, client_id=f"m{i}", body="hi")
+    db_session.commit()
+    held = client.get(f"/api/v1/conversations/{c.id}/allowance", headers=_auth(u.id)).json()
+    assert (held["in_a_row"], held["sent_today"], held["can_send"]) == (3, 3, False)
+
+    fourth = chat.send(db_session, u.id, c.id, client_id="m-held", body="held")
+    assert fourth.message is None and fourth.held is not None
+
+    chat.send(db_session, li.id, c.id, client_id="mentor-reply", body="here")
+    db_session.commit()
+    reset = client.get(f"/api/v1/conversations/{c.id}/allowance", headers=_auth(u.id)).json()
+    assert (reset["in_a_row"], reset["can_send"]) == (0, True)
+
+
 # --- admin: numbers only ----------------------------------------------------------
 
 
