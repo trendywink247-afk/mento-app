@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 import { screenCache } from './screenCache';
 import { forgetOwnChats } from './ownChatLifecycle';
+import { beginPushIdentityChange, finishPushIdentityChange } from './pushRegistrationState';
 
 const SESSION_KEY = 'mento.session_token';
 /** T3.2: present once the session refreshes (a short access token in SESSION_KEY). A
@@ -47,6 +48,7 @@ export async function saveSession(
   persona: Persona,
   refreshToken?: string | null,
 ): Promise<void> {
+  const pushGeneration = beginPushIdentityChange('member');
   forgetOwnChats('member');
   // A new identity never inherits the previous one's last-loaded tab data.
   screenCache.clear();
@@ -56,6 +58,7 @@ export async function saveSession(
   else await store.deleteItemAsync(REFRESH_KEY);
   await store.setItemAsync(STREAM_KEY, streamToken);
   await store.setItemAsync(PERSONA_KEY, JSON.stringify(persona));
+  finishPushIdentityChange('member', pushGeneration);
 }
 
 /** The bearer token for member calls: the access token once the session refreshes,
@@ -113,6 +116,7 @@ export async function getRole(): Promise<Role> {
 }
 
 export async function clearSession(): Promise<void> {
+  beginPushIdentityChange('member');
   forgetOwnChats('member');
   screenCache.clear();
   // Tear down the Stream websocket too — otherwise the singleton keeps the old

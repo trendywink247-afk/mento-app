@@ -37,6 +37,7 @@ import { KitTyping } from '@/components/chat/KitTyping';
 import { MentoBubble } from '@/components/chat/MentoBubble';
 import { MessageText, OwnBubbleToneContext } from '@/components/chat/MessageText';
 import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
+import { NativeChatProvider } from '@/components/chat/NativeChatProvider';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { captureFirstMessage } from '@/lib/analytics';
 import { api } from '@/lib/api';
@@ -45,6 +46,7 @@ import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { leaveToChats } from '@/lib/leaveToChats';
+import { NativeChatOwnerError, requireNativeStreamOwner } from '@/lib/nativeChatOwner';
 import { chatFaceKey } from '@/lib/originStore';
 import { pendingOption } from '@/lib/pendingOption';
 import { getPersona, getStreamToken } from '@/lib/session';
@@ -142,6 +144,10 @@ function StarterSeed({ text }: { text?: string }) {
 }
 
 export default function ChatScreen() {
+  return <NativeChatProvider role="member" stream={<StreamChatScreen />} />;
+}
+
+function StreamChatScreen() {
   const router = useRouter();
   // If the session vanishes (Start-fresh elsewhere), every conversation option would
   // 403 with only a small inline error — route back to landing instead.
@@ -349,6 +355,9 @@ export default function ChatScreen() {
 
     const setup = async () => {
       try {
+        if (!conversationId) throw new Error(t('chat.errOpen'));
+        await requireNativeStreamOwner(() => api.conversationState(conversationId));
+        if (cancelled) return;
         const [persona, token] = await Promise.all([getPersona(), getStreamToken()]);
         if (!persona || !token) throw new Error(t('chat.errMissingSession'));
         if (!channelId) throw new Error(t('chat.errMissingChannel'));
@@ -383,7 +392,8 @@ export default function ChatScreen() {
           }
         });
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : t('chat.errOpen'));
+        if (!cancelled) setError(e instanceof NativeChatOwnerError ? t('chat.errOpen') :
+          e instanceof Error ? e.message : t('chat.errOpen'));
       }
     };
 
@@ -393,7 +403,7 @@ export default function ChatScreen() {
     };
     // reason: `t` is intentionally not a trigger — a locale flip must not re-run channel setup
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [channelId, surfaceCrisis, refreshAllowance]);
+  }, [conversationId, channelId, surfaceCrisis, refreshAllowance]);
 
   const perch = useCompanionPlacement('chat', CHAT_PERCH, {
     hidden: crisis !== null || error !== null || optionsOpen,

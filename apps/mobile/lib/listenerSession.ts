@@ -4,6 +4,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import { forgetOwnChats } from './ownChatLifecycle';
+import { beginPushIdentityChange, finishPushIdentityChange } from './pushRegistrationState';
 
 const TOKEN_KEY = 'mento.listener.session_token';
 
@@ -26,8 +27,10 @@ const webStore: Store = {
 const store: Store = Platform.OS === 'web' ? webStore : SecureStore;
 
 export async function saveListenerToken(token: string): Promise<void> {
+  const generation = beginPushIdentityChange('listener');
   forgetOwnChats('mentor');
   await store.setItemAsync(TOKEN_KEY, token);
+  finishPushIdentityChange('listener', generation);
 }
 
 export async function getListenerToken(): Promise<string | null> {
@@ -35,6 +38,7 @@ export async function getListenerToken(): Promise<string | null> {
 }
 
 export async function clearListenerSession(): Promise<void> {
+  beginPushIdentityChange('listener');
   forgetOwnChats('mentor');
   await store.deleteItemAsync(TOKEN_KEY);
 }

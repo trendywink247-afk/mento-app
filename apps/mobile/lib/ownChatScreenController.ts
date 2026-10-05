@@ -39,6 +39,8 @@ export function createOwnChatScreenController(
   });
   return {
     start: client.start,
+    // App background/focus suspension preserves the same pending ids and draft.
+    pause: client.stop,
     dispose() { draft = undefined; client.dispose(); },
     typing: () => client.typing(true),
     markRead: () => {

@@ -17,19 +17,25 @@ from __future__ import annotations
 import logging
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.config import get_settings
 from app.models.conversation import Conversation
-from app.models.enums import ConversationStatus, PushOwnerKind, VettingStatus
+from app.models.enums import (
+    ConversationStatus,
+    MemberStatus,
+    PushOwnerKind,
+    RequestStatus,
+    VettingStatus,
+)
 from app.models.listener import ListenerProfile
 from app.models.push_token import PushToken
 from app.models.request import ConversationRequest
 from app.models.user import User
-from app.services import snooze, stream
+from app.services import member_status, snooze, stream
 
 logger = logging.getLogger("mento.push")
 
@@ -81,16 +87,16 @@ def upsert_token(
 
 def delete_token(db: Session, kind: PushOwnerKind, owner_id: str, token: str) -> None:
     """Remove a device token, but only if the caller owns it (opaque no-op otherwise)."""
-    row = db.scalars(
-        select(PushToken).where(
+    # A registration may move between the request's authentication and deletion.
+    # Keep ownership in the DELETE itself, never an earlier SELECT.
+    db.execute(
+        delete(PushToken).where(
             PushToken.expo_push_token == token,
             PushToken.owner_kind == kind,
             PushToken.owner_id == owner_id,
         )
-    ).first()
-    if row is not None:
-        db.delete(row)
-        db.commit()
+    )
+    db.commit()
 
 
 def tokens_for(db: Session, kind: PushOwnerKind, owner_id: str) -> list[str]:
@@ -198,6 +204,8 @@ def _send(
     `push.deliver` job (committed here, best-effort) — never a sleep."""
     if not tokens or not _enabled():
         return
+    if not _delivery_allowed(db, kind, owner_id, data):
+        return
     try:
         tickets = _post_or_raise(tokens, body, data)
     except PushTransportError as exc:
@@ -216,28 +224,32 @@ def _send(
         )
         db.commit()
         return
-    _forget_dead_tokens(db, kind, tokens, tickets)
+    _forget_dead_tokens(db, kind, owner_id, tokens, tickets)
 
 
 def deliver(db: Session, *, recipient_kind: str, recipient_id: str, body: str, data: dict) -> None:
     """The `push.deliver` retry job's body: re-read the recipient's CURRENT tokens (a
     device may have re-registered meanwhile) and send. Raises PushTransportError so
-    the queue retries with backoff; the suppression rules already ran."""
+    the queue retries with backoff. Current safety/quiet policies are rechecked,
+    without reserving another burst window for the same notification."""
     if not _enabled():
         return
-    tokens = tokens_for(db, PushOwnerKind(recipient_kind), recipient_id)
+    kind = PushOwnerKind(recipient_kind)
+    if not _delivery_allowed(db, kind, recipient_id, data):
+        return
+    tokens = tokens_for(db, kind, recipient_id)
     if not tokens:
         _suppressed("no_token")
         return
-    kind = PushOwnerKind(recipient_kind)
-    _forget_dead_tokens(db, kind, tokens, _post_or_raise(tokens, body, data))
+    _forget_dead_tokens(db, kind, recipient_id, tokens, _post_or_raise(tokens, body, data))
 
 
 def _forget_dead_tokens(
-    db: Session, kind: PushOwnerKind, tokens: list[str], tickets: list[dict]
+    db: Session, kind: PushOwnerKind, owner_id: str, tokens: list[str], tickets: list[dict]
 ) -> None:
     """A token Expo calls dead is removed for the RECIPIENT's role only — a dual-role
-    phone's other registration is cleaned by its own sends (T2.8)."""
+    phone's other registration is cleaned by its own sends (T2.8). A delayed
+    response cannot delete a registration reassigned to another owner."""
     dead = [
         t
         for t, ticket in zip(tokens, tickets)
@@ -245,12 +257,15 @@ def _forget_dead_tokens(
         and (ticket.get("details") or {}).get("error") == "DeviceNotRegistered"
     ]
     if dead:
-        for row in db.scalars(
-            select(PushToken).where(
-                PushToken.expo_push_token.in_(dead), PushToken.owner_kind == kind
+        # One conditional statement: reassignment cannot race a SELECT followed by
+        # an ORM delete that only filters by the old row's primary key.
+        db.execute(
+            delete(PushToken).where(
+                PushToken.expo_push_token.in_(dead),
+                PushToken.owner_kind == kind,
+                PushToken.owner_id == owner_id,
             )
-        ).all():
-            db.delete(row)
+        )
         db.commit()
     logger.info("push sent=%d dead=%d", len(tickets), len(dead))
 
@@ -265,6 +280,74 @@ def _suppressed(reason: str) -> None:
     logger.info("push suppressed reason=%s", reason)
 
 
+def _delivery_allowed(db: Session, kind: PushOwnerKind, owner_id: str, data: dict) -> bool:
+    """Current recipient and event policy, including retry jobs queued before a change.
+
+    No crisis label or message body is needed: the scan already ended a crisis snooze.
+    Accepted events retain their documented Pause exemption; clock quiet hours remain
+    the OS's responsibility. This check deliberately does not consume the burst key.
+    """
+    if kind == PushOwnerKind.listener:
+        if not _listener_ok(db, owner_id):
+            _suppressed("listener_not_approved")
+            return False
+    else:
+        user = db.get(User, owner_id)
+        if (
+            user is None
+            or member_status.standing(user.status, user.banned_until).status != MemberStatus.active
+        ):
+            _suppressed("member_not_active")
+            return False
+    event = data.get("kind")
+    if event == "request":
+        req = db.get(ConversationRequest, data.get("request_id"))
+        if (
+            kind != PushOwnerKind.listener
+            or req is None
+            or req.target_listener_id != owner_id
+            or req.status != RequestStatus.pending
+        ):
+            _suppressed("request_not_pending")
+            return False
+        return True
+    if event not in {"message", "accepted"}:
+        _suppressed("unknown_event")
+        return False
+    convo = db.get(Conversation, data.get("conversation_id"))
+    if convo is None or convo.status != ConversationStatus.active:
+        _suppressed("not_active")
+        return False
+    expected = convo.listener_id if kind == PushOwnerKind.listener else convo.user_id
+    if expected != owner_id or (event == "accepted" and kind != PushOwnerKind.member):
+        _suppressed("not_party")
+        return False
+    if event == "accepted":
+        return True
+    if kind == PushOwnerKind.listener and snooze.is_snoozed(convo):
+        _suppressed("snoozed")
+        return False
+    if kind == PushOwnerKind.member and convo.is_paused:
+        _suppressed("paused")
+        return False
+    if convo.chat_backend == "own":
+        # Read the existing authorized-socket presence hash from this job worker.
+        # Local in-process rooms cannot describe sockets on other API processes.
+        try:
+            watching = int(ratelimit._redis().hget(f"mento:chatp:{convo.id}", owner_id) or 0) > 0
+        except Exception:
+            watching = False  # same best-effort suppression policy as Stream
+    else:
+        if not convo.stream_channel_id:
+            _suppressed("not_active")
+            return False
+        watching = _is_watching(convo.stream_channel_id, owner_id)
+    if watching:
+        _suppressed("watching")
+        return False
+    return True
+
+
 def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: str) -> None:
     """message.new → push the OTHER party unless suppressed (spec §4).
 
@@ -272,7 +355,11 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
     commit (dead-token cleanup).
     """
     convo = db.get(Conversation, conversation_id)
-    if convo is None or convo.status != ConversationStatus.active or not convo.stream_channel_id:
+    if (
+        convo is None
+        or convo.status != ConversationStatus.active
+        or (convo.chat_backend != "own" and not convo.stream_channel_id)
+    ):
         _suppressed("not_active")
         return
     if sender_stream_user_id == convo.user_id:
@@ -294,20 +381,12 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
     if not tokens:
         _suppressed("no_token")
         return
-    if recipient_kind == PushOwnerKind.listener and not _listener_ok(db, recipient_id):
-        _suppressed("listener_not_approved")
-        return
-    if _is_watching(convo.stream_channel_id, recipient_id):
-        _suppressed("watching")
-        return
-    if recipient_kind == PushOwnerKind.listener and snooze.is_snoozed(convo):
-        # The mentor snoozed this chat ("I can't reply today"). A crisis-flagged
-        # member message has already ended the snooze in the Stream hook, so this
-        # can never silence one.
-        _suppressed("snoozed")
-        return
-    if recipient_kind == PushOwnerKind.member and convo.is_paused:
-        _suppressed("paused")
+    data = {
+        "kind": "message",
+        "conversation_id": convo.id,
+        "stream_channel_id": convo.stream_channel_id,
+    }
+    if not _delivery_allowed(db, recipient_kind, recipient_id, data):
         return
     if not _burst_open(convo.id, recipient_id):
         _suppressed("burst")
@@ -318,11 +397,7 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
         recipient_id,
         tokens,
         body,
-        {
-            "kind": "message",
-            "conversation_id": convo.id,
-            "stream_channel_id": convo.stream_channel_id,
-        },
+        data,
     )
 
 
@@ -383,7 +458,16 @@ def notify_request_accepted(db: Session, *, request_id: str) -> None:
 def notify_message_for_channel(db: Session, *, channel_id: str, sender_stream_user_id: str) -> None:
     """The `push.message` job's body: resolve channel → conversation, then notify."""
     cid = db.execute(
-        select(Conversation.id).where(Conversation.stream_channel_id == channel_id)
+        select(Conversation.id).where(
+            or_(
+                Conversation.stream_channel_id == channel_id,
+                and_(
+                    Conversation.chat_backend == "own",
+                    Conversation.stream_channel_id.is_(None),
+                    Conversation.id == channel_id,
+                ),
+            )
+        )
     ).scalar_one_or_none()
     if cid:
         notify_message(db, conversation_id=cid, sender_stream_user_id=sender_stream_user_id)

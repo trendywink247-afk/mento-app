@@ -212,6 +212,27 @@ def test_the_writer_skips_what_the_replay_already_sent():
     asyncio.run(scenario())
 
 
+def test_direct_retry_ack_survives_replay_dedup_without_leaking_internal_marker():
+    async def scenario() -> None:
+        hub = chat_hub.Hub()
+        ws = _FakeSocket(stuck=False)
+        peer = hub.join("room", ws, "a")  # type: ignore[arg-type]  # reason: fake socket
+        await hub.arrive("room", peer, 5)
+        ack = {"t": "message", "message": {"seq": 5, "client_id": "retried"}}
+        await hub.publish("room", ack)  # duplicate live broadcast must still be suppressed
+        hub.send_to(peer, ack)  # explicit duplicate-send acknowledgement must arrive
+        for _ in range(50):
+            if ws.frames:
+                break
+            await asyncio.sleep(0.01)
+        await asyncio.sleep(0.05)
+        assert ws.frames == [ack]
+        assert "_direct" not in ack
+        await hub.leave("room", ws)
+
+    asyncio.run(scenario())
+
+
 # ---- database -----------------------------------------------------------------------------------
 
 

@@ -12,6 +12,7 @@ type StreamChatStyle = ComponentProps<typeof Chat>['style'];
 
 import { Composer } from '@/components/chat/Composer';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
+import { NativeChatProvider } from '@/components/chat/NativeChatProvider';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { HelplinesSheet } from '@/components/mentor/HelplinesSheet';
 import { MentorChatHeader } from '@/components/mentor/MentorChatHeader';
@@ -28,6 +29,7 @@ import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { ensureListenerConnected, getListenerStreamClient } from '@/lib/listenerStreamClient';
 import { leaveToMentorHome } from '@/lib/leaveToChats';
+import { requireNativeStreamOwner } from '@/lib/nativeChatOwner';
 import { mentorFaces } from '@/lib/mentorFaces';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
@@ -57,6 +59,10 @@ function RenderNothing() {
 }
 
 export default function MentorChatScreen() {
+  return <NativeChatProvider role="mentor" stream={<StreamMentorChatScreen />} />;
+}
+
+function StreamMentorChatScreen() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
@@ -155,6 +161,9 @@ export default function MentorChatScreen() {
     const setup = async () => {
       try {
         setError(false);
+        if (!id) throw new Error('conversation_required');
+        await requireNativeStreamOwner(() => listenerApi.brief(id));
+        if (cancelled) return;
         const me = await listenerApi.me();
         mentorFaces.setSelf(me.companion_animal, me.companion_colour);
         setMine((me.companion_animal as CompanionAnimal | undefined) ?? 'Owl');
@@ -187,7 +196,7 @@ export default function MentorChatScreen() {
         activeChannel?.off('user.watching.stop', onWatch);
       }
     };
-  }, [channelId, surfaceCrisis, attempt]);
+  }, [id, channelId, surfaceCrisis, attempt]);
 
   const endNow = async () => {
     if (ending) return;

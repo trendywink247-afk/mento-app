@@ -58,6 +58,8 @@ jobs:
         run: node --test e2e/helplines.test.cjs
       - name: Verify inactive own-chat protocol client
         run: node --test e2e/own-chat-client.test.cjs e2e/own-chat-adapter.test.cjs e2e/own-chat-screen-controller.test.cjs
+      - name: Verify gated native ownership, lifecycle and acknowledged drafts
+        run: node --test e2e/native-chat-owner.test.cjs e2e/native-own-chat-lifecycle.test.cjs e2e/acknowledged-draft.test.cjs
       - run: npm run test:route && npm run test:question && npm run test:placement && npm run test:bubble
       - run: npx expo export --platform web
       - name: Install isolated browser test tools

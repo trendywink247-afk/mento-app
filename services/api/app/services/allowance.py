@@ -30,7 +30,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta, timezone
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import and_, delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -202,9 +202,20 @@ def state_for(
 
 
 def find_conversation(db: Session, channel_id: str):
+    """`channel_id` is whatever `chat.channel_key` sent: the Stream channel id for a
+    Stream room, or the conversation's own id for an own-chat room (T5.3's `chat.send`
+    passes `convo.stream_channel_id or convo.id`, and own-chat rooms keep that column
+    NULL — see `services/push.py`'s `notify_message_for_channel` for the same pair)."""
     return db.execute(
         select(Conversation.id, Conversation.user_id, Conversation.listener_id).where(
-            Conversation.stream_channel_id == channel_id
+            or_(
+                Conversation.stream_channel_id == channel_id,
+                and_(
+                    Conversation.chat_backend == "own",
+                    Conversation.stream_channel_id.is_(None),
+                    Conversation.id == channel_id,
+                ),
+            )
         )
     ).first()
 

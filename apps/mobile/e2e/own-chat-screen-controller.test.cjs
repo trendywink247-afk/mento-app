@@ -33,7 +33,8 @@ test('read status comes from peer sequence, never wall clock or self read', () =
 function harness() {
   let listener, pending = [], messages = [], fails = true;
   const sent = [], read = [], discarded = [];
-  const client = { start() {}, dispose() {}, typing() {}, markRead(seq) { read.push(seq); },
+  const client = { start() {}, stop() { listener({ status: 'stopped', messages: [], read: {}, after: 0 }); },
+    dispose() {}, typing() {}, markRead(seq) { read.push(seq); },
     snapshot: () => ({ pending, messages }),
     retry() {}, discard(id) { discarded.push(id); pending = pending.filter(p => p.clientId !== id); },
     async sendAndWait(id, text) {
@@ -79,4 +80,13 @@ test('a late recovered redacted acknowledgement completes retry without another 
   const response = await h.controller.sendMessage({ text: 'original private draft' });
   assert.equal(response.message.text, '[redacted]');
   assert.equal(h.sent.length, 1);
+});
+
+test('native pause preserves the ambiguous draft id for foreground retry', async () => {
+  const h = harness();
+  await assert.rejects(h.controller.sendMessage({ text: 'background pending draft' }));
+  h.controller.pause(); h.controller.start();
+  h.succeed();
+  await h.controller.sendMessage({ text: 'background pending draft' });
+  assert.equal(h.sent[0].id, h.sent[1].id);
 });

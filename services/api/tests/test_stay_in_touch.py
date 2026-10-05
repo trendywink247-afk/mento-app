@@ -30,6 +30,9 @@ from app.security import issue_admin_token, issue_listener_token, issue_session_
 from .conftest import TestSession, requires_postgres
 
 API = "/api/v1"
+_PRIVATE_DOB = date(1997, 5, 17)
+_PRIVATE_EMAIL = "someone@example.com"
+_PRIVATE_NAME = "Private Clementine"
 
 
 @pytest.fixture
@@ -41,9 +44,9 @@ def _member(s, name: str = "Gentle Harbor") -> str:
     u = User(
         persona_name=name,
         persona_avatar="harbor",
-        dob=date(1997, 5, 17),
+        dob=_PRIVATE_DOB,
         age_at_signup=29,
-        email="someone@example.com",
+        email=_PRIVATE_EMAIL,
         companion_animal="Cat",
         companion_colour="sage",
     )
@@ -416,11 +419,81 @@ def test_members_and_mentors_see_only_their_own(client, world, db_session):
     assert client.get(f"{API}/listener/me/stay-in-touch", headers=_l(cedar)).status_code == 403
 
 
+def _assert_no_private_identity(payload):
+    """Check JSON fields/values, rather than digits inside opaque identifiers."""
+    private_fields = {
+        "dob",
+        "date_of_birth",
+        "birthdate",
+        "birthday",
+        "birth_year",
+        "age",
+        "age_at_signup",
+        "email",
+        "email_address",
+        "real_name",
+        "full_name",
+        "name",
+        "companion_name",
+    }
+    if isinstance(payload, dict):
+        assert not private_fields.intersection(key.casefold() for key in payload)
+        for value in payload.values():
+            _assert_no_private_identity(value)
+    elif isinstance(payload, list):
+        for value in payload:
+            _assert_no_private_identity(value)
+    elif isinstance(payload, str):
+        for private in (_PRIVATE_EMAIL, _PRIVATE_NAME, _PRIVATE_DOB.isoformat()):
+            assert private.casefold() not in payload.casefold()
+        # A birth year as a standalone value is sensitive; UUID digits are not a date.
+        assert payload != str(_PRIVATE_DOB.year)
+    else:
+        assert payload != _PRIVATE_DOB.year
+
+
+def test_privacy_assertion_allows_year_digits_inside_uuid():
+    _assert_no_private_identity(
+        {
+            "items": [
+                {
+                    "id": "3b879894-ee22-4f4b-ad4b-19979cce69cf",
+                    "member_persona_name": "Gentle Harbor",
+                }
+            ]
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "leak",
+    [
+        {"dob": None},
+        {"age_at_signup": 29},
+        {"email": "different@example.com"},
+        {"real_name": "Different Real Name"},
+        {"companion_name": "Different Private Name"},
+        {"public_line": f"Born {_PRIVATE_DOB.isoformat()}"},
+        {"value": str(_PRIVATE_DOB.year)},
+        {"value": _PRIVATE_DOB.year},
+        {"public_line": f"Contact {_PRIVATE_EMAIL.upper()}"},
+        {"member_persona_name": _PRIVATE_NAME},
+        {"public_line": f"My name is {_PRIVATE_NAME.lower()}"},
+    ],
+)
+def test_privacy_assertion_rejects_private_fields_and_values(leak):
+    with pytest.raises(AssertionError):
+        _assert_no_private_identity({"nested": [leak]})
+
+
 @requires_postgres
 def test_no_identity_in_any_payload(client, world):
     """Personas and companions only — never an id of the other person's account, an
     age, a date of birth or an email, in either direction (T&S #7)."""
     member, (cedar, *_), (convo, *_) = world
+    with TestSession() as s:
+        s.get(User, member).companion_name = _PRIVATE_NAME
+        s.commit()
     link_id = _ask(client, convo, member).json()["link_id"]
     mentor_side = client.get(f"{API}/listener/me/stay-in-touch", headers=_l(cedar))
     assert set(mentor_side.json()[0]) == {
@@ -434,17 +507,17 @@ def test_no_identity_in_any_payload(client, world):
     }
     _accept(client, link_id, cedar)
     payloads = [
-        mentor_side.text,
-        client.get(f"{API}/listener/me/conversations", headers=_l(cedar)).text,
-        client.get(f"{API}/in-touch", headers=_u(member)).text,
-        client.get(f"{API}/conversations/{convo}/stay-in-touch", headers=_u(member)).text,
+        mentor_side,
+        client.get(f"{API}/listener/me/conversations", headers=_l(cedar)),
+        client.get(f"{API}/in-touch", headers=_u(member)),
+        client.get(f"{API}/conversations/{convo}/stay-in-touch", headers=_u(member)),
     ]
-    for text in payloads:
-        for leak in ("someone@example.com", "1997", "age_at_signup", "dob", "email"):
-            assert leak not in text
+    for response in payloads:
+        assert response.status_code == 200
+        _assert_no_private_identity(response.json())
     # The mentor never receives the member's account id; the member already knows the
     # mentor's listener id from Browse, and nothing more.
-    assert member not in payloads[0] and member not in payloads[1]
+    assert member not in payloads[0].text and member not in payloads[1].text
 
 
 # --- favourites keep working (deprecated) ----------------------------------------

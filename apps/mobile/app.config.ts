@@ -35,5 +35,35 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config.updates,
     requestHeaders: { ...config.updates?.requestHeaders, 'expo-channel-name': variant },
   };
+  const localAcceptance = process.env.MENTO_LOCAL_ACCEPTANCE;
+  if (localAcceptance !== undefined && localAcceptance !== '0' && localAcceptance !== '1') {
+    throw new Error('MENTO_LOCAL_ACCEPTANCE must be 0 or 1');
+  }
+  if (localAcceptance === '1') {
+    // Separate synthetic install: never replace a member's app or load an OTA.
+    // This is intentionally not an EAS/store profile or provider-push build.
+    if (variant !== 'development' || easProfile
+        || process.env.EXPO_NO_DOTENV !== '1'
+        || process.env.EXPO_PUBLIC_API_URL !== 'http://localhost:18000/api/v1'
+        || process.env.EXPO_PUBLIC_OWN_CHAT_ACCEPTED !== '1'
+        || process.env.EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED !== '1'
+        || ['EXPO_PUBLIC_STREAM_API_KEY', 'EXPO_PUBLIC_POSTHOG_KEY', 'EXPO_PUBLIC_SENTRY_DSN']
+          .some(key => Boolean(process.env[key]))) {
+      throw new Error('Local acceptance requires isolated own-chat settings and no provider keys');
+    }
+    const { googleServicesFile: _androidServices, ...android } = config.android ?? {};
+    const { googleServicesFile: _iosServices, ...ios } = config.ios ?? {};
+    const { eas: _eas, ...extra } = config.extra ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- plugin module, not a type import
+    const withLocalAcceptanceCmakeVersion = require('./plugins/withLocalAcceptanceCmakeVersion');
+    return {
+      ...config, plugins: [...plugins, withLocalAcceptanceCmakeVersion],
+      name: 'Mento Acceptance', scheme: 'mento-acceptance',
+      android: { ...android, package: 'com.mento.acceptance' },
+      ios: { ...ios, bundleIdentifier: 'com.mento.acceptance' },
+      extra: { ...extra, localAcceptance: true },
+      updates: { enabled: false, checkAutomatically: 'NEVER' },
+    } as ExpoConfig;
+  }
   return { ...config, plugins, updates } as ExpoConfig;
 };

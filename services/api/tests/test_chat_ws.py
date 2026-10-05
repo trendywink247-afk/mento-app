@@ -107,6 +107,30 @@ def test_a_retried_send_is_stored_once(client, chat):
         assert s.execute(select(func.count()).select_from(ChatMessage)).scalar_one() == 1
 
 
+def test_retried_send_after_reconnect_receives_ack_without_another_peer_broadcast(client, chat):
+    mws, member, _ = _open(client, chat, "member")
+    lws, mentor, _ = _open(client, chat, "mentor")
+    member.send_json({"t": "send", "client_id": "retry-after-replay", "text": "only once"})
+    original = _next(member, "message")["message"]
+    assert _next(mentor, "message")["message"]["id"] == original["id"]
+    mws.__exit__(None, None, None)
+    mws, member, _ = _open(client, chat, "member", after=original["seq"])
+    member.send_json({"t": "send", "client_id": "retry-after-replay", "text": "only once"})
+    assert _next(member, "message")["message"] == original
+    mentor.send_json({"t": "ping"})
+    for _ in range(10):
+        frame = mentor.receive_json()
+        assert frame["t"] != "message"
+        if frame["t"] == "pong":
+            break
+    else:
+        raise AssertionError("No peer pong barrier")
+    mws.__exit__(None, None, None)
+    lws.__exit__(None, None, None)
+    with TestSession() as s:
+        assert s.execute(select(func.count()).select_from(ChatMessage)).scalar_one() == 1
+
+
 def test_crisis_message_is_flagged_and_carries_the_helpline_card(client, chat):
     mws, member, _ = _open(client, chat, "member")
     lws, mentor, _ = _open(client, chat, "mentor")

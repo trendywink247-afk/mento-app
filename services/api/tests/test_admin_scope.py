@@ -54,7 +54,7 @@ def client():
     return TestClient(app)
 
 
-def _world(s) -> tuple[str, str, str, str]:
+def _world(s, backend="stream") -> tuple[str, str, str, str]:
     admin = AdminAccount(name="Helper", role=AdminRole.helper)
     user = User(
         persona_name="Quiet Cove", persona_avatar="x", dob=date(1996, 1, 1), age_at_signup=30
@@ -77,6 +77,7 @@ def _world(s) -> tuple[str, str, str, str]:
         user_id=user.id,
         listener_id=listener.id,
         stream_channel_id="c-scope",
+        chat_backend=backend,
     )
     s.add(convo)
     s.flush()
@@ -105,8 +106,9 @@ def _views(convo_id: str) -> list[AdminAuditLog]:
 
 
 @requires_postgres
-def test_no_open_case_is_refused_and_nothing_is_fetched(client, db_session, fetched):
-    admin_id, _, _, convo_id = _world(db_session)
+@pytest.mark.parametrize("backend", ["stream", "own"])
+def test_no_open_case_is_refused_and_nothing_is_fetched(client, db_session, fetched, backend):
+    admin_id, _, _, convo_id = _world(db_session, backend)
     db_session.commit()
     r = _read(client, admin_id, convo_id)
     assert r.status_code == 403
@@ -116,8 +118,9 @@ def test_no_open_case_is_refused_and_nothing_is_fetched(client, db_session, fetc
 
 
 @requires_postgres
-def test_a_reviewed_flag_is_not_an_open_case(client, db_session, fetched):
-    admin_id, uid, _, convo_id = _world(db_session)
+@pytest.mark.parametrize("backend", ["stream", "own"])
+def test_a_reviewed_flag_is_not_an_open_case(client, db_session, fetched, backend):
+    admin_id, uid, _, convo_id = _world(db_session, backend)
     db_session.add(
         SafetyFlag(user_id=uid, conversation_id=convo_id, signal=SafetySignal.abuse, reviewed=True)
     )
@@ -140,7 +143,7 @@ def test_open_flag_with_reason_reads_and_audits_the_reason(client, db_session, f
 
 
 @requires_postgres
-def test_own_room_open_case_never_uses_stream_or_claims_a_successful_view(
+def test_own_room_open_case_reads_live_empty_store_and_never_uses_stream(
     client, db_session, fetched
 ):
     admin_id, uid, _, convo_id = _world(db_session)
@@ -148,10 +151,10 @@ def test_own_room_open_case_never_uses_stream_or_claims_a_successful_view(
     db_session.add(SafetyFlag(user_id=uid, conversation_id=convo_id, signal=SafetySignal.suicidal))
     db_session.commit()
     response = _read(client, admin_id, convo_id)
-    assert response.status_code == 409
-    assert response.json()["code"] == "moderation_transport_not_supported"
+    assert response.status_code == 200
+    assert response.json() == []
     assert fetched == []
-    assert _views(convo_id) == []
+    assert len(_views(convo_id)) == 1
 
 
 @requires_postgres
@@ -174,8 +177,9 @@ def test_open_report_is_an_open_case(client, db_session, fetched):
 
 @requires_postgres
 @pytest.mark.parametrize("reason", [None, "", "   ", "look"])
-def test_a_reason_is_required(client, db_session, fetched, reason):
-    admin_id, uid, _, convo_id = _world(db_session)
+@pytest.mark.parametrize("backend", ["stream", "own"])
+def test_a_reason_is_required(client, db_session, fetched, reason, backend):
+    admin_id, uid, _, convo_id = _world(db_session, backend)
     db_session.add(SafetyFlag(user_id=uid, conversation_id=convo_id, signal=SafetySignal.suicidal))
     db_session.commit()
     assert _read(client, admin_id, convo_id, reason).status_code == 422
@@ -184,8 +188,11 @@ def test_a_reason_is_required(client, db_session, fetched, reason):
 
 
 @requires_postgres
-def test_a_flag_on_another_conversation_does_not_open_this_one(client, db_session, fetched):
-    admin_id, uid, lid, convo_id = _world(db_session)
+@pytest.mark.parametrize("backend", ["stream", "own"])
+def test_a_flag_on_another_conversation_does_not_open_this_one(
+    client, db_session, fetched, backend
+):
+    admin_id, uid, lid, convo_id = _world(db_session, backend)
     other = Conversation(type="anon", status=ConversationStatus.ended, user_id=uid, listener_id=lid)
     db_session.add(other)
     db_session.flush()
