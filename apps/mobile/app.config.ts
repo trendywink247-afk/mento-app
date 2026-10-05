@@ -54,8 +54,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     const { googleServicesFile: _androidServices, ...android } = config.android ?? {};
     const { googleServicesFile: _iosServices, ...ios } = config.ios ?? {};
     const { eas: _eas, ...extra } = config.extra ?? {};
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- plugin module, not a type import
+    const withLocalAcceptanceCmakeVersion = require('./plugins/withLocalAcceptanceCmakeVersion');
     return {
-      ...config, plugins, name: 'Mento Acceptance', scheme: 'mento-acceptance',
+      ...config, plugins: [...plugins, withLocalAcceptanceCmakeVersion],
+      name: 'Mento Acceptance', scheme: 'mento-acceptance',
       android: { ...android, package: 'com.mento.acceptance' },
       ios: { ...ios, bundleIdentifier: 'com.mento.acceptance' },
       extra: { ...extra, localAcceptance: true },
