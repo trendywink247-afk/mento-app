@@ -422,8 +422,19 @@ def test_members_and_mentors_see_only_their_own(client, world, db_session):
 def _assert_no_private_identity(payload):
     """Check JSON fields/values, rather than digits inside opaque identifiers."""
     private_fields = {
-        "dob", "date_of_birth", "birthdate", "birthday", "birth_year", "age", "age_at_signup",
-        "email", "email_address", "real_name", "full_name", "name", "companion_name",
+        "dob",
+        "date_of_birth",
+        "birthdate",
+        "birthday",
+        "birth_year",
+        "age",
+        "age_at_signup",
+        "email",
+        "email_address",
+        "real_name",
+        "full_name",
+        "name",
+        "companion_name",
     }
     if isinstance(payload, dict):
         assert not private_fields.intersection(key.casefold() for key in payload)
@@ -443,17 +454,33 @@ def _assert_no_private_identity(payload):
 
 def test_privacy_assertion_allows_year_digits_inside_uuid():
     _assert_no_private_identity(
-        {"items": [{"id": "3b879894-ee22-4f4b-ad4b-19979cce69cf", "member_persona_name": "Gentle Harbor"}]}
+        {
+            "items": [
+                {
+                    "id": "3b879894-ee22-4f4b-ad4b-19979cce69cf",
+                    "member_persona_name": "Gentle Harbor",
+                }
+            ]
+        }
     )
 
 
-@pytest.mark.parametrize("leak", [
-    {"dob": None}, {"age_at_signup": 29}, {"email": "different@example.com"},
-    {"real_name": "Different Real Name"}, {"companion_name": "Different Private Name"},
-    {"public_line": f"Born {_PRIVATE_DOB.isoformat()}"}, {"value": str(_PRIVATE_DOB.year)},
-    {"value": _PRIVATE_DOB.year}, {"public_line": f"Contact {_PRIVATE_EMAIL.upper()}"},
-    {"member_persona_name": _PRIVATE_NAME}, {"public_line": f"My name is {_PRIVATE_NAME.lower()}"},
-])
+@pytest.mark.parametrize(
+    "leak",
+    [
+        {"dob": None},
+        {"age_at_signup": 29},
+        {"email": "different@example.com"},
+        {"real_name": "Different Real Name"},
+        {"companion_name": "Different Private Name"},
+        {"public_line": f"Born {_PRIVATE_DOB.isoformat()}"},
+        {"value": str(_PRIVATE_DOB.year)},
+        {"value": _PRIVATE_DOB.year},
+        {"public_line": f"Contact {_PRIVATE_EMAIL.upper()}"},
+        {"member_persona_name": _PRIVATE_NAME},
+        {"public_line": f"My name is {_PRIVATE_NAME.lower()}"},
+    ],
+)
 def test_privacy_assertion_rejects_private_fields_and_values(leak):
     with pytest.raises(AssertionError):
         _assert_no_private_identity({"nested": [leak]})

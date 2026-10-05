@@ -462,12 +462,17 @@ def test_own_chat_counts_through_the_real_write_path(client, db_session, enforce
 
     u = User(persona_name="Quiet Cove", persona_avatar="x", dob=date(1996, 1, 1), age_at_signup=30)
     li = ListenerProfile(
-        persona_name="Open River", persona_avatar="river", categories=[],
-        status=ListenerStatus.online, vetting_status=VettingStatus.approved,
+        persona_name="Open River",
+        persona_avatar="river",
+        categories=[],
+        status=ListenerStatus.online,
+        vetting_status=VettingStatus.approved,
     )
     db_session.add_all([u, li])
     db_session.flush()
-    c = Conversation(user_id=u.id, listener_id=li.id, status=ConversationStatus.active, chat_backend="own")
+    c = Conversation(
+        user_id=u.id, listener_id=li.id, status=ConversationStatus.active, chat_backend="own"
+    )
     db_session.add(c)
     db_session.commit()
     assert c.stream_channel_id is None  # the real shape this test exists to cover
