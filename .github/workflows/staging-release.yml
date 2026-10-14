@@ -95,13 +95,13 @@ jobs:
       - name: Deploy to isolated VPS B
         run: |
           tar -C candidate -czf candidate.tgz .
-          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "receive $SHA" < candidate.tgz
-          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "deploy $SHA"
-          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "accept $SHA"
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@129.121.171.140 "receive $SHA" < candidate.tgz
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@129.121.171.140 "deploy $SHA"
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@129.121.171.140 "accept $SHA"
       - name: Connect browser to private staging over SSH
         run: |
           echo '127.0.0.1 staging.mento.chat' | sudo tee -a /etc/hosts >/dev/null
-          sudo ssh -F /dev/null -i "$HOME/.ssh/mento-release" -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -fN -L 127.0.0.1:443:127.0.0.1:443 mento-ci-staging@31.42.125.238
+          sudo ssh -F /dev/null -i "$HOME/.ssh/mento-release" -o UserKnownHostsFile="$HOME/.ssh/known_hosts" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -fN -L 127.0.0.1:443:127.0.0.1:443 mento-ci-staging@129.121.171.140
           npm install --prefix "$RUNNER_TEMP/browser-tools" --no-package-lock playwright@1.56.1
           "$RUNNER_TEMP/browser-tools/node_modules/.bin/playwright" install --with-deps chromium
       - name: Staging browser acceptance
@@ -110,7 +110,7 @@ jobs:
           MENTO_API: https://staging.mento.chat/api/v1
           MENTO_EXTENDED_ACCEPTANCE: '1'
         run: |
-          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "fixture $SHA" > "$RUNNER_TEMP/fixture.json"
+          ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@129.121.171.140 "fixture $SHA" > "$RUNNER_TEMP/fixture.json"
           export MENTO_LISTENER_URL="$(jq -r .url "$RUNNER_TEMP/fixture.json")"
           export LISTENER_ID="$(jq -r .id "$RUNNER_TEMP/fixture.json")"
           echo "::add-mask::$MENTO_LISTENER_URL"
@@ -125,10 +125,10 @@ jobs:
         if: always()
         run: |
           if [ -f ~/.ssh/mento-release ]; then
-            ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "cleanup $SHA"
+            ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@129.121.171.140 "cleanup $SHA"
           fi
       - name: Confirm staging still serves this candidate
-        run: ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@31.42.125.238 "verify $SHA"
+        run: ssh -F /dev/null -i ~/.ssh/mento-release -o BatchMode=yes -o StrictHostKeyChecking=yes mento-ci-staging@129.121.171.140 "verify $SHA"
       - name: Publish only an accepted candidate
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
