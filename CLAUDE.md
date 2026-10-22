@@ -7,7 +7,16 @@ Brief for any agent working in this repo. Keep it short and true. If it disagree
 An anonymous, low-friction emotional-support app: a person in a hard moment opens it and is talking to a real human in under 30 seconds, with no login and no name. v1 is 18+ anonymous 1:1 chat between members and volunteer mentors ("listener" is the internal/code word; user-facing copy says "mentor").
 
 - Product authority, in order: `docs/DECISIONS.md` → `docs/PRD.md` → `docs/Mockups/` (catalogued in `docs/MOCKUP_INVENTORY.md`). DECISIONS wins on conflict. If DECISIONS is silent, ask; don't guess.
-- Trust & Safety is non-negotiable: server-side crisis scan on every message, 18+ age gate enforced server-side, anonymity on both sides, honest opt-in contributions, real deletion (Clean Wipe), minimal PII, and a privacy policy (`docs/PRIVACY.md`) that matches reality.
+
+## Trust & Safety
+
+- Non-negotiable: server-side crisis scan on every message, 18+ age gate enforced server-side, anonymity on both sides, honest opt-in contributions, real deletion (Clean Wipe), minimal PII, and a privacy policy (`docs/PRIVACY.md`) that matches reality.
+- Changes to crisis scan, age gate, deletion (Clean Wipe) or anonymity need tests and explicit user review before PR.
+
+## Working style
+
+- For multi-step tasks, write a short plan and wait for "go".
+- When unsure, ask.
 
 ## Repo map
 
@@ -19,7 +28,7 @@ services/api/         FastAPI (Python 3.12), SQLAlchemy 2, Alembic, Procrastinat
 services/recovery_receiver/  Isolated encrypted-recovery receiver service
 deploy/               Compose stacks, deploy.sh, bluegreen.sh, backups, monitoring, drills (test-*.sh)
 scripts/ci/           Release policy, DB budget and drill tests (python unittest)
-scripts/local/        Workspace launchers (workspace.ps1, api.py)
+scripts/local/        api.py launcher; workspace.ps1 is Windows-only legacy
 .github/workflows/    api-ci, test-ci, maestro, staging-release, production-release, rollback-rehearsal
 docs/                 Current docs; index in docs/README.md; state in docs/STATUS.md
 docs/archive/         STALE. Never read it or use it as guidance.
@@ -39,7 +48,7 @@ docs/archive/         STALE. Never read it or use it as guidance.
 - Ask the user before opening a PR into `dev`.
 - Never push to `master` or `main`. Never force-push shared branches.
 - Never deploy to production, and never trigger production-release or staging-release workflows, unless the user explicitly asks for that specific run.
-- Don't delete branches or tags. History lives in `archive/*` tags.
+- Don't delete tags or other people's branches; you may delete your own merged feat/* branches. History lives in `archive/*` tags.
 
 ## Commands
 

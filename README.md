@@ -56,7 +56,7 @@ docs/archive/         Stale history; do not use as current guidance
 
 ## Local development
 
-Work in `/srv/mento/mento-app`. Prerequisites: Node 22 (CI parity), npm, Python 3.12+, PowerShell 7 (for `scripts/local/workspace.ps1`) and Docker. If dependencies are not installed, create `services/api/.venv`, install `services/api/requirements-dev.txt` into it, and run `npm ci` in `apps/mobile`. Never copy production secrets into a development configuration.
+Work in `/srv/mento/mento-app`. Prerequisites: Node 22 (CI parity), npm, Python 3.12+ and Docker. `scripts/local/workspace.ps1` (used below) is Windows-only legacy and needs PowerShell 7; on Linux use the commands in `CLAUDE.md`. If dependencies are not installed, create `services/api/.venv`, install `services/api/requirements-dev.txt` into it, and run `npm ci` in `apps/mobile`. Never copy production secrets into a development configuration.
 
 ```bash
 cd /srv/mento/mento-app
