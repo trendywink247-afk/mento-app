@@ -8,17 +8,17 @@
 
 ## Workspace and release environments — founder ruling, 2026-10-02
 
-Development now uses only `H:\Mento gpt` (repository `H:\Mento gpt\Mento`);
-the Desktop copy is not touched. Prove changes locally first, then validate releases
+Development uses the checkout at `/srv/mento/mento-app` (updated 2026-10-22;
+the original ruling named a Windows `H:` workspace). Prove changes locally first, then validate releases
 on VPS staging before staged production deployment. Use both existing VPSs for
 production, isolated staging, and monitoring with explicit resource and data
-boundaries. Operational contract and current blockers: `docs/ENVIRONMENTS.md`.
+boundaries. Staging runs on `129.121.171.140`. Current blockers: `docs/STATUS.md`.
 This changes delivery environments, not the v1 product scope.
 
 **Architecture direction, 2026-10-04:** the founder authorized the full pictured
 growth architecture, delivered through tested increments with Balanced as the first
 production milestone. Track local, staging and production evidence separately in
-`ARCHITECTURE_BOOK_ALIGNMENT.md` and `PROGRESS.md`. This authorizes implementation,
+`docs/STATUS.md` (history in `docs/archive/`). This authorizes implementation,
 not untested production activation or an unmeasured capacity claim. Professional
 mentoring remains separately scoped; no payments, groups or video launch is implied.
 
