@@ -11,6 +11,7 @@ Current documents only. `archive/` holds stale history: don't read it or use it 
 | [MOCKUP_INVENTORY.md](MOCKUP_INVENTORY.md) | Catalogue of the 64 UI mockups in `Mockups/` |
 | [Mockups/](Mockups/) | Original UI mockup images |
 | [ANDROID_BUILD.md](ANDROID_BUILD.md) | Local Android APK build and self-hosted OTA updates |
+| [environments.md](environments.md) | QA and production hosts, users, containers, config locations, deploy and rollback (prod is TBD) |
 | [DEPLOYMENT_VPS.md](DEPLOYMENT_VPS.md) | Self-managed VPS runbook, including SOPS + age secrets |
 | [BACKUP_CONTENT_POLICY.md](BACKUP_CONTENT_POLICY.md) | What encrypted backups contain and exclude; recovery activation contract |
 | [SAME_DATABASE_REHEARSAL.md](SAME_DATABASE_REHEARSAL.md) | Local rehearsal of the classic ↔ Balanced topology switch on one database |
