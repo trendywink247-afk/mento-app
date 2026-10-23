@@ -9,9 +9,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app import errors, observability
+from app import boot_check, errors, observability
 from app.chat_hub import hub
-from app.config import Settings, get_settings
+from app.config import get_settings
 from app.db import init_db
 from app.routers import (
     admin_console,
@@ -33,7 +33,6 @@ from app.routers import (
     safety,
     stream_hooks,
 )
-from app.services import message_crypto
 
 observability.configure_logging()
 settings = get_settings()
@@ -42,6 +41,9 @@ observability.init_sentry(settings)
 
 def _enforce_prod_invariants() -> None:
     """Refuse to boot in a state that silently breaks a security guarantee.
+
+    The checks live in app/boot_check.py (also runnable offline, names only:
+    `python -m app.boot_check`). They are:
 
     - The published default JWT secret would let anyone forge user AND listener
       tokens (they share the secret, differing only by a role claim).
@@ -57,42 +59,11 @@ def _enforce_prod_invariants() -> None:
     - DATABASE_URL still the code default (a published password): the real URL was never
       supplied, so the process would be talking to — or trying to — a dev database.
     """
-    problems = []
-    if settings.jwt_secret == "change-me-long-random":
-        problems.append("JWT_SECRET is the published default — set a long random value")
-    if not (settings.stream_api_key and settings.stream_api_secret):
-        problems.append(
-            "STREAM_API_KEY/SECRET missing — the crisis-scan webhook would reject "
-            "everything and messages would flow unscanned"
+    found = boot_check.problems(settings)
+    if found:
+        raise RuntimeError(
+            f"unsafe {settings.env} configuration: " + "; ".join(p.message for p in found)
         )
-    if not settings.resolved_cors_origins:
-        problems.append(
-            "CORS origin list is empty — set CORS_ORIGINS (comma-separated) or valid "
-            "APP_BASE_URL / ADMIN_BASE_URL so the web build can reach the API"
-        )
-    if not settings.admin_jwt_secret or settings.admin_jwt_secret == settings.jwt_secret:
-        problems.append(
-            "ADMIN_JWT_SECRET is empty or equal to JWT_SECRET — set a distinct "
-            "long random value so admin tokens can't be forged with the shared secret"
-        )
-    listener_secret = settings.listener_jwt_secret
-    if not listener_secret or listener_secret in (settings.jwt_secret, settings.admin_jwt_secret):
-        problems.append(
-            "LISTENER_JWT_SECRET is empty or equal to JWT_SECRET / ADMIN_JWT_SECRET — "
-            "set a distinct long random value so mentor tokens can't be forged"
-        )
-    problems.extend(message_crypto.config_problems(settings))
-    if settings.database_url == Settings.model_fields["database_url"].default:
-        problems.append(
-            "DATABASE_URL is the code default (published dev password) — set the real URL"
-        )
-    if "trusted_proxy_hops" not in settings.model_fields_set:
-        problems.append(
-            "TRUSTED_PROXY_HOPS is not set — set it to the number of reverse proxies "
-            "in front of the API (1 behind Caddy or nginx, 0 if none)"
-        )
-    if problems:
-        raise RuntimeError(f"unsafe {settings.env} configuration: " + "; ".join(problems))
 
 
 def _warn_on_risky_config() -> None:

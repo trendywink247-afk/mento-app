@@ -38,6 +38,11 @@ Cutover only starts when all of these are done. `ops/deploy-api.sh prod` refuses
 - [ ] `dev` → `main` PR, **approved by the mentor**, merged
 - [ ] The mentor has read this runbook; a window is agreed and announced
 - [ ] This runbook was rehearsed on QA end to end, including both rollback levels
+- [ ] QA's env file passes the new startup checks **before** QA gets the new image. As root on the QA box:
+  ```bash
+  /srv/mento/wt-prod/ops/boot-check.sh feat/ops-prod /opt/mento-staging/secrets/api.env
+  ```
+  It builds a release-candidate image from that ref, runs `python -m app.boot_check` in it with no network and the env file, and prints only the names of failing settings (nothing = pass; exit 0). Use the release branch or commit once there is one.
 - [ ] QA has run the exact release image, with the worker, for at least 24 hours with no job errors (the mentor may extend this)
 
 ## 2. Pre-checks (read-only, days before)
@@ -169,7 +174,7 @@ Non-secret settings with a code default (all optional; names that production doe
 | `JWT_TTL_DAYS` | `90` |
 | `LISTENER_JWT_TTL_DAYS` | `30` |
 | `ADMIN_JWT_TTL_DAYS` | `14` |
-| `LEGACY_CLAIMS_ACCEPTED_UNTIL` | `2027-01-31` (**cutover must happen on or before 2026-11-02**, otherwise set this later: tokens minted by the old API without `iss/aud/jti` are accepted only until this date) |
+| `LEGACY_CLAIMS_ACCEPTED_UNTIL` | `2027-01-31` (set in A6 to the cutover date + 30 days; read the caution there: the code's own rule is cutover + `JWT_TTL_DAYS`) |
 | `ACCESS_TOKEN_MINUTES` | `15` |
 | `REFRESH_TOKEN_TTL_DAYS` | `90` |
 | `MIN_AGE` | `18` |
@@ -420,6 +425,20 @@ stat -c '%U:%G %a %n' "$ENVFILE"                                                
   ```
 
 - **`GIT_SHA`**: do **not** put it in the env file. `deploy-api` exports the full commit from the image label on every deploy; compose passes it to `api` and `worker` as the Sentry release. A hand-written value would be overridden.
+- **`LEGACY_CLAIMS_ACCEPTED_UNTIL`** = the cutover date + 30 days. It is a plain date, not a secret, so it is fine to show:
+
+  ```bash
+  CUTOVER=<planned cutover date, UTC, YYYY-MM-DD>        # redo this step if the window moves
+  LEGACY=$(date -u -d "$CUTOVER + 30 days" +%F); echo "LEGACY_CLAIMS_ACCEPTED_UNTIL=$LEGACY"
+  if has_env LEGACY_CLAIMS_ACCEPTED_UNTIL; then
+    sed -i "s/^LEGACY_CLAIMS_ACCEPTED_UNTIL=.*/LEGACY_CLAIMS_ACCEPTED_UNTIL=$LEGACY/" "$ENVFILE"
+  else
+    printf '%s\n' "$LEGACY" | append_env LEGACY_CLAIMS_ACCEPTED_UNTIL
+  fi
+  grep -c '^LEGACY_CLAIMS_ACCEPTED_UNTIL=' "$ENVFILE"       # 1
+  ```
+
+  **Caution, decide with the mentor.** Tokens the old API minted have no `iss`/`aud`/`jti` and live 90 days (`JWT_TTL_DAYS`). From this date they are rejected with 401, including pre-split mentor tokens signed with `JWT_SECRET`. `app/config.py` says the date must be at least *the day the new API reaches production + `JWT_TTL_DAYS`* so that no legacy token is cut short; **+30 days is shorter than that rule (+90) on purpose**, so a member whose old token still has more than 30 days left is signed out on this date, and there is no login to fall back on. The code default `2027-01-31` already satisfies the +90 rule for a cutover on or before 2026-11-02. If the mentor wants the code's rule instead, use `+ 90 days` in the command above. Before the date, reissue mentor console links (section 7). Whether the app recovers a signed-out member silently (T3.2 refresh sessions) is untested here: try an old-build token against QA first.
 - Anything else P3b flagged and you decided to set.
 
 *Set by compose, ignore in the file:* `DATABASE_URL`, `REDIS_URL`.
@@ -428,14 +447,14 @@ Never set `MESSAGE_RETENTION_DAYS` in this change unless the founder has chosen 
 
 **A6b. Escrow the message key (a human step, the only place a secret is ever shown).** Production has no encrypted messages yet (the T5.1 table was never deployed), so nothing is unreadable today. From the first chat message onward, **losing `MESSAGE_KEY` makes every stored message permanently unreadable**, and the pre-cutover env copy and the Level 2 backup do not contain it. Before the window, the operator (with the mentor's agreement) puts the value in the team password manager from the box console, and clears the terminal scrollback afterwards. Tooling, tickets and chat never see it. `LISTENER_JWT_SECRET` needs no escrow: it can be regenerated (`scripts/issue_listener_token` reissues mentor links; tokens signed with `JWT_SECRET` stay accepted until `LEGACY_CLAIMS_ACCEPTED_UNTIL`).
 
-**A6c. Prove the new image will boot with this file** (the same checks the API runs at startup, offline, nothing started). `DATABASE_URL` is a placeholder here because compose supplies the real one:
+**A6c. Prove the new image will boot with this file** (the same checks the API runs at startup, offline, nothing started, no network, nothing printed but names). `DATABASE_URL` is a placeholder here because compose supplies the real one:
 
 ```bash
-docker run --rm --env-file "$ENVFILE" -e DATABASE_URL='postgresql+psycopg://check:check@db:5432/mento' mento-api:$TAG \
-  python -c "from app import main; main._enforce_prod_invariants(); print('boot invariants OK')"
+docker run --rm --network none --env-file "$ENVFILE" -e DATABASE_URL='postgresql+psycopg://check:check@db:5432/mento' mento-api:$TAG \
+  python -m app.boot_check; echo "exit=$?"
 ```
 
-`boot invariants OK` is required. Otherwise it prints `RuntimeError: unsafe prod configuration: ...` naming every offending setting (names only, never values); fix them all and re-run. Note `docker run --env-file` does not strip quotes; a quoted value in the file will fail here even though compose would accept it: fix the file, not the check.
+Required: no output and `exit=0`. Otherwise it prints the **names** of the failing settings, one per line, never a value (`ENV` means `ENV=dev`: the boot checks would be skipped); fix them all and re-run. Exit 2 means the checker itself broke. Note `docker run --env-file` does not strip quotes: a quoted value in the file can fail here even though compose would accept it. The same check, with the image built from a git ref in one step, is `ops/boot-check.sh <ref> <env file>` (the QA command is in section 1).
 
 ## 4. Phase A: API, worker and migrations (Nginx still the edge)
 
@@ -634,6 +653,7 @@ Never use `docker compose down -v`, `docker volume rm` or an image prune at any 
 
 ## 7. After the cutover
 
+- **Reissue mentor console links before `LEGACY_CLAIMS_ACCEPTED_UNTIL`** (A6): `scripts/issue_listener_token` mints tokens signed with the new `LISTENER_JWT_SECRET`. Old mentor tokens are signed with `JWT_SECRET` and stop working on that date. Put the date in the on-call calendar.
 - The `chat_messages` partitions: the migration creates the current month plus two, and the worker's daily `chat-partitions` job keeps two ahead. **Follow-up:** check they exist beyond 2026-12 once the worker has run (see `docs/STATUS.md`).
 - The old `docker-compose.prod.yml`, the Nginx config and the pre-cutover env/backups stay for the rollback window (suggest 14 days), then clean up with the mentor's approval.
 - Retire `/opt/mento/src` clone handling into the normal release flow only after the next deploy has been done the same way once.

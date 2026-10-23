@@ -38,13 +38,15 @@ SHORT="${SHA:0:12}"
 GIT_USER="${BUILD_GIT_USER-agent}"
 GIT_PREFIX=""
 [ -z "$GIT_USER" ] || GIT_PREFIX="sudo -u $GIT_USER "
+# Root-only build directory. Only tests override it (MENTO_BUILD_ROOT).
+BUILD_ROOT_DIR="${MENTO_BUILD_ROOT:-/var/lib/mento-build}"
 
 cat <<EOF
 # --- build mento-api:$SHORT-r<N> from $SHA. Run as root on a host with docker. ---
 set -euo pipefail
 REPO=$REPO
 SHA=$SHA
-BUILD_ROOT=/var/lib/mento-build
+BUILD_ROOT=$BUILD_ROOT_DIR
 install -d -m 700 -o root -g root "\$BUILD_ROOT"
 
 # One build at a time, so two runs cannot pick the same -r<N>.

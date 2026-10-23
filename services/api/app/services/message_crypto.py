@@ -101,28 +101,43 @@ def decrypt(blob: bytes, key_id: str, *, message_id: str, conversation_id: str) 
     return plain.decode("utf-8")
 
 
-def config_problems(settings) -> list[str]:
-    """Why MESSAGE_KEY / MESSAGE_KEY_PREVIOUS cannot be used outside dev, as boot-time text.
-
-    Nothing is cached or decrypted: this only parses, so the API can refuse to boot
-    instead of failing on the first chat message.
-    """
+def config_problems(settings) -> list[tuple[str, str]]:
+    """(setting name, why) for each of MESSAGE_KEY / MESSAGE_KEY_PREVIOUS that cannot be
+    used outside dev. Parses only, nothing is cached or decrypted, so the API can refuse to
+    boot instead of failing on the first chat message. The text never repeats a key, a key
+    id or any other part of a value."""
+    found: list[tuple[str, str]] = []
     if not settings.message_key:
-        return [
-            "MESSAGE_KEY is not set — own-chat messages could not be stored "
-            "(generate one: python -m app.services.message_crypto k1)"
-        ]
-    entries = [
-        settings.message_key,
-        *filter(None, (settings.message_key_previous or "").split(",")),
-    ]
-    try:
-        parsed = [_parse(entry) for entry in entries]
-    except MessageKeyError as exc:
-        return [str(exc)]
-    if any(key == _DEV_KEY for _, key in parsed):
-        return ["MESSAGE_KEY / MESSAGE_KEY_PREVIOUS contains the public dev key"]
-    return []
+        found.append(
+            (
+                "MESSAGE_KEY",
+                "MESSAGE_KEY is not set — own-chat messages could not be stored "
+                "(generate one: python -m app.services.message_crypto k1)",
+            )
+        )
+    checks = [("MESSAGE_KEY", [settings.message_key] if settings.message_key else [])]
+    checks.append(
+        (
+            "MESSAGE_KEY_PREVIOUS",
+            list(filter(None, (settings.message_key_previous or "").split(","))),
+        )
+    )
+    for name, entries in checks:
+        for entry in entries:
+            try:
+                _, key = _parse(entry)
+            except MessageKeyError:
+                found.append(
+                    (
+                        name,
+                        f"{name} is malformed — expected <key id, up to 16 chars>:<base64 of 32 bytes>",
+                    )
+                )
+                break
+            if key == _DEV_KEY:
+                found.append((name, f"{name} contains the public dev key"))
+                break
+    return found
 
 
 def new_key(key_id: str) -> str:
