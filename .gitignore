@@ -69,5 +69,9 @@ deploy/secrets/*
 !deploy/secrets/*.sops.yaml
 !deploy/secrets/README.md
 
+# ---- SOPS (QA): only *.enc.env are tracked in deploy/staging/secrets ----
+deploy/staging/secrets/*
+!deploy/staging/secrets/*.enc.env
+
 # ---- Local Balanced stack: the web build Caddy serves (deploy/compose.local.yml) ----
 deploy/web-root/

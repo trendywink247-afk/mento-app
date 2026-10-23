@@ -35,6 +35,34 @@ Config and secrets (names only):
 - New with `ops/qa-deploy-api.sh`: `previous-api-tag`, `deploy-history.log`, `ci.override.yml.bak.*`.
 - `/opt/mento-staging/README.md` is stale: it still calls this box "VPS B 31.42.125.238" and names an artifact from commit 6e47f7a.
 
+### QA secrets (encrypted, in git)
+
+QA's encrypted settings are committed in `deploy/staging/secrets/`:
+
+| File | Holds |
+|---|---|
+| `api.enc.env` | API and worker settings (env file for the `api`, `worker` and `migrate` containers) |
+| `db.enc.env` | Postgres role and database settings |
+
+Both are SOPS dotenv files encrypted with age. `.sops.yaml` has a creation rule for `deploy/staging/secrets/*.enc.env` with exactly two recipients and no others:
+
+- **QA server key.** The private key is `/etc/mento/age/qa.key` on the QA box (`129.121.171.140`), readable by root only.
+- **QA recovery key.** The private key is kept in the team password manager, so a lost box never loses the secrets.
+
+The production rule (`deploy/secrets/prod.env.sops.yaml`) is separate and unchanged. No private keys appear in this repo or its docs.
+
+Plaintext `*.env` files in `deploy/staging/secrets/` are gitignored; only `*.enc.env` is tracked (`.gitignore`).
+
+Until deploy decrypts automatically, the encrypted file in git is the source of truth: edit with `sops deploy/staging/secrets/<f>.enc.env`, then root renders it to /opt/mento-staging/secrets/<f>.env. Never edit the plaintext on the box directly.
+
+Editing needs a key that is a recipient, for example on the QA box as root:
+
+```bash
+SOPS_AGE_KEY_FILE=/etc/mento/age/qa.key sops deploy/staging/secrets/api.enc.env
+```
+
+`sops` re-encrypts to the two recipients above on save. Do not decrypt to a file in the repo.
+
 ### Deploy today
 
 1. Staging Release workflow (`.github/workflows/staging-release.yml`) builds the candidate, then SSHes as `mento-ci-staging@129.121.171.140` and runs `receive <sha>`, `deploy <sha>`, `accept <sha>`, `fixture`, `cleanup`, `verify`. Those commands are handled by `ci-receiver.py` (root-owned, `/usr/local/lib/mento-release/`). Only that workflow deploys QA automatically; agents never trigger it unless asked for that run.
