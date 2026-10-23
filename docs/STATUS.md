@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-23, during the repository consolidation (feat/consolidation → dev). CLAUDE.md now has a Scope section: v1 only; Module B mentoring, UPSC self-assessment suite and Community are deferred. feat/api-compat adds the T&S-reviewed X-App-Version 426 middleware and the OpenAPI breaking-change check.
+Updated 2026-10-23, during the repository consolidation (feat/consolidation → dev). CLAUDE.md now has a Scope section: v1 only; Module B mentoring, UPSC self-assessment suite and Community are deferred. feat/api-compat adds the T&S-reviewed X-App-Version 426 middleware and the OpenAPI breaking-change check. feat/sentry (worktree ../wt-sentry) hardens Sentry; awaiting scrubber review.
 
 **Current state:** dev = master (d23d591) + consolidation. Stale docs, the old CLAUDE.md, PROGRESS.md and project skills are in docs/archive/ (stale). QA cutover to Caddy completed 2026-10-23: `qa-api`/`qa-app`/`qa-admin.mento.chat` live on `129.121.171.140`, Nginx + certbot disabled on that box (not removed), `staging.mento.chat` kept serving as an alias pending a later retirement, QA reachable over the operator's Tailscale network, web releases installed by root via `/usr/local/sbin/qa-install-web` — full record in `infra/caddy/*.md` on `feat/qa-caddy`. Production promotion has stayed locked since the 2026-10 log. Old branches survive as archive/* tags. `feat/qa-ops` adds `docs/environments.md` and `ops/` (ci.sh, build-api.sh, qa-deploy-api.sh); qa-deploy-api is untested on a real host. It also adds QA's SOPS-encrypted env files in `deploy/staging/secrets/` and their `.sops.yaml` rule.
 
@@ -18,3 +18,4 @@ Updated 2026-10-23, during the repository consolidation (feat/consolidation → 
 - Erasure for suspended/banned members: currently blocked (403). Needs a product/legal decision — data-erasure rights vs. preserving safety-report evidence.
 - Should code comments that point at moved docs (e.g. docs/superpowers specs) be updated or left?
 - npm advisories in docs/DEPENDENCY_AUDIT_2026-10-05.md: still open?
+- Sentry follow-ups: ops/ scripts must supply GIT_SHA and EXPO_PUBLIC_GIT_SHA (and EXPO_PUBLIC_APP_ENV); add e2e/sentry-config.test.cjs to test-ci.yml (workflows untouched on purpose); .env.example documents ENV as `dev | staging | prod` but Sentry needs `production`.
