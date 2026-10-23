@@ -101,6 +101,30 @@ def decrypt(blob: bytes, key_id: str, *, message_id: str, conversation_id: str) 
     return plain.decode("utf-8")
 
 
+def config_problems(settings) -> list[str]:
+    """Why MESSAGE_KEY / MESSAGE_KEY_PREVIOUS cannot be used outside dev, as boot-time text.
+
+    Nothing is cached or decrypted: this only parses, so the API can refuse to boot
+    instead of failing on the first chat message.
+    """
+    if not settings.message_key:
+        return [
+            "MESSAGE_KEY is not set — own-chat messages could not be stored "
+            "(generate one: python -m app.services.message_crypto k1)"
+        ]
+    entries = [
+        settings.message_key,
+        *filter(None, (settings.message_key_previous or "").split(",")),
+    ]
+    try:
+        parsed = [_parse(entry) for entry in entries]
+    except MessageKeyError as exc:
+        return [str(exc)]
+    if any(key == _DEV_KEY for _, key in parsed):
+        return ["MESSAGE_KEY / MESSAGE_KEY_PREVIOUS contains the public dev key"]
+    return []
+
+
 def new_key(key_id: str) -> str:
     return f"{key_id}:{base64.b64encode(secrets.token_bytes(32)).decode()}"
 

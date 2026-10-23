@@ -21,17 +21,20 @@
 	}
 }
 
-# Same headers as QA. NOTE: X-Robots-Tag noindex is carried over unchanged; confirm it is
-# wanted on the public production hosts before cutover (runbook pre-check).
+# Same headers as QA, except the robots tag is split out (decided for production):
+# noindex on api. and admin. (machines and staff), NOT on mento.chat and app. (the public
+# front door must be indexable).
 (security_headers) {
 	header {
-		X-Robots-Tag "noindex, nofollow"
 		X-Content-Type-Options "nosniff"
 		X-Frame-Options "DENY"
 		Referrer-Policy "same-origin"
 		Strict-Transport-Security "max-age=31536000"
 		-Server
 	}
+}
+(noindex) {
+	header X-Robots-Tag "noindex, nofollow"
 }
 
 # Every site body is wrapped in `route { }`. Caddy otherwise reorders top-level
@@ -44,6 +47,7 @@
 api.mento.chat {
 	route {
 		import security_headers
+		import noindex
 		encode zstd gzip
 		request_body {
 			max_size 5MB
@@ -89,6 +93,7 @@ app.mento.chat {
 admin.mento.chat {
 	route {
 		import security_headers
+		import noindex
 		root * /opt/mento-console/current
 		encode zstd gzip
 

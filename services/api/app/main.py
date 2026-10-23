@@ -11,7 +11,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app import errors, observability
 from app.chat_hub import hub
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.db import init_db
 from app.routers import (
     admin_console,
@@ -33,6 +33,7 @@ from app.routers import (
     safety,
     stream_hooks,
 )
+from app.services import message_crypto
 
 observability.configure_logging()
 settings = get_settings()
@@ -51,6 +52,10 @@ def _enforce_prod_invariants() -> None:
       cross-origin from APP_BASE_URL / ADMIN_BASE_URL).
     - An empty or shared ADMIN_JWT_SECRET means a leaked user/listener secret can
       forge admin tokens — the highest-privilege credential must have its own key.
+    - MESSAGE_KEY unset, malformed or the public dev key: own-chat would fail on the
+      first message (or encrypt under a key anyone can read). Parsed here, not cached.
+    - DATABASE_URL still the code default (a published password): the real URL was never
+      supplied, so the process would be talking to — or trying to — a dev database.
     """
     problems = []
     if settings.jwt_secret == "change-me-long-random":
@@ -75,6 +80,11 @@ def _enforce_prod_invariants() -> None:
         problems.append(
             "LISTENER_JWT_SECRET is empty or equal to JWT_SECRET / ADMIN_JWT_SECRET — "
             "set a distinct long random value so mentor tokens can't be forged"
+        )
+    problems.extend(message_crypto.config_problems(settings))
+    if settings.database_url == Settings.model_fields["database_url"].default:
+        problems.append(
+            "DATABASE_URL is the code default (published dev password) — set the real URL"
         )
     if "trusted_proxy_hops" not in settings.model_fields_set:
         problems.append(

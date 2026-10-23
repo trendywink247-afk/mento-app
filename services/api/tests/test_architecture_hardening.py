@@ -9,6 +9,7 @@ A6: outside dev the API refuses to boot with an empty/shared ADMIN_JWT_SECRET.
 
 from __future__ import annotations
 
+import base64
 import uuid
 from types import SimpleNamespace
 
@@ -173,6 +174,10 @@ def test_non_pin_limits_still_fail_open(monkeypatch):
 # --- A6: ADMIN_JWT_SECRET prod invariant ---------------------------------------
 
 
+_PROD_MESSAGE_KEY = "k1:" + base64.b64encode(b"k" * 32).decode()
+_PROD_DATABASE_URL = "postgresql+psycopg://mento:not-the-default@db:5432/mento"
+
+
 def _boot_problems(**overrides) -> str:
     """Run _enforce_prod_invariants against a synthetic Settings; return the error."""
     from app import main
@@ -186,6 +191,8 @@ def _boot_problems(**overrides) -> str:
         admin_jwt_secret="a-distinct-admin-secret",
         listener_jwt_secret="a-distinct-listener-secret",
         trusted_proxy_hops=1,
+        message_key=_PROD_MESSAGE_KEY,
+        database_url=_PROD_DATABASE_URL,
     )
     base.update(overrides)
     settings = Settings(_env_file=None, **base)
@@ -233,6 +240,8 @@ def test_prod_refuses_unset_trusted_proxy_hops():
         cors_origins="https://console.example",
         admin_jwt_secret="a-distinct-admin-secret",
         listener_jwt_secret="a-distinct-listener-secret",
+        message_key=_PROD_MESSAGE_KEY,
+        database_url=_PROD_DATABASE_URL,
     )
     from app import main
 
@@ -247,3 +256,51 @@ def test_prod_refuses_unset_trusted_proxy_hops():
 
 def test_prod_accepts_explicit_zero_proxy_hops():
     assert _boot_problems(trusted_proxy_hops=0) == ""
+
+
+# --- production secrets must not be code defaults or missing ---------------------
+
+
+def test_prod_refuses_missing_message_key():
+    assert "MESSAGE_KEY" in _boot_problems(message_key="")
+
+
+def test_prod_refuses_malformed_message_key():
+    assert "MESSAGE_KEY" in _boot_problems(message_key="not-a-key")
+    assert "MESSAGE_KEY" in _boot_problems(message_key="k1:" + base64.b64encode(b"short").decode())
+
+
+def test_prod_refuses_the_public_dev_message_key():
+    dev = "dev:" + base64.b64encode(b"mento-dev-only-message-key-32byt").decode()
+    assert "dev key" in _boot_problems(message_key=dev)
+    assert "dev key" in _boot_problems(message_key_previous=dev)
+
+
+def test_prod_refuses_malformed_previous_message_key():
+    assert "MESSAGE_KEY" in _boot_problems(message_key_previous="k0:%%%")
+
+
+def test_prod_accepts_a_valid_previous_message_key():
+    previous = "k0:" + base64.b64encode(b"p" * 32).decode()
+    assert _boot_problems(message_key_previous=previous) == ""
+
+
+def test_prod_refuses_the_default_database_url():
+    default = Settings.model_fields["database_url"].default
+    assert "DATABASE_URL" in _boot_problems(database_url=default)
+
+
+def test_prod_refuses_the_default_jwt_secret():
+    assert "JWT_SECRET" in _boot_problems(jwt_secret="change-me-long-random")
+
+
+def test_production_spelling_of_env_is_enforced_too():
+    # is_dev is `env == "dev"`: "production" and "prod" are both enforced.
+    for env in ("prod", "production", "staging"):
+        assert "MESSAGE_KEY" in _boot_problems(env=env, message_key="")
+
+
+def test_every_missing_secret_is_reported_at_once():
+    problems = _boot_problems(message_key="", listener_jwt_secret="", admin_jwt_secret="")
+    for name in ("MESSAGE_KEY", "LISTENER_JWT_SECRET", "ADMIN_JWT_SECRET"):
+        assert name in problems

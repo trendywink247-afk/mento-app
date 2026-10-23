@@ -38,9 +38,11 @@ Cutover only starts when all of these are done. `ops/deploy-api.sh prod` refuses
 - [ ] `dev` → `main` PR, **approved by the mentor**, merged
 - [ ] The mentor has read this runbook; a window is agreed and announced
 - [ ] This runbook was rehearsed on QA end to end, including both rollback levels
-- [ ] QA has run the new image with the worker for a week with no job errors
+- [ ] QA has run the exact release image, with the worker, for at least 24 hours with no job errors (the mentor may extend this)
 
 ## 2. Pre-checks (read-only, days before)
+
+**Order of work:** P1, P2; then section 3 steps A1 to A4 (they change nothing users can see); then P2b, P2c, P3, P3b and P4 to P13; then A5 and A6. Several pre-checks need the clone, the image or the override those steps create, and say so.
 
 Keep all evidence in `/root/cutover` (root-only):
 
@@ -69,27 +71,162 @@ grep -x "${PROJECT}_mento_redisdata_prod" $W/volumes-before.txt
 
 Both `grep` lines must print a volume name. If either prints nothing, **stop**: the volumes are not named `<project>_mento_*_prod` and the new compose would not reuse them. Fix the compose file (an external `name:`) before going on.
 
-**P3. Settings: names only, and where the file is.**
+**P2b. How the old stack was actually started (read-only; needed for the Level 2 rollback).** Run this after A1 to A4 (it needs the clone, the override and the compose copy) and before anything else changes. `docker compose config` prints the resolved environment, **passwords included**: never run it bare. Use `--quiet`, `--services`, `--images`, or pipe `--format json` into the comparer, which prints no environment values.
+
+What the repo says about the old start (`deploy/deploy.sh`, legacy stack): from `/opt/mento`, `COMPOSE_FILE=deploy/docker-compose.prod.yml`, `docker compose --env-file "$MENTO_ENV_FILE" ...` with `MENTO_ENV_FILE` exported (the decrypted tmpfs file when `deploy/secrets/prod.env.sops.yaml` exists, else `/opt/mento/services/api/.env`) and `API_TAG` exported (the file defaults to `mento-api:latest` when `API_TAG` is unset), no `-p` (the project name is the compose directory's name unless overridden). The audit's tag `92b8f57a5cd3` is shorter than `deploy.sh`'s 40-hex tags, so **the live containers may have been started another way; do not assume.** Establish it from the containers:
+
+```bash
+docker inspect mento-api-prod --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}|{{index .Config.Labels "com.docker.compose.project.config_files"}}|{{index .Config.Labels "com.docker.compose.project.environment_file"}}' | tee $W/old-start-labels.txt
+ls -l /opt/mento/services/api/.env /opt/mento/deploy/secrets/prod.env.sops.yaml 2>&1      # metadata only
+ls -l /run/user/*/mento/api.env 2>&1                                                      # the tmpfs render, if any
+```
+
+Decide `ENVFILE` (the file the live containers were started from; it must also satisfy P3's rules) and `OLD_COMPOSE` (third field of `$W/project.txt`, normally `/opt/mento/deploy/docker-compose.prod.yml`). Check the file really matches the running container (names only):
+
+```bash
+OLD_TAG=$(docker inspect mento-api-prod --format '{{.Config.Image}}' | cut -d: -f2); echo "$OLD_TAG"      # must print 92b8f57a5cd3
+grep -oE '^[A-Za-z_][A-Za-z0-9_]*=' "$ENVFILE" | tr -d '=' | sort -u | comm -13 - $W/env-names-running.txt | head -50
+```
+
+The last command lists names the running container has that the file lacks. Expect only image defaults (`PATH`, `PYTHON_*`, `UVICORN_WORKERS`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`, `PORT`, `PYTHONUNBUFFERED`, `HOME`-style names) and `DATABASE_URL` / `REDIS_URL` (set by compose). Any application setting listed means the file is not the one the container was started from: find the right one before going on.
+
+Save the verified facts (paths and names only, no secrets); Level 2 rollback reads them:
+
+```bash
+printf 'PROJECT=%s\nENVFILE=%s\nOLD_COMPOSE=%s\nOLD_TAG=%s\n' "$PROJECT" "$ENVFILE" "$OLD_COMPOSE" "$OLD_TAG" > $W/vars.sh
+chmod 600 $W/vars.sh; . $W/vars.sh
+```
+
+Dry-run the exact old start, resolved but not started:
+
+```bash
+old_cfg() { MENTO_ENV_FILE="$ENVFILE" API_TAG="$OLD_TAG" docker compose -p "$PROJECT" --env-file "$ENVFILE" -f "$OLD_COMPOSE" "$@"; }
+old_cfg config --quiet && echo old-compose-valid
+old_cfg config --services          # must list the service names: postgres redis api worker
+old_cfg config --images | sort -u  # must include mento-api:92b8f57a5cd3
+```
+
+The `api` service name and the resolved image `mento-api:92b8f57a5cd3` are asserted again, mechanically, in P2c. **If the images list shows `mento-api:latest`, `API_TAG` was not honoured: stop and fix the rollback command before the window.**
+
+The Level 2 start command that follows from this. It is written to a file now, so the window uses the verified command and nobody retypes it from memory:
+
+```bash
+printf '%s\n' \
+  '#!/usr/bin/env bash' \
+  '# Start the OLD api image with the OLD compose file, exactly as the live stack was started (P2b).' \
+  'set -euo pipefail' \
+  '. /root/cutover/vars.sh' \
+  'MENTO_ENV_FILE="$ENVFILE" API_TAG="$OLD_TAG" docker compose -p "$PROJECT" --env-file "$ENVFILE" \' \
+  '  -f "$OLD_COMPOSE" up -d --no-deps --no-build --wait api' > $W/rollback-level2-start.sh
+chmod 700 $W/rollback-level2-start.sh; cat $W/rollback-level2-start.sh
+```
+
+`API_TAG` must be set (the old file falls back to `:latest`), `MENTO_ENV_FILE` must be exported (the old file falls back to `../services/api/.env`), and `--no-build` stops compose rebuilding from source. Same shape as `rollback()` in `deploy.sh`.
+
+**P2c. The new compose must adopt the existing containers.** Compose only reuses a container when the project, service name and `container_name` line up. Compare the old and new files for `api`, `postgres` and `redis` (and `worker` where both have one): service names, `container_name`, images, volumes, ports, named volumes. Run after A4 (needs the override):
+
+```bash
+new_cfg() { GIT_SHA="$MAIN" docker compose -p "$PROJECT" --env-file "$ENVFILE" -f /opt/mento/compose.prod-cutover.yml -f /opt/mento/prod.override.yml "$@"; }
+python3 /opt/mento/src/ops/compare-compose.py --expect-old-image mento-api:92b8f57a5cd3 \
+  <(old_cfg config --format json) <(new_cfg config --format json)
+```
+
+It prints both sides (names, images, ports only) and ends with `MATCH` (exit 0) or `MISMATCH, STOP` (exit 1) with the differing fields. **Stop if it differs.** Fix `compose.prod-cutover.yml` through a reviewed change on `main`, not by editing the copy on the box. (The same check on the two committed files, with no docker, is `python3 ops/test-compare-compose.py`.)
+
+**P3. Settings: names only, and where the file is.** `ENVFILE` is the file chosen in P2b. It must be a plain file, `root:root 0600`, that survives reboots (not the tmpfs render that `deploy/decrypt-env.sh` rewrites per deploy); if production secrets are SOPS-managed today, the operator makes one stable root-only render. **TBD (audit Mon): how production secrets are held today.**
 
 ```bash
 docker inspect mento-api-prod --format '{{range .Config.Env}}{{println .}}{{end}}' | cut -d= -f1 | sort -u > $W/env-names-running.txt
 wc -l $W/env-names-running.txt
-ls -l /opt/mento/services/api/.env /opt/mento/deploy/secrets/ 2>&1     # metadata only
+stat -c '%U:%G %a %n' "$ENVFILE"
 ```
 
-Decide the env file that will be `MENTO_ENV_FILE`. It must be a plain file, `root:root 0600`, that survives reboots (not a tmpfs that `deploy/decrypt-env.sh` rewrites per deploy). If production secrets are SOPS-managed today, the operator makes a stable root-only render once. **TBD (audit Mon): how production secrets are held today.**
+**P3a. Every setting the new code reads.** Each one has a code default, so a missing name never errors by itself: it silently runs on the default. Secrets are listed first. The "refuses to boot" column is `_enforce_prod_invariants` in `app/main.py`: when `ENV` is anything but `dev`, the API **fails fast at startup** if a published-default or missing secret remains (`MESSAGE_KEY` and `DATABASE_URL` are now covered too; see `test_architecture_hardening.py`). The audit found **`MESSAGE_KEY` and `LISTENER_JWT_SECRET` missing from production's running settings**. The old image does not enforce them; the new one does, so it would crash-loop on first start and trigger the automatic rollback. Both are therefore generated *before* the window (A6).
 
-Names to compare against what the new code reads:
+| Setting | Code default | Refuses to boot outside dev? | Production plan |
+|---|---|---|---|
+| `JWT_SECRET` | published default string | YES: refuses to boot if still the default | carry over |
+| `ADMIN_JWT_SECRET` | '' (falls back to JWT_SECRET in dev) | YES: refuses to boot if empty or equal to JWT_SECRET | carry over |
+| `LISTENER_JWT_SECRET` | '' | YES: refuses to boot if empty or equal to JWT_SECRET / ADMIN_JWT_SECRET | **NOT in prod today (audit): generate** |
+| `MESSAGE_KEY` | '' (dev uses a public key) | YES: refuses to boot if unset, malformed (`<id>:<base64 of 32 bytes>`) or the dev key | **NOT in prod today (audit): generate** |
+| `MESSAGE_KEY_PREVIOUS` | '' | YES if set: must parse and not be the dev key | leave empty (no retired keys yet) |
+| `DATABASE_URL` | `postgresql+psycopg://mento:mento@localhost:5432/mento` (published password) | YES: refuses to boot if still the default | set by compose from `POSTGRES_PASSWORD` |
+| `REDIS_URL` | `redis://localhost:6379/0` | no | set by compose |
+| `STREAM_API_KEY` | '' | YES: refuses to boot if empty (crisis scan would be off) | carry over |
+| `STREAM_API_SECRET` | '' | YES: refuses to boot if empty | carry over |
+| `RAZORPAY_KEY_ID` | '' | no (feature not wired) | carry over |
+| `RAZORPAY_KEY_SECRET` | '' | no (feature not wired) | carry over |
+| `RECOVERY_RECEIPT_TOKEN` | '' | no | leave unset unless `RECOVERY_RECEIPT_REQUIRED` is turned on |
+| `GEMINI_API_KEY` | '' (journal note-sorting stays dark) | no | leave unset |
+| `POSTHOG_API_KEY` | '' | no | carry over if set |
+| `SENTRY_DSN` | '' (Sentry off) | no | **add** (A6) |
+
+Non-secret settings with a code default (all optional; names that production does not set run on the default):
+
+| Setting | Code default |
+|---|---|
+| `ENV` | `dev` (`prod` in production; any value other than `dev` turns the boot checks on) |
+| `JWT_TTL_DAYS` | `90` |
+| `LISTENER_JWT_TTL_DAYS` | `30` |
+| `ADMIN_JWT_TTL_DAYS` | `14` |
+| `LEGACY_CLAIMS_ACCEPTED_UNTIL` | `2027-01-31` (**cutover must happen on or before 2026-11-02**, otherwise set this later: tokens minted by the old API without `iss/aud/jti` are accepted only until this date) |
+| `ACCESS_TOKEN_MINUTES` | `15` |
+| `REFRESH_TOKEN_TTL_DAYS` | `90` |
+| `MIN_AGE` | `18` |
+| `TERMS_VERSION` | `2026-09-27` |
+| `TERMS_GATE_ENFORCED` | `False` |
+| `RECOVERY_RECEIPT_REQUIRED` | `False` |
+| `RECOVERY_RECEIPT_URL` | `''` |
+| `DB_POOL_SIZE` | `10` |
+| `DB_MAX_OVERFLOW` | `10` |
+| `DB_STATEMENT_TIMEOUT_MS` | `5000` |
+| `DB_POOL_TIMEOUT` | `5` |
+| `DB_POOL_RECYCLE` | `1800` |
+| `RATE_LIMIT_ENABLED` | `True` |
+| `TRUSTED_PROXY_HOPS` | `0` (**must be set explicitly**: refuses to boot if absent; `1` behind Nginx or Caddy) |
+| `PUSH_ENABLED` | `True` (`true` in production) |
+| `PUSH_BURST_SECONDS` | `60` |
+| `PUSH_WATCH_CACHE_SECONDS` | `5` |
+| `CRISIS_SCAN_THREADS` | `8` |
+| `PII_REDACTION_ENABLED` | `True` |
+| `PII_USE_PRESIDIO` | `True` |
+| `STREAM_TIMEOUT_SECONDS` | `3.0` |
+| `MESSAGE_RETENTION_DAYS` | `None` (unset = the worker drops nothing; founder decision) |
+| `CHAT_FRAMES_PER_WINDOW` | `40` |
+| `CHAT_FRAMES_WINDOW_S` | `10` |
+| `CHAT_IDLE_DEADLINE_S` | `75.0` |
+| `ALLOWANCE_ENABLED` | `True` |
+| `ALLOWANCE_ENFORCED` | `False` |
+| `ALLOWANCE_IN_A_ROW` | `3` |
+| `ALLOWANCE_PER_DAY` | `10` |
+| `ALLOWANCE_CRISIS_EXEMPT_HOURS` | `24` |
+| `ALLOWANCE_BUDGET_MS` | `800` |
+| `MENTOR_NAME_ROTATION_ENABLED` | `True` |
+| `IN_TOUCH_LIMIT` | `2` |
+| `IN_TOUCH_REASK_DAYS` | `7` |
+| `CONVERSATION_MAX_AGE_HOURS` | `24` |
+| `SNOOZE_HOURS` | `24` |
+| `APP_BASE_URL` | `''` (refuses to boot if the derived CORS origin list is empty) |
+| `ADMIN_BASE_URL` | `''` (refuses to boot if the derived CORS origin list is empty) |
+| `CONSOLE_BASE_URL` | `http://localhost:8081` |
+| `CORS_ORIGINS` | `''` (refuses to boot if the derived CORS origin list is empty) |
+| `POSTHOG_HOST` | `https://app.posthog.com` |
+| `GEMINI_MODEL` | `gemini-1.5-flash` |
+| `CRISIS_HELPLINES_JSON` | `Tele-MANAS 14416 and 1800-89-14416 (JSON)` |
+
+Read outside `Settings`: `UVICORN_WORKERS` (2), `PORT` (8000) in the image; `GIT_SHA` (empty) is supplied by `deploy-api`, never by the env file.
+
+**P3b. What production is missing** (needs the image from A3; A1 to A3 do not affect users, so do them first):
 
 ```bash
-grep -oE '^[A-Z][A-Z0-9_]*=' /opt/mento/src/services/api/.env.example | tr -d '=' | sort -u > $W/env-names-example.txt   # after A1
-comm -13 $W/env-names-running.txt $W/env-names-example.txt      # in the example, not in the running container
+docker run --rm mento-api:$TAG python -c "from app.config import Settings; print('\n'.join(sorted(n.upper() for n in Settings.model_fields)))" > $W/env-names-code.txt
+comm -13 $W/env-names-running.txt $W/env-names-code.txt        # read by the code, not set in production
 ```
 
-Each name printed is a setting production does not set today. Decide for each: leave at its code default, or add (see A6). Expected additions: `SENTRY_DSN`. `GIT_SHA` is *not* added to the file (A6). Also check:
+Walk the output against the table. Every **secret** that appears is missing and must exist before the window; every non-secret simply runs on its default (decide for each whether that is acceptable). Also check (names only):
 
 ```bash
-grep -x -e MESSAGE_RETENTION_DAYS -e PUSH_ENABLED -e ENV -e MESSAGE_KEY -e RAZORPAY_KEY_ID -e RAZORPAY_KEY_SECRET -e STREAM_API_KEY -e STREAM_API_SECRET $W/env-names-running.txt
+grep -x -e MESSAGE_RETENTION_DAYS -e PUSH_ENABLED -e ENV -e TRUSTED_PROXY_HOPS -e STREAM_API_KEY -e STREAM_API_SECRET -e RAZORPAY_KEY_ID -e RAZORPAY_KEY_SECRET $W/env-names-running.txt
 ```
 
 **`MESSAGE_RETENTION_DAYS`:** unset means nothing is ever dropped. The worker's daily job *drops* message partitions older than that many days. If the name is present, confirm the value with the founder before the worker starts. Otherwise leave it unset.
@@ -171,7 +308,7 @@ Exit 0 is required. If it fails, fix the off-box remote *before* the window. Do 
 
 **P13. Decisions to take before the window:**
 
-- The Caddyfile sends `X-Robots-Tag: noindex, nofollow` (copied from QA). Keep it on public production?
+- Robots header, **decided**: `X-Robots-Tag: noindex, nofollow` is OFF for `mento.chat` and `app.mento.chat`, and ON for `api.mento.chat` and `admin.mento.chat` (`infra/caddy/Caddyfile.prod`: the `noindex` snippet is imported by those two hosts only).
 - Apex behaviour (P7).
 - The off-peak window, and who is on call for Stream and push.
 
@@ -215,7 +352,7 @@ The label must equal `$MAIN`. Now run P4 (migration review) with this image.
 **A4. `deploy.conf` and the first override.** `deploy.conf` is sourced as root by `deploy-api`; it must be root-owned and not group/world writable.
 
 ```bash
-ENVFILE=<path chosen in P3>
+ENVFILE=<path chosen in P2b>
 cat > /opt/mento/deploy.conf <<EOF
 PROJECT=$PROJECT
 MENTO_ENV_FILE=$ENVFILE
@@ -242,26 +379,63 @@ GIT_SHA=$MAIN docker compose -p "$PROJECT" --env-file "$ENVFILE" \
   -f /opt/mento/compose.prod-cutover.yml -f /opt/mento/prod.override.yml config -q && echo compose-ok
 ```
 
-**A6. Settings: carry over, add, never set.**
+**A6. Settings: carry over, generate, add, never set.** Do this before the window; it changes only the env file, which the running (old) containers do not re-read until they are recreated. Take the safety copy first:
 
-*Carry over unchanged* (the same env file, nothing edited): `ENV=prod`; `JWT_SECRET`, `ADMIN_JWT_SECRET`, `LISTENER_JWT_SECRET`; **`MESSAGE_KEY`** (stored message bodies are encrypted with it; a changed or lost key makes them unreadable); `STREAM_API_KEY` / `STREAM_API_SECRET`; `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`; `PUSH_ENABLED=true` and the push credentials; `APP_BASE_URL`, `ADMIN_BASE_URL`, `CORS_ORIGINS`; `TRUSTED_PROXY_HOPS` (Caddy is one proxy hop, same as Nginx; verify the value is unchanged); `UVICORN_WORKERS`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`; `POSTGRES_PASSWORD` (compose reads it through `--env-file`).
+```bash
+. $W/vars.sh
+cp -p "$ENVFILE" $W/api.env.pre-cutover        # secret file in a root-only dir; delete after the rollback window
+```
 
-*Set by compose, ignore in the file:* `DATABASE_URL`, `REDIS_URL`.
+*Carry over unchanged* (already in production's running settings; edit nothing): `ENV=prod`; `JWT_SECRET` and `ADMIN_JWT_SECRET` (**never regenerate these**: a new `JWT_SECRET` signs everyone out, a new `ADMIN_JWT_SECRET` invalidates admin sessions); `STREAM_API_KEY` / `STREAM_API_SECRET`; `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`; `PUSH_ENABLED=true` and the push credentials; `APP_BASE_URL`, `ADMIN_BASE_URL`, `CORS_ORIGINS`; `TRUSTED_PROXY_HOPS` (Caddy is one proxy hop, same as Nginx; verify it is set, the new image refuses to boot without it); `UVICORN_WORKERS`, `DB_POOL_SIZE`, `DB_MAX_OVERFLOW`; `POSTGRES_PASSWORD` (compose reads it through `--env-file`). `STREAM_*` and `RAZORPAY_*` are issued by the vendors: if either is missing, stop and get it from the team password manager; it cannot be generated.
+
+*Generate new, on the box, before the window* (the audit shows these are **not** in production's running settings; the new image refuses to boot without them):
+
+| Name | Value |
+|---|---|
+| `LISTENER_JWT_SECRET` | `secrets.token_urlsafe(48)`, distinct from `JWT_SECRET` and `ADMIN_JWT_SECRET` by construction |
+| `MESSAGE_KEY` | `<key id>:<base64 of 32 random bytes>` from the module's own generator (`python -m app.services.message_crypto k1`). **Not** a `token_urlsafe` string: the API rejects anything that is not this shape |
+
+Plus **any other secret** that P3b showed as missing and that can be generated (`JWT_SECRET` / `ADMIN_JWT_SECRET` are never in this list; vendor keys are never generated). The value is produced inside the image, piped straight into the file, and never printed, logged or put in a shell variable:
+
+```bash
+has_env() { grep -q "^$1=" "$ENVFILE"; }
+append_env() {   # append_env NAME  (the value arrives on stdin)
+  [ -z "$(tail -c1 "$ENVFILE")" ] || echo >> "$ENVFILE"      # make sure the file ends with a newline
+  { printf '%s=' "$1"; cat; } >> "$ENVFILE"
+}
+has_env LISTENER_JWT_SECRET || docker run --rm mento-api:$TAG python -c 'import secrets;print(secrets.token_urlsafe(48))' | append_env LISTENER_JWT_SECRET
+has_env MESSAGE_KEY         || docker run --rm mento-api:$TAG python -m app.services.message_crypto k1 | append_env MESSAGE_KEY
+for n in LISTENER_JWT_SECRET MESSAGE_KEY; do printf '%s: %s line(s)\n' "$n" "$(grep -c "^$n=" "$ENVFILE")"; done     # 1 each
+stat -c '%U:%G %a %n' "$ENVFILE"                                                                                  # root:root 600
+```
+
+`has_env` makes this safe to re-run: an existing value is never overwritten. (Overwriting `MESSAGE_KEY` after chats exist would make stored messages unreadable.)
 
 *Add:*
 
-- **`SENTRY_DSN`**: the production project's DSN from the team password manager. With `ENV=prod` the code reports as environment `production`, so there is no separate environment setting to add (`feat/sentry` maps `qa`/`staging` → `qa` and `prod`/`production` → `production`; anything else is off). The DSN is a secret; enter it without echo:
+- **`SENTRY_DSN`**: the production project's DSN from the team password manager. With `ENV=prod` the code reports as environment `production` (`feat/sentry` maps `qa`/`staging` → `qa` and `prod`/`production` → `production`; anything else is off), so there is no separate environment setting to add. Enter it without echo:
 
   ```bash
-  cp -p "$ENVFILE" $W/api.env.pre-cutover        # secret file, root-only dir; delete after the rollback window
-  grep -qx SENTRY_DSN $W/env-names-running.txt && echo "already set" || {
-    read -rsp 'SENTRY_DSN: ' V; echo; printf 'SENTRY_DSN=%s\n' "$V" >> "$ENVFILE"; unset V; }
+  has_env SENTRY_DSN || { read -rsp 'SENTRY_DSN: ' V; echo; printf '%s' "$V" | append_env SENTRY_DSN; echo >> "$ENVFILE"; unset V; }
   ```
 
 - **`GIT_SHA`**: do **not** put it in the env file. `deploy-api` exports the full commit from the image label on every deploy; compose passes it to `api` and `worker` as the Sentry release. A hand-written value would be overridden.
-- Anything else P3 flagged and you decided to set.
+- Anything else P3b flagged and you decided to set.
+
+*Set by compose, ignore in the file:* `DATABASE_URL`, `REDIS_URL`.
 
 Never set `MESSAGE_RETENTION_DAYS` in this change unless the founder has chosen the number.
+
+**A6b. Escrow the message key (a human step, the only place a secret is ever shown).** Production has no encrypted messages yet (the T5.1 table was never deployed), so nothing is unreadable today. From the first chat message onward, **losing `MESSAGE_KEY` makes every stored message permanently unreadable**, and the pre-cutover env copy and the Level 2 backup do not contain it. Before the window, the operator (with the mentor's agreement) puts the value in the team password manager from the box console, and clears the terminal scrollback afterwards. Tooling, tickets and chat never see it. `LISTENER_JWT_SECRET` needs no escrow: it can be regenerated (`scripts/issue_listener_token` reissues mentor links; tokens signed with `JWT_SECRET` stay accepted until `LEGACY_CLAIMS_ACCEPTED_UNTIL`).
+
+**A6c. Prove the new image will boot with this file** (the same checks the API runs at startup, offline, nothing started). `DATABASE_URL` is a placeholder here because compose supplies the real one:
+
+```bash
+docker run --rm --env-file "$ENVFILE" -e DATABASE_URL='postgresql+psycopg://check:check@db:5432/mento' mento-api:$TAG \
+  python -c "from app import main; main._enforce_prod_invariants(); print('boot invariants OK')"
+```
+
+`boot invariants OK` is required. Otherwise it prints `RuntimeError: unsafe prod configuration: ...` naming every offending setting (names only, never values); fix them all and re-run. Note `docker run --env-file` does not strip quotes; a quoted value in the file will fail here even though compose would accept it: fix the file, not the check.
 
 ## 4. Phase A: API, worker and migrations (Nginx still the edge)
 
@@ -392,7 +566,7 @@ Without this a reboot lets Nginx grab port 80 first.
 - `https://app.mento.chat/` loads the app; a deep link such as `/some/route` returns the SPA, a missing `/assets/x` is a real 404; `/admin` on the app host is 404.
 - `https://admin.mento.chat/` → 302 to `/admin`; the dashboard logs in; a non-admin path is 404.
 - `https://mento.chat/` → redirects to `app.`; `/admin…` → redirects to `admin.`.
-- Response headers carry `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and no `Server` (and `X-Robots-Tag` if kept).
+- Response headers on all four hosts carry `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and no `Server`. `X-Robots-Tag: noindex, nofollow` is present on `api.` and `admin.` and **absent** on `mento.chat` and `app.` (`curl -sI https://<host>/ | grep -i x-robots-tag`).
 - A real chat opens (WebSocket through Caddy), a message sends, a push arrives on a test device.
 - Re-run A11 (all three) against the public hostname.
 - The external monitor (`external-monitor.sh` / Uptime Kuma) shows green and its alert path still fires (they poll `https://api.mento.chat/api/v1/health/crisis`).
@@ -445,11 +619,11 @@ It asks you to type `rollback prod <tag>`, puts the previous image back (api onl
    $P -d postgres -c "ALTER DATABASE mento RENAME TO mento_failed_$(date +%Y%m%d%H%M)"
    $P -d postgres -c "ALTER DATABASE mento_restore RENAME TO mento"
    ```
-6. Start the OLD image with the OLD compose (`docker-compose.prod.yml` is untouched). Same project, same volumes:
+6. Start the OLD image with the OLD compose file (`docker-compose.prod.yml` is untouched), using the command verified in P2b and saved then; do not retype it:
    ```bash
-   API_TAG=92b8f57a5cd3 docker compose -p "$PROJECT" --env-file "$ENVFILE" \
-     -f /opt/mento/deploy/docker-compose.prod.yml up -d --no-deps api
+   /root/cutover/rollback-level2-start.sh
    ```
+   It runs `MENTO_ENV_FILE="$ENVFILE" API_TAG="$OLD_TAG" docker compose -p "$PROJECT" --env-file "$ENVFILE" -f "$OLD_COMPOSE" up -d --no-deps --no-build --wait api`, with the project, env file and compose file recorded from the live containers in P2b (`/root/cutover/vars.sh`). `API_TAG` is required because the old file otherwise starts `mento-api:latest`; `MENTO_ENV_FILE` is required because the old file otherwise reads `../services/api/.env`. The service is named `api` (asserted in P2c) and compose adopts `mento-api-prod` because the project and `container_name` match (also P2c).
    Then `docker exec mento-api-prod alembic current` → `c13a0seen001`, `curl http://127.0.0.1:8000/api/v1/health/ready` → 200, and the public hostnames answer through Nginx.
 7. Confirm the volumes list equals `$W/volumes-before.txt`, and row counts are close to `$W/rowcounts-before.txt` (lower only by what was written during the window). The extra settings (`SENTRY_DSN`) are harmless to the old image; `$W/api.env.pre-cutover` is the exact previous file if you want it back.
 8. Record what happened and why; do not retry the cutover until the cause is understood.
