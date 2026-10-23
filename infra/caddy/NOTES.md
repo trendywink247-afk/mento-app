@@ -1,8 +1,13 @@
 # QA → Caddy: findings (read-only recon, no sudo)
 
-Scope: VPS B (`31.42.125.238`, this box), which today serves only
+Scope: this box (`129.121.171.140`), which today serves only
 `staging.mento.chat` behind host Nginx. All of this was read directly off the
-box (`/etc/nginx/*`, no edits) plus the repo's `deploy/` tree.
+box (`/etc/nginx/*`, no edits) plus the repo's `deploy/` tree. (The repo's
+`deploy/staging/README.md`, `deploy/ssh.config` and `deploy/staging/release.json`
+still describe this host as "VPS B, `31.42.125.238`" — that no longer matches
+the box's actual address, confirmed by `hostname -I`. Fixing those is outside
+this plan's scope; flagging it here so it isn't mistaken for a typo in this
+plan instead of a stale fact elsewhere in the repo.)
 
 ## 1. How a staging release switches traffic today
 

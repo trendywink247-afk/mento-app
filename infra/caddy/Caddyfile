@@ -1,4 +1,4 @@
-# QA edge for VPS B (31.42.125.238) — replaces host Nginx for this box only.
+# QA edge for this box (129.121.171.140) — replaces host Nginx for this box only.
 # See infra/caddy/NOTES.md for how this was derived from the live Nginx config
 # and deploy/caddy/Caddyfile (production's template, unchanged by this file).
 #
@@ -52,45 +52,55 @@
 
 # --- New split hosts -------------------------------------------------------
 
+# Every site body below is wrapped in `route { }`. Caddy otherwise reorders
+# top-level directives into its own fixed global order (not written order) —
+# `file_server`/`handle` can end up evaluated before a bare `respond`, so a
+# request that should get the allowlist's 403 falls through to being served
+# instead. `route` disables that reordering and runs its contents exactly as
+# written, so `import allowlist`'s block-and-respond genuinely runs first.
 qa-api.mento.chat {
-	import allowlist
-	import security_headers
-	encode zstd gzip
-	request_body {
-		max_size 5MB
-	}
-	# Caddy upgrades WebSocket connections automatically (own-chat, WS5) — no
-	# special config needed beyond a read_timeout long enough for an idle
-	# chat socket, matching deploy/caddy/Caddyfile's own-chat value.
-	reverse_proxy 127.0.0.1:18010 {
-		health_uri /api/v1/health/ready
-		health_interval 5s
-		health_timeout 3s
-		transport http {
-			read_timeout 3600s
+	route {
+		import allowlist
+		import security_headers
+		encode zstd gzip
+		request_body {
+			max_size 5MB
+		}
+		# Caddy upgrades WebSocket connections automatically (own-chat, WS5) —
+		# no special config needed beyond a read_timeout long enough for an
+		# idle chat socket, matching deploy/caddy/Caddyfile's own-chat value.
+		reverse_proxy 127.0.0.1:18010 {
+			health_uri /api/v1/health/ready
+			health_interval 5s
+			health_timeout 3s
+			transport http {
+				read_timeout 3600s
+			}
 		}
 	}
 }
 
 # The web app — same static build qa-admin serves, routed differently.
 qa-app.mento.chat {
-	import allowlist
-	import security_headers
-	root * /opt/mento-staging/web
-	encode zstd gzip
+	route {
+		import allowlist
+		import security_headers
+		root * /opt/mento-staging/web
+		encode zstd gzip
 
-	handle /_expo/* {
-		file_server
-	}
-	handle /assets/* {
-		file_server
-	}
-	handle /admin* {
-		respond 404
-	}
-	handle {
-		try_files {path} {path}/ /index.html
-		file_server
+		handle /_expo/* {
+			file_server
+		}
+		handle /assets/* {
+			file_server
+		}
+		handle /admin* {
+			respond 404
+		}
+		handle {
+			try_files {path} {path}/ /index.html
+			file_server
+		}
 	}
 }
 
@@ -100,27 +110,29 @@ qa-app.mento.chat {
 # only one build artifact on this box, unlike prod's separate app/admin
 # release flow). Revisit the root path if/when QA gets its own console build.
 qa-admin.mento.chat {
-	import allowlist
-	import security_headers
-	root * /opt/mento-staging/web
-	encode zstd gzip
+	route {
+		import allowlist
+		import security_headers
+		root * /opt/mento-staging/web
+		encode zstd gzip
 
-	redir / /admin 302
-	handle /admin* {
-		try_files {path} {path}/ /index.html
-		file_server
-	}
-	handle /_expo/* {
-		file_server
-	}
-	handle /assets/* {
-		file_server
-	}
-	handle /favicon.ico {
-		file_server
-	}
-	handle {
-		respond 404
+		redir / /admin 302
+		handle /admin* {
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+		handle /_expo/* {
+			file_server
+		}
+		handle /assets/* {
+			file_server
+		}
+		handle /favicon.ico {
+			file_server
+		}
+		handle {
+			respond 404
+		}
 	}
 }
 
@@ -131,23 +143,25 @@ qa-admin.mento.chat {
 # three public exceptions). Retire this block once the Stream webhooks move
 # to qa-api.mento.chat (infra/caddy/CHANGES.md item 5).
 staging.mento.chat {
-	import allowlist
-	import security_headers
-	root * /opt/mento-staging/web
-	encode zstd gzip
+	route {
+		import allowlist
+		import security_headers
+		root * /opt/mento-staging/web
+		encode zstd gzip
 
-	handle /api/* {
-		reverse_proxy 127.0.0.1:18010 {
-			health_uri /api/v1/health/ready
-			health_interval 5s
-			health_timeout 3s
-			transport http {
-				read_timeout 3600s
+		handle /api/* {
+			reverse_proxy 127.0.0.1:18010 {
+				health_uri /api/v1/health/ready
+				health_interval 5s
+				health_timeout 3s
+				transport http {
+					read_timeout 3600s
+				}
 			}
 		}
-	}
-	handle {
-		try_files {path} {path}/ /index.html
-		file_server
+		handle {
+			try_files {path} {path}/ /index.html
+			file_server
+		}
 	}
 }
