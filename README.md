@@ -1,41 +1,53 @@
 # Mento
 
-An anonymous, low-friction emotional-support application with a shared onboarding base for members and mentors. The current v1 is 18+ anonymous support. UPSC, NEET and JEE are the community direction; verified professional mentoring, payments and broader sectors require their own agreed scope.
+An anonymous, low-friction emotional-support application. A person in a hard
+moment opens it and is talking to a real human in under 30 seconds — no
+login, no name. v1 is 18+ anonymous 1:1 chat between members and volunteer
+mentors ("listener" is the internal/code word; user-facing copy says
+"mentor"). UPSC, NEET and JEE are the first community direction; verified
+professional mentoring, payments and broader sectors are out of scope until
+separately agreed.
 
 **Start here:** [Current status](docs/STATUS.md) · [Docs index](docs/README.md) · [Product decisions](docs/DECISIONS.md) · [Project brief](CLAUDE.md)
 
-## Last verified status — 3 October 2026 (historical; see docs/STATUS.md)
+## Recent progress
 
-- Expo 54 and 55 upgrade PRs #11 and #12 merged after successful Android send/reply checks. Current mobile source uses **Expo 55 / React Native 0.83.10**.
-- Release foundation PR #13 and cookbook PR #14 are merged. Exact master API, web and Android checks passed for `f617473`.
-- **Full CI staging acceptance passed:** [run 37093153629](https://github.com/trendywink247-afk/mento-app/actions/runs/37093153629) deployed `f617473`, verified schema/safety, isolated backup restore and browser flows, cleaned the synthetic fixture and published the accepted release artifact. Live runtime identity was independently verified afterwards.
-- Production application remains on the older deployment. Its API is healthy, but no new job worker is running and the crisis-webhook freshness probe is stale. Production promotion is disabled.
-- Remaining: production operational gates, dependency security findings, load/device acceptance and iOS/App Store readiness. Passing tests are not an enterprise launch certification.
+- **Repository consolidation.** Stale docs, the old project brief and
+  one-off agent skills moved to `docs/archive/` (never read it as current
+  guidance); `CLAUDE.md` rewritten short; Dependabot retargeted at `dev`.
+- **GitHub's default branch is now `main`**, not `master`.
+- **QA moved from Nginx to Caddy.** `qa-api`/`qa-app`/`qa-admin.mento.chat`
+  are live on the staging box behind Caddy; Nginx and certbot are disabled
+  there (not removed — a documented rollback exists); `staging.mento.chat`
+  is kept serving as an alias for now. Full record, the Caddyfile and the
+  as-run runbook are under `infra/caddy/` once merged from its branch.
+  Web releases there install via `/usr/local/sbin/qa-install-web`
+  (`ops/qa-install-web.sh`, once merged).
+- Current state, the live next-tasks list and open questions: `docs/STATUS.md`.
 
-## Architecture
+## Stack
 
-The original **Balanced Architecture Book** remains the baseline. The [Balanced architecture spec](docs/specs/2026-09-20-mento-balanced-architecture-design.md) is the current design reference.
+| Layer | Choice |
+|---|---|
+| Mobile | Expo SDK 55 (React Native 0.83, TypeScript), expo-router — web + Android; iOS acceptance separate |
+| Chat | Stream Chat today; an own-chat backend exists server-side but is not the serving UI yet |
+| Backend | FastAPI (Python 3.12), SQLAlchemy 2, Alembic, Procrastinate job queue, pytest |
+| Data | Postgres 16, Redis (Valkey in staging) |
+| Edge | QA: Caddy (as of the 2026-10-23 cutover). Production: Nginx (unchanged) |
 
-[Current architecture image](docs/diagrams/mento-current-architecture.png) · [Target architecture image](docs/diagrams/mento-desired-architecture.png)
+## Environments
 
-![Current architecture: dated 2 October snapshot](docs/diagrams/mento-current-architecture.png)
-
-The diagram is the **2 October topology snapshot**. Android acceptance and release tooling have progressed since it was drawn; the status above and `docs/STATUS.md` record that delta. The current UI uses Stream Chat; an own-chat backend is not a completed UI migration.
-
-![Target architecture: proposed growth design](docs/diagrams/mento-desired-architecture.png)
-
-The target is a design, not the deployed state.
-
-## Environments and connections
-
-| Environment | Address | Actual role |
+| Environment | Where | Role |
 |---|---|---|
-| Development | `/srv/mento/mento-app`; web `18081`, API `18000` | Local development; isolated Docker Postgres `15432` and Valkey `16379` |
-| Production / VPS A | `129.121.122.28` | Nginx, static web, older FastAPI, self-hosted Postgres 16 and Redis 7; about 4 GB RAM / 2 CPU |
-| Staging | `129.121.171.140` | Restricted `staging.mento.chat`, API/worker, isolated Postgres/Valkey (target of Staging Release since PR #90) |
-| Chat transport | Stream Chat | Clients connect to Stream; signed server-to-server hooks enforce safety on the API |
+| Local | `/srv/mento/mento-app`; web `8081`, API `8000` | Dev only; isolated Postgres/Redis; no production data |
+| Production | VPS A, `129.121.122.28` | Nginx, static web, self-hosted Postgres 16 + Redis 7; public |
+| QA / staging | VPS B, `129.121.171.140` | `qa-api`/`qa-app`/`qa-admin.mento.chat` via Caddy; `staging.mento.chat` kept as an alias pending retirement; reachable over the operator's Tailscale network, not a public IP allowlist |
+| Chat transport | Stream Chat | Clients connect to Stream directly; signed server-to-server hooks enforce the crisis scan on the API |
 
-Monitoring (Uptime Kuma, external monitor) and the off-box backup target are still configured for the former staging host in `deploy/`; their current location is an open question in `docs/STATUS.md`. These two servers are **not** an automatic failover cluster. Independent monitoring and encrypted recovery storage remain target improvements.
+Production and QA/staging are **not** an automatic failover cluster — each
+has its own database, secrets and Stream application. Monitoring
+(Uptime Kuma, `deploy/external-monitor.sh`) and the off-box backup target
+still need reconfirming against QA's current host; see `docs/STATUS.md`.
 
 ## Repository map
 
@@ -45,65 +57,99 @@ apps/mobile/          Expo Router app: onboarding, member/mentor chat, journals,
   lib/                API client, identity/session and domain helpers
   e2e/                Browser flows and Maestro native tests
 services/api/         FastAPI, SQLAlchemy 2, Alembic, jobs and pytest
-scripts/local/        Workspace launchers and isolated test database
-scripts/ci/           Exact-commit release policy and archive tests
-deploy/               Compose, SSH access, receiver, staging and recovery scripts
+services/recovery_receiver/  Isolated encrypted-recovery receiver service
+scripts/ci/           Exact-commit release policy and drill tests (python unittest)
+deploy/               Compose stacks, deploy.sh, bluegreen.sh, backups, monitoring, drills
+infra/caddy/          QA Caddy cutover: Caddyfile, runbook, findings (feat/qa-caddy, pending merge)
+ops/                  Operational scripts run on a server (e.g. qa-install-web.sh, pending merge)
 .github/workflows/    API CI, Test CI, Maestro, Staging Release, Production Release
 docs/                 Decisions, PRD, privacy, runbooks, specs, diagrams (index: docs/README.md)
 docs/STATUS.md        Current state, next tasks, open questions
-docs/archive/         Stale history; do not use as current guidance
+docs/archive/         Stale history — never use as current guidance
 ```
 
 ## Local development
 
-Work in `/srv/mento/mento-app`. Prerequisites: Node 22 (CI parity), npm, Python 3.12+ and Docker. `scripts/local/workspace.ps1` (used below) is Windows-only legacy and needs PowerShell 7; on Linux use the commands in `CLAUDE.md`. If dependencies are not installed, create `services/api/.venv`, install `services/api/requirements-dev.txt` into it, and run `npm ci` in `apps/mobile`. Never copy production secrets into a development configuration.
+Work in `/srv/mento/mento-app`. Prerequisites: Node 22, npm, Python 3.12+.
+If dependencies aren't installed: create `services/api/.venv` (this repo
+uses `uv`), install `services/api/requirements-dev.txt` into it, and run
+`npm ci` in `apps/mobile`. Never copy production secrets into a development
+configuration.
 
 ```bash
-cd /srv/mento/mento-app
-pwsh -File scripts/local/workspace.ps1 init
-# Run each service in its own terminal, from the same folder:
-pwsh -File scripts/local/workspace.ps1 api
-pwsh -File scripts/local/workspace.ps1 worker
-pwsh -File scripts/local/workspace.ps1 web
+cd services/api
+uv venv --python 3.12 && source .venv/bin/activate
+uv pip install -r requirements.txt -r requirements-dev.txt
+# A local Postgres 16 + Redis matching docker-compose.yml must already be running.
+python -m alembic upgrade head
+python -m uvicorn app.main:app --port 8000   # Swagger at /docs
+
+cd ../../apps/mobile
+npm ci
+npx expo start --web --port 8081
 ```
 
-Open <http://localhost:18081>. These wrappers ignore copied application `.env` files, use `mento_dev`, and run tests against `mento_test`. Local push is disabled. The opt-in `.local/stream.env` is ignored by Git; its non-production Stream app currently points at staging hooks. Do not repoint those hooks or run simultaneous independent local live-chat tests against it. Use hermetic tests or a separate development Stream application.
+Local push is disabled. The opt-in `.local/stream.env` (git-ignored) can
+point a non-production Stream application at local dev — never repoint
+production's or QA's hooks for local testing.
 
 ## Verify a change
 
-```powershell
-# From repository root:
-pwsh -File scripts/local/workspace.ps1 status
-pwsh -File scripts/local/workspace.ps1 check
-pwsh -File scripts/local/workspace.ps1 test
-services/api/.venv/bin/python -m unittest discover -s scripts/ci -p 'test_*.py'
-# From apps/mobile:
-npx tsc --noEmit
-npm run test:route
-npm run test:question
-npm run test:placement
-npm run test:bubble
+```bash
+# services/api touched:
+python -m ruff check .
+python -m black --check .
+python -m alembic upgrade head && python -m alembic check
+python -m pytest                     # TRUNCATEs tables — never point at a real DB
+
+# apps/mobile touched:
+npm run typecheck                    # tsc --noEmit; there is no ESLint
+npm run test:route && npm run test:question && npm run test:placement && npm run test:bubble
+node --test e2e/*.test.cjs           # unit tests run in CI; see test-ci.yml for the exact list
+
+# repo root:
+python3 -m unittest discover -s scripts/ci -p 'test_*.py'
+bash deploy/test-parity.sh           # renders compose config only; no running daemon needed
+bash deploy/test-worker-rollback.sh  # mocks docker entirely; no daemon needed
+bash deploy/test-deploy.sh           # builds and runs real containers — needs real docker access
 ```
 
-Browser acceptance runs at 390 × 844, normally and with reduced motion, with zero page errors. Native CI verifies sent messages and mentor replies on an Android emulator. iOS physical-device/TestFlight acceptance remains separate. Use the isolated test wrapper instead of running raw pytest against a development or production database.
+Paste pass/fail counts in the PR description; never open a PR with failures
+unless the user explicitly approves (see `CLAUDE.md`'s branch rules).
 
 ## Release and recovery
 
-1. Develop locally, verify touched layers, and open/review a PR.
-2. Merge only with current successful checks; then require successful **master-push checks for the exact SHA**.
-3. Run Staging Release: build once, checksum, deploy, migrate, verify safety/restore/browser behavior, and publish the accepted candidate.
-4. Complete the production checklist before enabling promotion. Production Release reuses that accepted candidate without rebuilding.
-5. Observe errors, latency, worker backlog and saturation before expanding exposure.
+1. Develop on a `feat/<topic>` branch off `dev`; verify touched layers; ask
+   before opening a PR into `dev`.
+2. Merge only with current, successful PR checks; then require successful
+   **main-push checks for the exact SHA** before it's used for a release.
+3. Run Staging Release: build once, checksum, deploy, migrate, verify
+   safety/restore/browser behavior, publish the accepted candidate.
+4. Complete the production checklist before enabling promotion. Production
+   Release reuses that accepted candidate without rebuilding.
+5. Observe errors, latency, worker backlog and saturation before expanding
+   exposure.
 
-The workflow definitions in `.github/workflows/` and the scripts in `deploy/` are the source of truth for release mechanics. Database migrations must remain backward-compatible: runtime rollback does not automatically reverse schema changes. Legacy automatic production workflows are disabled.
+`.github/workflows/` and `deploy/` are the source of truth for release
+mechanics. Migrations must stay backward-compatible — runtime rollback does
+not reverse schema changes. Never deploy to production, or trigger a
+staging/production release workflow, unless explicitly asked for that run.
 
 ## Safety and configuration
 
-Never commit `.env`, private keys, tokens or user/message data. `EXPO_PUBLIC_*` variables are bundled into the client and cannot hold secrets. API role keys and Stream server credentials stay server-side. Read package `.env.example` files for configuration and `CLAUDE.md` for implementation conventions.
+Non-negotiable: server-side crisis scan on every message, 18+ age gate
+enforced server-side, anonymity on both sides, real deletion (Clean Wipe),
+minimal PII, and a privacy policy (`docs/PRIVACY.md`) that matches reality.
+Changes to any of these need tests and explicit user review before a PR.
 
-Preserve anonymity, 18+ age gating, crisis enforcement, honest payment states, deletion semantics and PII minimization. Keep a single shared onboarding base; do not infer a new bureaucrat-specific onboarding flow. Product decisions are authoritative over older PRDs and mockups.
+Never commit `.env` files, private keys, tokens, the decrypted SOPS env, SSH
+keys or user/message data. `EXPO_PUBLIC_*` variables ship inside the client
+and can never hold secrets. Production secrets are SOPS + age encrypted
+(`deploy/secrets/`) — don't decrypt them. Read each package's `.env.example`
+for configuration and `CLAUDE.md` for implementation conventions.
 
 ## Working references
 
-- [Decisions](docs/DECISIONS.md), [PRD](docs/PRD.md), [project brief](CLAUDE.md).
-- [Docs index](docs/README.md) and [current status](docs/STATUS.md).
+- [Decisions](docs/DECISIONS.md) (authoritative over the PRD/mockups on any
+  conflict) · [PRD](docs/PRD.md) · [project brief](CLAUDE.md)
+- [Docs index](docs/README.md) · [current status](docs/STATUS.md)
