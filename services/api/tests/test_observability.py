@@ -62,13 +62,20 @@ def test_sentry_never_captures_frame_locals_or_bodies():
 
 @pytest.mark.parametrize(
     ("env", "expected"),
-    [("qa", "qa"), ("staging", "qa"), ("production", "production"), ("QA", "qa")],
+    [
+        ("qa", "qa"),
+        ("staging", "qa"),
+        ("production", "production"),
+        ("prod", "production"),
+        ("PROD", "production"),
+        ("QA", "qa"),
+    ],
 )
 def test_sentry_environment_mapping(env, expected):
     assert observability.sentry_options(_settings(env=env))["environment"] == expected
 
 
-@pytest.mark.parametrize("env", ["dev", "", "prod", "test", "prodution"])
+@pytest.mark.parametrize("env", ["dev", "", "test", "prodution", "produc"])
 def test_sentry_stays_off_for_any_other_env(env):
     assert observability.sentry_options(_settings(env=env)) is None
 
@@ -157,7 +164,7 @@ def test_sentry_scrub_removes_message_content_and_ips_everywhere():
         assert gone not in out
     req = out["request"]
     assert set(req) == {"method", "url"}
-    assert req["url"] == "https://qa-api.mento.chat/api/v1/conversations/1/messages"
+    assert req["url"] == "https://qa-api.mento.chat/api/v1/conversations/{id}/messages"
 
 
 def test_sentry_scrub_keeps_what_debugging_needs():
@@ -173,6 +180,36 @@ def test_sentry_scrub_keeps_what_debugging_needs():
     assert out["tags"] == {"request_id": "r1"}
     assert out["contexts"] == {"runtime": {"name": "CPython"}}
     assert out["logentry"] == {"message": observability.SCRUBBED}
+
+
+@pytest.mark.parametrize(
+    ("url", "expected"),
+    [
+        (
+            "https://h.example/api/v1/conversations/123/messages",
+            "https://h.example/api/v1/conversations/{id}/messages",
+        ),
+        (
+            "https://h.example/api/v1/users/3f2b8c1e-9a4d-4e0b-8f6a-1c2d3e4f5a6b/notes",
+            "https://h.example/api/v1/users/{id}/notes",
+        ),
+        (
+            "https://h.example/api/v1/s/0123456789abcdef0123456789abcdef",
+            "https://h.example/api/v1/s/{id}",
+        ),
+        (
+            "https://h.example/api/v1/s/507F1F77BCF86CD799439011/x",
+            "https://h.example/api/v1/s/{id}/x",
+        ),
+        ("https://h.example/api/v1/health", "https://h.example/api/v1/health"),
+        ("https://h.example/api/v1/feed/facade", "https://h.example/api/v1/feed/facade"),
+        ("https://u:pw@h.example:8443/a/7?token=abc#frag", "https://h.example:8443/a/{id}"),
+        ("/api/v1/conversations/42", "/api/v1/conversations/{id}"),
+    ],
+)
+def test_sentry_scrub_replaces_id_path_segments(url, expected):
+    out = observability.scrub_event({"request": {"method": "GET", "url": url}}, {})
+    assert out["request"]["url"] == expected
 
 
 def test_sentry_scrub_fails_closed(monkeypatch):

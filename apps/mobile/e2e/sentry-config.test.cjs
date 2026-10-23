@@ -39,13 +39,13 @@ test('no replay integration is configured', () => {
 });
 
 test('environment: qa and staging report as qa, production as production', () => {
-  for (const [appEnv, want] of [['qa', 'qa'], ['staging', 'qa'], ['production', 'production'], ['QA', 'qa']]) {
+  for (const [appEnv, want] of [['qa', 'qa'], ['staging', 'qa'], ['production', 'production'], ['prod', 'production'], ['PROD', 'production'], ['QA', 'qa']]) {
     assert.equal(sentryInitOptions({ dsn: DSN, appEnv }).environment, want);
   }
 });
 
 test('anything else, or no DSN, leaves Sentry off', () => {
-  for (const appEnv of [undefined, '', 'dev', 'prod', 'test', 'prodution']) {
+  for (const appEnv of [undefined, '', 'dev', 'test', 'prodution', 'produc']) {
     assert.equal(sentryInitOptions({ dsn: DSN, appEnv }), null, String(appEnv));
   }
   assert.equal(sentryInitOptions({ appEnv: 'production' }), null);
@@ -69,7 +69,14 @@ const loaded = () => ({
   extra: { draft: TEXT },
   user: { id: 'u1', ip_address: '203.0.113.9', email: 'a@b.c' },
   tags: { runtime: 'hermes', free_text: TEXT },
-  contexts: { os: { name: 'Android' }, custom: { text: TEXT } },
+  contexts: {
+    os: { name: 'Android' },
+    device: {
+      name: "Asha's Pixel", family: 'Pixel', model: 'Pixel 8', model_id: 'abc', simulator: false,
+      arch: 'arm64', memory_size: 8, boot_time: 'x', timezone: 'Asia/Kolkata', locale: 'en_IN',
+    },
+    custom: { text: TEXT },
+  },
   _meta: { message: { '': { val: TEXT } } },
   request: {
     method: 'POST', url: 'https://qa-app.mento.chat/chat?draft=hello#x',
@@ -102,7 +109,8 @@ test('scrubber keeps what debugging needs', () => {
   assert.deepEqual(out.exception.values[0].stacktrace.frames,
     [{ filename: 'app/chat.tsx', function: 'send', lineno: 9, in_app: true }]);
   assert.deepEqual(out.tags, { runtime: 'hermes' });
-  assert.deepEqual(out.contexts, { os: { name: 'Android' } });
+  assert.deepEqual(out.contexts.os, { name: 'Android' });
+  assert.equal('custom' in out.contexts, false);
   assert.equal(out.request.url, 'https://qa-app.mento.chat/chat');
 });
 
@@ -112,4 +120,29 @@ test('scrubber fails closed on malformed events', () => {
   const hostile = loaded();
   Object.defineProperty(hostile, 'exception', { get() { throw new Error('x'); }, enumerable: true });
   assert.equal(scrubSentryEvent(hostile), null);
+});
+
+test('device context keeps only family, model, model_id, simulator, arch', () => {
+  const out = plain(scrubSentryEvent(loaded()));
+  assert.deepEqual(out.contexts.device,
+    { family: 'Pixel', model: 'Pixel 8', model_id: 'abc', simulator: false, arch: 'arm64' });
+  assert.ok(!JSON.stringify(out).includes('Asha'));
+  const odd = plain(scrubSentryEvent({ contexts: { device: 'Asha' } }));
+  assert.deepEqual(odd.contexts.device, {});
+});
+
+test('request URLs: numeric, UUID and long-hex segments become {id}; userinfo/query/fragment go', () => {
+  const urlOf = url => plain(scrubSentryEvent({ request: { method: 'GET', url } })).request.url;
+  const cases = [
+    ['https://h.example/chat/123/messages', 'https://h.example/chat/{id}/messages'],
+    ['https://h.example/u/3f2b8c1e-9a4d-4e0b-8f6a-1c2d3e4f5a6b/notes', 'https://h.example/u/{id}/notes'],
+    ['https://h.example/s/0123456789abcdef0123456789abcdef', 'https://h.example/s/{id}'],
+    ['https://h.example/s/507F1F77BCF86CD799439011/x', 'https://h.example/s/{id}/x'],
+    ['https://h.example/path/home', 'https://h.example/path/home'],
+    ['https://h.example/feed/facade', 'https://h.example/feed/facade'],
+    ['https://u:pw@h.example:8443/a/7?token=abc#frag', 'https://h.example:8443/a/{id}'],
+    ['/chat/42?draft=hi', '/chat/{id}'],
+    ['app:///chat/42', 'app:///chat/{id}'],
+  ];
+  for (const [input, want] of cases) assert.equal(urlOf(input), want, input);
 });

@@ -18,6 +18,7 @@ import re
 import time
 import traceback
 import uuid
+from urllib.parse import urlsplit, urlunsplit
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -47,7 +48,12 @@ def configure_logging() -> None:
 
 # Sentry environment for each ENV value. Anything not listed (dev, unset, a typo) maps
 # to None = Sentry off, so a misconfigured host can never report as production.
-_SENTRY_ENVIRONMENTS = {"qa": "qa", "staging": "qa", "production": "production"}
+_SENTRY_ENVIRONMENTS = {
+    "qa": "qa",
+    "staging": "qa",
+    "prod": "production",
+    "production": "production",
+}
 
 # Allowlists: an event is REBUILT from these, so a key the SDK adds later is dropped
 # by default rather than leaked by default.
@@ -57,10 +63,22 @@ _KEEP_CONTEXTS = ("runtime", "os")
 _KEEP_FRAME = ("filename", "abs_path", "function", "module", "lineno", "colno", "in_app")
 _KEEP_MECHANISM = ("type", "handled")
 SCRUBBED = "[scrubbed]"
+# A path segment that is an id: all digits, a UUID, or 12+ hex chars (ObjectIds, tokens).
+_ID_SEGMENT = re.compile(
+    r"^(?:\d+|[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[0-9a-f]{12,})$", re.IGNORECASE
+)
 
 
 def sentry_environment(env: str) -> str | None:
     return _SENTRY_ENVIRONMENTS.get((env or "").strip().lower())
+
+
+def _scrub_url(url: str) -> str:
+    """Scheme + host + path with id segments replaced by `{id}`; no userinfo, query or
+    fragment."""
+    parts = urlsplit(url)
+    path = "/".join("{id}" if _ID_SEGMENT.match(seg) else seg for seg in parts.path.split("/"))
+    return urlunsplit((parts.scheme, parts.netloc.rpartition("@")[2], path, "", ""))
 
 
 def _scrub_exception(exc: object) -> dict:
@@ -90,7 +108,8 @@ def scrub_event(event: dict, _hint: dict) -> dict | None:
     """Sentry `before_send`: build the event from an allowlist and drop the rest.
 
     Kept: id, time, level, release, environment, exception TYPE + frames (file, line,
-    function), method + URL without its query string, the route-template transaction.
+    function), method + URL with id path segments
+    replaced by `{id}` and no query string, the route-template transaction.
     Dropped: exception and log MESSAGES, breadcrumbs, request body / query / cookies /
     headers / env, user and every IP field, extra, `_meta` (it can hold the original of
     a redacted value). Fails closed: if scrubbing itself raises, the event is dropped.
@@ -121,7 +140,7 @@ def _scrub(event: dict) -> dict:
         if isinstance(request.get("method"), str):
             scrubbed_request["method"] = request["method"]
         if isinstance(request.get("url"), str):
-            scrubbed_request["url"] = request["url"].split("?", 1)[0].split("#", 1)[0]
+            scrubbed_request["url"] = _scrub_url(request["url"])
         out["request"] = scrubbed_request
 
     tags = event.get("tags")
@@ -134,7 +153,7 @@ def _scrub(event: dict) -> dict:
 
 
 def sentry_options(settings: Settings) -> dict | None:
-    """None = Sentry stays off (no DSN, or ENV is not qa/staging/production)."""
+    """None = Sentry stays off (no DSN, or ENV is not qa/staging/prod/production)."""
     environment = sentry_environment(settings.env)
     if not settings.sentry_dsn or environment is None:
         return None
@@ -158,7 +177,7 @@ def sentry_options(settings: Settings) -> dict | None:
 
 
 def init_sentry(settings: Settings) -> None:
-    """No-op unless there is a DSN and ENV is qa/staging/production."""
+    """No-op unless there is a DSN and ENV is qa/staging/prod/production."""
     options = sentry_options(settings)
     if options is None:
         return

@@ -95,13 +95,13 @@ Errors only: no tracing, no session replay, no screenshots, no breadcrumbs. Even
 `before_send` / `beforeSend` scrubber that drops message text, exception messages, request
 bodies and headers, user data and IPs (`services/api/app/observability.py`,
 `apps/mobile/lib/sentryConfig.ts`). Sentry is off unless there is a DSN **and** the
-environment value below is one of `qa`, `staging` (reported as `qa`) or `production`;
+environment value below is one of `qa`, `staging` (reported as `qa`), `prod` or `production` (reported as `production`);
 anything else, including unset or `dev`, is off. It never defaults to production.
 
 | Variable | Where | Purpose |
 |---|---|---|
 | `SENTRY_DSN` | API | Project DSN. Empty = off. |
-| `ENV` | API | `qa` / `staging` → Sentry env `qa`; `production` → `production`; else off. |
+| `ENV` | API | `qa` / `staging` → Sentry env `qa`; `prod` / `production` → `production`; else off. |
 | `GIT_SHA` | API | Sentry `release`. Supplied by the ops scripts; empty = no release. |
 | `EXPO_PUBLIC_SENTRY_DSN` | web + mobile | Project DSN (ships in the client, so it must not be a secret). Empty = off. |
 | `EXPO_PUBLIC_APP_ENV` | web + mobile | Same mapping as `ENV`. |
