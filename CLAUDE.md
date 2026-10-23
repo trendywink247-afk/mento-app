@@ -43,7 +43,7 @@ docs/archive/         STALE. Never read it or use it as guidance.
 | Env | Where | Notes |
 |---|---|---|
 | Local | `/srv/mento/mento-app` | Dev only; no production data or secrets |
-| QA / staging | host `129.121.171.140`; URL to be confirmed | Deployed only by the Staging Release workflow |
+| QA / staging | host `129.121.171.140`; `qa-api`/`qa-app`/`qa-admin.mento.chat` via Caddy (Nginx + certbot disabled, 2026-10-23 cutover — `infra/caddy/*.md` on `feat/qa-caddy`); `staging.mento.chat` kept as an alias pending retirement; reachable over the operator's Tailscale network, not a public IP allowlist; web releases installed by root via `/usr/local/sbin/qa-install-web` | Deployed only by the Staging Release workflow |
 | Production | URL and host to be confirmed | Off limits to agents (see branch rules) |
 
 ## Branch rules
