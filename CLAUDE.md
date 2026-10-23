@@ -57,17 +57,17 @@ docs/archive/         STALE. Never read it or use it as guidance.
 
 ## Commands
 
-API (from `services/api`; the local compose file starts Postgres 16 and Redis 7 on 5432/6379):
+Tests use the throwaway Postgres/Redis on 127.0.0.1:5432/6379 (root-managed, no real data). Wrap every DB-using command in `flock /srv/mento/locks/testdb.lock`. Never start/stop those containers.
+
+API (from `services/api`):
 
 ```bash
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
-docker compose up -d --wait
 .venv/bin/python -m ruff check .            # lint
 .venv/bin/python -m black --check .         # format
 .venv/bin/python -m alembic upgrade head
 .venv/bin/python -m alembic check           # models and migrations in sync
 .venv/bin/python -m pytest                  # tests; they TRUNCATE tables, so never point them at a real DB
-docker compose down -v
 ```
 
 Mobile (from `apps/mobile`):
