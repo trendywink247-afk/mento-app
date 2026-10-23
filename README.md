@@ -7,7 +7,7 @@ An anonymous, low-friction emotional-support application with a shared onboardin
 ## Verified status — 3 October 2026
 
 - Expo 54 and 55 upgrade PRs #11 and #12 merged after successful Android send/reply checks. Current mobile source uses **Expo 55 / React Native 0.83.10**.
-- Release foundation PR #13 and cookbook PR #14 are merged. Exact master API, web and Android checks passed for `f617473`.
+- Release foundation PR #13 and cookbook PR #14 are merged. Exact main API, web and Android checks passed for `f617473`.
 - **Full CI staging acceptance passed:** [run 37093153629](https://github.com/trendywink247-afk/mento-app/actions/runs/37093153629) deployed `f617473`, verified schema/safety, isolated backup restore and browser flows, cleaned the synthetic fixture and published the accepted release artifact. Live runtime identity was independently verified afterwards.
 - Production application remains on the older deployment. Its API is healthy, but no new job worker is running and the crisis-webhook freshness probe is stale. Production promotion is disabled.
 - Remaining: production operational gates, dependency security findings, load/device acceptance and iOS/App Store readiness. Passing tests are not an enterprise launch certification.
@@ -89,7 +89,7 @@ Browser acceptance runs at 390 × 844, normally and with reduced motion, with ze
 ## Release and recovery
 
 1. Develop locally, verify touched layers, and open/review a PR.
-2. Merge only with current successful checks; then require successful **master-push checks for the exact SHA**.
+2. Merge only with current successful checks; then require successful **main-push checks for the exact SHA**.
 3. Run Staging Release: build once, checksum, deploy, migrate, verify safety/restore/browser behavior, and publish the accepted candidate.
 4. Complete the production checklist before enabling promotion. Production Release reuses that accepted candidate without rebuilding.
 5. Observe errors, latency, worker backlog and saturation before expanding exposure.
