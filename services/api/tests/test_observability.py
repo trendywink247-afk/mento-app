@@ -88,7 +88,7 @@ def test_sentry_release_is_the_git_sha_or_absent():
     assert (
         observability.sentry_options(_settings(env="qa", git_sha="abc123"))["release"] == "abc123"
     )
-    assert "release" not in observability.sentry_options(_settings(env="qa"))
+    assert "release" not in observability.sentry_options(_settings(env="qa", git_sha=""))
 
 
 MEMBER_TEXT = "i have been feeling hopeless since monday"

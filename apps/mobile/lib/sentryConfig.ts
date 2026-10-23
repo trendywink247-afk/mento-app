@@ -1,6 +1,8 @@
-// Sentry for web + native. Pure (no SDK import) so a node test can assert the exact
+// Sentry for web + native. Pure (type-only SDK import, erased at runtime) so a node test can assert the exact
 // options. Mento is an emotional-support app: nothing a member typed, no screen
 // capture and no IP may leave the device through an error report.
+
+import type { ReactNativeOptions } from '@sentry/react-native';
 
 type SentryEvent = Record<string, unknown>;
 
@@ -119,7 +121,7 @@ export function sentryInitOptions(input: {
   dsn?: string;
   appEnv?: string;
   gitSha?: string;
-}): Record<string, unknown> | null {
+}): ReactNativeOptions | null {
   const environment = sentryEnvironment(input.appEnv);
   if (!input.dsn || !environment) return null;
   return {
