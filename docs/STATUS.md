@@ -15,5 +15,6 @@ Updated 2026-10-23, during the repository consolidation (feat/consolidation → 
 - `deploy/staging/compose.yml`'s `migrate` service still inherits the literal `mento-api:staging-6e47f7a` image tag (not interpolated) — any migration run on the box must name the current image explicitly, e.g. `docker run --rm --network mento-staging_default --env-file /opt/mento-staging/secrets/api.env mento-api:<current-tag> alembic upgrade head`, bypassing that stale pinned tag.
 - Where do monitoring (Uptime Kuma, external-monitor.sh) and off-box backups run now? deploy/ still points them at `31.42.125.238` — now confirmed stale, the box is `129.121.171.140`.
 - Does the receiver (`ci-receiver.py`) have its own API rollback, and should `qa-deploy-api` replace or sit beside it?
+- Erasure for suspended/banned members: currently blocked (403). Needs a product/legal decision — data-erasure rights vs. preserving safety-report evidence.
 - Should code comments that point at moved docs (e.g. docs/superpowers specs) be updated or left?
 - npm advisories in docs/DEPENDENCY_AUDIT_2026-10-05.md: still open?
