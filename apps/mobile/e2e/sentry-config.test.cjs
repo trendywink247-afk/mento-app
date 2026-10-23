@@ -25,6 +25,7 @@ test('init options never allow replay, screenshots, view hierarchy, PII or traci
   assert.equal(opts.replaysOnErrorSampleRate, 0);
   assert.equal(opts.tracesSampleRate, 0);
   assert.equal(opts.maxBreadcrumbs, 0);
+  assert.equal(opts.enableNative, false); // native crash events would bypass beforeSend
   assert.equal(opts.beforeSend, scrubSentryEvent);
   assert.equal(opts.beforeBreadcrumb({ message: TEXT }), null);
   assert.equal(opts.beforeSendTransaction({}), null);
@@ -145,4 +146,20 @@ test('request URLs: numeric, UUID and long-hex segments become {id}; userinfo/qu
     ['app:///chat/42', 'app:///chat/{id}'],
   ];
   for (const [input, want] of cases) assert.equal(urlOf(input), want, input);
+});
+
+test('token-bearing links (#token= / #code= fragments) never survive in url or transaction', () => {
+  const links = [
+    'https://qa-app.mento.chat/listener#token=SECRETTOKEN123',
+    'https://qa-app.mento.chat/listener#code=ONETIMECODE456',
+    'https://qa-admin.mento.chat/admin#token=ADMINSECRET789',
+    'https://qa-app.mento.chat/listener?token=QUERYSECRET#code=FRAGSECRET',
+  ];
+  for (const link of links) {
+    const out = plain(scrubSentryEvent({ transaction: link, request: { method: 'GET', url: link } }));
+    const blob = JSON.stringify(out);
+    for (const secret of ['SECRET', 'ONETIMECODE', 'token=', 'code=']) assert.ok(!blob.includes(secret), `${secret} in ${blob}`);
+    assert.equal(out.request.url, link.split(/[?#]/)[0]);
+    assert.equal(out.transaction, link.split(/[?#]/)[0]);
+  }
 });

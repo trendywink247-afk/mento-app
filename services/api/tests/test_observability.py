@@ -212,6 +212,29 @@ def test_sentry_scrub_replaces_id_path_segments(url, expected):
     assert out["request"]["url"] == expected
 
 
+@pytest.mark.parametrize(
+    "link",
+    [
+        "https://qa-app.mento.chat/listener#token=SECRETTOKEN123",
+        "https://qa-app.mento.chat/listener#code=ONETIMECODE456",
+        "https://qa-admin.mento.chat/admin#token=ADMINSECRET789",
+        "https://qa-app.mento.chat/listener?token=QUERYSECRET#code=FRAGSECRET",
+    ],
+)
+def test_sentry_scrub_drops_token_bearing_link_fragments(link):
+    """Console links are `/listener#token=` / `#code=` / `/admin#token=`; they must not
+    survive in the URL or the transaction name."""
+    out = observability.scrub_event(
+        {"transaction": link, "request": {"method": "GET", "url": link}}, {}
+    )
+    blob = json.dumps(out)
+    for secret in ("SECRET", "ONETIMECODE", "token=", "code="):
+        assert secret not in blob
+    bare = link.split("?")[0].split("#")[0]
+    assert out["request"]["url"] == bare
+    assert out["transaction"] == bare
+
+
 def test_sentry_scrub_fails_closed(monkeypatch):
     def boom(_event):
         raise RuntimeError("scrubber bug")

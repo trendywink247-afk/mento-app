@@ -19,4 +19,4 @@ Updated 2026-10-23, during the repository consolidation (feat/consolidation → 
 - Should code comments that point at moved docs (e.g. docs/superpowers specs) be updated or left?
 - npm advisories in docs/DEPENDENCY_AUDIT_2026-10-05.md: still open?
 - Sentry follow-ups: ops/ scripts must supply GIT_SHA, EXPO_PUBLIC_GIT_SHA and EXPO_PUBLIC_APP_ENV. ops/ci.sh runs e2e/*.test.cjs by glob, but test-ci.yml lists tests explicitly and lacks sentry-config.test.cjs (workflows untouched on purpose).
-- Sentry native crashes (dev-client/release builds): the JS beforeSend/beforeBreadcrumb are stripped before native init, so native-only crash events are NOT run through the scrubber. Decide how to handle it (see review notes) before enabling a DSN in native builds.
+- Native crash reporting off until a native beforeSend scrubber exists (post-launch).

@@ -98,6 +98,9 @@ bodies and headers, user data and IPs (`services/api/app/observability.py`,
 environment value below is one of `qa`, `staging` (reported as `qa`), `prod` or `production` (reported as `production`);
 anything else, including unset or `dev`, is off. It never defaults to production.
 
+Mobile reports JS-level errors only (`enableNative: false`): native crash events would bypass the
+JS `beforeSend` scrubber, so native crash reporting stays off until a native scrubber exists.
+
 | Variable | Where | Purpose |
 |---|---|---|
 | `SENTRY_DSN` | API | Project DSN. Empty = off. |

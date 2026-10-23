@@ -69,7 +69,7 @@ export function scrubSentryEvent<T>(event: T): T | null {
   try {
     if (!isObject(event)) return null;
     const out: SentryEvent = pick(event, KEEP_TOP);
-    if (typeof event.transaction === 'string') out.transaction = event.transaction;
+    if (typeof event.transaction === 'string') out.transaction = scrubUrl(event.transaction);
     const values = isObject(event.exception) ? event.exception.values : undefined;
     if (Array.isArray(values)) out.exception = { values: values.map(scrubException) };
     if (event.message || event.logentry) out.logentry = { message: SCRUBBED };
@@ -113,6 +113,9 @@ export function sentryInitOptions(input: {
     replaysOnErrorSampleRate: 0,
     tracesSampleRate: 0,
     enableAutoSessionTracking: false,
+    // JS-only reporting: the JS beforeSend never reaches the native SDKs, so native crash
+    // events would bypass the scrubber. Revisit when a native scrubber exists.
+    enableNative: false,
     maxBreadcrumbs: 0,
     beforeSend: scrubSentryEvent,
     beforeSendTransaction: () => null,

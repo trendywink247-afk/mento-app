@@ -125,7 +125,7 @@ def _scrub(event: dict) -> dict:
     if isinstance(event.get("server_name"), str):
         out["server_name"] = event["server_name"]
     if isinstance(event.get("transaction"), str):
-        out["transaction"] = event["transaction"]
+        out["transaction"] = _scrub_url(event["transaction"])
 
     exception = event.get("exception")
     if isinstance(exception, dict) and isinstance(exception.get("values"), list):
