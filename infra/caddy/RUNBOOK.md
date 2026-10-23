@@ -1,5 +1,15 @@
 # QA cutover runbook: Nginx → Caddy (this box, 129.121.171.140)
 
+**Status: COMPLETED 2026-10-23.** Caddy is live for `qa-api`/`qa-app`/
+`qa-admin.mento.chat`; Nginx and its certbot renewal timer are both
+disabled (not removed — step 6's rollback below still works). The
+required 403 test in 4b passed before Nginx was disabled. Stream's
+webhooks have since been repointed at `qa-api.mento.chat`
+(`infra/caddy/CHANGES.md` item 5) — `staging.mento.chat` is kept serving
+through Caddy as an alias for now (same allowlist, same behaviour), to be
+retired in a later, separate change. The steps below are kept as the
+as-run record and for the next time this needs doing elsewhere.
+
 Read this with `infra/caddy/NOTES.md` (what's live today, the allowlist
 drift) and `infra/caddy/CHANGES.md` (app/config changes — run those
 **separately**, item 5 especially, not as part of this cutover). This
@@ -124,8 +134,10 @@ done
 
 Open `qa-app.mento.chat`, send a chat message end-to-end, and confirm
 Stream's dashboard still shows deliveries against the **old**
-(`staging.mento.chat`) webhook URL — it should, since CHANGES.md item 5
-hasn't run yet.
+(`staging.mento.chat`) webhook URL at this point in the sequence —
+CHANGES.md item 5 (repointing the webhooks to `qa-api.mento.chat`) is a
+deliberate, separate step done only after this cutover is verified, which
+is what happened here.
 
 ## 5. Disable Nginx (only after 4a–4c all pass)
 

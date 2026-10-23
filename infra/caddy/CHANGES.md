@@ -53,7 +53,7 @@ style flows, console links) from `resolved_admin_base_url` in
 `app/services/links.py`. Once `ADMIN_BASE_URL=https://qa-admin.mento.chat`
 is set, those links point at the new host automatically; no code change.
 
-## 5. Stream webhook URLs
+## 5. Stream webhook URLs — DONE (2026-10-23)
 
 `services/api/scripts/configure_stream.py` points the Stream app at
 `<base>/api/v1/stream/before-message-send` (sync, "before-message-send") and
@@ -61,16 +61,20 @@ is set, those links point at the new host automatically; no code change.
 it once per base URL change:
 `docker compose exec -T api python -m scripts.configure_stream https://staging.mento.chat`.
 
-- **Change:** once `qa-api.mento.chat` is live and verified, re-run it against
-  the new base: `python -m scripts.configure_stream https://qa-api.mento.chat`.
-  **Do this last, deliberately, not as part of the Caddy cutover** — the
-  staging README already warns this project's Stream app has synchronous and
-  asynchronous hooks "pointed at staging" live; repointing them is what
-  actually moves production-adjacent chat traffic, and it's a one-way flip
-  (the old hooks stop being called the moment the new URL is configured).
-  This is also why the runbook below keeps `staging.mento.chat` serving
-  identically through Caddy — the Caddy/nginx swap and the Stream webhook
-  repoint are two separate, independently-reversible steps.
+**Corrected scope (confirmed on the box, not assumed):** the Stream app
+behind `STREAM_API_KEY=tsf6…` is QA's **own dedicated** Stream application —
+not shared with production. Repointing its webhooks from
+`staging.mento.chat` to `qa-api.mento.chat` only affects QA's own chat
+traffic; it is not the production-adjacent one-way flip this item
+originally assumed (that assumption came from the staging README's generic
+wording, not from checking which Stream app QA actually uses).
+
+- **Change, now applied:** re-ran it against the new base —
+  `python -m scripts.configure_stream https://qa-api.mento.chat`. Stream's
+  dashboard confirms both hooks now point at `qa-api.mento.chat`;
+  `staging.mento.chat`'s Caddy block (kept alive per the runbook) no longer
+  receives Stream traffic now that the hooks have moved, though the host
+  itself still serves identically for anything else hitting it directly.
 
 ## 6. Nothing else found
 
