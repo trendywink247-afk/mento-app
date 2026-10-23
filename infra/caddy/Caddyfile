@@ -1,0 +1,167 @@
+# QA edge for this box (129.121.171.140) — replaces host Nginx for this box only.
+# See infra/caddy/NOTES.md for how this was derived from the live Nginx config
+# and deploy/caddy/Caddyfile (production's template, unchanged by this file).
+#
+# Mirrors production's three-origin split (api / app / admin) plus keeps
+# staging.mento.chat serving exactly as it does today (combined web+API,
+# same IP allowlist, same three public exceptions) until the Stream webhooks
+# are repointed (infra/caddy/CHANGES.md item 5) — after that,
+# staging.mento.chat can be retired from this file in a follow-up change.
+#
+# Both the API and the static web build are a SINGLE instance each today
+# (127.0.0.1:18010 for the API; /opt/mento-staging/web for the static root) —
+# no blue/green on this box. See NOTES.md §4 for why that means no
+# bluegreen.sh change is needed for this cutover.
+#
+# OPERATOR_IP is a placeholder — substitute the real operator IP (or CIDR)
+# before installing, the same way deploy/staging/nginx.conf.template does.
+# NEVER commit the rendered file with a real IP in it.
+{
+	# No access logs: a request log would hold member IP addresses (CLAUDE.md
+	# T&S #7), same as deploy/caddy/Caddyfile. Caddy's error log still records
+	# the client address of a request that FAILED (e.g. no upstream) — nothing
+	# else is logged.
+	log default {
+		exclude http.handlers.reverse_proxy.health_checker.active
+	}
+}
+
+# Shared IP allowlist: the operator's IP, loopback, and the Tailscale CGNAT
+# range (100.64.0.0/10 — this box already has a tailscale0 interface).
+# Caddy's automatic HTTPS intercepts ACME challenges at the TLS/HTTP layer
+# BEFORE any site's handlers run, so — unlike the Nginx config — no explicit
+# /.well-known/acme-challenge/ exception is needed here.
+(allowlist) {
+	@blocked {
+		not remote_ip 127.0.0.1 100.64.0.0/10 OPERATOR_IP
+		not path /api/v1/health/ready /api/v1/stream/webhook /api/v1/stream/before-message-send
+	}
+	respond @blocked 403
+}
+
+(security_headers) {
+	header {
+		X-Robots-Tag "noindex, nofollow"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}
+
+# --- New split hosts -------------------------------------------------------
+
+# Every site body below is wrapped in `route { }`. Caddy otherwise reorders
+# top-level directives into its own fixed global order (not written order) —
+# `file_server`/`handle` can end up evaluated before a bare `respond`, so a
+# request that should get the allowlist's 403 falls through to being served
+# instead. `route` disables that reordering and runs its contents exactly as
+# written, so `import allowlist`'s block-and-respond genuinely runs first.
+qa-api.mento.chat {
+	route {
+		import allowlist
+		import security_headers
+		encode zstd gzip
+		request_body {
+			max_size 5MB
+		}
+		# Caddy upgrades WebSocket connections automatically (own-chat, WS5) —
+		# no special config needed beyond a read_timeout long enough for an
+		# idle chat socket, matching deploy/caddy/Caddyfile's own-chat value.
+		reverse_proxy 127.0.0.1:18010 {
+			health_uri /api/v1/health/ready
+			health_interval 5s
+			health_timeout 3s
+			transport http {
+				read_timeout 3600s
+			}
+		}
+	}
+}
+
+# The web app — same static build qa-admin serves, routed differently.
+qa-app.mento.chat {
+	route {
+		import allowlist
+		import security_headers
+		root * /opt/mento-staging/web
+		encode zstd gzip
+
+		handle /_expo/* {
+			file_server
+		}
+		handle /assets/* {
+			file_server
+		}
+		handle /admin* {
+			respond 404
+		}
+		handle {
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+	}
+}
+
+# The staff dashboard — qa-admin.mento.chat does NOT exist on this box today
+# (infra/caddy/NOTES.md §3). Mirrors production's admin host exactly, off the
+# SAME build output as qa-app (today that's /opt/mento-staging/web — there is
+# only one build artifact on this box, unlike prod's separate app/admin
+# release flow). Revisit the root path if/when QA gets its own console build.
+qa-admin.mento.chat {
+	route {
+		import allowlist
+		import security_headers
+		root * /opt/mento-staging/web
+		encode zstd gzip
+
+		redir / /admin 302
+		handle /admin* {
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+		handle /_expo/* {
+			file_server
+		}
+		handle /assets/* {
+			file_server
+		}
+		handle /favicon.ico {
+			file_server
+		}
+		handle {
+			respond 404
+		}
+	}
+}
+
+# --- Kept alive during the transition --------------------------------------
+
+# staging.mento.chat — same combined web+API behaviour as the live Nginx
+# config today (not the drifted one — the INTENDED one: restricted root +
+# three public exceptions). Retire this block once the Stream webhooks move
+# to qa-api.mento.chat (infra/caddy/CHANGES.md item 5).
+staging.mento.chat {
+	route {
+		import allowlist
+		import security_headers
+		root * /opt/mento-staging/web
+		encode zstd gzip
+
+		handle /api/* {
+			reverse_proxy 127.0.0.1:18010 {
+				health_uri /api/v1/health/ready
+				health_interval 5s
+				health_timeout 3s
+				transport http {
+					read_timeout 3600s
+				}
+			}
+		}
+		handle {
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+	}
+}
