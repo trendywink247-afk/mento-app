@@ -32,12 +32,32 @@ const pick = (src: Record<string, unknown>, keys: string[]) => {
   return out;
 };
 
-/** Scheme + host + path with id segments replaced by `{id}`; no userinfo, query or fragment. */
+// Literal journal sub-routes (app/journal/write.tsx, organize.tsx): not member data.
+const JOURNAL_LITERALS = ['write', 'organize'];
+
+/** Journal routes carry the entry's category (can be health information) and a day:
+ * `journal/<channel>` -> `journal/{channel}`, `journal/day/<date>` -> `journal/{date}`. */
+function scrubJournalSegments(segments: string[]): string[] {
+  const out = [...segments];
+  for (let i = 0; i < out.length - 1; i++) {
+    if (out[i].toLowerCase() !== 'journal') continue;
+    if (out[i + 1] === 'day') {
+      if (i + 2 < out.length && out[i + 2] !== '') out[i + 2] = '{date}';
+    } else if (out[i + 1] !== '' && !JOURNAL_LITERALS.includes(out[i + 1])) {
+      out[i + 1] = '{channel}';
+    }
+  }
+  return out;
+}
+
+/** Scheme + host + path with id segments replaced by `{id}`, journal channel/date by
+ * `{channel}`/`{date}`; no userinfo, query or fragment. */
 function scrubUrl(url: string): string {
   const absolute = /^([a-z][a-z0-9+.-]*:\/\/)([^/?#]*)([^?#]*)/i.exec(url);
   const origin = absolute ? absolute[1] + (absolute[2].split('@').pop() ?? '') : '';
   const path = absolute ? absolute[3] : url.split(/[?#]/)[0];
-  return origin + path.split('/').map(seg => (ID_SEGMENT.test(seg) ? '{id}' : seg)).join('/');
+  const segments = path.split('/').map(seg => (ID_SEGMENT.test(seg) ? '{id}' : seg));
+  return origin + scrubJournalSegments(segments).join('/');
 }
 
 function scrubContexts(contexts: Record<string, unknown>): Record<string, unknown> {
@@ -62,7 +82,7 @@ function scrubException(exc: unknown): Record<string, unknown> {
 
 /** `beforeSend`: rebuild the event from an allowlist. Kept: id, time, level, release,
  * environment, exception type + frames, the route/screen name, method + URL with id
- * path segments replaced by `{id}` and no query; device context limited to
+ * path segments replaced by `{id}`, journal channel/date by `{channel}`/`{date}`, no query; device context limited to
  * family/model/model_id/simulator/arch. Dropped: messages, breadcrumbs, request headers/body/cookies, user + IP,
  * extra, `_meta`. Fails closed (returns null) if scrubbing throws. */
 export function scrubSentryEvent<T>(event: T): T | null {

@@ -163,3 +163,31 @@ test('token-bearing links (#token= / #code= fragments) never survive in url or t
     assert.equal(out.transaction, link.split(/[?#]/)[0]);
   }
 });
+
+test('journal channel and date segments are replaced in request.url and transaction', () => {
+  const cases = [
+    ['https://qa-app.mento.chat/journal/health', 'https://qa-app.mento.chat/journal/{channel}'],
+    ['https://qa-app.mento.chat/journal/day/2026-10-23', 'https://qa-app.mento.chat/journal/day/{date}'],
+    ['https://qa-app.mento.chat/journal/Mood?x=1#y', 'https://qa-app.mento.chat/journal/{channel}'],
+    ['/journal/gratitude', '/journal/{channel}'],
+    ['/app/journal/finance/', '/app/journal/{channel}/'],
+    ['/journal/day/2026-10-23', '/journal/day/{date}'],
+    ['journal/[channel]', 'journal/{channel}'],
+    ['journal/day/[date]', 'journal/day/{date}'],
+    ['https://qa-app.mento.chat/journal/write', 'https://qa-app.mento.chat/journal/write'],
+    ['/journal/organize', '/journal/organize'],
+    ['https://qa-app.mento.chat/journal', 'https://qa-app.mento.chat/journal'],
+    ['https://qa-app.mento.chat/journal/day', 'https://qa-app.mento.chat/journal/day'],
+    ['https://qa-app.mento.chat/journal-club/health', 'https://qa-app.mento.chat/journal-club/health'],
+    ['https://qa-app.mento.chat/mentor/journal', 'https://qa-app.mento.chat/mentor/journal'],
+  ];
+  for (const [input, want] of cases) {
+    const out = plain(scrubSentryEvent({ transaction: input, request: { method: 'GET', url: input } }));
+    assert.equal(out.request.url, want, `url ${input}`);
+    assert.equal(out.transaction, want, `transaction ${input}`);
+  }
+  const blob = JSON.stringify(plain(scrubSentryEvent({
+    transaction: '/journal/health', request: { url: 'https://h.example/journal/day/2026-10-23' },
+  })));
+  assert.ok(!blob.includes('health') && !blob.includes('2026-10-23'));
+});
