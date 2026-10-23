@@ -49,6 +49,7 @@ docs/archive/         STALE. Never read it or use it as guidance.
 - Never push to `master` or `main`. Never force-push shared branches.
 - Never deploy to production, and never trigger production-release or staging-release workflows, unless the user explicitly asks for that specific run.
 - Don't delete tags or other people's branches; you may delete your own merged feat/* branches. History lives in `archive/*` tags.
+- Before opening any PR: run the full API checks (ruff, black --check, alembic upgrade head, alembic check, pytest against the local test DB on 127.0.0.1) and the mobile typecheck + test:* scripts. Paste pass/fail counts in the PR description. Never open a PR with failures unless the user approves.
 
 ## Commands
 
