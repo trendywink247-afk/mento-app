@@ -9,8 +9,9 @@
 #   Dockerfile : services/api/Dockerfile   (build context: services/api, no build args)
 #   Source     : `git archive <sha>` of services/api only, so the image holds exactly
 #                the committed tree: no untracked files, no local .env, no .venv.
-#                git runs as user `agent` (owner of the repo); only tar and docker run
-#                as root.
+#                git runs as user `agent` (owner of the repo; override with BUILD_GIT_USER,
+#                empty = run git directly, for a root-owned clone); only tar and docker
+#                run as root.
 #   Build dir  : mktemp under /var/lib/mento-build (root:root, 0700), removed on exit.
 #   Tag        : mento-api:<first 12 of sha>-r<N>. An existing tag is never reused or
 #                overwritten: N starts at 1 and is incremented, at run time, past every
@@ -32,6 +33,11 @@ SHA="$(git -C "$REPO" rev-parse --verify --quiet "$1^{commit}")" || die "unknown
 git -C "$REPO" cat-file -e "$SHA:services/api/Dockerfile" 2>/dev/null \
     || die "services/api/Dockerfile does not exist at $SHA"
 SHORT="${SHA:0:12}"
+# User that owns the repo and runs git. Default `agent`; on a host where root owns the
+# clone (production: /opt/mento/src) run with BUILD_GIT_USER= (empty) to run git directly.
+GIT_USER="${BUILD_GIT_USER-agent}"
+GIT_PREFIX=""
+[ -z "$GIT_USER" ] || GIT_PREFIX="sudo -u $GIT_USER "
 
 cat <<EOF
 # --- build mento-api:$SHORT-r<N> from $SHA. Run as root on a host with docker. ---
@@ -55,7 +61,7 @@ SRC="\$(mktemp -d "\$BUILD_ROOT/api-\$TAG.XXXXXX")"
 trap 'rm -rf "\$SRC"' EXIT
 
 # git as the repo owner; the root-only build dir is written by tar, not by git.
-sudo -u agent git -C "\$REPO" archive "\$SHA" services/api | tar --no-same-owner -x -C "\$SRC"
+${GIT_PREFIX}git -C "\$REPO" archive "\$SHA" services/api | tar --no-same-owner -x -C "\$SRC"
 
 docker build \\
     --file "\$SRC/services/api/Dockerfile" \\
@@ -67,5 +73,5 @@ docker build \\
 docker image inspect --format 'image={{index .RepoTags 0}} id={{.Id}} created={{.Created}}' "\$IMAGE"
 docker image inspect --format 'base-digest={{index .RepoDigests 0}}' python:3.12-slim || true
 
-echo "built \$IMAGE; deploy to QA (root):  qa-deploy-api \$TAG"
+echo "built \$IMAGE; deploy (root):  deploy-api <qa|prod> \$TAG"
 EOF

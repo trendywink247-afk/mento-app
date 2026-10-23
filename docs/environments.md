@@ -49,14 +49,18 @@ Config and secrets (names only):
 
 ## Production
 
-Off limits to agents. Nothing below was verified against a live host.
+Off limits to agents. Facts below are from the production audit; nothing is verified by an agent. Cutover plan: [runbooks/prod-cutover.md](runbooks/prod-cutover.md).
 
 | | |
 |---|---|
-| Host(s) | TBD (audit Mon). `deploy/domains.env` lists `VPS_SSH=mento-ops@129.121.122.28`; unverified. `docs/DEPLOYMENT_VPS.md` describes an older box (`87.232.72.79`), treat as stale |
-| URLs | TBD (audit Mon). `deploy/domains.env` defines `api.` / `app.` / `admin.` under `ROOT_DOMAIN=mento.chat` |
-| Linux users | TBD (audit Mon). Repo assumes `mento-ops` and `mento-ci-production` (`deploy/install-ci-production.sh`) |
-| Containers and ports | TBD (audit Mon). Repo designs: legacy stack `deploy/docker-compose.prod.yml` behind host Nginx, or Balanced stack (`compose.base.yml` + `compose.prod.yml`, Caddy, `api_blue`/`api_green`) |
-| Config | TBD (audit Mon). Repo: `deploy/secrets/prod.env.sops.yaml` (SOPS + age), decrypted to tmpfs by `deploy/decrypt-env.sh`, or `services/api/.env`; stack choice in `MENTO_STACK` or `~/.config/mento/stack` |
-| Deploy | Per `deploy/deploy.sh`, run on the server from `/opt/mento`: build `mento-api:<sha>`, one-off `alembic upgrade head`, then swap (blue/green on Balanced; recreate with auto put-back on legacy). Invoked by the Production Release workflow. Which stack runs today: TBD (audit Mon) |
-| Rollback | Per `deploy/deploy.sh --rollback`: previous image, no migrations. Not rehearsed on a live host as far as the repo shows (`rollback-rehearsal` workflow exists). TBD (audit Mon) |
+| Host | `129.121.122.28` |
+| URLs | `mento.chat`, `app.`, `api.`, `admin.mento.chat`, served by host Nginx today (Caddy at cutover: `infra/caddy/Caddyfile.prod`) |
+| Linux users | `mento-ops` (per `deploy/domains.env`), `root`. Anything else: TBD (audit Mon) |
+| Compose | `/opt/mento/deploy/docker-compose.prod.yml`. Project name: TBD (found in the runbook's pre-check P2). New stack for the cutover: `deploy/compose.prod-cutover.yml` (api + worker), same volumes |
+| Containers and ports | `mento-api-prod` (`mento-api:92b8f57a5cd3`, `127.0.0.1:8000`), `mento-postgres-prod`, `mento-redis-prod`. **No worker.** Volumes `mento_pgdata_prod`, `mento_redisdata_prod` |
+| Schema | `c13a0seen001`. A rehearsal upgrades cleanly to `ea01chat0001` with zero rows lost |
+| Settings | `ENV=prod`; Razorpay keys configured (payments are not wired in the API yet); `PUSH_ENABLED=true`. Where the env file lives (plain vs SOPS): TBD (audit Mon) |
+| Web roots | admin `/opt/mento-console/current`; app and apex: TBD (audit Mon) |
+| Backups | daily to `/opt/mento-backups` (`deploy/backup-postgres.sh`, then an rclone copy off-box) |
+| Deploy | `ops/deploy-api.sh prod <tag>` after the cutover: image must be built from a commit on `origin/main`, a fresh backup is taken in the same run, and you type `deploy prod <tag>`. Before the cutover the box is deployed the old way (`deploy/deploy.sh`) |
+| Rollback | `ops/deploy-api.sh prod --rollback` swaps the image only (no migration undo, no DB restore). Full rollback = restore the pre-cutover backup + old image + Nginx (runbook section 6) |

@@ -1,0 +1,126 @@
+# PRODUCTION edge for the 2026-10 cutover (host 129.121.122.28): replaces host Nginx for
+# mento.chat, app., api. and admin. Derived from infra/caddy/Caddyfile (QA, on
+# feat/qa-caddy) with the same headers and the same `route { }` wrapping, minus the
+# allowlist: production is PUBLIC, there is no operator-IP gate and no 403 block.
+# Runbook: docs/runbooks/prod-cutover.md. Keep the old Nginx config untouched: it is the
+# rollback.
+#
+# Placeholder rendered by the runbook (never commit a rendered copy with a real path):
+#   __APP_WEB_ROOT__   the app web root the live Nginx `app.mento.chat` server uses.
+#                      TBD: the runbook's pre-check (`nginx -T`) discovers it.
+# The admin root /opt/mento-console/current is known (deploy/nginx/mento-app.conf.template).
+#
+# No access logs on purpose: a request log would hold member IP addresses (CLAUDE.md T&S
+# #7), same as deploy/caddy/Caddyfile. Caddy's error log still records the client address
+# of a request that FAILED (e.g. no upstream) — nothing else.
+#
+# Upstream: the API container is published on 127.0.0.1:8000 (not QA's 18010).
+{
+	log default {
+		exclude http.handlers.reverse_proxy.health_checker.active
+	}
+}
+
+# Same headers as QA. NOTE: X-Robots-Tag noindex is carried over unchanged; confirm it is
+# wanted on the public production hosts before cutover (runbook pre-check).
+(security_headers) {
+	header {
+		X-Robots-Tag "noindex, nofollow"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+}
+
+# Every site body is wrapped in `route { }`. Caddy otherwise reorders top-level
+# directives into its own fixed global order (not written order), so a `respond` or
+# `redir` can end up evaluated after `file_server`/`handle`. `route` runs its contents
+# exactly as written.
+
+# The API. Body cap and long read timeout match nginx's `client_max_body_size 5m` and the
+# own-chat WebSockets (WS5), same as QA.
+api.mento.chat {
+	route {
+		import security_headers
+		encode zstd gzip
+		request_body {
+			max_size 5MB
+		}
+		reverse_proxy 127.0.0.1:8000 {
+			health_uri /api/v1/health/ready
+			health_interval 5s
+			health_timeout 3s
+			transport http {
+				read_timeout 3600s
+			}
+		}
+	}
+}
+
+# The web app: the whole SPA, never the staff dashboard.
+app.mento.chat {
+	route {
+		import security_headers
+		root * __APP_WEB_ROOT__
+		encode zstd gzip
+
+		# A missing static file is a real 404, never the SPA shell.
+		handle /_expo/* {
+			file_server
+		}
+		handle /assets/* {
+			file_server
+		}
+		# The dashboard has its own origin (its token must not share this localStorage).
+		handle /admin* {
+			respond 404
+		}
+		handle {
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+	}
+}
+
+# The staff dashboard: only /admin (+ the assets it needs). Root is the existing console
+# release directory that the live Nginx admin server serves.
+admin.mento.chat {
+	route {
+		import security_headers
+		root * /opt/mento-console/current
+		encode zstd gzip
+
+		redir / /admin 302
+		handle /admin* {
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+		handle /_expo/* {
+			file_server
+		}
+		handle /assets/* {
+			file_server
+		}
+		handle /favicon.ico {
+			file_server
+		}
+		# The member app is deliberately not reachable from the staff origin.
+		handle {
+			respond 404
+		}
+	}
+}
+
+# The bare domain redirects until it has a page of its own (as deploy/caddy/Caddyfile
+# does). A #fragment survives a redirect whose Location has none, so old private links
+# keep signing people in. TBD (audit): confirm what the live Nginx apex server does
+# today; if it serves content, replace this block before cutover.
+mento.chat {
+	route {
+		import security_headers
+		redir /admin* https://admin.mento.chat{uri} 302
+		redir https://app.mento.chat{uri} 302
+	}
+}

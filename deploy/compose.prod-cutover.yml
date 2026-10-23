@@ -1,0 +1,99 @@
+# Production stack for the 2026-10 cutover: api + worker on the existing postgres/redis.
+# Reviewed copy lives at /opt/mento/compose.prod-cutover.yml (docs/runbooks/prod-cutover.md).
+#
+# SAME data as deploy/docker-compose.prod.yml (kept untouched for rollback): same
+# container names, same volume names (mento_pgdata_prod, mento_redisdata_prod), same host
+# port (127.0.0.1:8000). Compose prefixes volume names with the PROJECT name, so every
+# command must pass the SAME project the live stack runs under: -p "$PROJECT"
+# (recorded in /opt/mento/deploy.conf by the runbook's pre-check). A different project
+# name would create EMPTY volumes. Never `down -v`, never `volume rm`.
+#
+# No image here on purpose: the tag comes from /opt/mento/prod.override.yml, which
+# ops/deploy-api.sh rewrites on every deploy. Running this file alone fails with
+# "no image" instead of silently starting :latest.
+#
+# Run through ops/deploy-api.sh prod <tag>. If you must call compose by hand:
+#   export GIT_SHA=<full sha of the image>      # else the Sentry release tag is blank
+#   docker compose -p "$PROJECT" --env-file "$MENTO_ENV_FILE" \
+#     -f /opt/mento/compose.prod-cutover.yml -f /opt/mento/prod.override.yml <cmd> api worker
+# and always name the services: a bare `up` would also touch postgres and redis.
+#
+# Settings come from MENTO_ENV_FILE (the live container's existing env file, unchanged
+# except for the additions listed in the runbook). ENV=prod there.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: mento-postgres-prod
+    restart: always
+    mem_limit: 256m
+    env_file:
+      - ${MENTO_ENV_FILE:?set MENTO_ENV_FILE}
+    environment:
+      POSTGRES_USER: mento
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+      POSTGRES_DB: mento
+    volumes:
+      - mento_pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mento -d mento"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    # Not published to the host.
+
+  redis:
+    image: redis:7-alpine
+    container_name: mento-redis-prod
+    restart: always
+    mem_limit: 128m
+    volumes:
+      - mento_redisdata_prod:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    container_name: mento-api-prod
+    restart: always
+    mem_limit: 384m
+    env_file:
+      - ${MENTO_ENV_FILE:?set MENTO_ENV_FILE}
+    environment:
+      DATABASE_URL: postgresql+psycopg://mento:${POSTGRES_PASSWORD}@postgres:5432/mento
+      REDIS_URL: redis://redis:6379/0
+      GIT_SHA: ${GIT_SHA:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8000:8000"   # the edge (Caddy, or nginx before cutover) proxies here
+
+  # Job queue worker (app/jobs/worker.py): same image as api, no port. Pushes, periodic
+  # sweeps and chat_messages partition upkeep run here; the old prod had none.
+  worker:
+    container_name: mento-worker-prod
+    command: ["python", "-m", "app.jobs.worker"]
+    restart: always
+    mem_limit: 256m
+    env_file:
+      - ${MENTO_ENV_FILE:?set MENTO_ENV_FILE}
+    environment:
+      DATABASE_URL: postgresql+psycopg://mento:${POSTGRES_PASSWORD}@postgres:5432/mento
+      REDIS_URL: redis://redis:6379/0
+      GIT_SHA: ${GIT_SHA:-}
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  mento_pgdata_prod:
+  mento_redisdata_prod:
