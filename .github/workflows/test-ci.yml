@@ -50,6 +50,7 @@ jobs:
       - name: Verify native release configuration separation
         run: node e2e/release-config.test.cjs
       - run: node e2e/keyboard-boundary.test.cjs
+      - run: node --test e2e/app-version.test.cjs
       - name: Verify missed web messages after Stream reconnect
         run: node --test e2e/stream-recovery.test.cjs
       - name: Verify telemetry runtime privacy and erasure fencing
