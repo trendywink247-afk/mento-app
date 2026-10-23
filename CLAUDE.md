@@ -8,6 +8,10 @@ An anonymous, low-friction emotional-support app: a person in a hard moment open
 
 - Product authority, in order: `docs/DECISIONS.md` → `docs/PRD.md` → `docs/Mockups/` (catalogued in `docs/MOCKUP_INVENTORY.md`). DECISIONS wins on conflict. If DECISIONS is silent, ask; don't guess.
 
+## Scope
+
+Build only v1 scope as defined in `docs/DECISIONS.md`. Deferred and NOT built unless the founder explicitly asks: Module B mentoring, the UPSC self-assessment suite, Community.
+
 ## Trust & Safety
 
 - Non-negotiable: server-side crisis scan on every message, 18+ age gate enforced server-side, anonymity on both sides, honest opt-in contributions, real deletion (Clean Wipe), minimal PII, and a privacy policy (`docs/PRIVACY.md`) that matches reality.

@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-22, during the repository consolidation (feat/consolidation → dev).
+Updated 2026-10-23, during the repository consolidation (feat/consolidation → dev). CLAUDE.md now has a Scope section: v1 only; Module B mentoring, UPSC self-assessment suite and Community are deferred.
 
 **Current state:** dev = master (d23d591) + consolidation. Stale docs, the old CLAUDE.md, PROGRESS.md and project skills are in docs/archive/ (stale). Staging release targets 129.121.171.140. Production promotion has stayed locked since the 2026-10 log. Old branches survive as archive/* tags.
 
