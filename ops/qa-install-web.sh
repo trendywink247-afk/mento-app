@@ -36,6 +36,19 @@ swap_symlink() {
     mv -T "$tmp" "$link"
 }
 
+# The old pipeline (pre-dates this script) could leave $PREVIOUS_LINK as a
+# plain file/directory rather than a symlink. Never let swap_symlink's `mv -T`
+# clobber that silently — move it aside first, once, so it's still there to
+# look at if it mattered.
+archive_if_legacy_plain() {
+    local path=$1 archived
+    if [ -e "$path" ] && [ ! -L "$path" ]; then
+        archived="${path}.legacy-$(date +%s)"
+        echo "qa-install-web: $path exists and is not a symlink (legacy) — moving to $archived"
+        mv -- "$path" "$archived"
+    fi
+}
+
 do_rollback() {
     [ -L "$PREVIOUS_LINK" ] || die "no $PREVIOUS_LINK symlink — nothing to roll back to"
     local prev_target current_target
@@ -51,6 +64,7 @@ do_rollback() {
     # Swap, don't just overwrite: running --rollback a second time undoes the
     # first rollback instead of pointing previous-web at itself.
     if [ -n "$current_target" ]; then
+        archive_if_legacy_plain "$PREVIOUS_LINK"
         swap_symlink "$PREVIOUS_LINK" "$current_target"
     fi
     echo "qa-install-web: live: $prev_target"
@@ -74,11 +88,22 @@ do_install() {
 
     mkdir -p "$target_dir"
     echo "qa-install-web: unpacking $tarball -> $target_dir"
-    tar -xzf "$tarball" -C "$target_dir"
+    # --no-same-owner/--no-same-permissions: the tarball's own uid/gid/modes
+    # come from whatever build host made it — never trust those on this box.
+    # chown/chmod below are the one source of truth for ownership and perms.
+    tar --no-same-owner --no-same-permissions -xzf "$tarball" -C "$target_dir"
+    chown -R root:root "$target_dir"
+    chmod -R u=rwX,go=rX "$target_dir"
+
+    if [ ! -f "$target_dir/index.html" ]; then
+        rm -rf "$target_dir"
+        die "$target_dir/index.html missing after extract — bad tarball, not installing"
+    fi
 
     if [ -L "$WEB_LINK" ] || [ -e "$WEB_LINK" ]; then
         old_target="$(readlink -f "$WEB_LINK")"
         echo "qa-install-web: saving current release as previous: $old_target"
+        archive_if_legacy_plain "$PREVIOUS_LINK"
         swap_symlink "$PREVIOUS_LINK" "$old_target"
     else
         echo "qa-install-web: no existing $WEB_LINK — first install, nothing to save as previous"
