@@ -101,12 +101,18 @@ db_block() {
     step "alembic upgrade head" "$PY" -m alembic upgrade head
     step "alembic check" "$PY" -m alembic check
     step "pytest" "$PY" -m pytest -q
+    # Required: fails CI on a breaking OpenAPI change vs services/api/openapi.snapshot.json.
+    # Imports the app against the local test DB settings, so it runs inside the lock.
+    step "openapi_compat check" bash -c 'cd "$1" && "$2" scripts/ci/openapi_compat.py check' _ "$WT" "$PY"
 }
 export -f db_block step say
-export PY LOG SUMMARY OUT
+export PY LOG SUMMARY OUT WT
 say "waiting for $LOCK_FILE"
 flock "$LOCK_FILE" bash -c 'FAILED=0; db_block'
 if grep -q '^FAIL' "$SUMMARY"; then FAILED=1; fi
+
+# --- Release tooling unit tests (drills against fakes; no DB, no docker) ----------
+step "scripts/ci unittests" bash -c 'cd "$1" && python3 -m unittest discover -s scripts/ci -p "test_*.py"' _ "$WT"
 
 # --- Mobile ---------------------------------------------------------------------
 cd "$MOBILE" || die "no $MOBILE"
