@@ -9,13 +9,19 @@
 #   Dockerfile : services/api/Dockerfile   (build context: services/api, no build args)
 #   Source     : `git archive <sha>` of services/api only, so the image holds exactly
 #                the committed tree: no untracked files, no local .env, no .venv.
-#   Tag        : mento-api:<first 12 of sha>   (the tag qa-deploy-api.sh takes)
+#                git runs as user `agent` (owner of the repo); only tar and docker run
+#                as root.
+#   Build dir  : mktemp under /var/lib/mento-build (root:root, 0700), removed on exit.
+#   Tag        : mento-api:<first 12 of sha>-r<N>. An existing tag is never reused or
+#                overwritten: N starts at 1 and is incremented, at run time, past every
+#                tag already present on the docker host. qa-deploy-api.sh takes the tag
+#                part (<shortsha>-r<N>), which the commands print at the end.
 #   Labels     : org.opencontainers.image.revision=<full sha>
 #
 # Reproducibility: the recipe pins the source exactly. The FROM image (python:3.12-slim)
 # and pip's resolution of services/api/requirements.txt can still float between builds;
 # the output records the base image digest and the resulting image ID so a drift is
-# visible. Rebuilding the same sha later may yield a different image ID.
+# visible. Rebuilding the same sha later may yield a different image ID, hence a new -r<N>.
 set -euo pipefail
 
 die() { echo "build-api: $*" >&2; exit 2; }
@@ -26,18 +32,30 @@ SHA="$(git -C "$REPO" rev-parse --verify --quiet "$1^{commit}")" || die "unknown
 git -C "$REPO" cat-file -e "$SHA:services/api/Dockerfile" 2>/dev/null \
     || die "services/api/Dockerfile does not exist at $SHA"
 SHORT="${SHA:0:12}"
-IMAGE="mento-api:$SHORT"
 
 cat <<EOF
-# --- build $IMAGE from $SHA. Run as root on a host with docker. ---
+# --- build mento-api:$SHORT-r<N> from $SHA. Run as root on a host with docker. ---
 set -euo pipefail
 REPO=$REPO
 SHA=$SHA
-IMAGE=$IMAGE
-SRC="\$(mktemp -d /srv/mento/build/api-$SHORT.XXXXXX)"
+BUILD_ROOT=/var/lib/mento-build
+install -d -m 700 -o root -g root "\$BUILD_ROOT"
+
+# One build at a time, so two runs cannot pick the same -r<N>.
+exec 9>>"\$BUILD_ROOT/.lock"
+flock 9
+
+# Never reuse a tag: take the first -r<N> that does not exist yet.
+N=1
+while docker image inspect "mento-api:$SHORT-r\$N" >/dev/null 2>&1; do N=\$((N + 1)); done
+TAG="$SHORT-r\$N"
+IMAGE="mento-api:\$TAG"
+
+SRC="\$(mktemp -d "\$BUILD_ROOT/api-\$TAG.XXXXXX")"
 trap 'rm -rf "\$SRC"' EXIT
 
-git -c safe.directory="\$REPO" -C "\$REPO" archive "\$SHA" services/api | tar -x -C "\$SRC"
+# git as the repo owner; the root-only build dir is written by tar, not by git.
+sudo -u agent git -C "\$REPO" archive "\$SHA" services/api | tar --no-same-owner -x -C "\$SRC"
 
 docker build \\
     --file "\$SRC/services/api/Dockerfile" \\
@@ -47,9 +65,7 @@ docker build \\
 
 # Record what was actually built (paste this into the release notes / deploy ticket):
 docker image inspect --format 'image={{index .RepoTags 0}} id={{.Id}} created={{.Created}}' "\$IMAGE"
-docker image inspect --format 'base=python:3.12-slim' python:3.12-slim >/dev/null \\
-    && docker image inspect --format 'base-digest={{index .RepoDigests 0}}' python:3.12-slim
+docker image inspect --format 'base-digest={{index .RepoDigests 0}}' python:3.12-slim || true
 
-# Then deploy to QA (root):
-#   qa-deploy-api $SHORT
+echo "built \$IMAGE; deploy to QA (root):  qa-deploy-api \$TAG"
 EOF

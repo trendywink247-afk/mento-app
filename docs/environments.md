@@ -39,7 +39,7 @@ Config and secrets (names only):
 
 1. Staging Release workflow (`.github/workflows/staging-release.yml`) builds the candidate, then SSHes as `mento-ci-staging@129.121.171.140` and runs `receive <sha>`, `deploy <sha>`, `accept <sha>`, `fixture`, `cleanup`, `verify`. Those commands are handled by `ci-receiver.py` (root-owned, `/usr/local/lib/mento-release/`). Only that workflow deploys QA automatically; agents never trigger it unless asked for that run.
 2. Web only: root runs `/usr/local/sbin/qa-install-web <tarball.tar.gz>` (verifies the `.sha256`, unpacks to `web-releases/<name>`, atomically flips `web`, saves the old target as `previous-web`).
-3. API by hand (new): root runs `ops/build-api.sh <sha>` output to build `mento-api:<shortsha>`, then `qa-deploy-api <shortsha>`: backs up and rewrites `ci.override.yml`, migrates through the `api` service with the same image, recreates `api` + `worker`, waits up to 60 s for HTTP 200 on `https://qa-api.mento.chat/api/v1/health/ready`, and rolls back automatically if that fails. Every run appends tag and Alembic revision before/after to `deploy-history.log`.
+3. API by hand (new): root runs `ops/build-api.sh <sha>` output to build `mento-api:<shortsha>-r<N>` (never reuses a tag; the commands print the tag), then `qa-deploy-api <shortsha>-r<N>`: backs up and rewrites `ci.override.yml`, migrates through the `api` service with the same image, recreates `api` + `worker`, waits up to 60 s for HTTP 200 on `https://qa-api.mento.chat/api/v1/health/ready`, and rolls back automatically if that fails. Every run appends tag and Alembic revision before/after to `deploy-history.log`.
 
 ### Rollback today
 
