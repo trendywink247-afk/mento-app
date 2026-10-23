@@ -180,6 +180,9 @@ class Settings(BaseSettings):
     # Sentry error reporting. Empty = Sentry off (dev default); errors-only when
     # set — never performance traces, never request bodies (see app/main.py).
     sentry_dsn: str = ""
+    # Release for Sentry events (the deployed git sha). Supplied by the ops scripts via
+    # GIT_SHA; empty = no release tag, never a guess.
+    git_sha: str = ""
 
     # Journal note-sorting (opt-in AI, app/services/notes_ai.py). Empty key = feature
     # DARK: the endpoint returns 503 and the app shows "coming soon". Only the user's

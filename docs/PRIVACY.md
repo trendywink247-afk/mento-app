@@ -67,9 +67,13 @@ person seeking support and the listener — appears only as an auto-assigned per
 - **Listener applications** (if you apply to become a listener) — motivation,
   community interests, availability, and optional email. Stored, not sent anywhere,
   until an admin reviews the application.
-- **Device/technical data for error reporting** — if Sentry is configured, JS-level
-  crash/error reports are captured with request bodies stripped. No message content
-  or chat identifiers are included.
+- **Device/technical data for error reporting** — if Sentry is configured, app and API
+  crash/error reports carry the error type, the code location (file, line, function),
+  the app release and the environment. Request bodies, exception and log messages,
+  breadcrumbs, user data and IP addresses are removed before sending. No message content
+  or chat identifiers are included. We do not use session replay, screenshots or view
+  hierarchy capture. API reports also carry the server name, the request method and the
+  request URL, with ID-like path segments replaced; query strings and fragments are not sent.
 - **Anonymous product analytics** — if PostHog is configured, we record anonymized
   usage events (e.g. "reached chat screen," "opened Path tab") from a closed,
   allow-listed event list. **We never send message content, journal content, or any

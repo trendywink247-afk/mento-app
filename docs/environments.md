@@ -88,3 +88,24 @@ Off limits to agents. Nothing below was verified against a live host.
 | Config | TBD (audit Mon). Repo: `deploy/secrets/prod.env.sops.yaml` (SOPS + age), decrypted to tmpfs by `deploy/decrypt-env.sh`, or `services/api/.env`; stack choice in `MENTO_STACK` or `~/.config/mento/stack` |
 | Deploy | Per `deploy/deploy.sh`, run on the server from `/opt/mento`: build `mento-api:<sha>`, one-off `alembic upgrade head`, then swap (blue/green on Balanced; recreate with auto put-back on legacy). Invoked by the Production Release workflow. Which stack runs today: TBD (audit Mon) |
 | Rollback | Per `deploy/deploy.sh --rollback`: previous image, no migrations. Not rehearsed on a live host as far as the repo shows (`rollback-rehearsal` workflow exists). TBD (audit Mon) |
+
+## Error reporting (Sentry)
+
+Errors only: no tracing, no session replay, no screenshots, no breadcrumbs. Events pass a
+`before_send` / `beforeSend` scrubber that drops message text, exception messages, request
+bodies and headers, user data and IPs (`services/api/app/observability.py`,
+`apps/mobile/lib/sentryConfig.ts`). Sentry is off unless there is a DSN **and** the
+environment value below is one of `qa`, `staging` (reported as `qa`), `prod` or `production` (reported as `production`);
+anything else, including unset or `dev`, is off. It never defaults to production.
+
+Mobile reports JS-level errors only (`enableNative: false`): native crash events would bypass the
+JS `beforeSend` scrubber, so native crash reporting stays off until a native scrubber exists.
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `SENTRY_DSN` | API | Project DSN. Empty = off. |
+| `ENV` | API | `qa` / `staging` → Sentry env `qa`; `prod` / `production` → `production`; else off. |
+| `GIT_SHA` | API | Sentry `release`. Supplied by the ops scripts; empty = no release. |
+| `EXPO_PUBLIC_SENTRY_DSN` | web + mobile | Project DSN (ships in the client, so it must not be a secret). Empty = off. |
+| `EXPO_PUBLIC_APP_ENV` | web + mobile | Same mapping as `ENV`. |
+| `EXPO_PUBLIC_GIT_SHA` | web + mobile | Sentry `release`. Supplied by the ops scripts. |
