@@ -1,5 +1,5 @@
 fastapi==0.141.1
-starlette==1.7.0  # pinned: fastapi only floors it (>=0.46), and 1.x changed routing internals
+starlette==1.9.0  # pinned: fastapi only floors it (>=0.46), and 1.x changed routing internals
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
 email-validator==2.2.0
