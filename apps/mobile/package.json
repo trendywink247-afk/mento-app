@@ -57,7 +57,7 @@
     "react-native-web": "^0.21.0",
     "react-native-worklets": "0.12.2",
     "stream-chat": "^9.45.2",
-    "stream-chat-expo": "^9.3.0"
+    "stream-chat-expo": "^9.10.1"
   },
   "devDependencies": {
     "@expo/config-plugins": "~55.0.11",
