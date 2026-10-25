@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Deploy an API image to QA on this box (run as root).
 #
-#   qa-deploy-api.sh <tag>        # deploy mento-api:<tag> (tag only, e.g. 0f1e133f175c)
+#   qa-deploy-api.sh [--skip-ci-check] <tag>   # deploy mento-api:<tag> (tag only, e.g. 0f1e133f175c)
 #   qa-deploy-api.sh --rollback   # swap back to the tag saved in previous-api-tag
 #
 # Install (root):  install -o root -g root -m 755 ops/qa-deploy-api.sh /usr/local/sbin/qa-deploy-api
@@ -17,8 +17,10 @@
 #                          before and after
 #   ci.lock                flock'd for the whole run so two deploys cannot overlap
 #
-# Deploy: check image exists -> take ci.lock -> record schema revision -> back up and
-# rewrite the override -> migrate with the SAME image through the real `api` service
+# Deploy: check image exists -> require a passing ops/ci run for the image's commit
+# (skip only with --skip-ci-check or QA_SKIP_CI_CHECK=1) -> take ci.lock -> record schema
+# revision -> pg_dump into predeploy-backups/ (a failed dump aborts before anything
+# changes) -> back up and rewrite the override -> migrate with the SAME image through the real `api` service
 # (compose network + env_file, not a bare docker run) -> recreate api+worker -> wait
 # for HTTP 200 from the readiness URL for up to 60s -> otherwise roll back
 # automatically and exit non-zero.
@@ -35,6 +37,9 @@ HISTORY="$ROOT_DIR/deploy-history.log"
 LOCK="$ROOT_DIR/ci.lock"
 HEALTH_URL="${QA_API_HEALTH_URL:-https://qa-api.mento.chat/api/v1/health/ready}"
 HEALTH_TIMEOUT=60
+BACKUP_DIR="$ROOT_DIR/predeploy-backups"
+CI_LOG_DIR="${QA_CI_LOG_DIR:-/srv/mento/logs/ci}"
+SKIP_CI="${QA_SKIP_CI_CHECK:-}"
 IMAGE_REPO=mento-api
 SERVICES=(api worker)
 
@@ -116,6 +121,36 @@ wait_healthy() {
     return 1
 }
 
+# Refuse an image whose commit has no passing ops/ci run. Reads the summary that
+# ops/ci.sh appends to /srv/mento/logs/ci/<full-sha>.log; only lines after the
+# "---- summary ----" marker count, so test output cannot fake a PASS or FAIL.
+ci_gate() { # <image>
+    local image=$1 sha log summary
+    if [ -n "$SKIP_CI" ]; then say "WARNING: ops/ci check skipped by request"; return 0; fi
+    sha="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$image" 2>/dev/null || true)"
+    [[ $sha =~ ^[0-9a-f]{40}$ ]] || die "$image has no commit label; rebuild with ops/build-api.sh, or pass --skip-ci-check"
+    log="$CI_LOG_DIR/$sha.log"
+    [ -f "$log" ] || die "no ops/ci log for $sha ($log); run ops/ci.sh $sha first, or pass --skip-ci-check"
+    summary="$(awk '/^ops\/ci: ---- summary ----/ {f=1; next} f' "$log")"
+    if ! grep -q '^PASS' <<<"$summary" || grep -q '^FAIL' <<<"$summary"; then
+        die "ops/ci did not pass for $sha (see $log); fix it, or pass --skip-ci-check"
+    fi
+    say "ops/ci passed for $sha"
+}
+
+# Plain-SQL dump of the QA database before any migration, mode 0600 under the 0700 dir.
+predeploy_dump() { # <tag>
+    local out
+    mkdir -p "$BACKUP_DIR"; chmod 700 "$BACKUP_DIR"
+    out="$BACKUP_DIR/api-$1-$(date -u +%Y%m%dT%H%M%SZ).sql"
+    if ! ( umask 077; docker compose -f compose.yml exec -T postgres \
+            pg_dump -U mento_staging -d mento_staging > "$out" ) || [ ! -s "$out" ]; then
+        rm -f "$out"
+        die "pre-deploy database dump FAILED; nothing was changed"
+    fi
+    say "database dumped: $out"
+}
+
 take_lock() {
     exec 9>>"$LOCK"
     flock -n 9 || die "another deploy holds $LOCK — not starting"
@@ -125,6 +160,7 @@ do_deploy() {
     local tag=$1 image="$IMAGE_REPO:$1" current ts backup prev_saved had_prev rev_before rev_after
     valid_tag "$tag" || die "bad tag: $tag"
     docker image inspect "$image" >/dev/null 2>&1 || die "image $image not found locally — build it first (ops/build-api.sh)"
+    ci_gate "$image"
     take_lock
     [ -f "$OVERRIDE" ] || die "missing $OVERRIDE"
 
@@ -140,6 +176,7 @@ do_deploy() {
     say "live: $IMAGE_REPO:$current  ->  deploying: $image"
     rev_before="$(db_revision)"
     say "schema revision before: $rev_before"
+    predeploy_dump "$tag"
 
     cp -p "$OVERRIDE" "$backup"
     say "override backed up: $backup"
@@ -219,16 +256,18 @@ do_rollback() {
     die "rollback to $image is NOT healthy — QA api may be down. No further automatic action taken."
 }
 
+if [ "${1:-}" = "--skip-ci-check" ]; then SKIP_CI=1; shift; fi
+
 case "${1:-}" in
     --rollback)
         [ $# -eq 1 ] || die "usage: qa-deploy-api.sh --rollback"
         do_rollback
         ;;
     "" | --help | -h)
-        die "usage: qa-deploy-api.sh <tag> | --rollback"
+        die "usage: qa-deploy-api.sh [--skip-ci-check] <tag> | --rollback"
         ;;
     *)
-        [ $# -eq 1 ] || die "usage: qa-deploy-api.sh <tag>"
+        [ $# -eq 1 ] || die "usage: qa-deploy-api.sh [--skip-ci-check] <tag>"
         do_deploy "${1#"$IMAGE_REPO":}"
         ;;
 esac
