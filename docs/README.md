@@ -17,5 +17,6 @@ Current documents only. `archive/` holds stale history: don't read it or use it 
 | [SAME_DATABASE_REHEARSAL.md](SAME_DATABASE_REHEARSAL.md) | Local rehearsal of the classic ↔ Balanced topology switch on one database |
 | [OWN_CHAT_LOCAL_ACCEPTANCE.md](OWN_CHAT_LOCAL_ACCEPTANCE.md) | Local own-chat replica and process-loss proof |
 | [DEPENDENCY_AUDIT_2026-10-05.md](DEPENDENCY_AUDIT_2026-10-05.md) | npm advisories and required treatment |
+| [specs/qa-deploy-path.md](specs/qa-deploy-path.md) | QA deploy paths compared (Actions receiver vs `ops/qa-deploy-api.sh`), the `master` rename finding, recommendation |
 | [specs/2026-09-20-mento-balanced-architecture-design.md](specs/2026-09-20-mento-balanced-architecture-design.md) | Balanced architecture design (current baseline) |
 | [diagrams/](diagrams/) | Current and target architecture images, plus their renderer |

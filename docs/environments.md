@@ -75,6 +75,12 @@ SOPS_AGE_KEY_FILE=/etc/mento/age/qa.key sops deploy/staging/secrets/api.enc.env
 - API: `qa-deploy-api --rollback` restores the tag in `previous-api-tag` (and swaps it, so a second run undoes the first). It changes the image only; **database migrations are not undone**. Expand/contract rules mean the old image must run on the newer schema; `deploy-history.log` shows the revision each tag last ran with.
 - Before `qa-deploy-api` existed, the only API path was the receiver's own handling inside the workflow; whether the receiver has a rollback command was not verified.
 
+### Backups, CI trigger and Actions (added 2026-10-25, not yet installed)
+
+- **Backups.** A plaintext nightly dump already lands in `/opt/mento-backups/mento-*.sql.gz` on the QA box (14 Oct onward). It is local-only and unencrypted. `ops/qa-backup.sh` (install as `/usr/local/sbin/qa-backup`) writes an age-encrypted dump to `/opt/mento-backups/qa-encrypted/` using the public recipients in `/etc/mento/age/qa.recipients`, copies off-box when `QA_BACKUP_REMOTE` (an rclone destination) is set, and keeps 14 days locally. `ops/qa-restore-drill.sh` restores the newest archive into a throwaway no-network container weekly. Units: `infra/systemd/mento-qa-backup.*`, `mento-qa-restore-drill.*`. Retire the plaintext job only after the first drill passes.
+- **CI trigger.** `ops/ci-poll.sh` (timer `infra/systemd/mento-ci-poll.*`, runs as `agent`) runs `ops/ci.sh` for each new `dev`, `main` and `feat/*` head and posts the `ops/ci` status. Run `ops/ci-poll.sh --seed` once before enabling the timer so old branches are not re-tested.
+- **Actions release path is broken.** `staging-release.yml` and `production-release.yml` require `master`, which no longer exists, and `test-ci.yml` pushes only on `master`. Nothing deploys through Actions until that is decided: see [specs/qa-deploy-path.md](specs/qa-deploy-path.md).
+
 ## Production
 
 Off limits to agents. Nothing below was verified against a live host.
