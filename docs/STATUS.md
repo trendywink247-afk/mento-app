@@ -5,8 +5,8 @@ Updated 2026-10-25. CLAUDE.md scope: v1 only; Module B mentoring, UPSC self-asse
 **Current state:** `qa-deploy-api` has rehearsed deploy + rollback once on QA (2026-10-23). A plaintext nightly DB dump already runs on QA, local-only. `feat/qa-hardening` adds `ops/ci-poll.sh`, `ops/qa-backup.sh`, `ops/qa-restore-drill.sh` and `infra/systemd/` units, all untested on a host and not installed. Staging/production release workflows still require `master` (gone), so Actions cannot deploy; left alone until prod is decided. test-ci.yml now runs on `main`/`dev` pushes and includes the Sentry test. Maestro CI is disabled by the founder. History scan (regex, 2026-10-25) found no committed keys or tokens; repo is still public.
 
 **Next 3 tasks:**
-1. Root: install `qa-backup`, `qa-restore-drill` and the timers (needs `/etc/mento/age/qa.recipients`, optional `QA_BACKUP_REMOTE`); run `ops/ci-poll.sh --seed`, then enable `mento-ci-poll.timer`.
-2. Root: reinstall `qa-deploy-api` (now dumps the DB first and needs a passing ops/ci log; QA deploy path = `specs/qa-deploy-path.md` option 2). Still to do: render secrets from sops, fix the stale compose image pin, port the receiver's acceptance fixture.
+1. Root: `sudo infra/qa-root-setup.sh --recovery-recipient age1... [--remote name:path] --enable` (installs qa-deploy-api, qa-backup, drill, timers, seeds the CI poller; see environments.md). Then retire the plaintext dumps.
+2. Verify `qa-deploy-api` after reinstall (now dumps the DB first and needs a passing ops/ci log; QA deploy path = `specs/qa-deploy-path.md` option 2). Still to do: render secrets from sops, fix the stale compose image pin, port the receiver's acceptance fixture.
 3. Audit production (founder/root) and replace the TBDs in `environments.md` and the CLAUDE.md table. Then upgrade ruff (0.8.4) in api and recovery_receiver.
 
 **Open questions:**
