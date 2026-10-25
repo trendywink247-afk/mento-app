@@ -1,0 +1,10 @@
+[Unit]
+Description=Schedule: Run ops/ci.sh for new branch heads
+
+[Timer]
+OnCalendar=*:0/2
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target
