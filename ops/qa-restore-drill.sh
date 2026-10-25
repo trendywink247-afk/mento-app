@@ -15,12 +15,18 @@ umask 077
 
 DIR="${QA_BACKUP_DIR:-/opt/mento-backups/qa-encrypted}"
 IDENTITY="${QA_AGE_IDENTITY:-/etc/mento/age/qa.key}"
-NAME="mento-qa-drill-$$"
+NAME=mento-qa-drill
 
 [ "$(id -u)" -eq 0 ] || { echo "qa-restore-drill: run as root" >&2; exit 2; }
 ARCHIVE="$(find "$DIR" -maxdepth 1 -name 'mento-qa-*.sql.gz.age' -type f | sort | tail -1)"
 [ -n "$ARCHIVE" ] || { echo "qa-restore-drill: no encrypted archive in $DIR" >&2; exit 1; }
 [ -r "$IDENTITY" ] || { echo "qa-restore-drill: cannot read age identity" >&2; exit 2; }
+
+# Stable name: one drill at a time, and a container left by a killed run is replaced
+# instead of piling up. Only this exact name is touched; no leftover is fine.
+exec 9>"$DIR/.drill.lock"
+flock --nonblock 9 || { echo "qa-restore-drill: another drill is running" >&2; exit 1; }
+docker rm -fv "$NAME" >/dev/null 2>&1 || true
 
 docker run -d --name "$NAME" --network none --memory 512m --cpus 1 \
     -e POSTGRES_USER=mento -e POSTGRES_DB=mento -e POSTGRES_HOST_AUTH_METHOD=trust \
