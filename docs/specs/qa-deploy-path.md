@@ -1,6 +1,6 @@
 # QA deploy path: one way to ship to QA
 
-Status: recommendation, needs the founder's decision. Read from the repo on 2026-10-25; nothing here was run on the QA box.
+Status: option 2 chosen by the founder on 2026-10-25 ("go with everything"). `qa-deploy-api` now takes the pre-migration dump and refuses an image without a passing `ops/ci` log. Still open: sops secret rendering, the stale image pin in `deploy/staging/compose.yml`, and the receiver's acceptance fixture. Read from the repo on 2026-10-25; nothing here was run on the QA box.
 
 ## The two paths today
 
