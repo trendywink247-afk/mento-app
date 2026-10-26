@@ -25,7 +25,7 @@ import { SageSky } from '@/components/motion/SageSky';
 import { bubbleMaxWidth } from '@/components/chat/bubbleWidth';
 import { useFrameSize } from '@/lib/useFrameSize';
 import { useI18n } from '@/lib/i18n';
-import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
+import { measureScreenTop, useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { ensureListenerConnected, getListenerStreamClient } from '@/lib/listenerStreamClient';
 import { leaveToMentorHome } from '@/lib/leaveToChats';
@@ -245,7 +245,7 @@ function StreamMentorChatScreen() {
         </View>
       ) : channel ? (
         <View style={[styles.flex, keyboardBoundary]} testID="mentor-chat-ready"
-          onLayout={(event) => event.currentTarget.measureInWindow((_x, y) => setKeyboardOffset(y))}>
+          onLayout={(event) => measureScreenTop(event.currentTarget, setKeyboardOffset)}>
           <Chat client={getListenerStreamClient()} style={streamTheme}>
             {/* MessageAuthor off: the kit reserves an avatar's width beside every incoming
                 message (an avatar on the last of a run, a spacer on the rest) — no thread

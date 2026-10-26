@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackKey } from '@/components/DeepHeader';
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { KeyboardAvoidingView } from '@/components/KeyboardAvoidingView';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
 import { ApiError, api } from '@/lib/api';

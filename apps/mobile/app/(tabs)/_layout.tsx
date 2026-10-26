@@ -72,12 +72,16 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
               accessibilityLabel={t(tab.label)}
               testID={`tab-${tab.name}`}
             >
+              {/* Remount on focus change and always set a background: on Android (Fabric) a face
+                  that gains its backgroundColor after mount paints without its border radius, so
+                  every tab but the one focused at launch showed a square highlight. */}
               <EdgeSurface
+                key={focused ? 'on' : 'off'}
                 edge={focused ? colors.accentTintEdge : 'transparent'}
                 travel={3}
                 radius={radius.pill}
                 containerStyle={styles.cellBox}
-                style={[styles.cell, focused && { backgroundColor: colors.accentTint }]}
+                style={[styles.cell, { backgroundColor: focused ? colors.accentTint : 'transparent' }]}
               >
                 <Ionicons name={tab.idle} size={22} color={ink} />
                 <Text style={[styles.label, { color: ink }]} numberOfLines={1}>

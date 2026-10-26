@@ -44,7 +44,7 @@ import { api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
-import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
+import { measureScreenTop, useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { NativeChatOwnerError, requireNativeStreamOwner } from '@/lib/nativeChatOwner';
 import { chatFaceKey } from '@/lib/originStore';
@@ -493,7 +493,7 @@ function StreamChatScreen() {
         </View>
       ) : channel ? (
         <View style={[{ flex: 1 }, keyboardBoundary]} testID="chat-ready"
-          onLayout={(event) => event.currentTarget.measureInWindow((_x, y) => setKeyboardOffset(y))}>
+          onLayout={(event) => measureScreenTop(event.currentTarget, setKeyboardOffset)}>
           <Chat client={getStreamClient()} style={streamTheme}>
             {/* Baloo message text + Android measure/draw fix (components/chat/MessageText.tsx),
                 pillow-key composer (components/chat/Composer.tsx), and the board's thread
