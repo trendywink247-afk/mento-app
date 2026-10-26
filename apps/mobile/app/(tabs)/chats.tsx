@@ -17,6 +17,7 @@ import { ChatsEmpty } from '@/components/chats/ChatsEmpty';
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
+import { useTabDockHeight } from '@/components/tabDock';
 import { ApiError, api, type ConversationListItem, type InTouchItem, type InTouchList } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { relativeTime } from '@/lib/format';
@@ -315,6 +316,7 @@ export default function ChatsTab() {
   // stage — so the perch stays empty (never two companions on one screen).
   const showEmpty = !loading && !hasAnything && view === 'all' && loadError === null;
   // An honest error is a still state; a sheet over the list hides the companion.
+  const dock = useTabDockHeight();
   const perch = useCompanionPlacement('chats', perches, {
     still: loadError !== null,
     hidden: sheetOpen || gate !== null || showEmpty,
@@ -549,7 +551,7 @@ export default function ChatsTab() {
               data={touch?.items ?? []}
               keyExtractor={(i) => i.link_id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.list}
+              contentContainerStyle={[styles.list, { paddingBottom: 170 + dock }]}
               testID="in-touch-list"
               ListEmptyComponent={
                 // Still on purpose: an empty or failed view is a limit state.
@@ -626,7 +628,7 @@ export default function ChatsTab() {
               data={merged}
               keyExtractor={(r) => r.key}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.list}
+              contentContainerStyle={[styles.list, { paddingBottom: 170 + dock }]}
               ListEmptyComponent={
                 <Text style={[type.note, styles.centerText, { color: colors.inkMuted }]}>{t('chatsList.noMatches')}</Text>
               }
@@ -637,8 +639,10 @@ export default function ChatsTab() {
 
           {!loading && hasAnything ? (
             <>
-              <GroundFade height={136} />
-              <View style={styles.newChatWrap} pointerEvents="box-none">
+              <View style={[styles.fadeWrap, { bottom: dock }]} pointerEvents="none">
+                <GroundFade height={136} />
+              </View>
+              <View style={[styles.newChatWrap, { bottom: 36 + dock }]} pointerEvents="box-none">
                 <CompanionSlot id="fabTop" size={52} align="left" inset={space.lg} />
                 <CompanionSlot id="fabDangle" size={56} align="left" inset={space.lg} nudge={4} />
                 <View
@@ -679,7 +683,7 @@ export default function ChatsTab() {
                   )}
                 </View>
               </View>
-              <View style={styles.privacy} pointerEvents="none">
+              <View style={[styles.privacy, { bottom: 8 + dock }]} pointerEvents="none">
                 <Ionicons name="lock-closed-outline" size={15} color={colors.inkMuted} />
                 <Text style={[type.caption, { color: colors.inkMuted }]}>{t('chats.privacyFooter')}</Text>
               </View>
@@ -744,6 +748,8 @@ const styles = StyleSheet.create({
   noteBox: { marginHorizontal: space.md, marginTop: space.sm },
   list: { paddingTop: 14, paddingHorizontal: space.md, paddingBottom: 170, gap: 10 },
   footerGap: { gap: 10 },
+  // The ground fade ends where the floating tab bar's pill begins.
+  fadeWrap: { position: 'absolute', left: 0, right: 0, height: 136 },
   peers: { textAlign: 'center', paddingTop: space.xs, paddingHorizontal: space.sm },
   calm: { padding: space.md, gap: 10, borderRadius: radius.lg, borderWidth: 1 },
   calmHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },

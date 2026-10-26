@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { TAB_BAR_HEIGHT, TAB_DOCK_MIN_INSET } from '@/components/tabDock';
 import { tabSceneInterpolator, tabTransitionSpec } from '@/components/motion/tabTransition';
 import { api } from '@/lib/api';
 import { useI18n, type TKey } from '@/lib/i18n';
@@ -43,7 +44,10 @@ function TabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.dock, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+    <View
+      pointerEvents="box-none"
+      style={[styles.dock, { paddingBottom: Math.max(insets.bottom, TAB_DOCK_MIN_INSET) }]}
+    >
       <View style={[styles.bar, elevation.md, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {TABS.map((tab) => {
           // Name-based lookup: hidden routes (mentors) share this navigator, so the
@@ -151,9 +155,11 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  dock: { paddingHorizontal: space.md },
+  // Absolute, so the screens run the full height and scroll visibly behind and around the
+  // pill; box-none lets touches in the clear space around it reach the screen.
+  dock: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.md },
   bar: {
-    height: 68,
+    height: TAB_BAR_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.xs,
