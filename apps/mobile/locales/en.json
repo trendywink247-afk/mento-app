@@ -331,7 +331,9 @@
     "emptyTitle": "You're connected.",
     "emptyBody": "This is a safe space to share, reflect and grow. Take your time.",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "dayToday": "Today",
+    "dayYesterday": "Yesterday"
   },
   "crisis": {
     "title": "You matter. Support is here.",
@@ -374,7 +376,7 @@
       "footnote": "Only you can open this chat. The PIN never leaves hashed storage.",
       "leadLock": "Set a 4-digit PIN",
       "leadUnlock": "Enter your PIN",
-      "bodyLock": "You'll need this PIN to open the conversation again.",
+      "bodyLock": "You'll need this PIN to open the conversation again. A forgotten PIN can't be recovered, so pick one you'll remember.",
       "bodyUnlock": "This conversation is locked.",
       "wrongPin": "That PIN doesn't look quite right. Please enter your current PIN.",
       "doneTitleLock": "Conversation locked",
@@ -412,13 +414,13 @@
       "ctaOn": "Turn on Quiet Pause",
       "ctaResume": "Resume notifications",
       "heroTitle": "Need a little\nbreathing room?",
-      "heroBody": "Turn on Quiet Pause and we'll quietly hold any new messages from this mentor until you're ready to return.",
+      "heroBody": "Turn on Quiet Pause and we'll stop notifying you about new messages from this mentor until you're ready to return.",
       "info1Title": "Your mentor can still write to you.",
       "info1Body": "They can send messages as usual.",
       "info2Title": "You simply won't be notified.",
       "info2Body": "No alerts, no sounds, no distractions.",
       "toggleTitle": "Pause this conversation",
-      "toggleBody": "You won't receive any messages until you resume.",
+      "toggleBody": "You won't get notifications from this chat until you resume.",
       "lostTitle": "Nothing will be lost.",
       "lostBody": "We'll keep every message safe until you come back.",
       "doneTitle": "Quiet Pause is on.",
@@ -821,7 +823,8 @@
     "peersLine": "Mentors are peers, not therapists.",
     "newChatFree": "A new question goes to one mentor. Ask whenever you are ready.",
     "newChatWaiting": "You have a question open with %{name}. You can ask another once they reply or you close it.",
-    "noMatches": "Nothing matches that yet."
+    "noMatches": "Nothing matches that yet.",
+    "lockedLine": "Locked. Enter your PIN to read."
   },
   "inTouch": {
     "badge": "In touch",

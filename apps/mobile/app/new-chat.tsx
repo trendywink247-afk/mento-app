@@ -219,6 +219,7 @@ export default function NewChatSheet() {
                   edge={on ? colors.accentTintEdge : colors.edgeSurface}
                   radius={radius.pill}
                   intent="select"
+                  accessibilityRole="button"
                   accessibilityState={{ selected: on }}
                   testID={`new-chat-topic-${tp.slug}`}
                   style={[

@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
 from app import errors, observability
+from app.app_version import MinAppVersionMiddleware
 from app.chat_hub import hub
 from app.config import get_settings
 from app.db import init_db
@@ -120,6 +121,10 @@ app.add_exception_handler(errors.ApiProblem, errors.api_problem_handler)
 # Added FIRST = innermost: request id + access line + JSON 500, inside GZip and CORS
 # so even an unhandled error leaves with CORS headers and a body the app can parse.
 app.add_middleware(observability.RequestContextMiddleware)
+
+# Inside CORS + GZip (added after the request-context layer, before them) so a 426
+# still carries CORS headers and the browser can read the upgrade message.
+app.add_middleware(MinAppVersionMiddleware)
 
 # List payloads (conversations, listeners, journals) compress well; cheap win for
 # mobile networks. Small floor so tiny JSON bodies skip the overhead.

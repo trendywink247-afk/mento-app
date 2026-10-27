@@ -1,0 +1,10 @@
+[Unit]
+Description=Run ops/ci.sh for new branch heads
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=agent
+ExecStart=/srv/mento/mento-app/ops/ci-poll.sh
+Nice=10
+TimeoutStartSec=2h

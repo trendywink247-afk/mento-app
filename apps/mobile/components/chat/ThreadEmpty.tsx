@@ -15,6 +15,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
+import { COMPOSER_SEAT } from '@/components/chat/companionRoom';
 import { font, space, type } from '@/theme/tokens';
 
 export function ThreadEmpty({ listType }: { listType?: string }) {
@@ -39,7 +40,9 @@ export function ThreadEmpty({ listType }: { listType?: string }) {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexGrow: 1, justifyContent: 'flex-end', alignItems: 'center', gap: 2, paddingHorizontal: space.lg, paddingBottom: space.sm },
+  wrap: { flexGrow: 1, justifyContent: 'flex-end', alignItems: 'center', gap: 2, paddingHorizontal: space.lg, // The companion stands on the composer and rises into the thread's last pixels; this
+    // room keeps it clear of the privacy line (it covered "names").
+    paddingBottom: space.sm + COMPOSER_SEAT.size - 8 },
   day: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18, marginBottom: 10 },
   privacy: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 10, paddingHorizontal: space.sm },
   privacyText: { flexShrink: 1, textAlign: 'center' },

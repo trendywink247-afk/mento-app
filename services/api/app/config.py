@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     env: str = "dev"
+    # Oldest app build the API still serves (dotted numeric, e.g. "1.4.0"). Empty =
+    # check disabled. Only requests that SEND X-App-Version are ever refused, and the
+    # crisis/safety/health/Stream paths are exempt (app/app_version.py).
+    min_app_version: str = ""
     jwt_secret: str = "change-me-long-random"
     jwt_ttl_days: int = 90
     # Listener-console token links are shareable strings — keep their life shorter
@@ -176,6 +180,9 @@ class Settings(BaseSettings):
     # Sentry error reporting. Empty = Sentry off (dev default); errors-only when
     # set — never performance traces, never request bodies (see app/main.py).
     sentry_dsn: str = ""
+    # Release for Sentry events (the deployed git sha). Supplied by the ops scripts via
+    # GIT_SHA; empty = no release tag, never a guess.
+    git_sha: str = ""
 
     # Journal note-sorting (opt-in AI, app/services/notes_ai.py). Empty key = feature
     # DARK: the endpoint returns 503 and the app shows "coming soon". Only the user's

@@ -2,6 +2,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
+import { withAppVersion } from './appVersion';
 import { getInstallId } from './installId';
 import { screenCache } from './screenCache';
 import {
@@ -325,10 +326,13 @@ async function apiFetch(
   init: RequestInit,
   getToken?: () => Promise<string | null>,
 ): Promise<Response> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(init.headers as Record<string, string>),
-  };
+  const headers: Record<string, string> = withAppVersion(
+    {
+      'Content-Type': 'application/json',
+      ...(init.headers as Record<string, string>),
+    },
+    Constants.expoConfig?.version,
+  );
   if (getToken) {
     const token = await getToken();
     if (token) headers.Authorization = `Bearer ${token}`;

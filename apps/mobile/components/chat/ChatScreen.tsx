@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -33,6 +34,7 @@ import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { KitMessageFooter, KitThreadContext, type KitThread } from '@/components/chat/KitMessageFooter';
 import { KitSavedHeader } from '@/components/chat/KitSavedHeader';
+import { KitInlineDateSeparator, KitStickyHeader } from '@/components/chat/KitDate';
 import { KitTyping } from '@/components/chat/KitTyping';
 import { MentoBubble } from '@/components/chat/MentoBubble';
 import { MessageText, OwnBubbleToneContext } from '@/components/chat/MessageText';
@@ -44,7 +46,7 @@ import { api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
-import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
+import { measureScreenTop, useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { NativeChatOwnerError, requireNativeStreamOwner } from '@/lib/nativeChatOwner';
 import { chatFaceKey } from '@/lib/originStore';
@@ -250,7 +252,11 @@ function StreamChatScreen() {
       message: { id: string; text?: string };
       dismissOverlay: () => void;
     }) => {
-      if (isMyMessage || !message.text) return [copyMessage, quotedReply];
+      // Already kept: no second "Save to Journal" (it would save a duplicate); the pill above
+      // the bubble already says "Saved".
+      if (isMyMessage || !message.text || savedMessageIds.has(message.id) || savedNow.has(message.id)) {
+        return [copyMessage, quotedReply];
+      }
       return [
         {
           action: () => {
@@ -258,6 +264,8 @@ function StreamChatScreen() {
             dismissOverlay();
           },
           actionType: 'saveToMentorNotes',
+          // The kit's own rows (Copy, Reply) carry an icon; this one stood bare.
+          icon: <Ionicons name="bookmark-outline" size={20} color={colors.inkMuted} />,
           title: t('chat.saveToNotes'),
           type: 'standard' as const,
         },
@@ -265,7 +273,7 @@ function StreamChatScreen() {
         quotedReply,
       ];
     },
-    [saveNote, t],
+    [saveNote, savedMessageIds, savedNow, t, colors.inkMuted],
   );
 
   const { width: frameWidth } = useFrameSize();
@@ -493,7 +501,7 @@ function StreamChatScreen() {
         </View>
       ) : channel ? (
         <View style={[{ flex: 1 }, keyboardBoundary]} testID="chat-ready"
-          onLayout={(event) => event.currentTarget.measureInWindow((_x, y) => setKeyboardOffset(y))}>
+          onLayout={(event) => measureScreenTop(event.currentTarget, setKeyboardOffset)}>
           <Chat client={getStreamClient()} style={streamTheme}>
             {/* Baloo message text + Android measure/draw fix (components/chat/MessageText.tsx),
                 pillow-key composer (components/chat/Composer.tsx), and the board's thread
@@ -521,9 +529,15 @@ function StreamChatScreen() {
                 // bubble's corner — where the board puts the "Saved" chip.
                 ReactionListTop: RenderNothing,
                 ReactionListBottom: RenderNothing,
+                // `supportedReactions={[]}` still left the long-press menu's empty reaction bar
+                // (a black pill with a "+"); there is nothing to react with, so draw nothing.
+                MessageReactionPicker: RenderNothing,
                 MessageFooter: KitMessageFooter,
                 MessageHeader: KitSavedHeader,
                 TypingIndicator: KitTyping,
+                // The kit's calendar-formatted date pills print a raw ISO string here.
+                StickyHeader: KitStickyHeader,
+                InlineDateSeparator: KitInlineDateSeparator,
               }}
             >
             <Channel
