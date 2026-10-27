@@ -6,7 +6,7 @@ Where Mento runs, who owns what, and how a release moves today. Secrets are name
 
 | | |
 |---|---|
-| Host | `129.121.171.140` (single box; reachable over the operator's Tailscale network, not a public IP allowlist) |
+| Host | `129.121.171.140` (single box). `qa-app`, `qa-admin` and `staging` are reachable over the operator's Tailscale network only; `qa-api` is open to the internet by founder decision 2026-10-27 so a phone off Tailscale can test (its routes enforce their own auth) |
 | URLs | `qa-api.mento.chat`, `qa-app.mento.chat`, `qa-admin.mento.chat`; `staging.mento.chat` kept as an alias pending retirement |
 | Edge | Caddy (systemd `caddy.service`, `/etc/caddy/Caddyfile`). Nginx + certbot disabled at the 2026-10-23 cutover, not removed. Cutover record: `infra/caddy/*.md` on `feat/qa-caddy` |
 | Linux users | `root` (runs `qa-install-web`, `qa-deploy-api`, owns `ci.lock`, `ci.override.yml`, `web`, `previous-web`); `mento-ops` (owns `compose.yml`, `proxy.conf`, `release.json`, `secrets/`); `mento-ci-staging` (forced-command SSH user for the Staging Release workflow, sudo only to `ci-receiver.py staging`, per `deploy/install-ci-staging.sh`) |
