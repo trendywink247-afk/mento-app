@@ -7,6 +7,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "splash": {
+      "image": "./assets/icon/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#F4EFE6"
     },
@@ -18,13 +19,16 @@
       "package": "com.mento.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon/adaptive-foreground.png",
+        "monochromeImage": "./assets/icon/adaptive-monochrome.png",
         "backgroundColor": "#F4EFE6"
       },
       "permissions": []
     },
     "web": {
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "favicon": "./assets/icon/favicon.png"
     },
     "plugins": [
       "expo-asset",
@@ -38,7 +42,8 @@
       [
         "expo-notifications",
         {
-          "color": "#A2533A"
+          "color": "#A2533A",
+          "icon": "./assets/icon/notification-icon.png"
         }
       ],
       [
@@ -72,6 +77,7 @@
       "requestHeaders": {
         "expo-channel-name": "preview"
       }
-    }
+    },
+    "icon": "./assets/icon/icon.png"
   }
 }
