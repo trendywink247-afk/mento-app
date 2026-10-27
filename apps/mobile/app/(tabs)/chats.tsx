@@ -379,7 +379,7 @@ export default function ChatsTab() {
                   ? t('chatsList.yourMentor')
                   : null
           }
-          lastLine={s === 'wiped' ? t('chats.wiped') : p?.text || t('chats.sayHello')}
+          lastLine={s === 'wiped' ? t('chats.wiped') : c.is_locked ? t('chatsList.lockedLine') : p?.text || t('chats.sayHello')}
           time={relativeTime((p?.at ?? new Date(c.created_at)).toISOString(), t)}
           unread={Boolean(p && p.unread > 0) && s === 'active'}
           unreadLabel={t('chatsList.newMessageA11y')}
@@ -606,7 +606,9 @@ export default function ChatsTab() {
                       lastLine={
                         c?.status === 'wiped'
                           ? t('chats.wiped')
-                          : p?.text || (item.status === 'online' ? t('inTouch.hereNow') : t('inTouch.away'))
+                          : c?.is_locked
+                            ? t('chatsList.lockedLine')
+                            : p?.text || (item.status === 'online' ? t('inTouch.hereNow') : t('inTouch.away'))
                       }
                       time={relativeTime((p?.at ?? new Date(item.since ?? item.first_met_at)).toISOString(), t)}
                       unread={Boolean(p && p.unread > 0) && live}

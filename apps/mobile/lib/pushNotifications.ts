@@ -31,11 +31,22 @@ function projectIdForPush(): string | null {
   return typeof projectId === 'string' && projectId.trim() ? projectId.trim() : null;
 }
 
+/** Mento's own Android channel, so notifications are tunable in system settings under
+ * "Messages" instead of the generic fallback. Safe to repeat; a no-op off Android. */
+async function ensureAndroidChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync('default', {
+    name: 'Messages',
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
+}
+
 async function currentToken(options: { prompt?: boolean; current?: () => boolean } = {}): Promise<string | null> {
   const { prompt = true, current = () => true } = options;
   if (Platform.OS === 'web' || !Device.isDevice) return null;
   const projectId = projectIdForPush();
   if (!projectId) return null;
+  await ensureAndroidChannel();
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (!current()) return null;
   let status = existing;

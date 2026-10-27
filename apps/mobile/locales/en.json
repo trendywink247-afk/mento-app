@@ -823,7 +823,8 @@
     "peersLine": "Mentors are peers, not therapists.",
     "newChatFree": "A new question goes to one mentor. Ask whenever you are ready.",
     "newChatWaiting": "You have a question open with %{name}. You can ask another once they reply or you close it.",
-    "noMatches": "Nothing matches that yet."
+    "noMatches": "Nothing matches that yet.",
+    "lockedLine": "Locked. Enter your PIN to read."
   },
   "inTouch": {
     "badge": "In touch",
