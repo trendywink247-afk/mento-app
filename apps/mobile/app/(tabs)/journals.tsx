@@ -9,6 +9,7 @@ import { Screen } from '@/components/Screen';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
+import { useTabDockHeight } from '@/components/tabDock';
 import { api, type JournalEntry } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
@@ -140,6 +141,7 @@ export default function JournalsTab() {
   };
 
   // A failed load is a still state: the companion keeps its home place (T&S #11).
+  const dock = useTabDockHeight();
   const perch = useCompanionPlacement('journal', PERCHES, { still: failed });
 
   const keptToday = today.filter((e) => e.channel === 'mentor_notes');
@@ -149,9 +151,9 @@ export default function JournalsTab() {
   );
 
   return (
-    <Screen>
+    <Screen bottomEdge={false}>
       <CompanionPerches placement={perch}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.xl }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: space.xl + dock }}>
         <Text style={[type.displaySerif, { color: colors.ink }]} accessibilityRole="header">
           {t('journals.hubTitle')}
         </Text>

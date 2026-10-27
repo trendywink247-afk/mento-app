@@ -58,9 +58,11 @@
 # request that should get the allowlist's 403 falls through to being served
 # instead. `route` disables that reordering and runs its contents exactly as
 # written, so `import allowlist`'s block-and-respond genuinely runs first.
+# qa-api is deliberately OPEN to the internet (founder decision 2026-10-27): the QA phone
+# reaches it over its public IP, which the allowlist 403'd. It carries no allowlist; every
+# route still enforces its own auth. qa-app, qa-admin and staging stay restricted.
 qa-api.mento.chat {
 	route {
-		import allowlist
 		import security_headers
 		encode zstd gzip
 		request_body {

@@ -72,6 +72,10 @@ export function ConversationOptions({
   const [mask, setMask] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The sheet starts blank each time the chat opens, so the lock / pause / mask switches must
+  // come from the server. Without this a locked chat always offered "Lock with a PIN" and
+  // there was no way to unlock it again.
+  const [ready, setReady] = useState(false);
 
   const wasVisible = useRef(visible);
   useEffect(() => {
@@ -81,6 +85,28 @@ export function ConversationOptions({
     }
     wasVisible.current = visible;
   }, [visible, initial]);
+
+  useEffect(() => {
+    if (!visible) return;
+    let live = true;
+    setReady(false);
+    api
+      .conversationState(conversationId)
+      .then((s) => {
+        if (!live) return;
+        setLocked(s.is_locked);
+        setPaused(s.is_paused);
+        setMask(s.status_mask ?? null);
+        setReady(true);
+      })
+      .catch(() => {
+        // A failed read leaves the sheet usable with what it knew; the server still decides.
+        if (live) setReady(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [visible, conversationId]);
 
   const scrim = useAnimatedStyle(() => ({ opacity: depth.progress.value }));
 
@@ -142,7 +168,7 @@ export function ConversationOptions({
           locked={locked}
           maskOn={mask !== null}
           paused={paused}
-          busy={busy}
+          busy={busy || !ready}
           error={error}
           onChoose={choose}
           onClose={close}

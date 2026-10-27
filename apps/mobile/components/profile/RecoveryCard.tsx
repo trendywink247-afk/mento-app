@@ -77,6 +77,10 @@ export function RecoveryCard({ hasCode }: { hasCode: boolean }) {
             <Text
               style={[styles.code, { color: colors.ink }]}
               selectable
+              // One line, shrunk to fit: wrapping broke the code mid-group ("…-2J / WX").
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.6}
               accessibilityLabel={phrase.split('').join(' ')}
               testID="recovery-phrase"
             >

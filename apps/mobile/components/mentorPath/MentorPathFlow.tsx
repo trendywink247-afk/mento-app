@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { KeyboardAvoidingView } from '@/components/KeyboardAvoidingView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApplicationForm } from '@/components/ApplicationForm';
@@ -276,19 +278,21 @@ export function MentorPathFlow({ surface }: { surface: 'public' | 'member' }) {
         );
       case 'form':
         return (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.content}
-          >
-            {/* Not approved yet: the eyebrow says only what is true — it will be reviewed. */}
-            <MentorPageHeader
-              eyebrow={t('mentorApplyCopy.eyebrowReview')}
-              title={t('mentorApply.title')}
-              onBack={() => goBack('form')}
-            />
-            <ApplicationForm onSuccess={onSubmitted} />
-          </ScrollView>
+          <KeyboardAvoidingView style={styles.fill}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.content}
+            >
+              {/* Not approved yet: the eyebrow says only what is true — it will be reviewed. */}
+              <MentorPageHeader
+                eyebrow={t('mentorApplyCopy.eyebrowReview')}
+                title={t('mentorApply.title')}
+                onBack={() => goBack('form')}
+              />
+              <ApplicationForm onSuccess={onSubmitted} />
+            </ScrollView>
+          </KeyboardAvoidingView>
         );
       case 'status':
         return (
