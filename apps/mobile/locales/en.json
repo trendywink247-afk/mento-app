@@ -376,7 +376,7 @@
       "footnote": "Only you can open this chat. The PIN never leaves hashed storage.",
       "leadLock": "Set a 4-digit PIN",
       "leadUnlock": "Enter your PIN",
-      "bodyLock": "You'll need this PIN to open the conversation again.",
+      "bodyLock": "You'll need this PIN to open the conversation again. A forgotten PIN can't be recovered, so pick one you'll remember.",
       "bodyUnlock": "This conversation is locked.",
       "wrongPin": "That PIN doesn't look quite right. Please enter your current PIN.",
       "doneTitleLock": "Conversation locked",

@@ -24,3 +24,8 @@ test('the long-press menu draws no reaction picker (reactions are off in Mento)'
     assert.match(s, /MessageReactionPicker:\s*RenderNothing/, f);
   }
 });
+
+test('an already-saved mentor message is not offered "Save to Journal" again', () => {
+  const s = fs.readFileSync(path.join(__dirname, '../components/chat/ChatScreen.tsx'), 'utf8');
+  assert.match(s, /savedMessageIds\.has\(message\.id\)\s*\|\|\s*savedNow\.has\(message\.id\)/);
+});

@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -251,7 +252,11 @@ function StreamChatScreen() {
       message: { id: string; text?: string };
       dismissOverlay: () => void;
     }) => {
-      if (isMyMessage || !message.text) return [copyMessage, quotedReply];
+      // Already kept: no second "Save to Journal" (it would save a duplicate); the pill above
+      // the bubble already says "Saved".
+      if (isMyMessage || !message.text || savedMessageIds.has(message.id) || savedNow.has(message.id)) {
+        return [copyMessage, quotedReply];
+      }
       return [
         {
           action: () => {
@@ -259,6 +264,8 @@ function StreamChatScreen() {
             dismissOverlay();
           },
           actionType: 'saveToMentorNotes',
+          // The kit's own rows (Copy, Reply) carry an icon; this one stood bare.
+          icon: <Ionicons name="bookmark-outline" size={20} color={colors.inkMuted} />,
           title: t('chat.saveToNotes'),
           type: 'standard' as const,
         },
@@ -266,7 +273,7 @@ function StreamChatScreen() {
         quotedReply,
       ];
     },
-    [saveNote, t],
+    [saveNote, savedMessageIds, savedNow, t, colors.inkMuted],
   );
 
   const { width: frameWidth } = useFrameSize();
