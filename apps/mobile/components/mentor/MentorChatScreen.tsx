@@ -251,7 +251,7 @@ function StreamMentorChatScreen() {
                 message (an avatar on the last of a run, a spacer on the rest) — no thread
                 in this app has an avatar column. */}
             <WithComponents
-              overrides={{ MessageText: MentorMessageText, Input: Composer, MessageAuthor: RenderNothing }}
+              overrides={{ MessageText: MentorMessageText, Input: Composer, MessageAuthor: RenderNothing, MessageReactionPicker: RenderNothing }}
             >
               <Channel channel={channel} keyboardVerticalOffset={keyboardOffset}
                 disableKeyboardCompatibleView={Platform.OS === 'android'}

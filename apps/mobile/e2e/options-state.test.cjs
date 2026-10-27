@@ -17,3 +17,10 @@ test('the options sheet loads lock, pause and mask state from the server when it
 test('rows stay disabled until that state has loaded', () => {
   assert.match(src, /busy=\{busy \|\| !ready\}/);
 });
+
+test('the long-press menu draws no reaction picker (reactions are off in Mento)', () => {
+  for (const f of ['../components/chat/ChatScreen.tsx', '../components/mentor/MentorChatScreen.tsx']) {
+    const s = fs.readFileSync(path.join(__dirname, f), 'utf8');
+    assert.match(s, /MessageReactionPicker:\s*RenderNothing/, f);
+  }
+});

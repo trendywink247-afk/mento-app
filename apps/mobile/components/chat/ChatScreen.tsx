@@ -522,6 +522,9 @@ function StreamChatScreen() {
                 // bubble's corner — where the board puts the "Saved" chip.
                 ReactionListTop: RenderNothing,
                 ReactionListBottom: RenderNothing,
+                // `supportedReactions={[]}` still left the long-press menu's empty reaction bar
+                // (a black pill with a "+"); there is nothing to react with, so draw nothing.
+                MessageReactionPicker: RenderNothing,
                 MessageFooter: KitMessageFooter,
                 MessageHeader: KitSavedHeader,
                 TypingIndicator: KitTyping,
