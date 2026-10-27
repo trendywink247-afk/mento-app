@@ -35,10 +35,14 @@ function projectIdForPush(): string | null {
  * "Messages" instead of the generic fallback. Safe to repeat; a no-op off Android. */
 async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync('default', {
-    name: 'Messages',
-    importance: Notifications.AndroidImportance.DEFAULT,
-  });
+  try {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Messages',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  } catch {
+    /* cosmetic: a channel that cannot be named must never stop push registration */
+  }
 }
 
 async function currentToken(options: { prompt?: boolean; current?: () => boolean } = {}): Promise<string | null> {
