@@ -33,6 +33,7 @@ import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { KitMessageFooter, KitThreadContext, type KitThread } from '@/components/chat/KitMessageFooter';
 import { KitSavedHeader } from '@/components/chat/KitSavedHeader';
+import { KitInlineDateSeparator, KitStickyHeader } from '@/components/chat/KitDate';
 import { KitTyping } from '@/components/chat/KitTyping';
 import { MentoBubble } from '@/components/chat/MentoBubble';
 import { MessageText, OwnBubbleToneContext } from '@/components/chat/MessageText';
@@ -524,6 +525,9 @@ function StreamChatScreen() {
                 MessageFooter: KitMessageFooter,
                 MessageHeader: KitSavedHeader,
                 TypingIndicator: KitTyping,
+                // The kit's calendar-formatted date pills print a raw ISO string here.
+                StickyHeader: KitStickyHeader,
+                InlineDateSeparator: KitInlineDateSeparator,
               }}
             >
             <Channel

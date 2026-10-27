@@ -331,7 +331,9 @@
     "emptyTitle": "You're connected.",
     "emptyBody": "This is a safe space to share, reflect and grow. Take your time.",
     "today": "Today",
-    "yesterday": "Yesterday"
+    "yesterday": "Yesterday",
+    "dayToday": "Today",
+    "dayYesterday": "Yesterday"
   },
   "crisis": {
     "title": "You matter. Support is here.",
