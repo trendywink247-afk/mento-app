@@ -41,6 +41,7 @@ function fixture(extra, permissions = 'granted') {
     './session': { getSessionToken: async () => credential.member },
     './listenerSession': { getListenerToken: async () => credential.listener },
     './pushRegistrationState': state,
+    './pushTokenRefresh': { refreshPushTokenOnce: async () => { calls.push('refresh'); } },
   };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,
     '../lib/pushNotifications.ts'), 'utf8'), {
@@ -71,7 +72,7 @@ test('absent or malformed provider project skips useless notification prompts', 
 test('configured normal native app retains permission and registration behavior', async () => {
   const h = fixture({ eas: { projectId: 'synthetic-project' } }, 'denied');
   await h.registerPush('member');
-  assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'prompt', 'token', 'register-member']);
+  assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'prompt', 'refresh', 'token', 'register-member']);
 });
 
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };

@@ -11,6 +11,7 @@ import { Platform } from 'react-native';
 import { apiRequest, currentMemberToken } from './api';
 import { getListenerToken } from './listenerSession';
 import { getSessionToken } from './session';
+import { refreshPushTokenOnce } from './pushTokenRefresh';
 import { beginPushIdentityChange, pushAlreadyRegistered, pushGeneration,
   pushScopeActive, rememberPushRegistration, type PushRole } from './pushRegistrationState';
 
@@ -59,6 +60,8 @@ async function currentToken(options: { prompt?: boolean; current?: () => boolean
     ({ status } = await Notifications.requestPermissionsAsync());
   }
   if (!current() || status !== 'granted') return null;
+  await refreshPushTokenOnce();
+  if (!current()) return null;
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
   return data;
 }
