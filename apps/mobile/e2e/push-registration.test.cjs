@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function fixture(extra, permissions = 'granted') {
+function fixture(extra, permissions = 'granted', env = {}) {
   const calls = [];
   const requests = [];
   const credential = { member: 'member-a', listener: 'listener-a' };
@@ -22,6 +22,7 @@ function fixture(extra, permissions = 'granted') {
     'expo-notifications': {
       async getPermissionsAsync() { calls.push('permission-read'); await gates.permissions; return { status: permissions }; },
       async requestPermissionsAsync() { calls.push('prompt'); return { status: 'granted' }; },
+      async getDevicePushTokenAsync() { calls.push('device-token'); return { data: 'raw-fcm-token' }; },
       async getExpoPushTokenAsync() { calls.push('token'); await gates.token; return { data: 'synthetic-token' }; },
     },
     'react-native': { Platform: { OS: 'android' } },
@@ -45,7 +46,7 @@ function fixture(extra, permissions = 'granted') {
   vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,
     '../lib/pushNotifications.ts'), 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
-  }).outputText, { exports, require: name => { assert.ok(modules[name], name); return modules[name]; } });
+  }).outputText, { exports, process: { env }, require: name => { assert.ok(modules[name], name); return modules[name]; } });
   return { calls, requests, credential, gates, state, modules, ...exports,
     replace(role, bearer) {
       const generation = state.beginPushIdentityChange(role);
@@ -202,4 +203,23 @@ test('real listener session lifecycle resets its role without invalidating membe
   await h.registerPush('member'); assert.equal(h.requests.length, 1);
   await session.clearListenerSession();
   assert.equal(h.state.pushScopeActive('listener', h.state.pushGeneration('listener')), false);
+});
+
+test('direct FCM build registers the raw Android device token instead of an Expo token', async () => {
+  const h = fixture({ eas: { projectId: 'synthetic-project' } }, 'granted', { EXPO_PUBLIC_PUSH_DIRECT: '1' });
+  let body;
+  const api = h.modules['./api'].apiRequest;
+  h.modules['./api'].apiRequest = async (route, options = {}, getToken) => {
+    if (options.method === 'POST') body = JSON.parse(options.body);
+    return api(route, options, getToken);
+  };
+  await h.registerPush('member');
+  assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'device-token', 'register-member']);
+  assert.equal(body.expo_push_token, 'raw-fcm-token');
+});
+
+test('without the flag the Expo token path is unchanged', async () => {
+  const h = fixture({ eas: { projectId: 'synthetic-project' } }, 'granted', { EXPO_PUBLIC_PUSH_DIRECT: '0' });
+  await h.registerPush('member');
+  assert.ok(h.calls.includes('token') && !h.calls.includes('device-token'));
 });

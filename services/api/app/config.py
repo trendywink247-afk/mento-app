@@ -90,6 +90,9 @@ class Settings(BaseSettings):
     push_enabled: bool = True
     push_burst_seconds: int = 60
     push_watch_cache_seconds: int = 5
+    # Direct FCM (HTTP v1) for non-Expo device tokens. Path to a Google service-account
+    # JSON file; empty = direct FCM sends are refused (Expo tokens are unaffected).
+    fcm_service_account_file: str = ""
 
     # Dedicated thread budget for the crisis-scan webhooks — isolated from the
     # shared anyio threadpool so slow sync handlers can't starve the safety scan.

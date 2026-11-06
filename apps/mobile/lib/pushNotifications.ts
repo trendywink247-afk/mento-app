@@ -16,6 +16,11 @@ import { beginPushIdentityChange, pushAlreadyRegistered, pushGeneration,
 
 export type { PushRole } from './pushRegistrationState';
 
+// Direct FCM: the raw Android device token goes to our server, which sends through
+// Firebase itself instead of Expo's relay. Opt-in per build (a public flag, no secret);
+// the server accepts both token kinds, so builds on either path keep working.
+const DIRECT_PUSH = process.env.EXPO_PUBLIC_PUSH_DIRECT === '1';
+
 let lastToken: string | null = null;
 // A newer account waits for the previous same-role operation to settle. Successful
 // stale responses cannot overwrite cache state or overtake a fresh registration.
@@ -44,6 +49,10 @@ async function currentToken(options: { prompt?: boolean; current?: () => boolean
     ({ status } = await Notifications.requestPermissionsAsync());
   }
   if (!current() || status !== 'granted') return null;
+  if (DIRECT_PUSH && Platform.OS === 'android') {
+    const { data } = await Notifications.getDevicePushTokenAsync();
+    return typeof data === 'string' && data ? data : null;
+  }
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
   return data;
 }
