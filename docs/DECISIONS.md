@@ -272,3 +272,17 @@ Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code al
 - **qq. "I'd rather talk today" ends on My Chats, not in a live match.** A mentor switching sides came to look around; a chat is one tap away there. Age and email are never re-asked (every session was minted by the server's 18+ gate — `/apply` included — so `has_dob` is always true today); email stays optional. Back from the companion pick = "never mind": still on the mentor side.
 - **rr. The loop's way back** reads "Back to Profile" when Profile is behind it, otherwise "I'd rather talk today" (a new mentor from the fork has no member side yet).
 - **ss. The declined line names the date** ("You can apply again from 19 October") from the server's cooldown anchor; inside the month there is no form at all, after it an "Apply again" key goes straight to the application (they have seen the story and the primer).
+
+---
+
+## M. Founder rulings — 2026-11-07 (own chat replaces Stream)
+
+**1. Own chat replaces Stream Chat for v1.** Founder, 2026-11-07: "I want to fully migrate to our own chat server. Each feature currently on chat, end-to-end, will be built and tested simultaneously before we publish it." This confirms D1 of `docs/specs/2026-09-20-mento-balanced-architecture-design.md` (own chat, direct FCM; Stream and the Expo push relay removed from the message path) and **supersedes §H.0 and §H.2 ("Keep Stream Chat")**. Where §K.10 says push goes through Expo's relay and detects "away" from Stream channel watchers, the replacement is direct FCM plus own-chat presence. Direct FCM for non-Expo device tokens is already built (PR #110).
+
+**2. How it is built.** One chat feature at a time, each built and tested end to end (server tests plus a real phone against QA) before the next starts. Production keeps running on Stream until every feature is verified; nothing is cut over feature by feature in production. The first Google Play closed-test build runs on Stream so the 14-day tester clock is not held up by the migration.
+
+**3. Safety gates stay.** The crisis scan, the age gate, deletion (Clean Wipe) and anonymity paths change with this migration, so each change needs tests and the founder's explicit review before its PR (`CLAUDE.md`). The scan stays on the single write path and runs before a message is stored.
+
+**4. Copy must match reality at cutover, not before.** `docs/PRIVACY.md` and the Clean Wipe wording change when own chat goes live: Stream stops being a processor, message bodies live in our database and are deleted from it on wipe, and backups exclude message bodies.
+
+**5. Still open (decide before launch, disclose in `PRIVACY.md`):** cutover style (the spec recommends a hard cutover); chat backup option (A, B or C; spec recommends B); staff visibility of chats (A to D; spec recommends B); two-person approval; push payload shape (notification plus data today, data-only to be tested).
