@@ -206,6 +206,8 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
+            autoComplete="off"
+            importantForAutofill="no"
             placeholder={t('mentorApply.emailPlaceholder')}
             placeholderTextColor={colors.inkMuted}
             accessibilityLabel={t('mentorApply.emailLabel')}

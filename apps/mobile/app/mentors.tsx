@@ -271,6 +271,7 @@ export default function BrowseMentors() {
                     travel={4}
                     radius={radius.pill}
                     intent="select"
+                    accessibilityRole="button"
                     accessibilityState={{ selected: on }}
                     testID={`browse-filter-${f.key}`}
                     containerStyle={styles.filterCell}

@@ -37,7 +37,7 @@ import { createOwnChatScreenController, type OwnScreenMessage } from '@/lib/ownC
 import { pendingOption } from '@/lib/pendingOption';
 import { CRISIS_EXEMPT_MS, useAllowance, type HeldAllowance } from '@/lib/useAllowance';
 import { useChatHeader } from '@/lib/useChatHeader';
-import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
+import { measureScreenTop, useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -224,7 +224,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         snapshot?.reason === 'wiped' ? 'reflection.ended' : 'chat.errOpen')}</Text>
       {retryable ? <PrimaryButton label={t('common.retry')} onPress={onRetry} testID="own-native-retry" /> : null}
     </View> : <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.flex, keyboardBoundary]} onLayout={event => event.currentTarget.measureInWindow((_x, y) => setOffset(y))}
+      style={[styles.flex, keyboardBoundary]} onLayout={event => measureScreenTop(event.currentTarget, setOffset)}
       testID={ready ? 'own-native-chat-ready' : 'own-native-chat-connecting'}>
       <FlatList ref={list} data={rows} keyExtractor={item => item.id} style={styles.flex}
         contentContainerStyle={[styles.thread, { paddingBottom: space.md + threadFoot }]} keyboardShouldPersistTaps="handled"

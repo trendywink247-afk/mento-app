@@ -410,3 +410,23 @@ Known-good sequence from the short path (`C:\mento-build\mobile`, mirrored with
 the existing `android/` — and therefore the same signing keystore, so `adb install -r` works over the
 installed app): the three steps above with both env vars set. Output:
 `android\app\build\outputs\apk\release\app-release.apk` (~153 MB universal).
+
+## QA build on the server and updates by EAS Update (as run 2026-10-27)
+
+The QA box builds the `preview` APK headlessly and ships JS changes as an OTA update — no
+cloud build. A new APK is needed only for native changes (icon, splash, manifest, native
+modules); everything else goes out as an update.
+
+- **Toolchain:** JDK 17 + Android SDK under the agent user's `~/toolchain`.
+- **APK:** `npx expo prebuild --platform android`, then `./gradlew assembleRelease
+  -PreactNativeArchitectures=arm64-v8a` with `APP_VARIANT=preview`,
+  `EXPO_PUBLIC_API_URL=https://qa-api.mento.chat/api/v1`, `EXPO_PUBLIC_APP_ENV=qa`
+  (debug-signed; lint-vital tasks skipped, they hang on this box).
+- **Chat key:** `EXPO_PUBLIC_STREAM_API_KEY` is not in the APK; it comes from the EAS
+  `preview` environment when an update is published. Chat is blank until the first update.
+- **OTA:** `npx eas-cli@latest update --channel preview --environment preview --platform
+  android`. Runtime version is the app version (`0.1.0`); relaunch the app twice to apply.
+  Profile → "Check for updates" shows the running update id.
+- **Phone access for testing:** USB ADB on a PC, `adb -a nodaemon server start`, and the
+  server drives it with `ADB_SERVER_SOCKET=tcp:<pc-tailscale-ip>:5037`. Android's Wireless
+  debugging does not listen on the Tailscale interface.

@@ -218,20 +218,23 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
   useFocusEffect(
     useCallback(() => {
       void refresh();
-      // Pin the poll to the generation refresh() just started — if a blur (or a
-      // later refresh) bumps seq, this poll's writes become no-ops.
-      const g = seq.current;
+      // The poll lives exactly as long as this focus. It must NOT be pinned to refresh()'s
+      // generation: accept / decline / going online / saving the line all call refresh(),
+      // which bumps `seq`, and a poll pinned to the first generation silently stopped
+      // updating after the first action — a new request then waited for a relaunch.
+      let focused = true;
       const id = setInterval(() => {
         void listenerApi
           .requests()
           .then((r) => {
-            if (seq.current === g) setRequests(r);
+            if (focused) setRequests(r);
           })
           .catch(() => {
             /* the 30s poll is a freshness nicety, not a source of truth — swallow */
           });
       }, REQUEST_POLL_MS);
       return () => {
+        focused = false;
         // Invalidate any in-flight refresh() first so it bails out of its own
         // setStates/subscribes and unsubscribes only the subs IT created.
         seq.current += 1;

@@ -19,9 +19,11 @@
 import Constants from 'expo-constants';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { KeyboardAvoidingView } from '@/components/KeyboardAvoidingView';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { PrimaryButton } from '@/components/PrimaryButton';

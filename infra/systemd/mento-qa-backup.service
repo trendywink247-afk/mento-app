@@ -3,6 +3,7 @@ Description=Encrypted QA Postgres backup
 After=network-online.target
 
 [Service]
+EnvironmentFile=-/etc/mento/qa-backup.env
 Type=oneshot
 User=root
 ExecStart=/usr/local/sbin/qa-backup

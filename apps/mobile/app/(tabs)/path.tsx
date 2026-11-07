@@ -8,6 +8,7 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
+import { useTabDockHeight } from '@/components/tabDock';
 import { FeedbackPill } from '@/components/FeedbackPill';
 import { StageSheen } from '@/components/path/ambient';
 import { api, type PathState } from '@/lib/api';
@@ -95,6 +96,7 @@ export default function PathTab() {
         ? [...HOME_PERCHES, ...SEASONAL_PERCHES]
         : HOME_PERCHES;
   const perch = useCompanionPlacement('path', perches);
+  const dock = useTabDockHeight();
 
   if (loading) {
     return (
@@ -145,8 +147,8 @@ export default function PathTab() {
               </PressKey>
             </Entrance>
           </View>
-          {/* The tab bar's top edge is this screen's floor. */}
-          <View style={styles.floor} pointerEvents="none">
+          {/* The floating tab bar's top edge is this screen's floor. */}
+          <View style={[styles.floor, { bottom: dock }]} pointerEvents="none">
             <CompanionSlot id="tabBarLeft" size={56} align="left" inset={space.lg} attach="floor" />
             <CompanionSlot id="tabBarNap" size={56} align="left" inset={space.lg} attach="floor" />
             <CompanionSlot id="tabBarPeek" size={46} align="left" inset={space.xl} attach="floor" />
@@ -170,7 +172,7 @@ export default function PathTab() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <CompanionPerches placement={perch}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[styles.content, { paddingBottom: space.lg + dock }]}>
           {header}
 
           <Entrance index={2} style={styles.lift}>

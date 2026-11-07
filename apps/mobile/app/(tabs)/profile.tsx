@@ -11,6 +11,7 @@ import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/compon
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
+import { useTabDockHeight } from '@/components/tabDock';
 import { CompanionNameRow } from '@/components/profile/CompanionNameRow';
 import { RecoveryCard } from '@/components/profile/RecoveryCard';
 import { api, type ListenerApplication } from '@/lib/api';
@@ -151,6 +152,7 @@ export default function ProfileTab() {
   const running = runningUpdate();
   // The hero place only exists once the animal is known — until then there is no home slot.
   // A sheet over the screen (Start fresh) hides the companion.
+  const dock = useTabDockHeight();
   const perch = useCompanionPlacement('profile', animal ? PERCHES : PERCHES.slice(1), { hidden: sheetOpen });
   // A perch that hangs off its card's edge lands UNDER the next card, because the blocks
   // share one zIndex and the later sibling paints last. Lift the block that actually
@@ -219,7 +221,13 @@ export default function ProfileTab() {
     <SettleBack>
       <SafeAreaView style={styles.safe} edges={['top']}>
         <CompanionPerches placement={perch}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          {/* "handled": with the companion-name field focused, the first tap on Save or Cancel
+              reached the button instead of only closing the keyboard. */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scroll, { paddingBottom: space.lg + dock }]}
+            keyboardShouldPersistTaps="handled"
+          >
             <Entrance>
               <Text style={[type.title, styles.title, { color: colors.ink }]} accessibilityRole="header">
                 {t('profile.title')}

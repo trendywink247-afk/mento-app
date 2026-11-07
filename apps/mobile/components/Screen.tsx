@@ -17,6 +17,7 @@ export function Screen({
   onBack,
   scroll = false,
   bg = 'cream',
+  bottomEdge = true,
 }: {
   children: ReactNode;
   footer?: ReactNode;
@@ -24,6 +25,8 @@ export function Screen({
   scroll?: boolean;
   /** 'lavender' = the mockups' "ritual" screens (companion, reflection, coffee, PIN). */
   bg?: 'cream' | 'lavender';
+  /** false on the tab screens: the floating tab bar lies over their foot, so they pad it themselves. */
+  bottomEdge?: boolean;
 }) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -37,7 +40,7 @@ export function Screen({
     <SafeAreaView
       // Cream = the one sky shows through (components/motion/SkyGround.tsx).
       style={[styles.safe, lavender && { backgroundColor: colors.bgLavender }]}
-      edges={['top', 'bottom']}
+      edges={bottomEdge ? ['top', 'bottom'] : ['top']}
     >
       {onBack ? (
         <View style={styles.header}>
