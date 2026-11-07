@@ -51,7 +51,7 @@ npx expo prebuild --platform android
 ```
 
 `prebuild` reads `app.json` and generates `android/`. It bakes in the `expo-updates`
-config (the `updates` block from §4 when you add it), the package `chat.mento.app`, FCM
+config (the `updates` block from §4 when you add it), the package (`chat.mento.app` for the store build; `chat.mento.app.qa`, named "Mento QA", for preview and development builds so they install beside it), FCM
 (`google-services.json`), and permissions. Re-run it after any `app.json` change.
 
 > The `.npmrc` (`legacy-peer-deps`) and `patches/` are device-compat fixes — never remove
