@@ -152,7 +152,10 @@ def open_conversation(
          reserved slot atomically, drop the conversation, run `on_stream_failure`).
     """
     listener.active_conversations += 1
-    own_chat = get_settings().own_chat_new_conversations
+    settings = get_settings()
+    own_chat = settings.own_chat_new_conversations or user_id in {
+        x.strip() for x in settings.own_chat_user_ids.split(",") if x.strip()
+    }
     convo = Conversation(
         type=ConversationType.anon,
         chat_backend="own" if own_chat else "stream",

@@ -155,3 +155,28 @@ def test_capacity_sweep_keeps_an_old_own_chat_conversation_but_ends_an_orphaned_
         status = dict(s.execute(select(Conversation.id, Conversation.status)).all())
         assert status[own_id] == ConversationStatus.active
         assert status[orphan_id] == ConversationStatus.ended
+
+
+@requires_postgres
+def test_allowlisted_member_gets_own_chat_while_everyone_else_stays_on_stream(
+    db_session, channels, monkeypatch
+):
+    """The per-user switch: the global setting is off, so a Stream-only build is never handed
+    an own-chat room, but a member on the allowlist is."""
+    with TestSession() as s:
+        uid_a, lid_a, rid_a = _seed(s)
+        uid_b, lid_b, rid_b = _seed(s)
+        s.commit()
+    monkeypatch.setattr(get_settings(), "own_chat_user_ids", f" {uid_a} , other-id ")
+    with TestSession() as s:
+        a = s.get(
+            Conversation,
+            matching.accept_personal_request(s, rid_a, acting_listener_id=lid_a).conversation_id,
+        )
+        b = s.get(
+            Conversation,
+            matching.accept_personal_request(s, rid_b, acting_listener_id=lid_b).conversation_id,
+        )
+        assert (a.chat_backend, a.stream_channel_id is None) == ("own", True)
+        assert (b.chat_backend, b.stream_channel_id is None) == ("stream", False)
+        assert len(channels) == 1
