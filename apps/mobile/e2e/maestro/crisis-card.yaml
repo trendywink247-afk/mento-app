@@ -10,7 +10,7 @@
 # API's Stream before-message-send hook is reachable from Stream's cloud, which needs a
 # tunnel and a dedicated Stream app. Run it by hand against a tunnelled stack
 # (mento-crisis-webhook skill); it fails by design without one.
-appId: com.mento.app
+appId: chat.mento.app
 ---
 - launchApp:
     clearState: true

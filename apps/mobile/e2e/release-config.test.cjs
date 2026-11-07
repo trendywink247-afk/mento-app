@@ -27,7 +27,7 @@ for (const variant of ['production', 'preview', 'development']) {
   assert.equal(config.updates.requestHeaders['expo-channel-name'], eas.build[variant].channel);
   const properties = config.plugins.find(p => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
   assert.equal(properties.android.usesCleartextTraffic, variant !== 'production');
-  assert.equal(config.ios.bundleIdentifier, 'com.mento.app');
+  assert.equal(config.ios.bundleIdentifier, 'chat.mento.app');
   assert.equal(config.android.package, base.android.package);
   assert.deepEqual(config.runtimeVersion, base.runtimeVersion);
   assert.equal(config.updates.url, base.updates.url);

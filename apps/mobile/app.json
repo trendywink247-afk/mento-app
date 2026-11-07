@@ -13,10 +13,10 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.mento.app"
+      "bundleIdentifier": "chat.mento.app"
     },
     "android": {
-      "package": "com.mento.app",
+      "package": "chat.mento.app",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon/adaptive-foreground.png",

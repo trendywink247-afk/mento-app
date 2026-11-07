@@ -11,7 +11,7 @@
 # the bot, then running this flow. If the bot never sees a message (this flow
 # never got as far as sending one) it exits 1 after --timeout; check both
 # exit codes, not just this flow's.
-appId: com.mento.app
+appId: chat.mento.app
 ---
 - launchApp:
     clearState: true
