@@ -116,3 +116,14 @@ JS `beforeSend` scrubber, so native crash reporting stays off until a native scr
 | `EXPO_PUBLIC_SENTRY_DSN` | web + mobile | Project DSN (ships in the client, so it must not be a secret). Empty = off. |
 | `EXPO_PUBLIC_APP_ENV` | web + mobile | Same mapping as `ENV`. |
 | `EXPO_PUBLIC_GIT_SHA` | web + mobile | Sentry `release`. Supplied by the ops scripts. |
+
+## Push notifications
+
+Expo device tokens go through Expo's push relay; any other token is sent straight to
+Firebase Cloud Messaging (HTTP v1, `services/api/app/services/fcm.py`). The body is only
+the persona name and the kind of event, never message text.
+
+| Variable | Where | Purpose |
+|---|---|---|
+| `FCM_SERVICE_ACCOUNT_FILE` | API | Path, inside the container, to a Google service-account JSON for the Firebase project. Empty = direct FCM sends fail and are retried (Expo tokens are unaffected). The file is a secret: mount it read-only, never commit or log it. On QA it lives in `/opt/mento-staging/secrets/` and is mounted by the base `compose.yml`, not `ci.override.yml` (the deploy script rewrites that file). |
+| `EXPO_PUBLIC_PUSH_DIRECT` | mobile | `1` = the Android app registers its raw FCM device token instead of an Expo token. Public flag, not a secret. Unset = Expo path. |

@@ -2,8 +2,8 @@
 
 Best-effort, never blocking: a push failure can never delay or degrade a
 conversation, the crisis scan, or a request. Content is persona-only — no
-message text ever leaves the chat path. Sends go to Expo's push API (FCM/APNs
-relay) over httpx.
+message text ever leaves the chat path. Expo device tokens go to Expo's push API
+(FCM/APNs relay); any other token goes straight to FCM HTTP v1 (services/fcm.py).
 
 Where it runs (WS4): every entry point below runs in the job WORKER (app/jobs/tasks.py),
 enqueued with the row that caused it — never inside a request. A notify_* job decides
@@ -35,7 +35,7 @@ from app.models.listener import ListenerProfile
 from app.models.push_token import PushToken
 from app.models.request import ConversationRequest
 from app.models.user import User
-from app.services import member_status, snooze, stream
+from app.services import fcm, member_status, snooze, stream
 
 logger = logging.getLogger("mento.push")
 
@@ -188,13 +188,25 @@ class PushTransportError(Exception):
 
 
 def _post_or_raise(tokens: list[str], body: str, data: dict) -> list[dict]:
-    messages = [
-        {"to": t, "title": TITLE, "body": body, "sound": None, "data": data} for t in tokens
-    ]
+    """Expo tokens go to Expo's relay, everything else straight to FCM. Tickets come back
+    in the order of `tokens`. A transient failure raises so the whole send is retried."""
+    tickets: list[dict | None] = [None] * len(tokens)
+    expo_at = [i for i, t in enumerate(tokens) if fcm.is_expo_token(t)]
+    fcm_at = [i for i, t in enumerate(tokens) if not fcm.is_expo_token(t)]
     try:
-        return _post_expo(messages)
-    except (httpx.HTTPError, ValueError) as exc:
+        if fcm_at:
+            for i, ticket in zip(fcm_at, fcm.send([tokens[i] for i in fcm_at], TITLE, body, data)):
+                tickets[i] = ticket
+        if expo_at:
+            messages = [
+                {"to": tokens[i], "title": TITLE, "body": body, "sound": None, "data": data}
+                for i in expo_at
+            ]
+            for i, ticket in zip(expo_at, _post_expo(messages)):
+                tickets[i] = ticket
+    except (httpx.HTTPError, ValueError, fcm.FcmConfigError) as exc:
         raise PushTransportError(type(exc).__name__) from exc
+    return [t or {"status": "error"} for t in tickets]
 
 
 def _send(

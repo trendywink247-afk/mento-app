@@ -16,6 +16,11 @@ import { beginPushIdentityChange, pushAlreadyRegistered, pushGeneration,
 
 export type { PushRole } from './pushRegistrationState';
 
+// Direct FCM: the raw Android device token goes to our server, which sends through
+// Firebase itself instead of Expo's relay. Opt-in per build (a public flag, no secret);
+// the server accepts both token kinds, so builds on either path keep working.
+const DIRECT_PUSH = process.env.EXPO_PUBLIC_PUSH_DIRECT === '1';
+
 let lastToken: string | null = null;
 // A newer account waits for the previous same-role operation to settle. Successful
 // stale responses cannot overwrite cache state or overtake a fresh registration.
@@ -59,12 +64,29 @@ async function currentToken(options: { prompt?: boolean; current?: () => boolean
     ({ status } = await Notifications.requestPermissionsAsync());
   }
   if (!current() || status !== 'granted') return null;
+  if (DIRECT_PUSH && Platform.OS === 'android') {
+    const { data } = await Notifications.getDevicePushTokenAsync();
+    return typeof data === 'string' && data ? data : null;
+  }
   const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
   return data;
 }
 
+/** A device that moves to the direct token still has its old Expo token registered, so it
+ * would get every push twice. Remove that one once the direct token is saved. Best-effort:
+ * if it fails, the old token stays until the provider reports it dead. */
+async function dropExpoToken(role: PushRole, bearer: string, projectId: string): Promise<void> {
+  try {
+    const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
+    if (typeof data !== 'string' || !data) return;
+    await apiRequest(rolePath(role), { method: 'DELETE',
+      body: JSON.stringify({ expo_push_token: data }) }, async () => bearer);
+  } catch { /* see above */ }
+}
+
 export async function registerPush(role: PushRole): Promise<void> {
-  if (!projectIdForPush() || Platform.OS === 'web' || !Device.isDevice) return;
+  const projectId = projectIdForPush();
+  if (!projectId || Platform.OS === 'web' || !Device.isDevice) return;
   const generation = pushGeneration(role);
   if (!pushScopeActive(role, generation)) return;
   const previous = flights.get(role);
@@ -87,7 +109,9 @@ export async function registerPush(role: PushRole): Promise<void> {
       await apiRequest(rolePath(role), { method: 'POST', body: JSON.stringify({
         expo_push_token: token, platform: Platform.OS === 'ios' ? 'ios' : 'android',
       }) }, async () => bearer);
-      if (await current()) rememberPushRegistration(role, generation, identity.id, token);
+      if (!await current()) return;
+      rememberPushRegistration(role, generation, identity.id, token);
+      if (DIRECT_PUSH && Platform.OS === 'android') await dropExpoToken(role, bearer, projectId);
     } catch { /* best-effort — no credential clearing or stale cache success */ }
   })();
   flights.set(role, { generation, promise: operation });
