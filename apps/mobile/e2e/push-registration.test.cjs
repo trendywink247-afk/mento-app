@@ -214,8 +214,9 @@ test('direct FCM build registers the raw Android device token instead of an Expo
     return api(route, options, getToken);
   };
   await h.registerPush('member');
-  assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'device-token', 'register-member']);
+  assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'device-token', 'register-member', 'token', 'delete-member']);
   assert.equal(body.expo_push_token, 'raw-fcm-token');
+  assert.deepEqual(h.requests.map(r => r.method), ['POST', 'DELETE']);
 });
 
 test('without the flag the Expo token path is unchanged', async () => {

@@ -57,8 +57,21 @@ async function currentToken(options: { prompt?: boolean; current?: () => boolean
   return data;
 }
 
+/** A device that moves to the direct token still has its old Expo token registered, so it
+ * would get every push twice. Remove that one once the direct token is saved. Best-effort:
+ * if it fails, the old token stays until the provider reports it dead. */
+async function dropExpoToken(role: PushRole, bearer: string, projectId: string): Promise<void> {
+  try {
+    const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
+    if (typeof data !== 'string' || !data) return;
+    await apiRequest(rolePath(role), { method: 'DELETE',
+      body: JSON.stringify({ expo_push_token: data }) }, async () => bearer);
+  } catch { /* see above */ }
+}
+
 export async function registerPush(role: PushRole): Promise<void> {
-  if (!projectIdForPush() || Platform.OS === 'web' || !Device.isDevice) return;
+  const projectId = projectIdForPush();
+  if (!projectId || Platform.OS === 'web' || !Device.isDevice) return;
   const generation = pushGeneration(role);
   if (!pushScopeActive(role, generation)) return;
   const previous = flights.get(role);
@@ -81,7 +94,9 @@ export async function registerPush(role: PushRole): Promise<void> {
       await apiRequest(rolePath(role), { method: 'POST', body: JSON.stringify({
         expo_push_token: token, platform: Platform.OS === 'ios' ? 'ios' : 'android',
       }) }, async () => bearer);
-      if (await current()) rememberPushRegistration(role, generation, identity.id, token);
+      if (!await current()) return;
+      rememberPushRegistration(role, generation, identity.id, token);
+      if (DIRECT_PUSH && Platform.OS === 'android') await dropExpoToken(role, bearer, projectId);
     } catch { /* best-effort — no credential clearing or stale cache success */ }
   })();
   flights.set(role, { generation, promise: operation });
