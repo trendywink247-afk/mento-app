@@ -152,8 +152,10 @@ def open_conversation(
          reserved slot atomically, drop the conversation, run `on_stream_failure`).
     """
     listener.active_conversations += 1
+    own_chat = get_settings().own_chat_new_conversations
     convo = Conversation(
         type=ConversationType.anon,
+        chat_backend="own" if own_chat else "stream",
         status=ConversationStatus.active,
         user_id=user_id,
         listener_id=listener.id,
@@ -169,6 +171,12 @@ def open_conversation(
     if before_commit is not None:
         before_commit(convo)
     db.commit()
+
+    if own_chat:
+        # Own chat has no channel to create: the conversation row is the room, so there is
+        # nothing outside the transaction that can fail and no compensation to run.
+        db.refresh(convo)
+        return convo
 
     try:
         channel_id = stream.create_dm_channel(
@@ -333,7 +341,22 @@ def accept_personal_request(
     # The question the member asked opens the thread, in their own words. Best-effort: the
     # conversation is already open and the mentor already said yes — a Stream hiccup here
     # must not undo that, and the mentor still has the question on the request card.
-    if req.intro_message and convo.stream_channel_id:
+    if req.intro_message and convo.chat_backend == "own":
+        try:
+            # Local import: chat -> jobs.tasks -> matching would otherwise be a cycle.
+            from app.services import chat
+
+            # Through the one write path (scan, allowance, redaction, persist, fan-out).
+            chat.send(
+                db,
+                req.requester_id,
+                convo.id,
+                client_id=f"intro-{req.id}"[:64],
+                body=req.intro_message,
+            )
+        except Exception:
+            logger.warning("could not post the held question into %s", convo.id, exc_info=True)
+    elif req.intro_message and convo.stream_channel_id:
         try:
             stream.post_message(convo.stream_channel_id, req.requester_id, req.intro_message)
         except Exception:
@@ -417,6 +440,7 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
                 # it; don't let it hold a slot for a day. The grace period keeps a
                 # match that is mid-flight right now (Stream budget: seconds) safe.
                 and_(
+                    Conversation.chat_backend == "stream",
                     Conversation.stream_channel_id.is_(None),
                     Conversation.created_at < now - ORPHAN_GRACE,
                 ),
