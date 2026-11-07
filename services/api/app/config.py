@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     # Stream. Off = every new match still creates a Stream channel. Existing conversations keep
     # the backend they were created with.
     own_chat_new_conversations: bool = False
+    # Comma-separated member ids whose NEW conversations use own chat even while the global
+    # switch above is off: a per-user dogfood allowlist, so a build that only speaks Stream
+    # (the Play test build, shipped OTA builds) is never handed an own-chat room.
+    own_chat_user_ids: str = ""
 
     # Dedicated thread budget for the crisis-scan webhooks — isolated from the
     # shared anyio threadpool so slow sync handlers can't starve the safety scan.
