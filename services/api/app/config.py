@@ -93,6 +93,10 @@ class Settings(BaseSettings):
     # Direct FCM (HTTP v1) for non-Expo device tokens. Path to a Google service-account
     # JSON file; empty = direct FCM sends are refused (Expo tokens are unaffected).
     fcm_service_account_file: str = ""
+    # Own chat (docs/DECISIONS.md §M): new conversations use our own WebSocket chat instead of
+    # Stream. Off = every new match still creates a Stream channel. Existing conversations keep
+    # the backend they were created with.
+    own_chat_new_conversations: bool = False
 
     # Dedicated thread budget for the crisis-scan webhooks — isolated from the
     # shared anyio threadpool so slow sync handlers can't starve the safety scan.
