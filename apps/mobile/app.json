@@ -23,7 +23,13 @@
         "monochromeImage": "./assets/icon/adaptive-monochrome.png",
         "backgroundColor": "#F4EFE6"
       },
-      "permissions": []
+      "versionCode": 10,
+      "permissions": [],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "bundler": "metro",

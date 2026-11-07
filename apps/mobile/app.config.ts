@@ -65,5 +65,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       updates: { enabled: false, checkAutomatically: 'NEVER' },
     } as ExpoConfig;
   }
-  return { ...config, plugins, updates } as ExpoConfig;
+  // Production only: unsigned release bundle (or upload-key signing from env), never the debug key.
+  const releasePlugins = isProduction ? [...plugins, './plugins/withReleaseSigning'] : plugins;
+  return { ...config, plugins: releasePlugins, updates } as ExpoConfig;
 };
