@@ -153,6 +153,10 @@ def test_the_prune_job_keeps_recent_failures_and_drops_old_ones(db_session):
 
 def test_the_worker_runs_a_maintenance_job_from_the_queue(db_session):
     """Registration, not just the function: the worker finds the task by name."""
+    # A worker start also runs the request-ageing job (DECISIONS section P.5); requests left
+    # over by earlier tests must not make it queue pushes into this count.
+    db_session.execute(text("TRUNCATE conversation_requests CASCADE"))
+    db_session.commit()
     _listener(db_session, "Far Hill", last_seen_at=datetime.now(UTC) - timedelta(hours=1))
     jobs.enqueue(db_session, tasks.maintenance_capacity, timestamp=0)
     db_session.commit()
