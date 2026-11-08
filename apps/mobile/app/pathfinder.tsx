@@ -42,6 +42,8 @@ import { font, radius, space, type, wash, washInk, type Wash } from '@/theme/tok
 
 const PERCHES: PlacementSlot[] = [{ id: 'firstChoice', type: 'top', level: 'high', home: true }];
 const UNSURE = '__unsure';
+/** More groups than this wrap onto rows so every label reads whole (six exam groups, 2026-11-08). */
+const MAX_ONE_ROW = 3;
 
 type Leaf = PathOption & { community: string; stage: string };
 type RouteRow =
@@ -318,7 +320,11 @@ export default function Pathfinder() {
 
                   {segments.length > 0 ? (
                     <View
-                      style={[styles.segments, { backgroundColor: colors.bgLavender, borderColor: colors.border }]}
+                      style={[
+                        styles.segments,
+                        segments.length > MAX_ONE_ROW && styles.segmentsWrap,
+                        { backgroundColor: colors.bgLavender, borderColor: colors.border },
+                      ]}
                       accessibilityRole="radiogroup"
                     >
                       {segments.map((s, i) => {
@@ -338,7 +344,7 @@ export default function Pathfinder() {
                             accessibilityRole="radio"
                             accessibilityState={{ selected: on }}
                             testID={`pathfinder-seg-${i}`}
-                            containerStyle={styles.segBox}
+                            containerStyle={segments.length > MAX_ONE_ROW ? styles.segBoxWrap : styles.segBox}
                             style={[
                               styles.seg,
                               on
@@ -505,8 +511,10 @@ const styles = StyleSheet.create({
   step: { gap: 6 },
   stepLabel: { lineHeight: 18, paddingHorizontal: space.xs },
   segments: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.md, borderWidth: 1 },
+  segmentsWrap: { flexWrap: 'wrap' },
   segBox: { flex: 1, minWidth: 0 },
-  seg: { height: 44, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  segBoxWrap: { flexGrow: 1, flexBasis: '30%', minWidth: 0 },
+  seg: { minHeight: 44, paddingHorizontal: 6, paddingVertical: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   segText: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 14, textAlign: 'center' },
   moments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 4 },
   momentCell: { width: '50%', paddingHorizontal: 4 },
