@@ -140,6 +140,8 @@ class ListenerRequestItem(BaseModel):
     requester_companion_animal: str | None = None
     requester_companion_colour: str | None = None
     issue_category_label: str | None = None
+    # Offered to every certified mentor, first to accept takes it (DECISIONS section P.4). Additive.
+    broadcast: bool = False
 
 
 class RequestsSeenIn(BaseModel):

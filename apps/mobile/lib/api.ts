@@ -151,6 +151,8 @@ export type PersonalRequest = {
   seen_at?: string | null;
   /** The mentor said yes and the chat is open — the letter's "Replying". */
   replying?: boolean;
+  /** Offered to every verified mentor, the first to accept takes it (DECISIONS §P.4). */
+  broadcast?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
   listener_companion_animal?: string | null;
   listener_companion_colour?: string | null;

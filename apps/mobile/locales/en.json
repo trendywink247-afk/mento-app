@@ -37,6 +37,10 @@
     "sweptAway": "You were away a while, so we set you to Away.",
     "consoleUnavailable": "Your console isn't available right now.",
     "consoleRetry": "Try again",
+    "openToAll": "Open to all verified mentors",
+    "requestTaken": "Another mentor took that one first.",
+    "requestsForYou": "Asked of you",
+    "requestsOpen": "Open to all verified mentors",
     "requestsTitle": "Requests",
     "requestsEmpty": "When someone asks for you, their request waits here. Being online is enough.",
     "accept": "Accept",
@@ -1327,6 +1331,10 @@
     "redirectLater": "Not now"
   },
   "requestSent": {
+    "allMentors": "verified mentors",
+    "toAll": "Your question went to every verified mentor who is online. The first to reply takes it, and we will notify you.",
+    "slowAll": "No reply yet. Mentors answer when they are free, and you can keep waiting. Or choose a mentor yourself.",
+    "chooseMentor": "Choose a mentor",
     "slowLine": "No reply yet. Some mentors answer after a while, and you can keep waiting. Or ask someone else.",
     "tryAnother": "Ask another mentor",
     "helpline": "If it feels urgent, Tele-MANAS is free and open any time: %{number}",

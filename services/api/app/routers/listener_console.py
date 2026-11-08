@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, case, func, select, tuple_, update
+from sqlalchemy import and_, case, false, func, or_, select, true, tuple_, update
 from sqlalchemy.orm import Session
 
 from app import jobs, pagination, ratelimit
@@ -35,8 +35,9 @@ from app.models.enums import (
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
+from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
-from app.models.request import ConversationRequest
+from app.models.request import ConversationRequest, RequestPass
 from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.schemas import (
@@ -420,8 +421,36 @@ def my_pending_requests(
         select(ConversationRequest, User)
         .join(User, User.id == ConversationRequest.requester_id)
         .where(
-            ConversationRequest.target_listener_id == listener.id,
             ConversationRequest.status == RequestStatus.pending,
+            or_(
+                ConversationRequest.target_listener_id == listener.id,
+                # A broadcast (DECISIONS section P.4) is in every certified mentor's inbox until
+                # one takes it or they pass; never the mentor the member blocked or their own.
+                and_(
+                    ConversationRequest.broadcast.is_(True),
+                    ConversationRequest.target_listener_id.is_(None),
+                    true() if listener.certified_exam else false(),
+                    ~select(RequestPass.id)
+                    .where(
+                        RequestPass.request_id == ConversationRequest.id,
+                        RequestPass.listener_id == listener.id,
+                    )
+                    .exists(),
+                    ~select(ModerationEvent.id)
+                    .where(
+                        ModerationEvent.reporter_id == ConversationRequest.requester_id,
+                        ModerationEvent.subject_id == listener.id,
+                        ModerationEvent.blocked.is_(True),
+                    )
+                    .exists(),
+                    ~select(ListenerApplication.id)
+                    .where(
+                        ListenerApplication.listener_id == listener.id,
+                        ListenerApplication.user_id == ConversationRequest.requester_id,
+                    )
+                    .exists(),
+                ),
+            ),
         )
     )
     if after is not None:
@@ -446,6 +475,7 @@ def my_pending_requests(
             requester_companion_animal=user.companion_animal,
             requester_companion_colour=user.companion_colour,
             issue_category_label=categories.label(req.issue_category),
+            broadcast=req.broadcast,
         )
         for req, user in rows
     ]
@@ -471,7 +501,14 @@ def mark_requests_seen(
             update(ConversationRequest)
             .where(
                 ConversationRequest.id.in_(payload.request_ids),
-                ConversationRequest.target_listener_id == listener.id,
+                or_(
+                    ConversationRequest.target_listener_id == listener.id,
+                    and_(
+                        ConversationRequest.broadcast.is_(True),
+                        ConversationRequest.target_listener_id.is_(None),
+                        true() if listener.certified_exam else false(),
+                    ),
+                ),
                 ConversationRequest.status == RequestStatus.pending,
                 ConversationRequest.seen_at.is_(None),
             )

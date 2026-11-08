@@ -18,7 +18,7 @@ from app.models.mentor_link import ListenerNameHistory, MentorLink
 from app.models.moderation import ModerationEvent
 from app.models.push_token import PushToken
 from app.models.reflection import ConversationReflection
-from app.models.request import ConversationRequest
+from app.models.request import ConversationRequest, RequestPass
 from app.models.safety import SafetyFlag
 from app.models.session import Session
 from app.models.user import User
@@ -45,6 +45,7 @@ __all__ = [
     "MessageAllowanceDay",
     "ModerationEvent",
     "ProductFeedback",
+    "RequestPass",
     "PushToken",
     "SafetyFlag",
     "Session",

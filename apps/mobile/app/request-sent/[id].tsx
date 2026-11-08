@@ -161,7 +161,9 @@ export default function RequestSentScreen() {
   // A closed or failed question is a still state (T&S #11).
   const still = reduced || phase !== 'pending' || loadError || missing;
 
-  const name = mentor?.name ?? '';
+  // A broadcast has no one mentor until somebody accepts: the screen says "verified mentors".
+  const toAll = Boolean(request?.broadcast) && !mentor;
+  const name = mentor?.name ?? (toAll ? t('requestSent.allMentors') : '');
   const question = request?.intro_message ?? '';
 
   const openChat = () => {
@@ -203,7 +205,9 @@ export default function RequestSentScreen() {
         ? closedByMe
           ? t('askFlow.closedByYou')
           : t('requestSent.closed', { name })
-        : t('requestSent.oneAtATime', { name });
+        : toAll
+          ? t('requestSent.toAll')
+          : t('requestSent.oneAtATime', { name });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']} testID="request-sent">
@@ -257,9 +261,9 @@ export default function RequestSentScreen() {
                   </Text>
                   {slow ? (
                     <View style={styles.slow} testID="request-sent-slow">
-                      <Text style={[type.note, { color: colors.ink }]}>{t('requestSent.slowLine')}</Text>
+                      <Text style={[type.note, { color: colors.ink }]}>{toAll ? t('requestSent.slowAll') : t('requestSent.slowLine')}</Text>
                       <QuietKey
-                        label={t('requestSent.tryAnother')}
+                        label={toAll ? t('requestSent.chooseMentor') : t('requestSent.tryAnother')}
                         onPress={tryAnother}
                         disabled={closing}
                         testID="request-sent-try-another"

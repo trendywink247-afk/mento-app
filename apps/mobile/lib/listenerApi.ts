@@ -90,6 +90,8 @@ export type ListenerRequest = {
   requester_companion_animal?: string | null;
   requester_companion_colour?: string | null;
   issue_category_label?: string | null;
+  /** Offered to every certified mentor; the first to accept takes it (DECISIONS §P.4). */
+  broadcast?: boolean;
 };
 
 /** Dev-only picker row (the /listener/dev/* endpoints 404 in production). */

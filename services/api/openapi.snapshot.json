@@ -3608,6 +3608,11 @@
       },
       "ListenerRequestItem": {
         "properties": {
+          "broadcast": {
+            "default": false,
+            "title": "Broadcast",
+            "type": "boolean"
+          },
           "created_at": {
             "title": "Created At",
             "type": "string"
@@ -4866,6 +4871,11 @@
       },
       "RequestOut": {
         "properties": {
+          "broadcast": {
+            "default": false,
+            "title": "Broadcast",
+            "type": "boolean"
+          },
           "conversation_id": {
             "anyOf": [
               {

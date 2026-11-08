@@ -23,7 +23,7 @@ from app.models.enums import (
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
-from app.models.request import ConversationRequest
+from app.models.request import ConversationRequest, RequestPass
 from app.models.user import User
 from app.services import stream
 
@@ -272,6 +272,65 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
     return open_conversation(db, user.id, listener, issue_category=category)
 
 
+BROADCAST_LIMIT = 20
+
+
+def broadcast_candidate_ids(
+    db: Session,
+    category: str | None,
+    blocked_ids: set[str],
+    community: str | None = None,
+    limit: int = BROADCAST_LIMIT,
+) -> list[str]:
+    """Online certified mentors with a free slot who may be offered a broadcast question, best
+    match first (same tiers as the instant match), at most `limit`. Nothing is locked or
+    reserved: a broadcast reserves nobody until a mentor accepts it."""
+    rows = db.execute(
+        select(ListenerProfile.id, ListenerProfile.categories, ListenerProfile.community_slug)
+        .where(
+            ListenerProfile.vetting_status == VettingStatus.approved,
+            ListenerProfile.status == ListenerStatus.online,
+            ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
+            ListenerProfile.certified_exam.is_(True),
+        )
+        .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
+    ).all()
+
+    def _tier(cats: list[str] | None, comm: str | None) -> int:
+        hit_c = bool(community) and comm == community
+        hit_k = bool(category) and category in (cats or [])
+        return 0 if hit_c and hit_k else 1 if hit_c else 2 if hit_k else 3
+
+    ranked = [r for r in rows if r[0] not in blocked_ids]
+    return [lid for lid, _, _ in sorted(ranked, key=lambda r: _tier(r[1], r[2]))][:limit]
+
+
+def can_take_broadcast(
+    db: Session, request: ConversationRequest, listener: ListenerProfile
+) -> bool:
+    """May this mentor see and accept this broadcast? Certified and approved, not one the member
+    blocked, not the member's own mentor profile, and has not passed on it."""
+    if not (
+        request.broadcast
+        and request.target_listener_id is None
+        and listener.certified_exam
+        and listener.vetting_status == VettingStatus.approved
+    ):
+        return False
+    if listener.id in blocked_listener_ids(db, request.requester_id) | own_listener_ids(
+        db, request.requester_id
+    ):
+        return False
+    return (
+        db.scalar(
+            select(RequestPass.id).where(
+                RequestPass.request_id == request.id, RequestPass.listener_id == listener.id
+            )
+        )
+        is None
+    )
+
+
 def _pending_request(
     db: Session, request_id: str, acting_listener_id: str | None
 ) -> ConversationRequest:
@@ -290,6 +349,15 @@ def _pending_request(
     ).scalar_one_or_none()
     if req is None or req.status != RequestStatus.pending:
         raise RequestNotPending()
+    # A broadcast has no target yet: the first certified mentor to accept takes it, here,
+    # under the request's row lock, so a second mentor finds it already matched. Nothing is
+    # written when this mentor may not take it; the request stays open for the others.
+    if req.broadcast and req.target_listener_id is None and acting_listener_id is not None:
+        taker = db.get(ListenerProfile, acting_listener_id)
+        if taker is None or not can_take_broadcast(db, req, taker):
+            raise RequestNotPending()
+        req.target_listener_id = acting_listener_id
+        return req
     # A listener may only act on requests addressed to them; the admin path
     # (acting_listener_id=None) may act on any. Not-mine is opaquely "not found".
     if acting_listener_id is not None and req.target_listener_id != acting_listener_id:
@@ -335,6 +403,8 @@ def accept_personal_request(
     def _revert_request() -> None:
         req.status = RequestStatus.pending
         req.conversation_id = None
+        if req.broadcast:
+            req.target_listener_id = None  # still open for every certified mentor
 
     convo = open_conversation(
         db,
@@ -379,7 +449,13 @@ def decline_personal_request(
     db: Session, request_id: str, *, acting_listener_id: str | None = None
 ) -> None:
     req = _pending_request(db, request_id, acting_listener_id)
-    req.status = RequestStatus.declined
+    if req.broadcast and req.target_listener_id == acting_listener_id:
+        # One mentor passing does not close a broadcast for everyone: it leaves this mentor's
+        # inbox and stays open for the others.
+        req.target_listener_id = None
+        db.add(RequestPass(request_id=req.id, listener_id=acting_listener_id))
+    else:
+        req.status = RequestStatus.declined
     db.commit()
 
 

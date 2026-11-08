@@ -94,6 +94,8 @@ class RequestOut(BaseModel):
     # (the chat is open). A pending, unseen question lights "Sent" only.
     seen_at: str | None = None
     replying: bool = False
+    # Offered to every certified mentor, not one (DECISIONS section P.4). Additive.
+    broadcast: bool = False
     # The mentor this request went to, as every screen draws them (a Personal request's
     # target; null for anything else). Lets the A04 letter paint the right face.
     listener_companion_animal: str | None = None

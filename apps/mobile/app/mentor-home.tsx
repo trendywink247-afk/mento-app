@@ -1,6 +1,6 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
@@ -310,7 +310,10 @@ function ConsoleBody({
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
-  const c = useMentorConsole(t('mentor.atCapacity'));
+  const c = useMentorConsole(t('mentor.atCapacity'), t('mentor.requestTaken'));
+  // Two tabs on the console: Requests (with a count) and Conversations. null = not chosen yet,
+  // so it opens on Requests when something is waiting and on Conversations otherwise.
+  const [tab, setTab] = useState<'requests' | 'chats' | null>(null);
   useListenerHeartbeat(c.me?.status === 'online');
 
   // Detect a server-side sweep to Away (the 15-minute heartbeat timeout) versus a
@@ -429,6 +432,9 @@ function ConsoleBody({
   const snoozed = active.filter((conv) => isSnoozed(conv));
   const ended = c.conversations.filter((conv) => conv.status !== 'active');
   const conversations = [...awake, ...snoozed, ...ended];
+  const shownTab = tab ?? (c.requests.length > 0 ? 'requests' : 'chats');
+  const personalRequests = c.requests.filter((r) => !r.broadcast);
+  const openRequests = c.requests.filter((r) => r.broadcast);
 
   const setSnooze = async (id: string, on: boolean) => {
     setSnoozeFailed(null);
@@ -461,6 +467,34 @@ function ConsoleBody({
         </Entrance>
       ) : null}
 
+      <View style={styles.tabs} accessibilityRole="tablist">
+        {(['requests', 'chats'] as const).map((key) => {
+          const on = shownTab === key;
+          const label =
+            key === 'requests'
+              ? c.requests.length
+                ? `${t('mentor.requestsTitle')} · ${c.requests.length}`
+                : t('mentor.requestsTitle')
+              : t('mentor.conversationsTitle');
+          return (
+            <Pressable
+              key={key}
+              onPress={() => setTab(key)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              style={[
+                styles.tab,
+                { borderColor: on ? colors.accent : colors.border, backgroundColor: on ? colors.accentTint : colors.surface },
+              ]}
+              testID={`mentor-tab-${key}`}
+            >
+              <Text style={[type.label, { color: on ? colors.accentEdge : colors.inkMuted }]}>{label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {shownTab === 'requests' ? (
       <Entrance index={3} style={styles.section}>
         <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
           {t('mentor.requestsTitle')}
@@ -471,15 +505,26 @@ function ConsoleBody({
           </Text>
         ) : null}
         {c.requests.length ? (
-          c.requests.map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              busy={c.busy === request.id}
-              onAccept={() => void c.act(request.id, 'accept')}
-              onDecline={() => void c.act(request.id, 'decline')}
-            />
-          ))
+          [personalRequests, openRequests].map((group, g) =>
+            group.length ? (
+              <View key={g} style={styles.list}>
+                {personalRequests.length && openRequests.length ? (
+                  <Text style={[type.label, styles.pad, { color: colors.inkMuted }]}>
+                    {g === 0 ? t('mentor.requestsForYou') : t('mentor.requestsOpen')}
+                  </Text>
+                ) : null}
+                {group.map((request) => (
+                  <RequestCard
+                    key={request.id}
+                    request={request}
+                    busy={c.busy === request.id}
+                    onAccept={() => void c.act(request.id, 'accept')}
+                    onDecline={() => void c.act(request.id, 'decline')}
+                  />
+                ))}
+              </View>
+            ) : null,
+          )
         ) : (
           <EmptyNote
             title={t('mentorHomePage.requestsEmptyTitle')}
@@ -488,7 +533,9 @@ function ConsoleBody({
           />
         )}
       </Entrance>
+      ) : null}
 
+      {shownTab === 'chats' ? (
       <Entrance index={4} style={styles.section}>
         <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
           {t('mentor.conversationsTitle')}
@@ -517,6 +564,7 @@ function ConsoleBody({
           />
         )}
       </Entrance>
+      ) : null}
     </View>
   );
 }
@@ -543,6 +591,8 @@ const styles = StyleSheet.create({
   console: { gap: 12 },
   list: { gap: 12 },
   section: { gap: space.sm, paddingTop: space.xs },
+  tabs: { flexDirection: 'row', gap: space.sm },
+  tab: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.sm },
   h2: { fontSize: 18, lineHeight: 24, fontFamily: type.label.fontFamily, paddingHorizontal: space.sm },
   pad: { paddingHorizontal: space.sm },
   grow: { flexGrow: 1, minHeight: space.md },

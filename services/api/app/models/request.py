@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -19,6 +19,9 @@ class ConversationRequest(UUIDMixin, TimestampMixin, Base):
         Index("ix_conversation_requests_target_status", "target_listener_id", "status"),
     )
 
+    # One question offered to every certified mentor (DECISIONS section P.4): no target until
+    # the first to accept takes it. `target_listener_id` is then set to that mentor.
+    broadcast: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     kind: Mapped[RequestKind] = mapped_column(default=RequestKind.general)
     status: Mapped[RequestStatus] = mapped_column(default=RequestStatus.pending, index=True)
 
@@ -40,3 +43,18 @@ class ConversationRequest(UUIDMixin, TimestampMixin, Base):
     # honest "Seen" the member's letter (board A04) can light. Never set for a request
     # nobody has been shown.
     seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class RequestPass(UUIDMixin, TimestampMixin, Base):
+    """A mentor who passed on a broadcast request: it stays open for the others, and is no
+    longer in this mentor's inbox."""
+
+    __tablename__ = "request_passes"
+    __table_args__ = (UniqueConstraint("request_id", "listener_id", name="uq_request_passes_pair"),)
+
+    request_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("conversation_requests.id", ondelete="CASCADE")
+    )
+    listener_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("listener_profiles.id", ondelete="CASCADE"), index=True
+    )

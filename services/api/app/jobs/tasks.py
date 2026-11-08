@@ -28,6 +28,12 @@ def push_request_created(request_id: str) -> None:
         push.notify_request_created(db, request_id=request_id)
 
 
+@queue.task(name="push.request_broadcast", queue="push")
+def push_request_broadcast(request_id: str) -> None:
+    with SessionLocal() as db:
+        push.notify_request_broadcast(db, request_id=request_id)
+
+
 @queue.task(name="push.request_accepted", queue="push")
 def push_request_accepted(request_id: str) -> None:
     with SessionLocal() as db:
