@@ -24,7 +24,7 @@ appId: chat.mento.app
 # (~91s both times) — this runner's emulator is CPU-contended enough (confirmed:
 # load average 1.7-4.6 on 2 cores) that even a generous-looking margin isn't
 # generous enough. 150s is the same budget mentor-bot.mjs needed for the same
-# reason (see maestro.yml's --timeout 480 comment).
+# reason (emulator timeouts; the CI workflow was removed).
 - extendedWaitUntil:
     visible:
       id: "start"

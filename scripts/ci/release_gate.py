@@ -10,7 +10,6 @@ REQUIRED = {
     "api-ci.yml": {"api-lint", "api-test", "lint", "test", "full-suite"},
     "test-ci.yml": {"mobile-web", "release-tooling", "recovery-receipts",
                     "receiver-isolation", "test-gate", "full-suite"},
-    "maestro.yml": {"check-secrets", "maestro", "native-gate", "full-suite"},
 }
 
 
