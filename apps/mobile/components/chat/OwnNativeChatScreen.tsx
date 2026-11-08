@@ -1,6 +1,8 @@
 /** Native own transport: existing persona/safety furniture, authenticated controller,
  * in-memory drafts only. Mounted solely by the authoritative native provider gate.
  */
+import { SlashSuggest } from '@/components/mentor/SlashSuggest';
+import { fill, slashQuery, suggest, usePreparedAnswers } from '@/lib/preparedAnswers';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -66,6 +68,8 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [snapshot, setSnapshot] = useState<OwnChatSnapshot | null>(null);
   const [actor, setActor] = useState('');
   const [draft, setDraft] = useState(member ? params.starter ?? '' : '');
+  // The mentor's prepared answers (device only). "/" in the box lists them; choosing one only fills the box.
+  const prepared = usePreparedAnswers();
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
   const [error, setError] = useState(false);
@@ -311,6 +315,14 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         testID="own-native-typing">{t('chat.typing', { name })}</Text> : null}
       {!member ? <MentorComposerHint /> : null}
       {sendError ? <Text style={[type.caption, styles.typing, { color: colors.danger }]}>{t('chat.sendFailed')}</Text> : null}
+      {!member && !crisis && slashQuery(draft) !== null ? (
+        <SlashSuggest
+          items={suggest(draft, prepared.answers)}
+          hasAnswers={prepared.answers.length > 0}
+          onPick={(a) => setDraft(fill(a))}
+          onManage={() => router.push('/mentor/answers')}
+        />
+      ) : null}
       <ComposerChromeContext.Provider value={chrome}>
         <ComposerPerchContext.Provider value={member && !allowanceView.note ?
           <CompanionSlot id="composerTop" size={COMPOSER_SEAT.size} inset={space.lg} /> : null}>

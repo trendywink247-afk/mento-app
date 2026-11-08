@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -10,10 +11,12 @@ import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { ConversationRow, isSnoozed } from '@/components/mentor/ConversationRow';
 import { ownLive } from '@/lib/ownLive';
+import { HomeStats } from '@/components/mentor/HomeStats';
 import { MentorTabBar, type MentorTab } from '@/components/mentor/MentorTabBar';
+import { OldestWaiting } from '@/components/mentor/OldestWaiting';
+import { RequestFocus } from '@/components/mentor/RequestFocus';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { CertifiedBadge } from '@/components/CertifiedBadge';
-import { RequestCard } from '@/components/mentor/RequestCard';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
 import { LineSheet } from '@/components/mentor/LineSheet';
 import { StayInTouchSheet } from '@/components/mentor/StayInTouchSheet';
@@ -22,7 +25,8 @@ import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
 import { api, type ListenerApplication } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, type TKey } from '@/lib/i18n';
+import { usePreparedAnswers } from '@/lib/preparedAnswers';
 import { listenerApi, type ListenerMe, type StayInTouchAsk } from '@/lib/listenerApi';
 import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
 import { continueAsMember, loadApplication as readApplication } from '@/lib/mentorPath';
@@ -336,6 +340,9 @@ function ConsoleBody({
   const { t } = useI18n();
   const c = useMentorConsole(t('mentor.atCapacity'), t('mentor.requestTaken'));
   useListenerHeartbeat(c.me?.status === 'online');
+  const prepared = usePreparedAnswers();
+  const [chatTab, setChatTab] = useState<'active' | 'waiting' | 'touch'>('active');
+  const [reqIndex, setReqIndex] = useState(0);
 
   // Detect a server-side sweep to Away (the 15-minute heartbeat timeout) versus a
   // status change this device itself just requested — only the former shows the
@@ -453,20 +460,37 @@ function ConsoleBody({
     );
   }
 
-  // Board A10: awake chats first, then snoozed ones ("Snoozed · back at …"), then ended.
-  const active = c.conversations.filter((conv) => conv.status === 'active');
-  const awake = active.filter((conv) => !isSnoozed(conv));
-  const snoozed = active.filter((conv) => isSnoozed(conv));
-  const ended = c.conversations.filter((conv) => conv.status !== 'active');
-  const conversations = [...awake, ...snoozed, ...ended];
-  const unreadChats = conversations.filter((conv) => (conv.unread ?? 0) > 0).length;
-  const personalRequests = c.requests.filter((r) => !r.broadcast);
-  const openRequests = c.requests.filter((r) => r.broadcast);
+  // Chats (founder choice, 2026-11-08): Active, Waiting on you and In touch. "Ended" is gone: a finished
+  // chat stays only while the member and mentor stay in touch.
+  const liveOf = (conv: (typeof c.conversations)[number]) =>
+    conv.stream_channel_id ? c.live[conv.stream_channel_id] : ownLive(conv);
+  const openChats = c.conversations.filter((conv) => conv.status === 'active');
+  const isWaiting = (conv: (typeof c.conversations)[number]) => Boolean(liveOf(conv)?.waitingSince) && !isSnoozed(conv);
+  const waitingChats = openChats.filter(isWaiting);
+  const activeChats = [...openChats.filter((conv) => !isWaiting(conv) && !isSnoozed(conv)), ...openChats.filter((conv) => !isWaiting(conv) && isSnoozed(conv))];
+  const touchChats = c.conversations.filter((conv) => conv.in_touch);
+  const shownChats = chatTab === 'waiting' ? waitingChats : chatTab === 'touch' ? touchChats : activeChats;
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const weekCount = c.conversations.filter((conv) => Date.parse(conv.created_at) >= weekAgo).length;
+  const seatsFree = Math.max(0, c.me.max_concurrent - c.me.active_conversations);
+  const reqIdx = Math.min(reqIndex, Math.max(0, c.requests.length - 1));
+  const request = c.requests[reqIdx];
 
   const setSnooze = async (id: string, on: boolean) => {
     setSnoozeFailed(null);
     if (!(await c.setSnooze(id, on))) setSnoozeFailed(id);
   };
+
+  const chatRow = (conversation: (typeof c.conversations)[number]) => (
+    <ConversationRow
+      key={conversation.id}
+      conversation={conversation}
+      live={liveOf(conversation)}
+      onPress={() => openConversation(conversation)}
+      onSnooze={(on) => void setSnooze(conversation.id, on)}
+      snoozeBusy={c.busy === `snooze:${conversation.id}`}
+    />
+  );
 
   return (
     <View style={styles.console}>
@@ -479,10 +503,23 @@ function ConsoleBody({
             swept={swept}
             onToggle={handleToggle}
             onOpenLine={() => c.me && onOpenLine(c.me)}
+            afterGreeting={<HomeStats weekCount={weekCount} reply={c.me.reply_within} seatsFree={seatsFree} />}
           />
 
+          {c.requests[0] ? (
+            <Entrance index={3}>
+              <OldestWaiting
+                request={c.requests[0]}
+                total={c.requests.length}
+                busy={c.busy === c.requests[0].id}
+                onAccept={() => void c.act(c.requests[0].id, 'accept')}
+                onSeeAll={() => onTab('requests')}
+              />
+            </Entrance>
+          ) : null}
+
           {asks.length ? (
-            <Entrance index={2} style={styles.list}>
+            <Entrance index={4} style={styles.list}>
               {asks.map((ask) => (
                 <StayInTouchRow
                   key={ask.id}
@@ -495,128 +532,203 @@ function ConsoleBody({
               ))}
             </Entrance>
           ) : null}
+        </>
+      ) : null}
 
-          {waiting > 0 || unreadChats > 0 ? (
-            <View style={styles.chips} testID="mentor-home-summary">
-              {waiting > 0 ? (
+      {tab === 'requests' ? (
+        <Entrance index={1} style={styles.section}>
+          <View style={styles.titleRow}>
+            <Text style={[styles.display, { color: colors.ink }]} accessibilityRole="header">
+              {t('mentor.requestsTitle')}
+            </Text>
+            {c.requests.length ? (
+              <View style={[styles.countChip, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <Text style={[type.caption, { color: colors.inkMuted, fontFamily: type.label.fontFamily }]}>
+                  {t('mentor.reqOf', { n: reqIdx + 1, total: c.requests.length })}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+          {c.note ? (
+            <Text style={[type.caption, styles.pad, { color: colors.warning }]} testID="mentor-note">
+              {c.note}
+            </Text>
+          ) : null}
+          {request ? (
+            <RequestFocus
+              request={request}
+              busy={c.busy === request.id}
+              onAccept={() => void c.act(request.id, 'accept')}
+              onDecline={() => void c.act(request.id, 'decline')}
+              onNext={() => setReqIndex(reqIdx + 1 >= c.requests.length ? 0 : reqIdx + 1)}
+              canNext={c.requests.length > 1}
+            />
+          ) : (
+            <EmptyNote
+              title={t('mentorHomePage.requestsEmptyTitle')}
+              body={t('mentor.requestsEmpty')}
+              testID="mentor-requests-empty"
+            />
+          )}
+        </Entrance>
+      ) : null}
+
+      {tab === 'chats' ? (
+        <Entrance index={1} style={styles.section}>
+          <Text style={[styles.display, { color: colors.ink }]} accessibilityRole="header">
+            {t('mentor.chatsLead')} <Text style={{ color: colors.accent }}>{t('mentor.chatsAccent')}</Text>
+          </Text>
+          <View style={[styles.seg, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} accessibilityRole="tablist">
+            {(
+              [
+                ['active', t('mentor.tabActive'), activeChats.length],
+                ['waiting', t('mentor.tabWaiting'), waitingChats.length],
+                ['touch', t('mentor.tabTouch'), touchChats.length],
+              ] as const
+            ).map(([key, label, count]) => {
+              const on = chatTab === key;
+              return (
                 <Pressable
-                  onPress={() => onTab('requests')}
-                  accessibilityRole="button"
-                  style={[styles.chip, { backgroundColor: colors.accentTint }]}
+                  key={key}
+                  onPress={() => setChatTab(key)}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  style={[styles.segItem, on && { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+                  testID={`mentor-chats-${key}`}
                 >
-                  <Text style={[type.label, { color: colors.accentEdge }]}>{t('mentor.summaryWaiting', { count: waiting })}</Text>
+                  <Text style={[type.label, { color: on ? colors.accent : colors.inkMuted }]} numberOfLines={1}>
+                    {label} · {count}
+                  </Text>
                 </Pressable>
-              ) : null}
-              {unreadChats > 0 ? (
-                <Pressable
-                  onPress={() => onTab('chats')}
-                  accessibilityRole="button"
-                  style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}
-                >
-                  <Text style={[type.label, { color: colors.ink }]}>{t('mentor.summaryUnread', { count: unreadChats })}</Text>
-                </Pressable>
-              ) : null}
+              );
+            })}
+          </View>
+
+          {snoozeFailed ? (
+            <Text style={[type.caption, styles.pad, { color: colors.inkMuted }]} testID="mentor-snooze-error">
+              {t('mentorHomePage.snoozeError')}
+            </Text>
+          ) : null}
+
+          {chatTab === 'touch' && asks.length ? (
+            <View style={styles.list}>
+              <Text style={[type.label, styles.pad, { color: colors.inkMuted }]}>{t('mentor.touchAsks')}</Text>
+              {asks.map((ask) => (
+                <StayInTouchRow
+                  key={ask.id}
+                  id={ask.id}
+                  name={ask.member_persona_name}
+                  onPress={() => {
+                    if (c.me) onOpenAsk(ask, c.me.max_concurrent);
+                  }}
+                />
+              ))}
             </View>
           ) : null}
-        </>
+
+          {shownChats.length ? (
+            <View style={styles.list}>{shownChats.map(chatRow)}</View>
+          ) : (
+            <EmptyNote
+              title={t(chatTab === 'touch' ? 'mentor.tabTouch' : chatTab === 'waiting' ? 'mentor.tabWaiting' : 'mentor.tabActive')}
+              body={t(chatTab === 'touch' ? 'mentor.touchNone' : chatTab === 'waiting' ? 'mentor.waitingNone' : 'mentor.activeNone')}
+              testID="mentor-convos-empty"
+            />
+          )}
+          {chatTab === 'touch' ? (
+            <Text style={[type.caption, styles.centerText, { color: colors.inkMuted }]}>{t('mentor.touchFoot')}</Text>
+          ) : null}
+        </Entrance>
       ) : null}
 
       {tab === 'profile' ? (
         <Entrance index={1} style={styles.section}>
-          <View style={[styles.profile, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-profile">
-            <Companion animal={animal} size={72} />
-            <Text style={[styles.h2, { color: colors.ink, paddingHorizontal: 0 }]}>{c.me.persona_name}</Text>
+          <EdgeSurface edge={colors.edgeSurface} style={[styles.profile, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-profile">
+            <Companion animal={animal} size={84} />
+            <Text style={[styles.display, { color: colors.ink, fontSize: 26, lineHeight: 34 }]}>{c.me.persona_name}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
             {c.me.certified ? <CertifiedBadge testID="mentor-profile-certified" /> : null}
-          </View>
-          <PrimaryButton
-            label={t('mentor.profileLine')}
-            variant="ghost"
-            onPress={() => c.me && onOpenLine(c.me)}
-            testID="mentor-profile-line"
+          </EdgeSurface>
+
+          <Pressable onPress={() => c.me && onOpenLine(c.me)} accessibilityRole="button" testID="mentor-profile-line">
+            <EdgeSurface edge={colors.edgeSurface} style={[styles.lineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <Text style={[type.caption, styles.eyebrow, { color: colors.inkMuted }]}>{t('mentor.line.title')}</Text>
+              <Text style={[type.body, { color: colors.ink }]}>{c.me.public_line ? `"${c.me.public_line}"` : t('mentor.profileLineAdd')}</Text>
+            </EdgeSurface>
+          </Pressable>
+
+          <ProfileRow
+            icon="document-text-outline"
+            tone="orange"
+            title={t('mentor.profileAnswers')}
+            sub={t('mentor.profileAnswersSub', { count: prepared.answers.length })}
+            onPress={() => router.push('/mentor/answers')}
+            testID="mentor-profile-answers"
           />
-          <PrimaryButton
-            label={t('mentorHome.switchTalk')}
-            variant="link"
-            onPress={onSwitchTalk}
-            loading={switching}
-            testID="mentor-profile-switch"
+          <ProfileRow
+            icon="people-outline"
+            tone="sky"
+            title={t('mentor.profileTouch')}
+            sub={t('mentor.profileTouchSub', { count: touchChats.length })}
+            onPress={() => {
+              setChatTab('touch');
+              onTab('chats');
+            }}
+            testID="mentor-profile-touch"
           />
+          <ProfileRow
+            icon="book-outline"
+            tone="green"
+            title={t('mentor.profileReading')}
+            sub={t('mentorHomePage.readingTitle')}
+            onPress={() => router.push('/mentor/reading')}
+            testID="mentor-profile-reading"
+          />
+          <ProfileRow
+            icon="shield-checkmark-outline"
+            tone="indigo"
+            title={t('mentor.profileHelp')}
+            sub={t('mentor.profileHelpSub')}
+            onPress={() => router.push('/mentor/helplines')}
+            testID="mentor-profile-help"
+          />
+          <PrimaryButton label={t('mentorHome.switchTalk')} variant="link" onPress={onSwitchTalk} loading={switching} testID="mentor-profile-switch" />
         </Entrance>
       ) : null}
-
-      {tab === 'requests' ? (
-      <Entrance index={3} style={styles.section}>
-        <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
-          {t('mentor.requestsTitle')}
-        </Text>
-        {c.note ? (
-          <Text style={[type.caption, styles.pad, { color: colors.warning }]} testID="mentor-note">
-            {c.note}
-          </Text>
-        ) : null}
-        {c.requests.length ? (
-          [personalRequests, openRequests].map((group, g) =>
-            group.length ? (
-              <View key={g} style={styles.list}>
-                {personalRequests.length && openRequests.length ? (
-                  <Text style={[type.label, styles.pad, { color: colors.inkMuted }]}>
-                    {g === 0 ? t('mentor.requestsForYou') : t('mentor.requestsOpen')}
-                  </Text>
-                ) : null}
-                {group.map((request) => (
-                  <RequestCard
-                    key={request.id}
-                    request={request}
-                    busy={c.busy === request.id}
-                    onAccept={() => void c.act(request.id, 'accept')}
-                    onDecline={() => void c.act(request.id, 'decline')}
-                  />
-                ))}
-              </View>
-            ) : null,
-          )
-        ) : (
-          <EmptyNote
-            title={t('mentorHomePage.requestsEmptyTitle')}
-            body={t('mentor.requestsEmpty')}
-            testID="mentor-requests-empty"
-          />
-        )}
-      </Entrance>
-      ) : null}
-
-      {tab === 'chats' ? (
-      <Entrance index={4} style={styles.section}>
-        <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
-          {t('mentor.conversationsTitle')}
-        </Text>
-        {snoozeFailed ? (
-          <Text style={[type.caption, styles.pad, { color: colors.inkMuted }]} testID="mentor-snooze-error">
-            {t('mentorHomePage.snoozeError')}
-          </Text>
-        ) : null}
-        {conversations.length ? (
-          conversations.map((conversation) => (
-            <ConversationRow
-              key={conversation.id}
-              conversation={conversation}
-              live={conversation.stream_channel_id ? c.live[conversation.stream_channel_id] : ownLive(conversation)}
-              onPress={() => openConversation(conversation)}
-              onSnooze={(on) => void setSnooze(conversation.id, on)}
-              snoozeBusy={c.busy === `snooze:${conversation.id}`}
-            />
-          ))
-        ) : (
-          <EmptyNote
-            title={t('mentorHomePage.conversationsEmptyTitle')}
-            body={t('mentor.conversationsEmpty')}
-            testID="mentor-convos-empty"
-          />
-        )}
-      </Entrance>
-      ) : null}
     </View>
+  );
+}
+
+/** One row of the mentor Profile (founder choice, 2026-11-08): a round badge, a title with a quiet line under it, a chevron. */
+function ProfileRow({
+  icon,
+  tone,
+  title,
+  sub,
+  onPress,
+  testID,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  tone: 'orange' | 'sky' | 'green' | 'indigo';
+  title: string;
+  sub: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  const { colors } = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${sub}`} testID={testID}>
+      <EdgeSurface edge={colors.edgeSurface} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <IconBadge icon={icon} tone={tone} size={40} />
+        <View style={styles.rowText}>
+          <Text style={[type.label, { color: colors.ink }]}>{title}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+            {sub}
+          </Text>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
+      </EdgeSurface>
+    </Pressable>
   );
 }
 
@@ -642,9 +754,15 @@ const styles = StyleSheet.create({
   console: { gap: 12 },
   list: { gap: 12 },
   section: { gap: space.sm, paddingTop: space.xs },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  chip: { borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 8, minHeight: 36, justifyContent: 'center' },
-  profile: { alignItems: 'center', gap: space.xs, padding: space.md, borderWidth: 1, borderRadius: radius.lg },
+  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  display: { fontSize: 30, lineHeight: 40, fontFamily: type.displaySerif.fontFamily, paddingHorizontal: space.sm },
+  countChip: { borderWidth: 1, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 4 },
+  seg: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.pill, borderWidth: 1 },
+  segItem: { flex: 1, minHeight: 42, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1, borderColor: 'transparent' },
+  profile: { alignItems: 'center', gap: space.xs, padding: space.md, borderWidth: 1 },
+  lineCard: { padding: 14, gap: 4, borderWidth: 1 },
+  eyebrow: { textTransform: 'uppercase', letterSpacing: 0.6 },
+  rowText: { flex: 1, minWidth: 0 },
   h2: { fontSize: 18, lineHeight: 24, fontFamily: type.label.fontFamily, paddingHorizontal: space.sm },
   pad: { paddingHorizontal: space.sm },
   grow: { flexGrow: 1, minHeight: space.md },

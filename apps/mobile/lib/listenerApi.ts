@@ -19,8 +19,10 @@ export type ListenerMe = {
   /** The mentor's own face — the SAME animal + wash members see (server mentor_face). */
   companion_animal?: string;
   companion_colour?: string;
-  /** Certified for exam mentoring (DECISIONS §O). */
+  /** Certified for exam mentoring (DECISIONS §O); shown to people as "Mento Verified". */
   certified?: boolean;
+  /** Usual time to accept a request over 30 days, once there is enough to say (DECISIONS §P.6). */
+  reply_within?: 'day' | 'two_days' | null;
 };
 
 /** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
@@ -92,6 +94,9 @@ export type ListenerRequest = {
   issue_category_label?: string | null;
   /** Offered to every certified mentor; the first to accept takes it (DECISIONS §P.4). */
   broadcast?: boolean;
+  /** What the member chose to share: their road and stage, as words. */
+  community_label?: string | null;
+  stage_label?: string | null;
 };
 
 /** Dev-only picker row (the /listener/dev/* endpoints 404 in production). */

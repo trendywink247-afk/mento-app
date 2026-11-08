@@ -118,7 +118,7 @@ export default function ListenersPanel() {
       await adminApi.approveApplication(id, certify);
       setToast(
         certify
-          ? 'Approved and certified for exam mentoring — listener added to the roster'
+          ? 'Approved and verified for exam mentoring — listener added to the roster'
           : 'Application approved — listener added to the roster',
       );
       await Promise.all([loadApplications(), load()]);
@@ -180,10 +180,10 @@ export default function ListenersPanel() {
     setError(null);
     try {
       await adminApi.certifyListener(id, certified);
-      setToast(certified ? 'Certified for exam mentoring' : 'Certification removed');
+      setToast(certified ? 'Verified for exam mentoring' : 'Verification removed');
       await load();
     } catch {
-      setError("Couldn't update that certification. Try again.");
+      setError("Couldn't update that verification. Try again.");
     } finally {
       setBusy(null);
     }
@@ -284,7 +284,7 @@ export default function ListenersPanel() {
         <Text style={[type.bodySemi, { color: colors.ink }]}>Gold mentor invitations</Text>
         <Text style={[type.caption, { color: colors.inkMuted }]}>
           Makes a single-use code, valid 7 days. Send it yourself. The mentor enters it in the app under
-          Become a mentor and is certified at once. Keep the note free of real names and contacts.
+          Become a mentor and is verified at once. Keep the note free of real names and contacts.
         </Text>
         <TextInput
           value={inviteNote}
@@ -424,11 +424,11 @@ export default function ListenersPanel() {
                     onPress={() => void approve(app.id, true)}
                     disabled={busy === app.id}
                     accessibilityRole="button"
-                    accessibilityLabel={`Approve and certify ${app.persona_name} for exam mentoring`}
+                    accessibilityLabel={`Approve and verify ${app.persona_name} for exam mentoring`}
                     testID={`admin-app-approve-certify-${app.id}`}
                     style={[styles.secondaryBtn, { borderColor: colors.accent }]}
                   >
-                    <Text style={[type.label, { color: colors.ink }]}>Approve + certify</Text>
+                    <Text style={[type.label, { color: colors.ink }]}>Approve + verify</Text>
                   </ConsolePressable>
                 ) : null}
                 <ConsolePressable
@@ -523,12 +523,12 @@ export default function ListenersPanel() {
                     onPress={() => void certify(li.id, !li.certified)}
                     disabled={busy === li.id}
                     accessibilityRole="button"
-                    accessibilityLabel={`${li.certified ? 'Remove certification from' : 'Certify'} ${li.persona_name}`}
+                    accessibilityLabel={`${li.certified ? 'Remove verification from' : 'Verify'} ${li.persona_name}`}
                     testID={`admin-listener-${li.id}-certify`}
                     style={[styles.secondaryBtn, { borderColor: li.certified ? colors.accent : colors.border }]}
                   >
                     <Text style={[type.label, { color: colors.ink }]}>
-                      {li.certified ? 'Certified ✓ (remove)' : 'Certify for exams'}
+                      {li.certified ? 'Verified ✓ (remove)' : 'Verify for exams'}
                     </Text>
                   </ConsolePressable>
                 ) : null}

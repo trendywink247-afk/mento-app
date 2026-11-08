@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -34,6 +35,7 @@ export function PresenceHeader({
   swept,
   onToggle,
   onOpenLine,
+  afterGreeting,
 }: {
   me: ListenerMe;
   animal: CompanionAnimal | null;
@@ -42,6 +44,8 @@ export function PresenceHeader({
   onToggle: () => void;
   /** Opens the "Your line" sheet over this (settled-back) Mentor Home. */
   onOpenLine: () => void;
+  /** Shown between the greeting and the presence card (Home's week strip, 2026-11-08). */
+  afterGreeting?: ReactNode;
 }) {
   const router = useRouter();
   const { colors } = useTheme();
@@ -76,6 +80,8 @@ export function PresenceHeader({
           {rotation}
         </Text>
       </Entrance>
+
+      {afterGreeting}
 
       <View style={styles.perchZone}>
         <View
