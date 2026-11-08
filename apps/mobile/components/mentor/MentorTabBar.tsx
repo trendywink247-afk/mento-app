@@ -39,7 +39,7 @@ export function MentorTabBar({
     k === 'requests'
       ? t('mentor.requestsTitle')
       : k === 'chats'
-        ? t('mentor.conversationsTitle')
+        ? t('mentor.tabChats')
         : k === 'home'
           ? t('mentor.tabHome')
           : t('mentor.tabProfile');

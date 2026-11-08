@@ -630,7 +630,7 @@ function ConsoleBody({
             <View style={styles.list}>{shownChats.map(chatRow)}</View>
           ) : (
             <EmptyNote
-              title={t(chatTab === 'touch' ? 'mentor.tabTouch' : chatTab === 'waiting' ? 'mentor.tabWaiting' : 'mentor.tabActive')}
+              title={t(chatTab === 'touch' ? 'mentor.emptyTouch' : chatTab === 'waiting' ? 'mentor.emptyWaiting' : 'mentor.emptyActive')}
               body={t(chatTab === 'touch' ? 'mentor.touchNone' : chatTab === 'waiting' ? 'mentor.waitingNone' : 'mentor.activeNone')}
               testID="mentor-convos-empty"
             />
@@ -644,7 +644,7 @@ function ConsoleBody({
       {tab === 'profile' ? (
         <Entrance index={1} style={styles.section}>
           <EdgeSurface edge={colors.edgeSurface} style={[styles.profile, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-profile">
-            <Companion animal={animal} size={84} />
+            <Companion animal={(c.me.companion_animal as CompanionAnimal | undefined) ?? animal} size={84} />
             <Text style={[styles.display, { color: colors.ink, fontSize: 26, lineHeight: 34 }]}>{c.me.persona_name}</Text>
             <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
             {c.me.certified ? <CertifiedBadge testID="mentor-profile-certified" /> : null}
@@ -718,7 +718,7 @@ function ProfileRow({
   const { colors } = useTheme();
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${sub}`} testID={testID}>
-      <EdgeSurface edge={colors.edgeSurface} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <EdgeSurface edge={colors.edgeSurface} style={[styles.profileRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <IconBadge icon={icon} tone={tone} size={40} />
         <View style={styles.rowText}>
           <Text style={[type.label, { color: colors.ink }]}>{title}</Text>
@@ -760,6 +760,7 @@ const styles = StyleSheet.create({
   seg: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.pill, borderWidth: 1 },
   segItem: { flex: 1, minHeight: 42, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1, borderColor: 'transparent' },
   profile: { alignItems: 'center', gap: space.xs, padding: space.md, borderWidth: 1 },
+  profileRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: 12, paddingHorizontal: 14, borderWidth: 1 },
   lineCard: { padding: 14, gap: 4, borderWidth: 1 },
   eyebrow: { textTransform: 'uppercase', letterSpacing: 0.6 },
   rowText: { flex: 1, minWidth: 0 },

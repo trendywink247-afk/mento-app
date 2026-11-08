@@ -68,24 +68,9 @@ export function PresenceHeader({
     .filter(Boolean)
     .join(' · ');
 
-  return (
-    <View style={styles.wrap} testID="mentor-console">
-      <Entrance index={0}>
-        <Text style={[styles.h1, styles.clearOfPerch, { color: colors.ink }]} accessibilityRole="header">
-          {t('mentorHomePage.greeting')}
-          {'\n'}
-          <Text style={{ color: colors.accent }}>{me.persona_name}</Text>
-        </Text>
-        <Text style={[type.caption, styles.hint, styles.clearOfPerch, { color: colors.inkMuted }]} testID="mentor-rotation-hint">
-          {rotation}
-        </Text>
-      </Entrance>
-
-      {afterGreeting}
-
-      <View style={styles.perchZone}>
+  const perchNode = (
         <View
-          style={styles.perch}
+          style={afterGreeting ? styles.perchBeside : styles.perch}
           pointerEvents="none"
           accessible
           accessibilityRole="image"
@@ -100,6 +85,26 @@ export function PresenceHeader({
             </View>
           </Animated.View>
         </View>
+  );
+
+  return (
+    <View style={styles.wrap} testID="mentor-console">
+      <Entrance index={0}>
+        <Text style={[styles.h1, styles.clearOfPerch, { color: colors.ink }]} accessibilityRole="header">
+          {t('mentorHomePage.greeting')}
+          {'\n'}
+          <Text style={{ color: colors.accent }}>{me.persona_name}</Text>
+        </Text>
+        <Text style={[type.caption, styles.hint, styles.clearOfPerch, { color: colors.inkMuted }]} testID="mentor-rotation-hint">
+          {rotation}
+        </Text>
+      </Entrance>
+
+      {afterGreeting ? perchNode : null}
+      {afterGreeting}
+
+      <View style={styles.perchZone}>
+        {afterGreeting ? null : perchNode}
         <Entrance index={1}>
           <EdgeSurface
             edge={colors.edgeSurface}
@@ -204,6 +209,8 @@ const styles = StyleSheet.create({
   // heading's empty right side — the heading keeps its words clear of it.
   perchZone: { marginTop: -space.xs },
   perch: { position: 'absolute', right: space.md, top: -82, height: 90, zIndex: 2, alignItems: 'center', justifyContent: 'flex-end' },
+  // With the week strip under the greeting the owl stands beside the greeting instead (it would sit on the strip).
+  perchBeside: { position: 'absolute', right: space.md, top: 2, height: 90, zIndex: 2, alignItems: 'center', justifyContent: 'flex-end' },
   clearOfPerch: { paddingRight: 104 },
   originBottom: { transformOrigin: 'bottom' },
   presence: {
