@@ -32,8 +32,8 @@ for (const variant of ['production', 'preview', 'development']) {
   assert.equal(config.ios.bundleIdentifier, qa ? 'chat.mento.app.qa' : 'chat.mento.app');
   assert.equal(config.android.package, qa ? `${base.android.package}.qa` : base.android.package);
   assert.equal(config.name, qa ? 'Mento QA' : 'Mento');
-  // Firebase only lists the store package today, so the QA package gets no push file yet.
-  assert.equal(Boolean(config.android.googleServicesFile), !qa);
+  // google-services.json lists both packages, so every variant gets the push file.
+  assert.equal(config.android.googleServicesFile, './google-services.json');
   assert.deepEqual(config.runtimeVersion, base.runtimeVersion);
   assert.equal(config.updates.url, base.updates.url);
   assert.equal(config.updates.enabled, base.updates.enabled);
