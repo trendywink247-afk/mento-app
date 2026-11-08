@@ -56,6 +56,11 @@ class ConversationListItem(BaseModel):
     # The mentor's face (services/mentor_face.py) — the same animal + wash on every screen.
     listener_companion_animal: str = "Owl"
     listener_companion_colour: str = "sage"
+    # My Chats preview for an OWN chat (Stream rows are previewed client-side). Absent for a
+    # locked or wiped chat, so a PIN-locked conversation never leaks its last line to the list.
+    last_message: str | None = None
+    last_message_at: str | None = None
+    last_message_mine: bool = False
 
 
 class VerifyPinRequest(BaseModel):

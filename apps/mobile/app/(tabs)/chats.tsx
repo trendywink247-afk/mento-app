@@ -277,7 +277,12 @@ export default function ChatsTab() {
       )
         continue;
       const p = c.stream_channel_id ? previews[c.stream_channel_id] : undefined;
-      out.push({ kind: 'convo', key: c.id, at: (p?.at ?? new Date(c.created_at)).getTime(), convo: c });
+      out.push({
+        kind: 'convo',
+        key: c.id,
+        at: (p?.at ?? new Date(c.last_message_at ?? c.created_at)).getTime(),
+        convo: c,
+      });
     }
     if (filter !== 'completed') {
       for (const w of waiting) {
@@ -379,7 +384,7 @@ export default function ChatsTab() {
                   ? t('chatsList.yourMentor')
                   : null
           }
-          lastLine={s === 'wiped' ? t('chats.wiped') : c.is_locked ? t('chatsList.lockedLine') : p?.text || t('chats.sayHello')}
+          lastLine={s === 'wiped' ? t('chats.wiped') : c.is_locked ? t('chatsList.lockedLine') : p?.text || c.last_message || t('chats.sayHello')}
           time={relativeTime((p?.at ?? new Date(c.created_at)).toISOString(), t)}
           unread={Boolean(p && p.unread > 0) && s === 'active'}
           unreadLabel={t('chatsList.newMessageA11y')}
