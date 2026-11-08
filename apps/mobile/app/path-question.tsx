@@ -40,6 +40,7 @@ import { ApiError, api, type PathState } from '@/lib/api';
 import { openNewChat } from '@/lib/askLoop';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
+import { matchOrAsk, openAsked } from '@/lib/startChat';
 import {
   EMPTY_CHOICE,
   QUESTION_MAX_CHARS,
@@ -181,7 +182,12 @@ export default function PathQuestion() {
     setBusyExit(false);
     setOpenQ(null);
     try {
-      const match = await api.match({ kind: 'general' });
+      const started = await matchOrAsk({}, assembled.text);
+      if (started.kind === 'ask') {
+        openAsked(router, started.request);
+        return;
+      }
+      const match = started.match;
       // replace: the builder has done its job — back from the chat should not return
       // to a half-used form holding a message that may already be sent.
       router.replace({

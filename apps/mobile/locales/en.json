@@ -1294,6 +1294,10 @@
     "body": "We have not confirmed this yet. Nothing changes for you today."
   },
   "requestSent": {
+    "slowLine": "No reply yet. Some mentors answer after a while, and you can keep waiting. Or ask someone else.",
+    "tryAnother": "Ask another mentor",
+    "helpline": "If it feels urgent, Tele-MANAS is free and open any time: %{number}",
+    "helplineA11y": "Call Tele-MANAS, %{number}",
     "titleLead": "Your question is\non its ",
     "titleAccent": "way",
     "eyebrow": "Your question, to %{name}",
@@ -1332,6 +1336,9 @@
   },
   "askFlow": {
     "busyBody": "Everyone is with someone right now. Send your question to one mentor instead. They reply when they are free.",
+    "becomeMentor": "Become a mentor",
+    "inviteMentor": "Invite a mentor",
+    "inviteMessage": "Mento is an anonymous place to talk with someone who has been on your road. Mentors are volunteers, and it is free. If you have been through this yourself and would like to help, you can join here:",
     "busyA11y": "Nobody is free right now",
     "openSee": "See your question",
     "openClose": "Close it",

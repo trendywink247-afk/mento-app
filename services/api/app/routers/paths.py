@@ -15,7 +15,7 @@ from app.db import get_db
 from app.models.enums import ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.user import User
-from app.schemas import PathChoice, PathState, PathTree
+from app.schemas import PathChoice, PathCommunityOut, PathState, PathTree
 from app.security import current_user_id
 from app.services import paths
 
@@ -25,6 +25,13 @@ router = APIRouter(prefix="/paths", tags=["paths"])
 @router.get("/tree", response_model=PathTree)
 def pathfinder_tree() -> PathTree:
     return PathTree(**paths.tree_payload())
+
+
+@router.get("/communities", response_model=list[PathCommunityOut])
+def path_communities() -> list[PathCommunityOut]:
+    """Every road with its plain name and whether it waits for a mentor's accept. Static
+    config, no member data: the app words its filters from this, never from its own list."""
+    return [PathCommunityOut(**paths.community_info(slug)) for slug in paths.COMMUNITIES]
 
 
 def _state(db: Session, user: User) -> PathState:
