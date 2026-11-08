@@ -336,3 +336,9 @@ Recorded from the founder's meeting notes and answers; items marked _proposed_ a
 **6. Response time (_proposed_).** Mentors and listeners show "Usually replies within a day / 2 days", from the median first reply over 30 days, only after at least 5 requests.
 
 _Build order: UPSC gate, invite-only gold with recovery, broadcast and Requests tab, then the 24/48-hour rule and the response-time badge._
+
+**7. Mentor screens, 2026-11-08 (founder choices).** The mentor side has a bottom bar: Requests (with a count of waiting requests), Chats, Home, Profile. **Home** shows the week (conversations, usual reply time, free seats), presence, the reading card, then the oldest waiting request that can be accepted from there. **Requests** are shown one at a time with what the member chose to share (road, stage, topic; never a name or contact), and a Next key. **Chats** has three tabs: Active, Waiting on you, **In touch**; "Ended" is dropped. A finished chat is kept only while the member and mentor stay in touch (§L.6-7), and stay-in-touch asks sit on top of the In touch tab. **Profile** is a persona card, the mentor's line, prepared answers, in touch, reading and helplines.
+
+**8. Prepared answers (device only).** A mentor keeps reusable replies, each with a /shortcut. Typing "/" and a few letters in a chat lists the matches; choosing one only fills the box, and the mentor reads and sends it. The list is hidden while a crisis card is showing, the crisis scan is unchanged, and message text is never scanned for the shortcut. They are stored on the phone only and removed with the session (sign-out, Clean Wipe). Server storage is a separate branch needing review (stored user content, privacy policy).
+
+**9. The mark is "Mento Verified"** in everything people see (was "Certified"); the code and database keep `certified_exam`.
