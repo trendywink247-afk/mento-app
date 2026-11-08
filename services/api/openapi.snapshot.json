@@ -135,6 +135,18 @@
         "title": "AdminAllowanceRule",
         "type": "object"
       },
+      "AdminApplicationApproveIn": {
+        "description": "Optional body on approve: certify the mentor for exam roads at the same time. Omitted =\napprove as a general listener, exactly as before.",
+        "properties": {
+          "certify": {
+            "default": false,
+            "title": "Certify",
+            "type": "boolean"
+          }
+        },
+        "title": "AdminApplicationApproveIn",
+        "type": "object"
+      },
       "AdminApplicationDeclineIn": {
         "properties": {
           "reason": {
@@ -164,6 +176,11 @@
             "title": "Available Times",
             "type": "array"
           },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
+          },
           "communities": {
             "items": {
               "type": "string"
@@ -186,6 +203,17 @@
             ],
             "title": "Email"
           },
+          "exam_credential": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam Credential"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -205,6 +233,11 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "wants_exam": {
+            "default": false,
+            "title": "Wants Exam",
+            "type": "boolean"
           }
         },
         "required": [
@@ -271,6 +304,19 @@
           "created_at"
         ],
         "title": "AdminAuditItem",
+        "type": "object"
+      },
+      "AdminCertifyIn": {
+        "properties": {
+          "certified": {
+            "title": "Certified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "certified"
+        ],
+        "title": "AdminCertifyIn",
         "type": "object"
       },
       "AdminConsoleLinkOut": {
@@ -670,6 +716,11 @@
             "title": "Categories",
             "type": "array"
           },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
+          },
           "companion_animal": {
             "default": "Owl",
             "title": "Companion Animal",
@@ -925,6 +976,11 @@
       "AllowanceOut": {
         "description": "The member's allowance right now. `GET /conversations/{id}/allowance` fills\nevery field; `GET /me/allowance` (no conversation yet) reports `in_a_row` as 0.\n\n`held_reason` is what the NEXT send would be held for: null (send away),\n\"in_a_row\" (wait for the mentor) or \"daily\" (wait for `resets_at`). It is always\nnull while holding is switched off (`enforced` false) and in a conversation the\ncrisis scan has recently flagged — urgent words are never held back or counted.",
         "properties": {
+          "applies": {
+            "default": true,
+            "title": "Applies",
+            "type": "boolean"
+          },
           "can_send": {
             "title": "Can Send",
             "type": "boolean"
@@ -1334,6 +1390,11 @@
             "title": "Category Labels",
             "type": "array"
           },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
+          },
           "community_slug": {
             "anyOf": [
               {
@@ -1481,6 +1542,11 @@
             ],
             "title": "Chat Backend",
             "type": "string"
+          },
+          "exam_redirect": {
+            "default": false,
+            "title": "Exam Redirect",
+            "type": "boolean"
           },
           "id": {
             "title": "Id",
@@ -2777,6 +2843,18 @@
             ],
             "title": "Email"
           },
+          "exam_credential": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam Credential"
+          },
           "mentor_interest": {
             "default": false,
             "title": "Mentor Interest",
@@ -3018,6 +3096,11 @@
             "title": "Categories",
             "type": "array"
           },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
+          },
           "companion_animal": {
             "default": "Owl",
             "title": "Companion Animal",
@@ -3103,6 +3186,11 @@
             },
             "title": "Categories",
             "type": "array"
+          },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
           },
           "companion_animal": {
             "default": "Owl",
@@ -3231,6 +3319,11 @@
             },
             "title": "Category Labels",
             "type": "array"
+          },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
           },
           "community_slug": {
             "anyOf": [
@@ -5425,6 +5518,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AdminApplicationApproveIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -5917,6 +6027,65 @@
           }
         ],
         "summary": "Patch Listener",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/listeners/{listener_id}/certify": {
+      "post": {
+        "description": "Mark an already-approved mentor certified for exam mentoring, or take it away\n(DECISIONS section O). Audited either way. Taking it away does not end running chats.",
+        "operationId": "certify_listener_api_v1_admin_listeners__listener_id__certify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listener_id",
+            "required": true,
+            "schema": {
+              "title": "Listener Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminCertifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Certify Listener Api V1 Admin Listeners  Listener Id  Certify Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Certify Listener",
         "tags": [
           "admin"
         ]
@@ -8687,6 +8856,54 @@
         "summary": "Mentor Ends Link",
         "tags": [
           "stay-in-touch"
+        ]
+      }
+    },
+    "/api/v1/listener/me/conversations/{convo_id}/suggest-certified": {
+      "post": {
+        "description": "\"This is about an exam\" (DECISIONS section O): the mentor suggests the conversation move to a\ncertified exam mentor. It records a time only; the member sees a gentle card and chooses\n(the chat stays open). A certified mentor has nothing to suggest, and it is idempotent.",
+        "operationId": "suggest_certified_mentor_api_v1_listener_me_conversations__convo_id__suggest_certified_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "convo_id",
+            "required": true,
+            "schema": {
+              "title": "Convo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Suggest Certified Mentor",
+        "tags": [
+          "listener-console"
         ]
       }
     },

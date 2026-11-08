@@ -112,6 +112,7 @@ def _me_out(li: ListenerProfile) -> ListenerMeOut:
         ),
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
+        certified=bool(li.certified_exam),
     )
 
 
@@ -668,6 +669,28 @@ def snooze_conversation(
     until = snooze.snooze(convo)
     db.commit()
     return SnoozeOut(id=convo_id, snoozed_until=until.isoformat())
+
+
+@router.post("/me/conversations/{convo_id}/suggest-certified", response_model=OkResult)
+def suggest_certified_mentor(
+    convo_id: str,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """ "This is about an exam" (DECISIONS section O): the mentor suggests the conversation move to a
+    certified exam mentor. It records a time only; the member sees a gentle card and chooses
+    (the chat stays open). A certified mentor has nothing to suggest, and it is idempotent."""
+    if listener.certified_exam:
+        raise ApiProblem(
+            status.HTTP_409_CONFLICT,
+            "already_certified",
+            "You are certified for exam mentoring, so there is no one to hand this to.",
+        )
+    convo = _snooze_target(db, convo_id, listener)
+    if convo.exam_redirect_at is None:
+        convo.exam_redirect_at = datetime.now(UTC)
+        db.commit()
+    return OkResult(status="ok")
 
 
 @router.delete("/me/conversations/{convo_id}/snooze", response_model=SnoozeOut)

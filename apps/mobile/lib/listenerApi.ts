@@ -19,6 +19,8 @@ export type ListenerMe = {
   /** The mentor's own face — the SAME animal + wash members see (server mentor_face). */
   companion_animal?: string;
   companion_colour?: string;
+  /** Certified for exam mentoring (DECISIONS §O). */
+  certified?: boolean;
 };
 
 /** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
@@ -208,6 +210,11 @@ export const listenerApi = {
       `/listener/me/conversations/${conversationId}/snooze`,
       { method: 'POST' },
     ),
+
+  /** "This is about an exam" (DECISIONS §O): suggest the member move to a certified exam mentor. A
+   * time on the server, never text; idempotent. 409 `already_certified` for a certified mentor. */
+  suggestCertified: (conversationId: string) =>
+    req<{ status: string }>(`/listener/me/conversations/${conversationId}/suggest-certified`, { method: 'POST' }),
 
   wake: (conversationId: string) =>
     req<{ id: string; snoozed_until: string | null }>(

@@ -246,6 +246,8 @@ export type ConversationState = {
   is_locked: boolean;
   is_paused: boolean;
   status_mask: string | null;
+  /** The mentor suggested a certified exam mentor for this conversation (DECISIONS §O). */
+  exam_redirect?: boolean;
 };
 
 export type JournalEntry = {

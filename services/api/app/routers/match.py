@@ -117,7 +117,7 @@ def ask_best_mentor(
     db.commit()
     blocked = blocked_listener_ids(db, user_id) | own_listener_ids(db, user_id)
     listener = _pick_available_listener(
-        db, payload.issue_category, blocked, community=user.community_slug
+        db, payload.issue_category, blocked, community=user.community_slug, certified_only=True
     )
     if listener is None:
         raise HTTPException(

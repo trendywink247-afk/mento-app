@@ -53,14 +53,19 @@ export default function BrowseMentors() {
   const { t } = useI18n();
   // `question`: a draft carried from the first-question builder when nobody was free — it
   // travels on to the mentor page's question step, never sent by itself.
-  const { topic, question } = useLocalSearchParams<{ topic?: string; question?: string }>();
+  const { topic, question, filter: startFilter } = useLocalSearchParams<{
+    topic?: string;
+    question?: string;
+    filter?: string;
+  }>();
   // Last-loaded list first, quiet refresh on focus; spinner only with nothing to show yet
   // (lib/screenCache.ts). Presence moves, so the refresh always runs.
   const cachedMentors = screenCache.get('mentors');
   const [loading, setLoading] = useState(!cachedMentors);
   const [listeners, setListeners] = useState<Listener[]>(cachedMentors ?? []);
   const [, setDetailTick] = useState(0);
-  const [filter, setFilter] = useState<Filter>('all');
+  // A mentor's suggestion (DECISIONS §O) opens Browse already on the certified mentors.
+  const [filter, setFilter] = useState<Filter>(startFilter === 'certified' ? 'certified' : 'all');
   const [roadNames, setRoadNames] = useState<Record<string, string>>({});
   const [myRoad, setMyRoad] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);

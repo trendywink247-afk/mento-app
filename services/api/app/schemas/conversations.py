@@ -76,6 +76,8 @@ class ConversationState(BaseModel):
     is_locked: bool
     is_paused: bool
     status_mask: str | None = None
+    # The mentor suggested a certified exam mentor for this conversation (DECISIONS section O).
+    exam_redirect: bool = False
 
 
 class ReflectionIn(BaseModel):

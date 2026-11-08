@@ -10,6 +10,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { Bubble } from '@/components/chat/Bubble';
 import { AllowanceNote } from '@/components/chat/AllowanceNote';
+import { ExamRedirectCard } from '@/components/chat/ExamRedirectCard';
 import { AllowanceRow } from '@/components/chat/AllowanceRow';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { ComposerChromeContext, ComposerField, ComposerPerchContext } from '@/components/chat/ComposerField';
@@ -74,6 +75,12 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [initialOption, setInitialOption] = useState<'report' | undefined>();
   const [held, setHeld] = useState<ThreadMsg | null>(null);
   const [menu, setMenu] = useState<'closed' | 'open' | 'confirmEnd'>('closed');
+  // Mentor side, DECISIONS §O: not certified for exams -> the menu offers "This is about an exam".
+  const [mentorCertified, setMentorCertified] = useState(true);
+  const [suggested, setSuggested] = useState(false);
+  // Member side: the mentor suggested a certified exam mentor; a gentle card, never a block.
+  const [redirect, setRedirect] = useState(false);
+  const [redirectHidden, setRedirectHidden] = useState(false);
   const [ending, setEnding] = useState(false);
   const [helplines, setHelplines] = useState(false);
   const [saveOpen, setSaveOpen] = useState<string | null>(null);
@@ -128,6 +135,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         }
         if (!live) return;
         if (!member) setMentorOnline('status' in identity && identity.status === 'online');
+        if (!member) setMentorCertified(('certified' in identity && identity.certified) === true);
         setActor(identity.id);
         const scope = { actorId: identity.id, role, conversationId };
         const binding = createOwnChatScreenController(scope,
@@ -172,6 +180,17 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
       .catch(() => { /* reason: the generic error and Retry stay; nothing is lost */ });
     return () => { live = false; };
   }, [member, snapshot?.reason, conversationId]);
+  // The mentor's suggestion reaches the member by a quiet read: on open and every 30 s.
+  useEffect(() => {
+    if (!member) return;
+    let live = true;
+    const read = () => void api.conversationState(conversationId)
+      .then(state => { if (live) setRedirect(state.exam_redirect === true); })
+      .catch(() => { /* reason: the card is a convenience; the chat is unaffected */ });
+    read();
+    const timer = setInterval(read, 30_000);
+    return () => { live = false; clearInterval(timer); };
+  }, [member, conversationId]);
   // An ended chat is still the member's to read: the socket refuses it, the REST history does not.
   const [archive, setArchive] = useState<ThreadMsg[] | null>(null);
   const archiveList = useRef<FlatList<ThreadMsg>>(null);
@@ -226,10 +245,15 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   }
   const chrome = member ? {
     held: !!allowanceView.note,
-    above: allowanceView.note && allowanceView.allowance ?
+    above: <>
+      {redirect && !redirectHidden ? <ExamRedirectCard name={name}
+        onChoose={() => router.push({ pathname: '/mentors', params: { filter: 'certified' } })}
+        onLater={() => setRedirectHidden(true)} /> : null}
+      {allowanceView.note && allowanceView.allowance ?
       <AllowanceNote allowance={allowanceView.allowance} reason={allowanceView.note} name={name}
         onJournal={() => router.dismissTo('/journals')} /> : allowanceView.allowance && allowanceView.allowance.applies !== false ?
-      <AllowanceRow allowance={allowanceView.allowance} exempt={allowanceView.exempt} /> : null,
+      <AllowanceRow allowance={allowanceView.allowance} exempt={allowanceView.exempt} /> : null}
+    </>,
   } : {};
 
   return <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: colors.bg }]}>
@@ -306,6 +330,8 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         row.user.id !== actor && !saved.has(row.id))?.id ?? null)} /> : null}
     {!member && menu !== 'closed' ? <MentorOptionsMenu state={menu} top={96} ending={ending}
       onReport={() => { setMenu('closed'); router.push({ pathname: '/mentor/report', params: { id: conversationId } }); }}
+      onSuggest={mentorCertified ? undefined : () => { void listenerApi.suggestCertified(conversationId).then(() => setSuggested(true)).catch(() => {}); }}
+      suggested={suggested}
       onAskEnd={() => setMenu('confirmEnd')} onConfirmEnd={() => void end()} onClose={() => setMenu('closed')} /> : null}
     {helplines ? <View style={styles.helplines}><HelplinesSheet onClose={() => setHelplines(false)} /></View> : null}
     </CompanionPerches>

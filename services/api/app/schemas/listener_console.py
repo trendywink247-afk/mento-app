@@ -22,6 +22,9 @@ class ListenerMeOut(BaseModel):
     stream_token: str
     public_line: str | None
     availability_note: str | None
+    # Certified for exam mentoring (DECISIONS section O): decides whether the chat menu offers
+    # "This is about an exam".
+    certified: bool = False
     # Rotating names (DECISIONS §L.6): when this name is replaced (next 04:00 IST, as
     # UTC). Null while rotation is switched off.
     name_changes_at: str | None = None

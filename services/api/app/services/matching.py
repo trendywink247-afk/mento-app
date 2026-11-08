@@ -78,6 +78,7 @@ def _pick_available_listener(
     category: str | None,
     blocked_ids: set[str],
     community: str | None = None,
+    certified_only: bool = False,
 ) -> ListenerProfile | None:
     """Lowest current load, then highest rank; community + category preferred (in
     Python — portable across JSON/JSONB); blocked listeners excluded. Community is a
@@ -96,6 +97,9 @@ def _pick_available_listener(
             ListenerProfile.vetting_status == VettingStatus.approved,
             ListenerProfile.status == ListenerStatus.online,
             ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
+            # An exam question goes only to a mentor an admin certified for exams (DECISIONS
+            # section O); the instant general match never sets this.
+            *([ListenerProfile.certified_exam.is_(True)] if certified_only else []),
         )
         .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
         .limit(10)

@@ -1304,7 +1304,14 @@
     "badge": "Certified",
     "a11y": "Certified for exam mentoring",
     "filter": "Certified exam mentors",
-    "hint": "Only mentors an admin has certified for exam mentoring"
+    "hint": "Only mentors an admin has certified for exam mentoring",
+    "suggest": "This is about an exam",
+    "suggestHint": "They are kindly asked to choose a certified exam mentor. You can keep talking.",
+    "suggestedSent": "Suggestion sent",
+    "redirectTitle": "A certified exam mentor may help most with this",
+    "redirectBody": "%{name} thinks a certified exam mentor could help you best here. You can choose one, and you are welcome to keep talking here too.",
+    "redirectChoose": "Choose a certified mentor",
+    "redirectLater": "Not now"
   },
   "requestSent": {
     "slowLine": "No reply yet. Some mentors answer after a while, and you can keep waiting. Or ask someone else.",

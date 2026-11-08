@@ -97,6 +97,7 @@ def _state(convo: Conversation) -> ConversationState:
         is_locked=convo.is_locked,
         is_paused=convo.is_paused,
         status_mask=convo.status_mask,
+        exam_redirect=convo.exam_redirect_at is not None,
     )
 
 

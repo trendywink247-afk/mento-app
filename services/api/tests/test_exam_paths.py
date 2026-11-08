@@ -78,7 +78,9 @@ def _member(s, community: str | None = None) -> str:
     return u.id
 
 
-def _mentor(s, name="Open River", *, community=None, status=ListenerStatus.online) -> str:
+def _mentor(
+    s, name="Open River", *, community=None, status=ListenerStatus.online, certified=True
+) -> str:
     li = ListenerProfile(
         persona_name=name,
         persona_avatar="seed",
@@ -89,6 +91,7 @@ def _mentor(s, name="Open River", *, community=None, status=ListenerStatus.onlin
         active_conversations=0,
         max_concurrent=3,
         community_slug=community,
+        certified_exam=certified,
     )
     s.add(li)
     s.flush()
@@ -289,3 +292,20 @@ def test_communities_endpoint_names_every_road(client):
     assert by_slug["life"]["accept_first"] is False
     assert by_slug["upsc"]["accept_first"] is True and by_slug["upsc"]["name"] == "UPSC"
     assert {"ssc", "banking", "railways", "gate", "cuet"} <= set(by_slug)
+
+
+def test_an_exam_ask_goes_only_to_a_certified_mentor(client):
+    """DECISIONS section O: an ordinary listener never receives an exam question."""
+    with TestSession() as s:
+        _mentor(s, "Plain Willow", community="upsc", certified=False)
+        member = _member(s, "upsc")
+        s.commit()
+    r = client.post("/api/v1/match/ask", json={}, headers=_auth(member))
+    assert r.status_code == 503  # nobody certified is online: the busy card, not a wrong mentor
+
+    with TestSession() as s:
+        certified = _mentor(s, "Certified Cedar", certified=True)
+        s.commit()
+    r = client.post("/api/v1/match/ask", json={}, headers=_auth(member))
+    assert r.status_code == 200, r.text
+    assert r.json()["target_listener_id"] == certified
