@@ -333,7 +333,13 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "dayToday": "Today",
-    "dayYesterday": "Yesterday"
+    "dayYesterday": "Yesterday",
+    "msgActionsTitle": "Message",
+    "msgCopy": "Copy",
+    "msgCopied": "Copied",
+    "msgReport": "Report this chat",
+    "msgClose": "Close",
+    "msgActionsA11y": "Message options"
   },
   "crisis": {
     "title": "You matter. Support is here.",

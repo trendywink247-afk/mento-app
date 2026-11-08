@@ -333,7 +333,13 @@
     "today": "आज",
     "yesterday": "कल",
     "dayToday": "आज",
-    "dayYesterday": "कल"
+    "dayYesterday": "कल",
+    "msgActionsTitle": "संदेश",
+    "msgCopy": "कॉपी करें",
+    "msgCopied": "कॉपी हो गया",
+    "msgReport": "इस चैट की रिपोर्ट करें",
+    "msgClose": "बंद करें",
+    "msgActionsA11y": "संदेश विकल्प"
   },
   "crisis": {
     "title": "आप मायने रखते हैं। सहारा यहीं है।",
