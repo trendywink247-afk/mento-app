@@ -508,6 +508,7 @@ def _listener_item(li: ListenerProfile) -> AdminListenerItem:
             li.step_back_requested_at.isoformat() if li.step_back_requested_at else None
         ),
         step_back_reason=li.step_back_reason,
+        certified=bool(li.certified_exam),
     )
 
 

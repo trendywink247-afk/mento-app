@@ -61,13 +61,17 @@ export default function ListenersPanel() {
     void loadApplications();
   }, []);
 
-  const approve = async (id: string) => {
+  const approve = async (id: string, certify = false) => {
     setBusy(id);
     setError(null);
     setConfirmId(null);
     try {
-      await adminApi.approveApplication(id);
-      setToast('Application approved — listener added to the roster');
+      await adminApi.approveApplication(id, certify);
+      setToast(
+        certify
+          ? 'Approved and certified for exam mentoring — listener added to the roster'
+          : 'Application approved — listener added to the roster',
+      );
       await Promise.all([loadApplications(), load()]);
     } catch {
       setError('Could not approve that application. Try again.');
@@ -119,6 +123,20 @@ export default function ListenersPanel() {
       setError('Could not create that listener. Try again.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const certify = async (id: string, certified: boolean) => {
+    setBusy(id);
+    setError(null);
+    try {
+      await adminApi.certifyListener(id, certified);
+      setToast(certified ? 'Certified for exam mentoring' : 'Certification removed');
+      await load();
+    } catch {
+      setError("Couldn't update that certification. Try again.");
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -253,6 +271,14 @@ export default function ListenersPanel() {
 
               <Text style={[type.body, { color: colors.ink }]}>{app.motivation}</Text>
 
+              {app.wants_exam ? (
+                <Text style={[type.caption, { color: colors.ink }]} testID={`admin-app-credential-${app.id}`}>
+                  {app.exam_credential
+                    ? `Exam credential (their words, unverified): ${app.exam_credential}`
+                    : 'Chose an exam road; gave no credential.'}
+                </Text>
+              ) : null}
+
               {app.communities.length > 0 ? (
                 <View style={styles.chips}>
                   {app.communities.map((c) => (
@@ -288,6 +314,18 @@ export default function ListenersPanel() {
                     {busy === app.id ? 'Working…' : 'Approve'}
                   </Text>
                 </ConsolePressable>
+                {app.wants_exam ? (
+                  <ConsolePressable
+                    onPress={() => void approve(app.id, true)}
+                    disabled={busy === app.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Approve and certify ${app.persona_name} for exam mentoring`}
+                    testID={`admin-app-approve-certify-${app.id}`}
+                    style={[styles.secondaryBtn, { borderColor: colors.accent }]}
+                  >
+                    <Text style={[type.label, { color: colors.ink }]}>Approve + certify</Text>
+                  </ConsolePressable>
+                ) : null}
                 <ConsolePressable
                   onPress={() => void decline(app.id)}
                   disabled={
@@ -375,6 +413,20 @@ export default function ListenersPanel() {
               ) : null}
 
               <View style={styles.actions}>
+                {approved ? (
+                  <ConsolePressable
+                    onPress={() => void certify(li.id, !li.certified)}
+                    disabled={busy === li.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${li.certified ? 'Remove certification from' : 'Certify'} ${li.persona_name}`}
+                    testID={`admin-listener-${li.id}-certify`}
+                    style={[styles.secondaryBtn, { borderColor: li.certified ? colors.accent : colors.border }]}
+                  >
+                    <Text style={[type.label, { color: colors.ink }]}>
+                      {li.certified ? 'Certified ✓ (remove)' : 'Certify for exams'}
+                    </Text>
+                  </ConsolePressable>
+                ) : null}
                 {approved ? (
                   <ConsolePressable
                     onPress={() => void setStatus(li.id, 'suspend')}

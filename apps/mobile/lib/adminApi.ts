@@ -40,6 +40,8 @@ export type AdminListener = {
   /** The mentor asked the team to step their mentor side back (lane u14); the list puts
    * live mentors with a waiting ask first. Suspend handles it; reinstate clears it. */
   step_back_requested_at?: string | null;
+  /** Certified for exam mentoring (DECISIONS §O). */
+  certified?: boolean;
   step_back_reason?: string | null;
 };
 export type AdminModerationItem = {
@@ -95,6 +97,10 @@ export type AdminApplication = {
   mentor_interest: boolean;
   status: 'pending' | 'approved' | 'declined';
   created_at: string;
+  /** Exam mentoring (DECISIONS §O): the applicant chose an exam road, and what they say they hold. */
+  wants_exam?: boolean;
+  exam_credential?: string | null;
+  certified?: boolean;
 };
 
 /** Board A13 — one IST day of message-allowance counts. Numbers only: no ids, names, text. */
@@ -194,8 +200,16 @@ export const adminApi = {
   // --- Listener applications (spec 2026-07-24) ---
   listApplications: (status?: string) =>
     req<AdminApplication[]>(`/admin/applications${status ? `?status=${status}` : ''}`),
-  approveApplication: (id: string) =>
-    req<AdminApplication>(`/admin/applications/${id}/approve`, { method: 'POST' }),
+  approveApplication: (id: string, certify = false) =>
+    req<AdminApplication>(`/admin/applications/${id}/approve`, {
+      method: 'POST',
+      ...(certify ? { body: JSON.stringify({ certify: true }) } : {}),
+    }),
+  certifyListener: (id: string, certified: boolean) =>
+    req<{ id: string; certified: boolean }>(`/admin/listeners/${id}/certify`, {
+      method: 'POST',
+      body: JSON.stringify({ certified }),
+    }),
   declineApplication: (id: string, reason: string) =>
     req<AdminApplication>(`/admin/applications/${id}/decline`, {
       method: 'POST',

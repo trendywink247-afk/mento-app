@@ -71,6 +71,8 @@ class AdminListenerItem(BaseModel):
     # panel lists these first while the side is still approved; suspend handles it.
     step_back_requested_at: str | None = None
     step_back_reason: str | None = None
+    # Certified for exam mentoring (DECISIONS section O); the panel shows and toggles it.
+    certified: bool = False
 
 
 class AdminListenerCreateIn(BaseModel):

@@ -454,6 +454,8 @@ export type ListenerApplicationIn = {
   available_times?: Array<'mornings' | 'afternoons' | 'evenings' | 'late_nights' | 'weekends'>;
   email: string | null;
   mentor_interest: boolean;
+  /** Exam mentoring (DECISIONS §O): what the applicant says they hold; an admin reads it. */
+  exam_credential?: string | null;
   pledge_accepted: boolean;
 };
 
