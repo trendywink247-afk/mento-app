@@ -418,9 +418,11 @@ export type PathOption = {
   next?: string;
   community?: string;
   stage?: string;
+  /** Open for this launch; false = greyed out as "Coming soon" (DECISIONS §P.1). Absent on old servers. */
+  enabled?: boolean;
 };
 export type PathNode = { question: string; options: PathOption[] };
-export type PathCommunity = { slug: string; name: string; tagline: string; accept_first: boolean };
+export type PathCommunity = { slug: string; name: string; tagline: string; accept_first: boolean; enabled?: boolean };
 export type PathTree = { root: string; nodes: Record<string, PathNode> };
 export type PathState = {
   community: { slug: string; name: string; tagline: string; accept_first?: boolean } | null;

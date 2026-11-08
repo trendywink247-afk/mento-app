@@ -110,6 +110,8 @@ def ask_best_mentor(
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "unknown session")
     terms.require(db, user_id)
+    if not paths.is_open(user.community_slug):
+        raise ApiProblem(409, "road_closed", "This road opens soon. Please choose another for now.")
     locks.serialize_member(db, user_id)
     open_question.enforce(db, user_id)
 

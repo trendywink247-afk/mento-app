@@ -4367,6 +4367,11 @@
             "title": "Accept First",
             "type": "boolean"
           },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"

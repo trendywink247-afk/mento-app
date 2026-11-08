@@ -23,6 +23,8 @@ class PathCommunityOut(BaseModel):
     tagline: str
     # Exam niche: a request waits for a mentor's accept (DECISIONS §N.2). Additive.
     accept_first: bool = False
+    # Open for this launch; false = shown greyed out as "Coming soon" (DECISIONS §P.1). Additive.
+    enabled: bool = True
 
 
 class PathStageOut(BaseModel):
