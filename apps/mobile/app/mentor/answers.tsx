@@ -13,7 +13,7 @@ import {
   BODY_MAX,
   cleanShortcut,
   newAnswerId,
-  TITLE_MAX,
+  titleFrom,
   usePreparedAnswers,
   validateAnswer,
   type AnswerProblem,
@@ -25,7 +25,6 @@ import { radius, space, type } from '@/theme/tokens';
 
 const PROBLEM: Record<Exclude<AnswerProblem, null>, TKey> = {
   shortcut: 'answers.errShortcut',
-  title: 'answers.errTitle',
   body: 'answers.errBody',
   duplicate: 'answers.errDuplicate',
   full: 'answers.errFull',
@@ -59,7 +58,7 @@ export default function PreparedAnswers() {
       setProblem(bad);
       return;
     }
-    await save({ ...editing, shortcut: cleanShortcut(editing.shortcut), title: editing.title.trim(), body: editing.body.trim() });
+    await save({ ...editing, shortcut: cleanShortcut(editing.shortcut), title: titleFrom(editing.body), body: editing.body.trim() });
     setEditing(null);
   };
 
@@ -91,15 +90,6 @@ export default function PreparedAnswers() {
                 testID="answer-shortcut"
               />
               <Text style={[type.caption, { color: colors.inkMuted }]}>{t('answers.shortcutHint')}</Text>
-              <Text style={[type.label, { color: colors.ink }]}>{t('answers.titleLabel')}</Text>
-              <TextInput
-                value={editing.title}
-                onChangeText={(v) => setEditing({ ...editing, title: v })}
-                maxLength={TITLE_MAX}
-                accessibilityLabel={t('answers.titleLabel')}
-                style={field}
-                testID="answer-title"
-              />
               <Text style={[type.label, { color: colors.ink }]}>{t('answers.bodyLabel')}</Text>
               <TextInput
                 value={editing.body}
@@ -148,15 +138,14 @@ export default function PreparedAnswers() {
                       edge={colors.edgeSurface}
                       radius={radius.lg}
                       intent="navigate"
-                      accessibilityLabel={`${a.title}. /${a.shortcut}`}
+                      accessibilityLabel={`/${a.shortcut}. ${titleFrom(a.body)}`}
                       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
                       testID={`answer-${a.shortcut}`}
                     >
                       <View style={[styles.chip, { backgroundColor: colors.accentTint }]}>
                         <Text style={[type.caption, { color: colors.accentEdge, fontFamily: type.label.fontFamily }]}>/{a.shortcut}</Text>
                       </View>
-                      <Text style={[type.label, { color: colors.ink }]}>{a.title}</Text>
-                      <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={2}>
+                      <Text style={[type.body, { color: colors.ink }]} numberOfLines={3}>
                         {a.body}
                       </Text>
                     </PressKey>

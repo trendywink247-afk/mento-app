@@ -33,7 +33,7 @@ export function SlashSuggest({
               key={a.id}
               onPress={() => onPick(a)}
               accessibilityRole="button"
-              accessibilityLabel={`${a.title}. ${a.body}`}
+              accessibilityLabel={`/${a.shortcut}. ${a.body}`}
               style={[styles.row, i === 0 && { backgroundColor: colors.accentTint }]}
               testID={`slash-item-${a.shortcut}`}
             >
@@ -41,11 +41,8 @@ export function SlashSuggest({
                 <View style={[styles.chip, { backgroundColor: i === 0 ? colors.surface : colors.accentTint }]}>
                   <Text style={[type.caption, { color: colors.accentEdge, fontFamily: type.label.fontFamily }]}>/{a.shortcut}</Text>
                 </View>
-                <Text style={[type.label, styles.title, { color: colors.ink }]} numberOfLines={1}>
-                  {a.title}
-                </Text>
               </View>
-              <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>
+              <Text style={[type.body, { color: colors.ink }]} numberOfLines={2}>
                 {a.body}
               </Text>
             </Pressable>

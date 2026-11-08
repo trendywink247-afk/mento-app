@@ -2,7 +2,7 @@
  * in-memory drafts only. Mounted solely by the authoritative native provider gate.
  */
 import { SlashSuggest } from '@/components/mentor/SlashSuggest';
-import { fill, slashQuery, suggest, usePreparedAnswers } from '@/lib/preparedAnswers';
+import { applyAnswer, slashQuery, suggest, usePreparedAnswers } from '@/lib/preparedAnswers';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -319,7 +319,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         <SlashSuggest
           items={suggest(draft, prepared.answers)}
           hasAnswers={prepared.answers.length > 0}
-          onPick={(a) => setDraft(fill(a))}
+          onPick={(a) => setDraft(applyAnswer(draft, a))}
           onManage={() => router.push('/mentor/answers')}
         />
       ) : null}

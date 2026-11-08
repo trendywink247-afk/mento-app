@@ -23,33 +23,44 @@ test('a shortcut is lower case letters and digits, never the slash', () => {
   assert.equal(mod.cleanShortcut('averyveryverylongshortcut').length, 12);
 });
 
-test('only "/" plus letters or digits is a slash command', () => {
+test('a slash command is the last word: "/" plus letters or digits, alone or after other words', () => {
   assert.equal(mod.slashQuery('/'), '');
   assert.equal(mod.slashQuery('/Th'), 'th');
-  assert.equal(mod.slashQuery('hello /th'), null);
-  assert.equal(mod.slashQuery('/th ank'), null);
-  assert.equal(mod.slashQuery('/th\nx'), null);
+  assert.equal(mod.slashQuery('hello /th'), 'th');
+  assert.equal(mod.slashQuery('hello\n/th'), 'th');
+  assert.equal(mod.slashQuery('hello /'), '');
+  assert.equal(mod.slashQuery('a/b'), null); // not at a word start
+  assert.equal(mod.slashQuery('/th ank'), null); // the last word is not a command
+  assert.equal(mod.slashQuery('hello'), null);
   assert.equal(mod.slashQuery(''), null);
+  assert.deepEqual(plain(mod.slashTrigger('hello /th')), { query: 'th', start: 6 });
 });
 
-test('suggestions: shortcut prefix first, then title words; pinned lead; nothing for plain text', () => {
+test('suggestions: shortcut prefix first, then words in the answer; pinned lead; none for plain text', () => {
   assert.deepEqual(plain(mod.suggest('/th', A).map((a) => a.id)), ['1', '3']);
+  assert.deepEqual(plain(mod.suggest('Hello /th', A).map((a) => a.id)), ['1', '3']);
   assert.deepEqual(plain(mod.suggest('/', A).map((a) => a.id)), ['2', '1', '3']); // pinned, then by shortcut
-  assert.deepEqual(plain(mod.suggest('/hurry', A).map((a) => a.id)), ['3']); // title word
+  assert.deepEqual(plain(mod.suggest('/hurry', A).map((a) => a.id)), ['3']); // a word in the answer
   assert.deepEqual(plain(mod.suggest('hello', A)), []);
   assert.deepEqual(plain(mod.suggest('/zz', A)), []);
   assert.equal(mod.suggest('/', A, 2).length, 2);
 });
 
-test('choosing an answer fills its body and sends nothing', () => {
-  assert.equal(mod.fill(A[0]), 'Thank you for telling me this.');
+test('choosing an answer replaces only the /word, keeping what was already typed', () => {
+  assert.equal(mod.applyAnswer('/th', A[0]), 'Thank you for telling me this.');
+  assert.equal(mod.applyAnswer('Hello, /th', A[0]), 'Hello, Thank you for telling me this.');
+  assert.equal(mod.applyAnswer('no command', A[0]), 'Thank you for telling me this.');
 });
 
-test('validation: shortcut length, title, body, duplicates, and a full list', () => {
-  const ok = { shortcut: 'new', title: 'T', body: 'B' };
+test('a title is the first words of the body, shortened', () => {
+  assert.equal(mod.titleFrom('  Take   your time  '), 'Take your time');
+  assert.equal(mod.titleFrom('x'.repeat(100)).length, 60);
+});
+
+test('validation: shortcut length, body, duplicates, and a full list (no title needed)', () => {
+  const ok = { shortcut: 'new', body: 'B' };
   assert.equal(mod.validateAnswer(ok, A), null);
   assert.equal(mod.validateAnswer({ ...ok, shortcut: 'x' }, A), 'shortcut');
-  assert.equal(mod.validateAnswer({ ...ok, title: ' ' }, A), 'title');
   assert.equal(mod.validateAnswer({ ...ok, body: '' }, A), 'body');
   assert.equal(mod.validateAnswer({ ...ok, body: 'x'.repeat(501) }, A), 'body');
   assert.equal(mod.validateAnswer({ ...ok, shortcut: '/Rest' }, A), 'duplicate');
