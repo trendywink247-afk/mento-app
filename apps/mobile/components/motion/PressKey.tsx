@@ -45,6 +45,8 @@ const INTENT_HAPTIC: Record<PressKeyIntent, () => void> = {
 type Props = {
   children: ReactNode;
   onPress?: () => void;
+  /** Hold-to-act (message options). A long press does not also fire `onPress`. */
+  onLongPress?: () => void;
   /** Colour of the underside (e.g. colors.accentEdge under an accent face). */
   edge: string;
   /** Key travel in px: 4 buttons/cards, 3 chips, 2 the tab pill. */
@@ -75,6 +77,7 @@ type Props = {
 export function PressKey({
   children,
   onPress,
+  onLongPress,
   edge,
   travel = 4,
   radius = radiusTokens.lg,
@@ -131,6 +134,8 @@ export function PressKey({
   return (
     <Pressable
       onPress={wrappedOnPress}
+      onLongPress={disabled ? undefined : onLongPress}
+      delayLongPress={380}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       disabled={disabled}
