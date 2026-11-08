@@ -37,7 +37,7 @@ import { createOwnChatScreenController, type OwnScreenMessage } from '@/lib/ownC
 import { pendingOption } from '@/lib/pendingOption';
 import { CRISIS_EXEMPT_MS, useAllowance, type HeldAllowance } from '@/lib/useAllowance';
 import { useChatHeader } from '@/lib/useChatHeader';
-import { measureScreenTop, useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
+import { useKeyboardPad } from '@/lib/useKeyboardPad';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -76,12 +76,11 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [helplines, setHelplines] = useState(false);
   const [saveOpen, setSaveOpen] = useState<string | null>(null);
   const [savedNow, setSavedNow] = useState<Set<string>>(new Set());
-  const [offset, setOffset] = useState(0);
   const [mentorOnline, setMentorOnline] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isForeground, setIsForeground] = useState(AppState.currentState === 'active');
   useListenerHeartbeat(!member && mentorOnline && isFocused && isForeground);
-  const keyboardBoundary = useChatKeyboardBoundary(offset);
+  const keyboardPad = useKeyboardPad();
   const allowanceView = useAllowance(member ? conversationId : undefined,
     crisisAt > 0 && Date.now() - crisisAt < CRISIS_EXEMPT_MS);
   const allowanceRef = useRef(allowanceView);
@@ -224,7 +223,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         snapshot?.reason === 'wiped' ? 'reflection.ended' : 'chat.errOpen')}</Text>
       {retryable ? <PrimaryButton label={t('common.retry')} onPress={onRetry} testID="own-native-retry" /> : null}
     </View> : <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.flex, keyboardBoundary]} onLayout={event => measureScreenTop(event.currentTarget, setOffset)}
+      style={[styles.flex, keyboardPad]}
       testID={ready ? 'own-native-chat-ready' : 'own-native-chat-connecting'}>
       <FlatList ref={list} data={rows} keyExtractor={item => item.id} style={styles.flex}
         contentContainerStyle={[styles.thread, { paddingBottom: space.md + threadFoot }]} keyboardShouldPersistTaps="handled"
