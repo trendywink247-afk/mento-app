@@ -354,7 +354,7 @@ export default function Pathfinder() {
                           >
                             <Text
                               style={[styles.segText, { color: on ? colors.accentEdge : colors.inkMuted }]}
-                              numberOfLines={2}
+                              numberOfLines={3}
                             >
                               {s.label}
                             </Text>

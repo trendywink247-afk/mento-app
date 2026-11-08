@@ -640,6 +640,8 @@
     "messageTitle": "Your message",
     "count": "%{used} of %{max} characters",
     "previewA11y": "Your message so far: %{message}",
+    "sentToMentor": "This goes to one mentor as your question. No chat opens until they accept, and you can close it any time.",
+    "continueAskA11y": "Send this question to one mentor. A chat opens only when they accept",
     "editable": "Nothing is sent for you. It waits in the chat, and you can edit it before it goes.",
     "dropped": "A first message stays short, so the last detail was left out. You can add it in the chat.",
     "edit": "Edit in chat",
