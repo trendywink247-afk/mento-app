@@ -1586,7 +1586,7 @@
     "unpin": "Unpin",
     "errShortcut": "Use 2 to 12 letters or numbers.",
     "errTitle": "Add a short title.",
-    "errBody": "Write what it says, up to 500 characters.",
+    "errBody": "Write what it says, up to 4,000 characters.",
     "errDuplicate": "You already use that word.",
     "errFull": "You have reached 30 answers. Delete one to add another.",
     "count": "%{count} saved"

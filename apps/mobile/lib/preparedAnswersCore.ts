@@ -24,7 +24,8 @@ export function titleFrom(body: string): string {
   const one = body.trim().replace(/\s+/g, ' ');
   return one.length <= TITLE_MAX ? one : one.slice(0, TITLE_MAX - 1).trimEnd() + '…';
 }
-export const BODY_MAX = 500;
+/** The same as chat's own cap (services/api chat.MAX_BODY): an answer longer than a message could never be sent. */
+export const BODY_MAX = 4000;
 
 /** "/Thanks!" -> "thanks": the slash and anything that is not a letter or digit is dropped. */
 export function cleanShortcut(raw: string): string {

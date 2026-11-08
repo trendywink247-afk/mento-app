@@ -62,7 +62,8 @@ test('validation: shortcut length, body, duplicates, and a full list (no title n
   assert.equal(mod.validateAnswer(ok, A), null);
   assert.equal(mod.validateAnswer({ ...ok, shortcut: 'x' }, A), 'shortcut');
   assert.equal(mod.validateAnswer({ ...ok, body: '' }, A), 'body');
-  assert.equal(mod.validateAnswer({ ...ok, body: 'x'.repeat(501) }, A), 'body');
+  assert.equal(mod.validateAnswer({ ...ok, body: 'x'.repeat(4001) }, A), 'body');
+  assert.equal(mod.validateAnswer({ ...ok, body: 'x'.repeat(4000) }, A), null);
   assert.equal(mod.validateAnswer({ ...ok, shortcut: '/Rest' }, A), 'duplicate');
   assert.equal(mod.validateAnswer({ ...ok, shortcut: 'rest' }, A, '2'), null); // editing itself is fine
   assert.equal(mod.validateAnswer(ok, Array.from({ length: 30 }, (_, i) => ({ ...A[0], id: String(i), shortcut: 's' + i }))), 'full');
