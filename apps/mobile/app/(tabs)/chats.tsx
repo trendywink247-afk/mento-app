@@ -464,7 +464,7 @@ export default function ChatsTab() {
                     style={[styles.switchFace, on && { backgroundColor: colors.surface }]}
                   >
                     {v === 'touch' ? <LinkedRings color={on ? colors.ink : colors.inkMuted} size={14} /> : null}
-                    <Text style={[styles.switchText, { color: on ? colors.ink : colors.inkMuted }]} numberOfLines={1}>
+                    <Text style={[styles.switchText, { color: on ? colors.ink : colors.inkMuted }]} numberOfLines={2}>
                       {v === 'all'
                         ? t('chatsList.allChats')
                         : slots
@@ -735,18 +735,18 @@ const styles = StyleSheet.create({
   toolsEdge: { position: 'absolute', left: 0, right: 0, bottom: -4, height: 3 },
   toolsFloor: { position: 'absolute', left: 0, right: 0, bottom: -1, height: 0 },
   search: {
-    height: 52,
+    minHeight: 52,
     paddingHorizontal: space.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, minWidth: 0, height: 44, ...type.body },
+  searchInput: { flex: 1, minWidth: 0, minHeight: 44, paddingVertical: 4, ...type.body },
   switch: { flexDirection: 'row', padding: 4, borderRadius: radius.pill },
   switchCell: { flex: 1 },
-  switchFace: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  switchText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20 },
+  switchFace: { minHeight: 44, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  switchText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20, textAlign: 'center', flexShrink: 1 },
   chips: { flexDirection: 'row', gap: space.sm },
   touchLine: { minHeight: 48, justifyContent: 'center', paddingLeft: space.sm, paddingRight: 96 },
   touchLineText: {},
