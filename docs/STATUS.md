@@ -1,19 +1,18 @@
 # Status
 
-Updated 2026-10-27. CLAUDE.md scope: v1 only; Module B mentoring, UPSC self-assessment and Community are deferred. Landed on dev: consolidation, Caddy QA cutover (2026-10-23, `qa-*.mento.chat` on `129.121.171.140`, Nginx disabled not removed, `staging.mento.chat` alias kept; record in `infra/caddy/*.md` on `feat/qa-caddy`), `ops/` (ci.sh, build-api.sh, qa-deploy-api.sh, qa-install-web.sh), QA SOPS env files, X-App-Version 426 + OpenAPI breaking-change check (`MIN_APP_VERSION` unset = off), and Sentry (#97: errors only, scrubbed, off unless DSN + qa/prod env). Production promotion stays locked. Push (PR #110): non-Expo device tokens go straight to FCM v1 (`app/services/fcm.py`, `FCM_SERVICE_ACCOUNT_FILE`); the Android app opts in with `EXPO_PUBLIC_PUSH_DIRECT=1` and drops its Expo token once the direct one is saved; Expo tokens still use the relay. Proven on QA (image `5be88830b938-r1`) on a real phone: registration, accept and reply pushes (persona name only), tap opens the right chat. Not proven: the tap path on Expo-token devices alone. Delivery lags when the phone's mobile push connection goes stale; `adb shell am force-stop` kills the app's token. Production needs the FCM key mounted by its owner.
+Updated 2026-11-08. v1 scope only (CLAUDE.md); Module B, the UPSC self-assessment suite and Community stay deferred (thinking in `docs/proposals/self-assessment-and-community.md`).
 
-**Current state:** QA mobile testing ran end to end on a real phone (2026-10-27): onboarding, chat, crisis card, recovery, PIN lock, report, End and wipe, Start fresh, mentor application, push (QA `PUSH_ENABLED=true`, `qa-api` open to the internet by founder decision). Fixes are on `feat/android-tab-keyboard-fixes` (tab bar, keyboard, PIN, dates, icon) and live on the `preview` channel by OTA; see `ANDROID_BUILD.md`. `qa-deploy-api` has rehearsed deploy + rollback once on QA (2026-10-23). A plaintext nightly DB dump already runs on QA, local-only. `feat/qa-hardening` adds `ops/ci-poll.sh`, `ops/qa-backup.sh`, `ops/qa-restore-drill.sh` and `infra/systemd/` units, all untested on a host and not installed. Staging/production release workflows still require `master` (gone), so Actions cannot deploy; left alone until prod is decided. test-ci.yml now runs on `main`/`dev` pushes and includes the Sentry test. Maestro CI is disabled by the founder. History scan (regex, 2026-10-25) found no committed keys or tokens; repo is still public.
+**State:** Own chat is proven on QA for allowlisted members (live both ways, replay, direct FCM push, tap routing). The side-by-side "Mento QA" app (`chat.mento.app.qa`) is how the phone is tested; OTA on channel `preview`. Section N of DECISIONS (2026-11-08): the Path can be set before connecting; exam roads (UPSC, NEET, JEE and 13 more) wait for a mentor's accept, life in general keeps the instant match; with nobody online the screen offers Become a mentor / Invite a mentor.
+PRs open (2026-11-08, #118 to #123, none merged): `feat/qa-side-by-side` > `feat/chat-composer-fixes` > `feat/exam-paths-accept` > `feat/path-accept-app` (stacked); `feat/decisions-path-accept`; `feat/ci-streamline` (Maestro removed, `master` to `main`, split mobile jobs; the repaired release path is not exercised yet).
 
 **Next 3 tasks:**
-0. Merge PR #110 (direct FCM push); open the PR for `feat/package-chat-mento-app` (package `chat.mento.app`, Firebase config; needs a new APK); mentor-side accept/decline/snooze still untested on a device.
-1. Root: `sudo infra/qa-root-setup.sh --recovery-recipient age1... [--remote name:path] --enable` (installs qa-deploy-api, qa-backup, drill, timers, seeds the CI poller; see environments.md). Then retire the plaintext dumps.
-2. Verify `qa-deploy-api` after reinstall (now dumps the DB first and needs a passing ops/ci log; QA deploy path = `specs/qa-deploy-path.md` option 2). Still to do: render secrets from sops, fix the stale compose image pin, port the receiver's acceptance fixture.
-3. Audit production (founder/root) and replace the TBDs in `environments.md` and the CLAUDE.md table. Then upgrade ruff (0.8.4) in api and recovery_receiver.
+1. Merge the PRs in order (#118 > #119 > #120 > #121; #122, #123 separate); deploy `feat/path-accept-app` to QA (`qa-release <sha>`, root) so the accept flow can be tested on the phone.
+2. Test mentor and mentee sides together on devices (Island profile = mentor): accept, decline, snooze, End, report, crisis view, push.
+3. Chat-list preview for own chats (needs last message in the list response); the undismissable Feedback sheet (needs a repro); rotation, dark mode, large font, TalkBack.
 
 **Open questions:**
-- Repo is public and the agent's `gh` token is the admin account; `protect-default` has no required status check. GitHub lockdown was skipped for now, by the founder.
-- Monitoring (Uptime Kuma, external-monitor.sh) and off-box backups still point at `31.42.125.238`; where do they run now?
-- `deploy/staging/compose.yml` `migrate` still pins `mento-api:staging-6e47f7a`; name the current image on any hand-run migration.
-- Erasure for suspended/banned members is blocked (403): needs a product/legal decision. 426 upgrade screen in the app is still to do.
-- Are the npm advisories in `docs/DEPENDENCY_AUDIT_2026-10-05.md` still open?
-- Sentry follow-ups: ops scripts must supply GIT_SHA, EXPO_PUBLIC_GIT_SHA, EXPO_PUBLIC_APP_ENV; native crash reporting stays off until a native scrubber exists.
+- Run the Rollback Rehearsal on GitHub before relying on the `main` repair in the release workflows.
+- Production URL/host, FCM key mount, Play Console declarations, trademark check, privacy policy finalisation.
+- Safety gap to rule on: a request's intro text (Personal request and the new ask) is not crisis-scanned when it is created, only once it is sent as the first chat message after a mentor accepts. Mentors see it in the inbox before that. Needs your decision (scan at creation, flag, and show the helpline card).
+- Erasure for suspended/banned members is blocked (403): product/legal decision. 426 upgrade screen in the app is still to do.
+- Revoke the "Founder QA" admin when testing is done.

@@ -408,9 +408,10 @@ export type PathOption = {
   stage?: string;
 };
 export type PathNode = { question: string; options: PathOption[] };
+export type PathCommunity = { slug: string; name: string; tagline: string; accept_first: boolean };
 export type PathTree = { root: string; nodes: Record<string, PathNode> };
 export type PathState = {
-  community: { slug: string; name: string; tagline: string } | null;
+  community: { slug: string; name: string; tagline: string; accept_first?: boolean } | null;
   stage: { id: string; title: string; blurb: string } | null;
   prompts: string[];
   seasonal: { title: string; body: string } | null;
@@ -654,6 +655,11 @@ export const api = {
   match: (body: { kind?: 'general' | 'personal'; issue_category?: string | null }) =>
     request<MatchResult>('/match', { method: 'POST', body: JSON.stringify(body) }, true),
 
+  /** Exam niche: the best online mentor gets the question and the chat opens only when they
+   * accept (DECISIONS §N.2). 503 when nobody is online. */
+  ask: (body: { issue_category?: string | null; intro_message?: string | null }) =>
+    request<PersonalRequest>('/match/ask', { method: 'POST', body: JSON.stringify(body) }, true),
+
   scan: (body: { text: string; conversation_id?: string | null }) =>
     request<ScanResult>('/safety/scan', { method: 'POST', body: JSON.stringify(body) }, true),
 
@@ -662,6 +668,7 @@ export const api = {
 
   // --- Paths (Communities) ---
   pathTree: () => request<PathTree>('/paths/tree'),
+  pathCommunities: () => request<PathCommunity[]>('/paths/communities'),
   myPath: () => request<PathState>('/paths/me', {}, true),
   choosePath: (community: string, stage: string) =>
     request<PathState>('/paths/me', { method: 'PUT', body: JSON.stringify({ community, stage }) }, true),

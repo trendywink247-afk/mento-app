@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -19,6 +19,8 @@ import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
+import { matchOrAsk, openAsked } from '@/lib/startChat';
+import { matchesRoad, roadChips } from '@/lib/mentorFilters';
 import { screenCache } from '@/lib/screenCache';
 import { topicLabelKey } from '@/lib/topics';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -35,7 +37,8 @@ import { font, radius, space, type, washInk } from '@/theme/tokens';
  * profile is read once (`GET /listeners/{id}`) and kept in memory for this session. A card
  * shows only what has arrived — never a guessed reply time.
  */
-type Filter = 'all' | 'online' | 'upsc' | 'life' | 'touch';
+// 'road:<slug>' chips are built from the roads mentors serve (lib/mentorFilters.ts).
+type Filter = string;
 type Detail = Pick<ListenerProfile, 'public_line' | 'availability_note' | 'community_slug'>;
 
 const PERCHES: PlacementSlot[] = [{ id: 'nextTop', type: 'top', level: 'high', home: true }];
@@ -57,11 +60,31 @@ export default function BrowseMentors() {
   const [listeners, setListeners] = useState<Listener[]>(cachedMentors ?? []);
   const [, setDetailTick] = useState(0);
   const [filter, setFilter] = useState<Filter>('all');
+  const [roadNames, setRoadNames] = useState<Record<string, string>>({});
+  const [myRoad, setMyRoad] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   /** One open question at a time (server 409 `question_open`): a still note, never a dead end. */
   const [openQ, setOpenQ] = useState<OpenQuestion | null>(null);
   const [matching, setMatching] = useState(false);
   const perch = useCompanionPlacement('mentors', PERCHES, { still: note !== null });
+
+  // Road names and the member's own road, once: the chips below follow them. Best effort — the
+  // list works without (fewer chips, never a blocked screen).
+  useEffect(() => {
+    let live = true;
+    void Promise.all([api.pathCommunities(), api.myPath().catch(() => null)])
+      .then(([all, mine]) => {
+        if (!live) return;
+        setRoadNames(Object.fromEntries(all.map((c) => [c.slug, c.name])));
+        setMyRoad(mine?.community?.slug ?? null);
+      })
+      .catch(() => {
+        /* reason: filters are a convenience; the list itself already loaded */
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -106,7 +129,12 @@ export default function BrowseMentors() {
     setNote(null);
     setOpenQ(null);
     try {
-      const match = await api.match({ kind: 'general', issue_category: topic ?? null });
+      const started = await matchOrAsk({ issue_category: topic ?? null });
+      if (started.kind === 'ask') {
+        openAsked(router, started.request);
+        return;
+      }
+      const match = started.match;
       router.push({
         pathname: '/chat/[id]',
         params: {
@@ -131,9 +159,7 @@ export default function BrowseMentors() {
         const community = details.get(l.id)?.community_slug ?? null;
         if (filter === 'online') return l.available;
         if (filter === 'touch') return Boolean(l.in_touch);
-        if (filter === 'upsc') return community === 'upsc';
-        if (filter === 'life') return community === 'life' || l.categories.includes('life');
-        return true;
+        return matchesRoad(filter, community, l.categories);
       }),
     // reason: `details` is a module map; the tick state re-renders when it fills
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,7 +169,11 @@ export default function BrowseMentors() {
   const filters: { key: Filter; label: string }[] = [
     { key: 'all', label: t('chats.filterAll') },
     { key: 'online', label: t('browse.filterOnline') },
-    { key: 'upsc', label: t('browse.filterUpsc') },
+    ...roadChips(
+      roadNames,
+      listeners.map((l) => details.get(l.id)?.community_slug),
+      myRoad,
+    ).map((c) => ({ key: c.key, label: c.label })),
     { key: 'life', label: t('browse.filterLife') },
     { key: 'touch', label: t('inTouch.badge') },
   ];

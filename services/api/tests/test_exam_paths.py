@@ -280,3 +280,12 @@ def test_path_me_reports_accept_first(client):
         "/api/v1/paths/me", json={"community": "life", "stage": "heavy_days"}, headers=_auth(member)
     )
     assert put.json()["community"]["accept_first"] is False
+
+
+def test_communities_endpoint_names_every_road(client):
+    r = client.get("/api/v1/paths/communities")
+    assert r.status_code == 200
+    by_slug = {c["slug"]: c for c in r.json()}
+    assert by_slug["life"]["accept_first"] is False
+    assert by_slug["upsc"]["accept_first"] is True and by_slug["upsc"]["name"] == "UPSC"
+    assert {"ssc", "banking", "railways", "gate", "cuet"} <= set(by_slug)
