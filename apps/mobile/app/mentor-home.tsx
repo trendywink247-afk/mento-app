@@ -10,7 +10,9 @@ import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { ConversationRow, isSnoozed } from '@/components/mentor/ConversationRow';
 import { ownLive } from '@/lib/ownLive';
+import { MentorTabBar, type MentorTab } from '@/components/mentor/MentorTabBar';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
+import { CertifiedBadge } from '@/components/CertifiedBadge';
 import { RequestCard } from '@/components/mentor/RequestCard';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
 import { LineSheet } from '@/components/mentor/LineSheet';
@@ -48,6 +50,10 @@ export default function MentorHome() {
   // undefined = still loading; null = no application on file.
   const [application, setApplication] = useState<ListenerApplication | null | undefined>(undefined);
   const [loadError, setLoadError] = useState(false);
+  // The bottom bar (Requests, Conversations, Home, Profile): plain state, so this one route and every
+  // push tap or old link to it stay as they are. The count is the number of waiting requests.
+  const [tab, setTab] = useState<MentorTab>('home');
+  const [requestCount, setRequestCount] = useState(0);
   const [switching, setSwitching] = useState(false);
   // Board A15: the stay-in-touch decision sheet over a settled-back Mentor Home.
   const [sheet, setSheet] = useState<{ ask: StayInTouchAsk; seats: number } | null>(null);
@@ -156,7 +162,7 @@ export default function MentorHome() {
   const showConsole = application?.status === 'approved' && consoleReady === true;
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={showConsole ? ['top'] : ['top', 'bottom']}>
       <SettleBack
         open={!!sheet || !!lineMe}
         onDismiss={() => {
@@ -227,6 +233,11 @@ export default function MentorHome() {
             asksVersion={asksVersion}
             lineVersion={lineVersion}
             onOpenLine={setLineMe}
+            tab={tab}
+            onTab={setTab}
+            onRequestCount={setRequestCount}
+            onSwitchTalk={() => void switchToTalk()}
+            switching={switching}
             openAskId={typeof askParam === 'string' ? askParam : undefined}
             onOpenAsk={(ask, seats) => setSheet({ ask, seats })}
             onSessionLost={() => {
@@ -268,6 +279,7 @@ export default function MentorHome() {
       ) : null}
 
       <View style={styles.grow} />
+      {showConsole && tab !== 'home' ? null : (
       <Entrance index={showConsole ? 5 : 2} style={styles.foot}>
         {showConsole ? (
           <Text style={[type.caption, styles.centerText, { color: colors.inkMuted }]}>{t('mentorHomePage.footer')}</Text>
@@ -280,8 +292,10 @@ export default function MentorHome() {
           testID="mentor-switch-talk"
         />
       </Entrance>
+      )}
         </ScrollView>
       </SettleBack>
+      {showConsole ? <MentorTabBar tab={tab} onChange={setTab} requestCount={requestCount} /> : null}
     </SafeAreaView>
   );
 }
@@ -297,6 +311,11 @@ function ConsoleBody({
   openAskId,
   onOpenAsk,
   onSessionLost,
+  tab,
+  onTab,
+  onRequestCount,
+  onSwitchTalk,
+  switching,
 }: {
   animal: CompanionAnimal | null;
   asksVersion: number;
@@ -306,14 +325,16 @@ function ConsoleBody({
   openAskId?: string;
   onOpenAsk: (ask: StayInTouchAsk, seats: number) => void;
   onSessionLost: () => void;
+  tab: MentorTab;
+  onTab: (tab: MentorTab) => void;
+  onRequestCount: (n: number) => void;
+  onSwitchTalk: () => void;
+  switching: boolean;
 }) {
   const router = useRouter();
   const { colors } = useTheme();
   const { t } = useI18n();
   const c = useMentorConsole(t('mentor.atCapacity'), t('mentor.requestTaken'));
-  // Two tabs on the console: Requests (with a count) and Conversations. null = not chosen yet,
-  // so it opens on Requests when something is waiting and on Conversations otherwise.
-  const [tab, setTab] = useState<'requests' | 'chats' | null>(null);
   useListenerHeartbeat(c.me?.status === 'online');
 
   // Detect a server-side sweep to Away (the 15-minute heartbeat timeout) versus a
@@ -338,6 +359,12 @@ function ConsoleBody({
     acknowledgedToggles.current = toggles.current;
     prevStatus.current = c.me.status;
   }, [c.me]);
+
+  // The bar's count: how many requests are waiting.
+  const waiting = c.requests.length;
+  useEffect(() => {
+    onRequestCount(waiting);
+  }, [waiting, onRequestCount]);
 
   useEffect(() => {
     if (c.error === 'session') onSessionLost();
@@ -432,7 +459,7 @@ function ConsoleBody({
   const snoozed = active.filter((conv) => isSnoozed(conv));
   const ended = c.conversations.filter((conv) => conv.status !== 'active');
   const conversations = [...awake, ...snoozed, ...ended];
-  const shownTab = tab ?? (c.requests.length > 0 ? 'requests' : 'chats');
+  const unreadChats = conversations.filter((conv) => (conv.unread ?? 0) > 0).length;
   const personalRequests = c.requests.filter((r) => !r.broadcast);
   const openRequests = c.requests.filter((r) => r.broadcast);
 
@@ -443,58 +470,82 @@ function ConsoleBody({
 
   return (
     <View style={styles.console}>
-      <PresenceHeader
-        me={c.me}
-        animal={animal}
-        busy={c.busy === 'status'}
-        swept={swept}
-        onToggle={handleToggle}
-        onOpenLine={() => c.me && onOpenLine(c.me)}
-      />
+      {tab === 'home' ? (
+        <>
+          <PresenceHeader
+            me={c.me}
+            animal={animal}
+            busy={c.busy === 'status'}
+            swept={swept}
+            onToggle={handleToggle}
+            onOpenLine={() => c.me && onOpenLine(c.me)}
+          />
 
-      {asks.length ? (
-        <Entrance index={2} style={styles.list}>
-          {asks.map((ask) => (
-            <StayInTouchRow
-              key={ask.id}
-              id={ask.id}
-              name={ask.member_persona_name}
-              onPress={() => {
-                if (c.me) onOpenAsk(ask, c.me.max_concurrent);
-              }}
-            />
-          ))}
+          {asks.length ? (
+            <Entrance index={2} style={styles.list}>
+              {asks.map((ask) => (
+                <StayInTouchRow
+                  key={ask.id}
+                  id={ask.id}
+                  name={ask.member_persona_name}
+                  onPress={() => {
+                    if (c.me) onOpenAsk(ask, c.me.max_concurrent);
+                  }}
+                />
+              ))}
+            </Entrance>
+          ) : null}
+
+          {waiting > 0 || unreadChats > 0 ? (
+            <View style={styles.chips} testID="mentor-home-summary">
+              {waiting > 0 ? (
+                <Pressable
+                  onPress={() => onTab('requests')}
+                  accessibilityRole="button"
+                  style={[styles.chip, { backgroundColor: colors.accentTint }]}
+                >
+                  <Text style={[type.label, { color: colors.accentEdge }]}>{t('mentor.summaryWaiting', { count: waiting })}</Text>
+                </Pressable>
+              ) : null}
+              {unreadChats > 0 ? (
+                <Pressable
+                  onPress={() => onTab('chats')}
+                  accessibilityRole="button"
+                  style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}
+                >
+                  <Text style={[type.label, { color: colors.ink }]}>{t('mentor.summaryUnread', { count: unreadChats })}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          ) : null}
+        </>
+      ) : null}
+
+      {tab === 'profile' ? (
+        <Entrance index={1} style={styles.section}>
+          <View style={[styles.profile, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-profile">
+            <Companion animal={animal} size={72} />
+            <Text style={[styles.h2, { color: colors.ink, paddingHorizontal: 0 }]}>{c.me.persona_name}</Text>
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
+            {c.me.certified ? <CertifiedBadge testID="mentor-profile-certified" /> : null}
+          </View>
+          <PrimaryButton
+            label={t('mentor.profileLine')}
+            variant="ghost"
+            onPress={() => c.me && onOpenLine(c.me)}
+            testID="mentor-profile-line"
+          />
+          <PrimaryButton
+            label={t('mentorHome.switchTalk')}
+            variant="link"
+            onPress={onSwitchTalk}
+            loading={switching}
+            testID="mentor-profile-switch"
+          />
         </Entrance>
       ) : null}
 
-      <View style={styles.tabs} accessibilityRole="tablist">
-        {(['requests', 'chats'] as const).map((key) => {
-          const on = shownTab === key;
-          const label =
-            key === 'requests'
-              ? c.requests.length
-                ? `${t('mentor.requestsTitle')} · ${c.requests.length}`
-                : t('mentor.requestsTitle')
-              : t('mentor.conversationsTitle');
-          return (
-            <Pressable
-              key={key}
-              onPress={() => setTab(key)}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: on }}
-              style={[
-                styles.tab,
-                { borderColor: on ? colors.accent : colors.border, backgroundColor: on ? colors.accentTint : colors.surface },
-              ]}
-              testID={`mentor-tab-${key}`}
-            >
-              <Text style={[type.label, { color: on ? colors.accentEdge : colors.inkMuted }]}>{label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {shownTab === 'requests' ? (
+      {tab === 'requests' ? (
       <Entrance index={3} style={styles.section}>
         <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
           {t('mentor.requestsTitle')}
@@ -535,7 +586,7 @@ function ConsoleBody({
       </Entrance>
       ) : null}
 
-      {shownTab === 'chats' ? (
+      {tab === 'chats' ? (
       <Entrance index={4} style={styles.section}>
         <Text style={[styles.h2, { color: colors.ink }]} accessibilityRole="header">
           {t('mentor.conversationsTitle')}
@@ -591,8 +642,9 @@ const styles = StyleSheet.create({
   console: { gap: 12 },
   list: { gap: 12 },
   section: { gap: space.sm, paddingTop: space.xs },
-  tabs: { flexDirection: 'row', gap: space.sm },
-  tab: { flex: 1, minHeight: 44, borderWidth: 1, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.sm },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  chip: { borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 8, minHeight: 36, justifyContent: 'center' },
+  profile: { alignItems: 'center', gap: space.xs, padding: space.md, borderWidth: 1, borderRadius: radius.lg },
   h2: { fontSize: 18, lineHeight: 24, fontFamily: type.label.fontFamily, paddingHorizontal: space.sm },
   pad: { paddingHorizontal: space.sm },
   grow: { flexGrow: 1, minHeight: space.md },
