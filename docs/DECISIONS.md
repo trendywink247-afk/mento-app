@@ -318,3 +318,21 @@ Source: the founder, in session, 2026-11-08. These supersede the "connected righ
 **5. Message text is never scanned for this.** Detection is the mentor's key and the member's own choice of road; the crisis scan remains the only reader of message text for safety.
 
 _Recorded as the founder stated them, 2026-11-08. Built as proposed pending the founder's objection: what a mentor submits as proof of certification is a self-declared credential (free text, 200 characters) that an admin reads; a document upload would add stored personal data and a privacy-policy change and is not built._
+
+## P. Founder rulings — 2026-11-08 (UPSC launch scope, gold mentors, requests)
+
+Recorded from the founder's meeting notes and answers; items marked _proposed_ are built as recommended pending the founder's objection.
+
+**1. Launch covers UPSC only.** JEE, NEET and the other exam roads stay in the app **greyed out ("Coming soon"), not hidden**, and cannot be selected. The server holds the list of enabled roads (UPSC plus life in general) and rejects an ask for a disabled road, so an older app build cannot bypass it. Enabling a road later is a setting, not a release. UPSC prelims / mains / interview classification is deferred; people ask general questions at first.
+
+**2. Gold tier: "Mento verified mentors".** In-service officers, onboarded **only by invitation** from the founder's vetted personal contacts (the founder will supply contacts who cleared prelims or mains). A gold mentor may keep an optional mentee profile; switching persona changes the whole app and mutes mentor notifications. Gold mentors have the capped allowance (§O.1); listeners stay unlimited. There is one listener category for now: peer listeners, all tagged **unverified**.
+
+**3. Invite and recovery (_proposed_).** An admin creates a single-use invite (expires in 7 days) and sends the link or code himself; **no email address is stored**. Claiming it creates a mentor who is certified from the start, with no application, and shows a **recovery code once** (hash stored only), reusing the member recovery mechanism, so access survives a deleted app or a new phone. The code is rate-limited and an admin can revoke and reissue. The self-applied path never produces gold.
+
+**4. Requests (_proposed_).** Requests are **personal** (one mentor) or **general** (broadcast). On the UPSC road "Next available" **broadcasts to online gold mentors** (about 20 at most); the **first to accept takes it** (atomic) and it disappears for the others. Life in general keeps the instant match. Mentors get a **Requests tab** with Personal and General. A mentor's profile also keeps a **notes area** of reusable prepared answers.
+
+**5. Unanswered personal requests (_proposed_).** After 24 hours the member is asked (push and card): send to all gold mentors, pick another, keep waiting, or withdraw. Nothing moves without their say-so, because their text would otherwise reach other mentors. At 48 hours the request expires with a kind message and the same options.
+
+**6. Response time (_proposed_).** Mentors and listeners show "Usually replies within a day / 2 days", from the median first reply over 30 days, only after at least 5 requests.
+
+_Build order: UPSC gate, invite-only gold with recovery, broadcast and Requests tab, then the 24/48-hour rule and the response-time badge._
