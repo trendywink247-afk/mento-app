@@ -7,8 +7,8 @@ On dev 2026-11-08 (#118 to #124): QA build beside store, CI streamline, DECISION
 
 **Next 3 tasks:**
 1. PR for `feat/accept-flow-fixes`, then OTA is already on QA preview; remaining device passes: decline, snooze, End, report, crisis view, push for a new request, busy card (nobody online), dark mode, large font, rotation, TalkBack.
-2. Chat-list preview for own chats (needs the last message in the list response); the undismissable Feedback sheet (needs a repro).
-3. Mentor Home stays on a stale state after approval until the screen re-focuses (fixed in `feat/accept-flow-fixes`); check other screens that promise live updates.
+2. Chat-list preview for own chats shows a placeholder, not the last message (needs it in the list response); an ended own chat shows no transcript to the member and its header still says "here now"; the undismissable Feedback sheet (needs a repro).
+3. Not yet on a device: snooze, the busy card with nobody online (needs a second online mentor taken offline), dark mode, large font, rotation, TalkBack.
 
 **Open questions:**
 - Run the Rollback Rehearsal on GitHub before relying on the `main` repair in the release workflows.
