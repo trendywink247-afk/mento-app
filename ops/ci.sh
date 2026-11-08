@@ -116,7 +116,10 @@ step "scripts/ci unittests" bash -c 'cd "$1" && python3 -m unittest discover -s 
 
 # --- Mobile ---------------------------------------------------------------------
 cd "$MOBILE" || die "no $MOBILE"
-step "npm ci" npm ci --no-audit --no-fund
+# Skia's install script fetches Android/iOS prebuilt binaries from GitHub releases. This run only
+# typechecks and runs Node unit tests, so it never needs them, and a GitHub release-host 504 must not
+# fail the gate (it did, 2026-11-08).
+step "npm ci" env SKIP_SKIA_DOWNLOAD=1 npm ci --no-audit --no-fund
 step "typecheck" npm run typecheck
 for t in route question placement bubble; do
     step "test:$t" npm run "test:$t"
