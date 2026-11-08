@@ -286,3 +286,21 @@ Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code al
 **4. Copy must match reality at cutover, not before.** `docs/PRIVACY.md` and the Clean Wipe wording change when own chat goes live: Stream stops being a processor, message bodies live in our database and are deleted from it on wipe, and backups exclude message bodies.
 
 **5. Still open (decide before launch, disclose in `PRIVACY.md`):** cutover style (the spec recommends a hard cutover); chat backup option (A, B or C; spec recommends B); staff visibility of chats (A to D; spec recommends B); two-person approval; push payload shape (notification plus data today, data-only to be tested).
+
+---
+
+## N. Founder rulings — 2026-11-08 (Path before connecting; accept for exam niches)
+
+Source: the founder, in session, 2026-11-08. These supersede the "connected right away" wording of K.5 and the General-match promise of §14 **for exam niches only**.
+
+**1. The Path is also a step before connecting.** A member can pick what they are preparing for (or "life in general") before asking for a mentor, then see which mentors are around. It stays coarse, optional and clearable: **never a gate**, "skip" is always one tap, and it must never strand a member unmatched (K.1 stands).
+
+**2. Exam niches need the mentor's accept; life in general does not.** When the member's Path is an exam niche (UPSC, NEET, JEE and the other exam communities in the Path tree), nobody is connected until a mentor accepts the request, even when a mentor in that niche is online. When the member's Path is life in general (the "hard path" lens; the final name is still open) or nothing is chosen, the General instant match is unchanged and mentors outside the exam niches keep getting instant chats. A mentor not in the niche is not affected by the accept rule.
+
+**3. Waiting is honest and never leaves a member alone with it.** While a request is waiting for an accept the member sees whose request it is and how long it has waited; the helpline card stays visible; the crisis scan runs on the intro as on every message; after a timeout the member is offered another mentor or to leave the question as a letter. Safety gates: this changes the first moments of a conversation, so it needs tests and the founder's explicit review before its PR (`CLAUDE.md`).
+
+**4. When no mentor is online** the screen offers **"Become a mentor"** and **"Invite a mentor"**. An invite is a plain share link; it carries no member identity (anonymity stands).
+
+**5. Exam options are broad and tappable.** The Path offers the common Indian exams as one-tap choices with a one-line plain description each, the most used first, and a search for the rest. UPSC and JEE get extra shortcuts for the usual preparation stages.
+
+**6. Scope.** Everything above is inside v1. The self-assessment suite (§D.8), Module B mentoring and Community stay deferred; the founder asked for the thinking only, which lives in `docs/proposals/self-assessment-and-community.md`.
