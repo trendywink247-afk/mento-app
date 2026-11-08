@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   promote:
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment: production
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -27,12 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: master
+          ref: main
           fetch-depth: 0
       - name: Verify exact-commit tests and accepted staging artifact
         run: |
           python3 scripts/ci/release_gate.py checks "$SHA"
-          git merge-base --is-ancestor "$SHA" origin/master
+          git merge-base --is-ancestor "$SHA" origin/main
           python3 scripts/ci/release_gate.py staging "$STAGING_RUN" "$SHA"
           (cd candidate && sha256sum --check SHA256SUMS)
       - name: Require production readiness switch

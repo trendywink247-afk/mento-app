@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: Full SHA on master with complete API, web and native push or manual checks
+        description: Full SHA on main with complete API, web and native push or manual checks
         required: true
       reuse_build_run_id:
         description: Optional completed staging run whose immutable build should be retried
@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   stage:
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     environment: staging
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -27,9 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: master
+          ref: main
           fetch-depth: 0
-      - name: Require exact-commit complete master checks
+      - name: Require exact-commit complete main checks
         run: |
           mkdir candidate
           python3 scripts/ci/release_gate.py checks "$SHA" > "$RUNNER_TEMP/current-checks.json"
@@ -38,7 +38,7 @@ jobs:
           if [ -z "$REUSE_RUN" ]; then
             cp "$RUNNER_TEMP/current-checks.json" candidate/checks.json
           fi
-          git merge-base --is-ancestor "$SHA" origin/master
+          git merge-base --is-ancestor "$SHA" origin/main
           git checkout --detach "$SHA"
       - name: Reuse a previously built candidate for a deployment retry
         if: inputs.reuse_build_run_id != ''
