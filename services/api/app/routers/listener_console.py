@@ -22,7 +22,7 @@ from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
 from app.jobs import tasks
-from app.models.chat_message import ChatMessage
+from app.models.chat_message import ChatMessage, ChatReadMarker
 from app.models.conversation import Conversation
 from app.models.enums import (
     ConversationEndedBy,
@@ -299,6 +299,45 @@ def register_push_token(
     return {"status": "registered"}
 
 
+def _own_waiting(db: Session, listener_id: str, convos: list[Conversation]) -> dict[str, dict]:
+    """For each ACTIVE own chat: since when the member has been waiting on this mentor (the
+    first member message after the mentor's last word) and how many member messages are
+    unread. Active chats are few (a mentor holds a handful), so this is a handful of small
+    indexed reads, not a scan."""
+    out: dict[str, dict] = {}
+    for c in convos:
+        if c.chat_backend != "own" or c.status != ConversationStatus.active:
+            continue
+        last_mentor = (
+            db.scalar(
+                select(func.max(ChatMessage.seq)).where(
+                    ChatMessage.conversation_id == c.id, ChatMessage.sender_kind == "mentor"
+                )
+            )
+            or 0
+        )
+        since = db.scalar(
+            select(func.min(ChatMessage.created_at)).where(
+                ChatMessage.conversation_id == c.id,
+                ChatMessage.sender_kind == "member",
+                ChatMessage.seq > last_mentor,
+            )
+        )
+        marker = db.get(ChatReadMarker, (c.id, listener_id))
+        read = marker.last_read_seq if marker else 0
+        unread = db.scalar(
+            select(func.count())
+            .select_from(ChatMessage)
+            .where(
+                ChatMessage.conversation_id == c.id,
+                ChatMessage.sender_kind == "member",
+                ChatMessage.seq > read,
+            )
+        )
+        out[c.id] = {"waiting_since": since.isoformat() if since else None, "unread": unread or 0}
+    return out
+
+
 @router.get("/me/conversations", response_model=list[ListenerConversationItem])
 def my_conversations(
     listener: ListenerProfile = Depends(current_listener),
@@ -334,6 +373,7 @@ def my_conversations(
         .offset(offset)
     ).all()
     linked = in_touch.listener_in_touch_user_ids(db, listener.id, {user.id for _c, user in rows})
+    waiting = _own_waiting(db, listener.id, [c for c, _u in rows])
     return [
         ListenerConversationItem(
             id=convo.id,
@@ -349,6 +389,7 @@ def my_conversations(
             snoozed_until=snooze.snoozed_until_iso(convo, now),
             user_companion_animal=user.companion_animal,
             user_companion_colour=user.companion_colour,
+            **waiting.get(convo.id, {}),
         )
         for convo, user in rows
     ]

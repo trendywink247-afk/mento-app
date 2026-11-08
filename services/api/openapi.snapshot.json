@@ -1222,6 +1222,33 @@
             ],
             "title": "Issue Category Label"
           },
+          "last_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message"
+          },
+          "last_message_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message At"
+          },
+          "last_message_mine": {
+            "default": false,
+            "title": "Last Message Mine",
+            "type": "boolean"
+          },
           "listener_companion_animal": {
             "default": "Owl",
             "title": "Listener Companion Animal",
@@ -2906,6 +2933,11 @@
             ],
             "title": "Stream Channel Id"
           },
+          "unread": {
+            "default": 0,
+            "title": "Unread",
+            "type": "integer"
+          },
           "user_companion_animal": {
             "anyOf": [
               {
@@ -2935,6 +2967,17 @@
           "user_persona_name": {
             "title": "User Persona Name",
             "type": "string"
+          },
+          "waiting_since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Since"
           }
         },
         "required": [

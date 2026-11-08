@@ -57,6 +57,10 @@ export type ListenerConversation = {
   in_touch?: boolean;
   /** Snooze 24 h (board A10): when the snooze ends, while it is open; else null. */
   snoozed_until?: string | null;
+  /** Own chats only: when the member began waiting on this mentor's reply (ISO), and how many
+   * of their messages are unread. Absent for Stream chats (mirrored live) or an older server. */
+  waiting_since?: string | null;
+  unread?: number;
   /** The member's companion in their colour (board A10 rows). Never its name. */
   user_companion_animal?: string | null;
   user_companion_colour?: string | null;

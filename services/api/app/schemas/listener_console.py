@@ -83,6 +83,11 @@ class ListenerConversationItem(BaseModel):
     # Snooze 24 h (board A10): when the snooze ends (ISO UTC) while it is open; null
     # otherwise. Snoozed rows sort after the un-snoozed active ones.
     snoozed_until: str | None = None
+    # Own chats only (Stream rows are mirrored client-side): when the member began waiting for
+    # this mentor's reply (their latest unanswered message), and how many member messages the
+    # mentor has not read. Counts and a time, never text.
+    waiting_since: str | None = None
+    unread: int = 0
     # The MEMBER's growth companion in their colour (board A10 rows) — the same two
     # values the member brief carries. Never the companion's name (private, lane u7).
     user_companion_animal: str | None = None

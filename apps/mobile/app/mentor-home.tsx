@@ -9,6 +9,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { ConversationRow, isSnoozed } from '@/components/mentor/ConversationRow';
+import { ownLive } from '@/lib/ownLive';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { RequestCard } from '@/components/mentor/RequestCard';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
@@ -502,7 +503,7 @@ function ConsoleBody({
             <ConversationRow
               key={conversation.id}
               conversation={conversation}
-              live={conversation.stream_channel_id ? c.live[conversation.stream_channel_id] : undefined}
+              live={conversation.stream_channel_id ? c.live[conversation.stream_channel_id] : ownLive(conversation)}
               onPress={() => openConversation(conversation)}
               onSnooze={(on) => void setSnooze(conversation.id, on)}
               snoozeBusy={c.busy === `snooze:${conversation.id}`}

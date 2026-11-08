@@ -232,6 +232,15 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
           .catch(() => {
             /* the 30s poll is a freshness nicety, not a source of truth — swallow */
           });
+        // Own chats have no Stream mirror: who is waiting and what is unread arrives with the rows.
+        void listenerApi
+          .conversations()
+          .then((rows) => {
+            if (focused) setConversations(rows);
+          })
+          .catch(() => {
+            /* same: the next poll or focus catches up */
+          });
       }, REQUEST_POLL_MS);
       return () => {
         focused = false;
