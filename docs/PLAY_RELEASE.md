@@ -2,6 +2,8 @@
 
 Package `chat.mento.app`. Play needs a signed `.aab`. The build never signs with the debug key.
 
+Preview and development builds are a different app, "Mento QA" (`chat.mento.app.qa`), so a QA build and the Play build install side by side on one phone. Only the production variant is the store app. The QA package gets push once it is added as an Android app in the Firebase project and `google-services.json` is refreshed: `app.config.ts` attaches the Firebase file only when it lists the package.
+
 ## One-time: upload key (on your own machine, not the server)
 
 ```bash

@@ -27,8 +27,13 @@ for (const variant of ['production', 'preview', 'development']) {
   assert.equal(config.updates.requestHeaders['expo-channel-name'], eas.build[variant].channel);
   const properties = config.plugins.find(p => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
   assert.equal(properties.android.usesCleartextTraffic, variant !== 'production');
-  assert.equal(config.ios.bundleIdentifier, 'chat.mento.app');
-  assert.equal(config.android.package, base.android.package);
+  // The store build keeps the store ids; every other variant installs beside it as "Mento QA".
+  const qa = variant !== 'production';
+  assert.equal(config.ios.bundleIdentifier, qa ? 'chat.mento.app.qa' : 'chat.mento.app');
+  assert.equal(config.android.package, qa ? `${base.android.package}.qa` : base.android.package);
+  assert.equal(config.name, qa ? 'Mento QA' : 'Mento');
+  // google-services.json lists both packages, so every variant gets the push file.
+  assert.equal(config.android.googleServicesFile, './google-services.json');
   assert.deepEqual(config.runtimeVersion, base.runtimeVersion);
   assert.equal(config.updates.url, base.updates.url);
   assert.equal(config.updates.enabled, base.updates.enabled);
