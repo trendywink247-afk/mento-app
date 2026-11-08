@@ -304,3 +304,11 @@ Source: the founder, in session, 2026-11-08. These supersede the "connected righ
 **5. Exam options are broad and tappable.** The Path offers the common Indian exams as one-tap choices with a one-line plain description each, the most used first, and a search for the rest. UPSC and JEE get extra shortcuts for the usual preparation stages.
 
 **6. Scope.** Everything above is inside v1. The self-assessment suite (§D.8), Module B mentoring and Community stay deferred; the founder asked for the thinking only, which lives in `docs/proposals/self-assessment-and-community.md`.
+
+## O. Founder rulings — 2026-11-08 (message limit and verification by kind of listening)
+
+**1. The 10-message limit applies only to certified exam mentors** (UPSC, JEE and the other exam roads), **not to general listening.** This narrows §L.2: the 3-in-a-row / 10-a-day allowance stays for conversations with an exam mentor; a general emotional or life conversation has no daily or in-a-row cap. Crisis-flagged messages stay never blocked and never counted (T&S #1), as before.
+
+**2. General emotional or life listening requires no verification.** Verification applies to exam mentoring.
+
+_Recorded as the founder stated them. Open, not yet built or assumed (see the note to the founder, 2026-11-08): what makes an exam mentor "certified" and who certifies; what happens to a conversation's cap if it moves between a life topic and an exam topic; whether "no verification" for general listening means mentor approval is dropped for them or only that no certificate is needed. Mentor vetting is a safety control (CLAUDE.md): nothing on it changes until the founder rules on that third point._
