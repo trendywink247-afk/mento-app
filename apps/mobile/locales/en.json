@@ -600,6 +600,7 @@
     "newChatBody": "Both are private. Both are real people.",
     "newChatNow": "Next available mentor",
     "newChatNowSub": "Right away if a mentor is online now.",
+    "newChatAskSub": "Goes to the best mentor online. A chat opens when they accept.",
     "newChatPick": "Pick a mentor",
     "newChatPickSub": "Browse who is around. They reply when they are free.",
     "newChatCancel": "Not right now",
