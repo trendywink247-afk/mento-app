@@ -896,6 +896,7 @@
     "oneAtATime": "One question goes to one mentor at a time."
   },
   "browse": {
+    "emptyCertified": "No verified mentor is online right now. You can ask a question and the first one to be free will take it, or look at everyone.",
     "replyDay": "Usually replies within a day",
     "replyTwoDays": "Usually replies within 2 days",
     "title": "Mentors",

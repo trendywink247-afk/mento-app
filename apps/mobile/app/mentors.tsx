@@ -368,7 +368,11 @@ export default function BrowseMentors() {
             }
             ListEmptyComponent={
               <Text style={[type.note, styles.empty, { color: colors.inkMuted }]} testID="browse-empty">
-                {filter === 'touch' ? t('inTouch.emptyBody') : t('browse.empty')}
+                {filter === 'touch'
+                  ? t('inTouch.emptyBody')
+                  : filter === 'certified'
+                    ? t('browse.emptyCertified')
+                    : t('browse.empty')}
               </Text>
             }
             ListFooterComponent={
