@@ -205,7 +205,10 @@ export default function Pathfinder() {
     const on = r.key === routeKey;
     const look = r.kind === 'unsure' ? UNSURE_DISC : disc(i);
     const childLabels =
-      r.kind === 'branch' ? (tree?.nodes[r.next]?.options ?? []).map((o) => o.label).join(' · ') : '';
+      r.kind === 'branch' ? (tree?.nodes[r.next]?.options ?? [])
+            .filter((o) => o.enabled !== false) // roads that are not open yet are not advertised here
+            .map((o) => o.label)
+            .join(' · ') : '';
     const title =
       r.kind === 'group'
         ? r.community === 'life'
@@ -361,11 +364,15 @@ export default function Pathfinder() {
                                 { color: on ? colors.accentEdge : colors.inkMuted },
                                 closed && styles.segClosed,
                               ]}
-                              numberOfLines={3}
+                              numberOfLines={closed ? 2 : 3}
                             >
                               {s.label}
-                              {closed ? `\n${t('pathfinder.comingSoon')}` : ''}
                             </Text>
+                            {closed ? (
+                              <Text style={[styles.segText, styles.segClosed, { color: colors.inkMuted }]} numberOfLines={1}>
+                                {t('pathfinder.comingSoon')}
+                              </Text>
+                            ) : null}
                           </PressKey>
                         );
                       })}
