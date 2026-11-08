@@ -26,9 +26,9 @@
     },
     {
       "client_info": {
-        "mobilesdk_app_id": "1:124659214563:android:6154575d407cd92aa13dd6",
+        "mobilesdk_app_id": "1:124659214563:android:a91e9b749bb02424a13dd6",
         "android_client_info": {
-          "package_name": "com.mento.app"
+          "package_name": "chat.mento.app.qa"
         }
       },
       "oauth_client": [],
