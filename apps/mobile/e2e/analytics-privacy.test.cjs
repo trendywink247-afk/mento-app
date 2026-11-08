@@ -34,7 +34,8 @@ test('all existing approved event shapes survive the runtime boundary', () => {
   for (const companion of ['Panda', 'Elephant', 'Fox', 'Turtle', 'Deer', 'Owl', 'Dog', 'Cat', 'Capybara']) {
     assert.deepEqual(plain(safeEvent('onboarding_companion_chosen', { companion })), { companion });
   }
-  for (const community of ['upsc', 'neet', 'jee', 'exams', 'life']) {
+  for (const community of ['upsc', 'neet', 'jee', 'exams', 'life', 'ssc', 'banking', 'railways', 'psc', 'defence',
+    'teaching', 'gate', 'cuet', 'law', 'mba', 'ugcnet', 'ca', 'boards']) {
     assert.deepEqual(plain(safeEvent('path_chosen', { community })), { community });
   }
 });

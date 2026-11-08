@@ -154,19 +154,22 @@ export default function PathQuestion() {
     else leaveToPath(router);
   }, [pathLoaded, starter, prompts, router]);
 
+  // An exam road waits for a mentor's accept (DECISIONS §N.2): the words go to ONE mentor as the
+  // question, and there is no chat to edit in until they say yes.
+  const acceptFirst = Boolean(path?.community?.accept_first);
   const community = params.community ?? path?.community?.slug ?? null;
   const lens =
     params.lens ?? (path?.community && path.stage ? `${path.community.name} · ${path.stage.title}` : '');
 
-  const offered = useMemo(() => chipsFor(community), [community]);
+  const offered = useMemo(() => chipsFor(community, acceptFirst), [community, acceptFirst]);
   const assembled = useMemo(
     () =>
       assembleQuestion(
         starter,
-        chosenChips(choice, community).map((id) => t(CHIP_CLAUSE[id])),
+        chosenChips(choice, community, acceptFirst).map((id) => t(CHIP_CLAUSE[id])),
         { joinList: t('pathQuestion.joinList'), joinLast: t('pathQuestion.joinLast'), stop: t('pathQuestion.stop') },
       ),
-    [starter, choice, community, t],
+    [starter, choice, community, acceptFirst, t],
   );
 
   const another = () => {
@@ -368,7 +371,7 @@ export default function PathQuestion() {
           <View style={styles.promise}>
             <Ionicons name="lock-closed-outline" size={15} color={colors.inkMuted} style={styles.promiseIcon} />
             <Text style={[type.caption, styles.promiseText, { color: colors.inkMuted }]}>
-              {t('pathQuestion.editable')}
+              {t(acceptFirst ? 'pathQuestion.sentToMentor' : 'pathQuestion.editable')}
             </Text>
           </View>
           {assembled.dropped > 0 ? (
@@ -412,12 +415,13 @@ export default function PathQuestion() {
         ) : null}
         <Entrance index={6}>
           <View style={styles.actions}>
+            {acceptFirst ? null : (
             <PressKey
               onPress={() => void go('edit')}
               edge={colors.edgeSurface}
               intent="navigate"
               radius={radius.md}
-              disabled={busy !== null || !assembled.text}
+              disabled={busy !== null || !assembled.text || !pathLoaded}
               accessibilityLabel={t('pathQuestion.editA11y')}
               testID="pq-edit"
               containerStyle={styles.editBox}
@@ -431,13 +435,14 @@ export default function PathQuestion() {
                 </Text>
               )}
             </PressKey>
+            )}
             <PressKey
               onPress={() => void go('continue')}
               edge={colors.accentEdge}
               intent="commit"
               radius={radius.md}
               disabled={busy !== null || !assembled.text}
-              accessibilityLabel={t('pathQuestion.continueA11y')}
+              accessibilityLabel={t(acceptFirst ? 'pathQuestion.continueAskA11y' : 'pathQuestion.continueA11y')}
               testID="pq-continue"
               containerStyle={styles.continueBox}
               style={[styles.action, styles.actionFilled, { backgroundColor: colors.accent }]}

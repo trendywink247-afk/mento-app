@@ -160,8 +160,31 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   }, [conversationId, member, role]);
 
   const leave = () => member ? leaveToChats(router) : leaveToMentorHome(router);
+  // A fresh connection to an ended chat is refused with the same close as "not yours" (the server
+  // keeps those answers identical on purpose). The member's own state read tells them apart, so an
+  // ended conversation says so instead of offering a Retry that can never work.
+  const [endedByState, setEndedByState] = useState(false);
+  useEffect(() => {
+    if (!member || snapshot?.reason !== 'not_authorized') return;
+    let live = true;
+    void api.conversationState(conversationId)
+      .then(state => { if (live && state.status === 'ended') setEndedByState(true); })
+      .catch(() => { /* reason: the generic error and Retry stay; nothing is lost */ });
+    return () => { live = false; };
+  }, [member, snapshot?.reason, conversationId]);
+  // An ended chat is still the member's to read: the socket refuses it, the REST history does not.
+  const [archive, setArchive] = useState<ThreadMsg[] | null>(null);
+  const archiveList = useRef<FlatList<ThreadMsg>>(null);
+  useEffect(() => {
+    if (!member || !endedByState || !actor) return;
+    let live = true;
+    void api.ownChatMessages(conversationId)
+      .then(r => { if (live) setArchive(r.messages.map(m => ({ id: m.id, text: m.text, mine: m.sender === actor, at: m.ts }))); })
+      .catch(() => { /* reason: the ended notice stands without the transcript */ });
+    return () => { live = false; };
+  }, [member, endedByState, actor, conversationId]);
   const closed = snapshot?.status === 'terminal';
-  const retryable = error || snapshot?.reason === 'not_authorized' || snapshot?.reason === 'reconnect_exhausted';
+  const retryable = !endedByState && (error || snapshot?.reason === 'not_authorized' || snapshot?.reason === 'reconnect_exhausted');
   const connectionFailed = error || closed || snapshot?.reason === 'reconnect_exhausted';
   const ready = snapshot?.status === 'ready';
   const saved = new Set([...header.savedMessageIds, ...savedNow]);
@@ -213,15 +236,24 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
     {member ? <MemberSessionGuard /> : null}
     <CompanionPerches placement={perch}>
     {member ? <ChatHeaderCard conversationId={conversationId} name={name} face={header.face ?? undefined}
-      status={header.profile?.status ?? null} replyWithinADay={!!header.profile?.reply_within_a_day}
+      status={endedByState ? null : header.profile?.status ?? null} replyWithinADay={!!header.profile?.reply_within_a_day}
       community={header.community} topic={header.topic} savedCount={header.savedCount} onBack={leave}
       onOpenProfile={() => router.push({ pathname: '/mentor-profile/[id]', params: { id: conversationId, name } })}
       onOpenOptions={() => setOptions(true)} /> : <MentorChatHeader memberName={name} brief={brief}
       here={!!snapshot?.peerOnline} masked={params.masked === '1' || !!brief?.member_masked} onBack={leave}
       onOpenBrief={() => router.push({ pathname: '/mentor/member/[id]', params: { id: conversationId, member: name } })}
       onOptions={() => setMenu('open')} onHelplines={() => setHelplines(true)} />}
-    {connectionFailed ? <View style={styles.center}>
-      <Text style={[type.body, { color: colors.ink }]}>{t(snapshot?.reason === 'ended' ||
+    {connectionFailed && endedByState && archive?.length ? <FlatList data={archive} keyExtractor={item => item.id}
+      style={styles.flex} contentContainerStyle={[styles.thread, { paddingBottom: space.lg }]}
+      testID="own-native-archive"
+      onContentSizeChange={() => archiveList.current?.scrollToEnd({ animated: false })} ref={archiveList}
+      renderItem={({ item }) => <ThreadRow item={item} dayText={null} statusText={null} arrival={null}
+        arrivalStep={0} saveOpen={false} nudge={false} isSaved={false} savedNow={false} onToggleSave={() => {}}
+        onSave={() => {}} onArrived={() => {}} onLongPress={setHeld} />}
+      ListFooterComponent={<Text style={[type.body, { color: colors.inkMuted, textAlign: 'center', paddingTop: space.md }]}
+        testID="own-native-ended">{t('reflection.ended')}</Text>} />
+    : connectionFailed ? <View style={styles.center}>
+      <Text style={[type.body, { color: colors.ink }]}>{t(endedByState || snapshot?.reason === 'ended' ||
         snapshot?.reason === 'wiped' ? 'reflection.ended' : 'chat.errOpen')}</Text>
       {retryable ? <PrimaryButton label={t('common.retry')} onPress={onRetry} testID="own-native-retry" /> : null}
     </View> : <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}

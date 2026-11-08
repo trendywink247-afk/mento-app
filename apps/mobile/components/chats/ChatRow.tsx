@@ -208,7 +208,8 @@ const styles = StyleSheet.create({
   },
   rowTop: { alignItems: 'flex-start' },
   body: { flex: 1, minWidth: 0, gap: 1 },
-  headline: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // Wraps at large text sizes so the name is never cut to "Gentle …" beside its state chip.
+  headline: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 6 },
   name: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22, flexShrink: 1 },
   // The time is pushed right by the margin, NOT by growing: a growing time ate the row's
   // spare width and clipped a long name to one word at 390 ("Gentle …").

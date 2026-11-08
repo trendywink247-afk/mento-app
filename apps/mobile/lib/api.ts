@@ -228,7 +228,11 @@ export type ConversationListItem = {
   reply_within_a_day?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
   listener_companion_animal?: string | null;
-  listener_companion_colour?: string | null;
+  listener_companion_colour?: string | null;  /** The last line of an OWN chat (server-cut to one short line). Absent for a Stream chat (previewed
+   * client-side), a PIN-locked or wiped chat, or an older server. */
+  last_message?: string | null;
+  last_message_at?: string | null;
+  last_message_mine?: boolean;
 };
 
 export type ConversationState = {
@@ -664,6 +668,10 @@ export const api = {
     request<ScanResult>('/safety/scan', { method: 'POST', body: JSON.stringify(body) }, true),
 
   listConversations: () => request<ConversationListItem[]>('/conversations', {}, true),
+  /** An own chat's history over REST, for a chat the socket will no longer open (it ended). */
+  ownChatMessages: (id: string) =>
+    request<{ messages: { id: string; seq: number; sender: string; text: string; ts: string }[]; last_seq: number }>(
+      `/chat/${encodeURIComponent(id)}/messages`, {}, true),
   conversationState: (id: string) => request<ConversationState>(`/conversations/${encodeURIComponent(id)}/state`, {}, true),
 
   // --- Paths (Communities) ---

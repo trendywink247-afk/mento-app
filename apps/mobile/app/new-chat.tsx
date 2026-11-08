@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { BusyExits } from '@/components/BusyExits';
@@ -12,6 +12,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
+import { screenCache } from '@/lib/screenCache';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
 import { TOPICS } from '@/lib/topics';
 import { useI18n } from '@/lib/i18n';
@@ -57,6 +58,21 @@ export default function NewChatSheet() {
   const params = useLocalSearchParams<{ topic?: string; question?: string; busy?: string }>();
   const [topic, setTopic] = useState<string | null>(params.topic ?? null);
   const [matching, setMatching] = useState(false);
+  // An exam road waits for the mentor's accept: the sheet must not promise "right away" there.
+  // The server decides what happens; this only words the door truthfully.
+  const [acceptFirst, setAcceptFirst] = useState(Boolean(screenCache.get('path')?.community?.accept_first));
+  useEffect(() => {
+    let live = true;
+    void api
+      .myPath()
+      .then((p) => live && setAcceptFirst(Boolean(p.community?.accept_first)))
+      .catch(() => {
+        /* reason: the line stays as cached; the door itself works either way */
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
   const [note, setNote] = useState<Note | null>(params.busy === '1' ? { kind: 'busy' } : null);
   // "Everyone is busy" is a still state: the companion sits, nothing moves.
   const perch = useCompanionPlacement('newChat', PERCHES, { still: note !== null });
@@ -146,7 +162,7 @@ export default function NewChatSheet() {
               radius={radius.lg}
               intent="commit"
               accessibilityLabel={t('chats.newChatNow')}
-              accessibilityHint={t('chats.newChatNowSub')}
+              accessibilityHint={t(acceptFirst ? 'chats.newChatAskSub' : 'chats.newChatNowSub')}
               testID="new-chat-now"
               style={[styles.door, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
@@ -155,7 +171,9 @@ export default function NewChatSheet() {
               </View>
               <View style={styles.doorText}>
                 <Text style={[styles.doorTitle, { color: colors.ink }]}>{t('chats.newChatNow')}</Text>
-                <Text style={[type.note, { color: colors.inkMuted }]}>{t('chats.newChatNowSub')}</Text>
+                <Text style={[type.note, { color: colors.inkMuted }]}>
+                  {t(acceptFirst ? 'chats.newChatAskSub' : 'chats.newChatNowSub')}
+                </Text>
               </View>
               {matching ? (
                 <ActivityIndicator color={colors.accent} />

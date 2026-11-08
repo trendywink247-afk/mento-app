@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
@@ -12,8 +12,12 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { colors as base, radius, space, type, wash, washEdge } from '@/theme/tokens';
 
-// Must match services/api/app/services/paths_data.py COMMUNITIES (server validates; drift = submit-time 422).
-const COMMUNITIES = ['upsc', 'neet', 'jee', 'exams', 'life'] as const;
+// The roads a mentor can say they know come from the server (`GET /paths/communities`), so a new
+// exam road needs no app release. These five (with their own translated names) are the fallback
+// when that read fails, and keep their translated labels when it works. The server validates the
+// slugs and accepts at most MAX_COMMUNITIES.
+const KNOWN_COMMUNITIES = ['upsc', 'neet', 'jee', 'exams', 'life'] as const;
+const MAX_COMMUNITIES = 5;
 // Must match ListenerApplicationIn.availability — the single-choice commitment, kept in the
 // contract (DECISIONS §L, founder-delegated 2026-09-19) and drawn as the board's quiet
 // caption "A few hours a week" beside the chips; tapping it steps through the four.
@@ -60,8 +64,26 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         ? t('mentorApply.gateAvailability')
         : null;
 
+  const [roads, setRoads] = useState<{ slug: string; name: string | null }[]>(
+    KNOWN_COMMUNITIES.map((slug) => ({ slug, name: null })),
+  );
+  useEffect(() => {
+    let live = true;
+    void api
+      .pathCommunities()
+      .then((all) => live && all.length > 0 && setRoads(all.map((c) => ({ slug: c.slug, name: c.name }))))
+      .catch(() => {
+        /* reason: the five known roads stay; an older server has no such route */
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const atCap = communities.length >= MAX_COMMUNITIES;
   const toggleCommunity = (slug: string) =>
-    setCommunities((cs) => (cs.includes(slug) ? cs.filter((c) => c !== slug) : [...cs, slug]));
+    setCommunities((cs) =>
+      cs.includes(slug) ? cs.filter((c) => c !== slug) : cs.length >= MAX_COMMUNITIES ? cs : [...cs, slug],
+    );
   const toggleTime = (slot: Time) =>
     setTimes((ts) => (ts.includes(slot) ? ts.filter((x) => x !== slot) : [...ts, slot]));
   const nextCommitment = () =>
@@ -141,13 +163,15 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
       <Entrance index={1} style={styles.group}>
         <View style={styles.labelRow}>
           <Text style={[type.rowTitle, styles.shrink, { color: colors.ink }]}>{t('mentorApply.communitiesLabel')}</Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.communitiesHint')}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>
+            {atCap ? t('mentorApply.communitiesMax', { max: MAX_COMMUNITIES }) : t('mentorApply.communitiesHint')}
+          </Text>
         </View>
         <View style={styles.chips}>
-          {COMMUNITIES.map((slug) =>
+          {roads.map(({ slug, name }) =>
             chip(
               slug,
-              t(`mentorApply.community_${slug}` as TKey),
+              (KNOWN_COMMUNITIES as readonly string[]).includes(slug) ? t(`mentorApply.community_${slug}` as TKey) : (name ?? slug),
               communities.includes(slug),
               () => toggleCommunity(slug),
               `apply-community-${slug}`,
