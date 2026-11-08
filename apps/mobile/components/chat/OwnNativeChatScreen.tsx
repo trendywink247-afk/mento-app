@@ -160,8 +160,20 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   }, [conversationId, member, role]);
 
   const leave = () => member ? leaveToChats(router) : leaveToMentorHome(router);
+  // A fresh connection to an ended chat is refused with the same close as "not yours" (the server
+  // keeps those answers identical on purpose). The member's own state read tells them apart, so an
+  // ended conversation says so instead of offering a Retry that can never work.
+  const [endedByState, setEndedByState] = useState(false);
+  useEffect(() => {
+    if (!member || snapshot?.reason !== 'not_authorized') return;
+    let live = true;
+    void api.conversationState(conversationId)
+      .then(state => { if (live && state.status === 'ended') setEndedByState(true); })
+      .catch(() => { /* reason: the generic error and Retry stay; nothing is lost */ });
+    return () => { live = false; };
+  }, [member, snapshot?.reason, conversationId]);
   const closed = snapshot?.status === 'terminal';
-  const retryable = error || snapshot?.reason === 'not_authorized' || snapshot?.reason === 'reconnect_exhausted';
+  const retryable = !endedByState && (error || snapshot?.reason === 'not_authorized' || snapshot?.reason === 'reconnect_exhausted');
   const connectionFailed = error || closed || snapshot?.reason === 'reconnect_exhausted';
   const ready = snapshot?.status === 'ready';
   const saved = new Set([...header.savedMessageIds, ...savedNow]);
@@ -221,7 +233,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
       onOpenBrief={() => router.push({ pathname: '/mentor/member/[id]', params: { id: conversationId, member: name } })}
       onOptions={() => setMenu('open')} onHelplines={() => setHelplines(true)} />}
     {connectionFailed ? <View style={styles.center}>
-      <Text style={[type.body, { color: colors.ink }]}>{t(snapshot?.reason === 'ended' ||
+      <Text style={[type.body, { color: colors.ink }]}>{t(endedByState || snapshot?.reason === 'ended' ||
         snapshot?.reason === 'wiped' ? 'reflection.ended' : 'chat.errOpen')}</Text>
       {retryable ? <PrimaryButton label={t('common.retry')} onPress={onRetry} testID="own-native-retry" /> : null}
     </View> : <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}
