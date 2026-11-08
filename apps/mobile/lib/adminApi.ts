@@ -149,6 +149,15 @@ function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   return apiRequest<T>(path, init, getAdminToken);
 }
 
+export type AdminMentorInvite = {
+  id: string;
+  note: string | null;
+  status: 'open' | 'claimed' | 'revoked' | 'expired';
+  created_at: string;
+  expires_at: string;
+  claimed_at: string | null;
+};
+
 export const adminApi = {
   me: () => req<AdminMe>('/admin/me'),
   overview: () => req<AdminOverview>('/admin/overview'),
@@ -205,6 +214,15 @@ export const adminApi = {
       method: 'POST',
       ...(certify ? { body: JSON.stringify({ certify: true }) } : {}),
     }),
+  // --- Gold mentor invitations (DECISIONS §P.3) ---
+  listMentorInvites: () => req<AdminMentorInvite[]>('/admin/mentor-invites'),
+  createMentorInvite: (note: string | null) =>
+    req<AdminMentorInvite & { code: string }>('/admin/mentor-invites', {
+      method: 'POST',
+      body: JSON.stringify({ note }),
+    }),
+  revokeMentorInvite: (id: string) =>
+    req<AdminMentorInvite>(`/admin/mentor-invites/${id}/revoke`, { method: 'POST' }),
   certifyListener: (id: string, certified: boolean) =>
     req<{ id: string; certified: boolean }>(`/admin/listeners/${id}/certify`, {
       method: 'POST',

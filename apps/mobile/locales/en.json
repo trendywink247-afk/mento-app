@@ -1077,6 +1077,18 @@
     "companionA11y": "Your companion has walked onto a soft green round stage and greets you",
     "errorHeadline": "That did not go through."
   },
+  "mentorInvite": {
+    "eyebrow": "Verified mentor",
+    "title": "Your invitation",
+    "intro": "You were invited by the Mento team. Enter the code you were sent. There is no application and no review: the team already knows you.",
+    "codeLabel": "Invitation code",
+    "claim": "Become a verified mentor",
+    "link": "I have an invitation",
+    "notWorking": "That code did not work. It may be used, expired or typed wrong. Ask the team for a new one.",
+    "alreadyOnFile": "This account already has a mentor application on file.",
+    "tryAgain": "Could not check the code. Please try again.",
+    "recoveryNote": "After this, save your recovery code in Profile. It brings your mentor role back if you change phones."
+  },
   "mentorApply": {
     "eyebrow": "Reviewed and approved by the Mento team",
     "title": "Become a mentor",

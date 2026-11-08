@@ -793,6 +793,14 @@ export const api = {
   submitListenerApplication: (payload: ListenerApplicationIn) =>
     request<ListenerApplication>('/listener-applications', { method: 'POST', body: JSON.stringify(payload) }, true),
 
+  /** Claim a gold mentor invitation (DECISIONS §P.3): the account becomes a certified mentor. 404 = the code did not work. */
+  claimMentorInvite: (code: string, pledge_accepted: boolean) =>
+    request<ListenerApplication>(
+      '/listener-applications/invite',
+      { method: 'POST', body: JSON.stringify({ code, pledge_accepted }) },
+      true,
+    ),
+
   getListenerApplication: () => request<ListenerApplication | null>('/listener-applications/me', {}, true),
 
   /** A one-time web-console link (T3.10): ten minutes, single use. 403 `not_approved`

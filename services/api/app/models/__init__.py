@@ -13,6 +13,7 @@ from app.models.feedback import ProductFeedback
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentor_invite import MentorInvite
 from app.models.mentor_link import ListenerNameHistory, MentorLink
 from app.models.moderation import ModerationEvent
 from app.models.push_token import PushToken
@@ -38,6 +39,7 @@ __all__ = [
     "JournalEntry",
     "ListenerApplication",
     "ListenerNameHistory",
+    "MentorInvite",
     "ListenerProfile",
     "MentorLink",
     "MessageAllowanceDay",

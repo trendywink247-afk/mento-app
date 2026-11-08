@@ -619,6 +619,133 @@
         "title": "AdminHealthOut",
         "type": "object"
       },
+      "AdminInviteCreateIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "AdminInviteCreateIn",
+        "type": "object"
+      },
+      "AdminInviteCreated": {
+        "properties": {
+          "claimed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "note",
+          "status",
+          "created_at",
+          "expires_at",
+          "claimed_at",
+          "code"
+        ],
+        "title": "AdminInviteCreated",
+        "type": "object"
+      },
+      "AdminInviteItem": {
+        "properties": {
+          "claimed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "note",
+          "status",
+          "created_at",
+          "expires_at",
+          "claimed_at"
+        ],
+        "title": "AdminInviteItem",
+        "type": "object"
+      },
       "AdminJobsHealth": {
         "description": "The job queue (WS4): backlog, backoff, failures by TASK NAME, the worker's\npulse. Never a job's arguments. `available` is False if the queue can't be read.",
         "properties": {
@@ -2724,6 +2851,26 @@
           "free"
         ],
         "title": "InTouchSlots",
+        "type": "object"
+      },
+      "InviteClaimIn": {
+        "properties": {
+          "code": {
+            "maxLength": 64,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          },
+          "pledge_accepted": {
+            "default": false,
+            "title": "Pledge Accepted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "InviteClaimIn",
         "type": "object"
       },
       "JournalEntryIn": {
@@ -6311,6 +6458,128 @@
         ]
       }
     },
+    "/api/v1/admin/mentor-invites": {
+      "get": {
+        "operationId": "list_mentor_invites_api_v1_admin_mentor_invites_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminInviteItem"
+                  },
+                  "title": "Response List Mentor Invites Api V1 Admin Mentor Invites Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "List Mentor Invites",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "A single-use gold mentor invitation (DECISIONS section P.3). The code is in this\nresponse only; the founder sends it himself, so no email address is ever stored.",
+        "operationId": "create_mentor_invite_api_v1_admin_mentor_invites_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminInviteCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminInviteCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Create Mentor Invite",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/mentor-invites/{invite_id}/revoke": {
+      "post": {
+        "operationId": "revoke_mentor_invite_api_v1_admin_mentor_invites__invite_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "title": "Invite Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminInviteItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Revoke Mentor Invite",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/moderation/queue": {
       "get": {
         "operationId": "moderation_queue_api_v1_admin_moderation_queue_get",
@@ -8260,6 +8529,53 @@
           }
         ],
         "summary": "Apply",
+        "tags": [
+          "listener-applications"
+        ]
+      }
+    },
+    "/api/v1/listener-applications/invite": {
+      "post": {
+        "description": "Claim a gold mentor invitation (DECISIONS section P.2-3). The invite replaces the\napplication and the admin's review: the founder vetted this person before handing over the\ncode. The member's own anonymous account becomes a certified mentor, so their recovery code\nrestores the role on a new phone. Wrong, used, expired and revoked codes are all the same 404.",
+        "operationId": "claim_invite_api_v1_listener_applications_invite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteClaimIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListenerApplicationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Claim Invite",
         "tags": [
           "listener-applications"
         ]

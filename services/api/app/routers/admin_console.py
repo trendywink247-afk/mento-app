@@ -30,6 +30,7 @@ from app.models.enums import (
 from app.models.feedback import ProductFeedback
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentor_invite import MentorInvite
 from app.models.moderation import ModerationEvent
 from app.models.safety import SafetyFlag
 from app.models.user import User
@@ -65,6 +66,7 @@ from app.schemas import (
     ModerationResolveIn,
     OkResult,
 )
+from app.schemas.mentor_invites import AdminInviteCreated, AdminInviteCreateIn, AdminInviteItem
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
 from app.services import (
     allowance,
@@ -73,6 +75,7 @@ from app.services import (
     in_touch,
     member_status,
     mentor_face,
+    mentor_invites,
     paths,
     stream,
 )
@@ -726,6 +729,61 @@ def approve_application(
     # mentor's first console sign-in re-ensures the user either way.
     stream.ensure_user(*new_listener)
     return item
+
+
+def _invite_item(i: MentorInvite) -> AdminInviteItem:
+    return AdminInviteItem(
+        id=i.id,
+        note=i.note,
+        status=mentor_invites.status_of(i),
+        created_at=i.created_at.isoformat(),
+        expires_at=i.expires_at.isoformat(),
+        claimed_at=i.claimed_at.isoformat() if i.claimed_at else None,
+    )
+
+
+@router.post("/mentor-invites", response_model=AdminInviteCreated)
+def create_mentor_invite(
+    payload: AdminInviteCreateIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminInviteCreated:
+    """A single-use gold mentor invitation (DECISIONS section P.3). The code is in this
+    response only; the founder sends it himself, so no email address is ever stored."""
+    invite, code = mentor_invites.create(db, note=payload.note, admin_id=admin.id)
+    audit.record(db, admin, "mentor_invite.created", subject_type="invite", subject_id=invite.id)
+    db.commit()
+    db.refresh(invite)
+    return AdminInviteCreated(**_invite_item(invite).model_dump(), code=code)
+
+
+@router.get("/mentor-invites", response_model=list[AdminInviteItem])
+def list_mentor_invites(
+    _: AdminAccount = Depends(current_admin), db: Session = Depends(get_db)
+) -> list[AdminInviteItem]:
+    rows = db.scalars(select(MentorInvite).order_by(MentorInvite.created_at.desc()).limit(200))
+    return [_invite_item(i) for i in rows]
+
+
+@router.post("/mentor-invites/{invite_id}/revoke", response_model=AdminInviteItem)
+def revoke_mentor_invite(
+    invite_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminInviteItem:
+    invite = db.get(MentorInvite, invite_id, with_for_update=True)
+    if invite is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "invitation not found")
+    if invite.claimed_at is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "this invitation was already used")
+    if invite.revoked_at is None:
+        invite.revoked_at = datetime.now(UTC)
+        audit.record(
+            db, admin, "mentor_invite.revoked", subject_type="invite", subject_id=invite.id
+        )
+    db.commit()
+    db.refresh(invite)
+    return _invite_item(invite)
 
 
 @router.post("/listeners/{listener_id}/certify", response_model=dict)
