@@ -11,8 +11,8 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.db import SessionLocal
-from app.jobs import queue, retention
-from app.services import matching, mentor_names, push, snooze
+from app.jobs import enqueue, queue, retention
+from app.services import matching, mentor_names, push, request_ageing, snooze
 
 logger = logging.getLogger("mento.jobs")
 
@@ -32,6 +32,12 @@ def push_request_created(request_id: str) -> None:
 def push_request_broadcast(request_id: str) -> None:
     with SessionLocal() as db:
         push.notify_request_broadcast(db, request_id=request_id)
+
+
+@queue.task(name="push.request_nudge", queue="push")
+def push_request_nudge(request_id: str) -> None:
+    with SessionLocal() as db:
+        push.notify_request_nudge(db, request_id=request_id)
 
 
 @queue.task(name="push.request_accepted", queue="push")
@@ -105,6 +111,22 @@ def maintenance_capacity(timestamp: int) -> dict[str, int]:
     if any(result.values()):
         logger.info("capacity sweep %s", result)
     return result
+
+
+# --- unanswered requests (DECISIONS section P.5) -------------------------------------
+
+
+# Every 15 minutes: requests 48 hours old close, requests 24 hours old ask the member what
+# they want next. Nothing is moved to another mentor without the member's say-so.
+@queue.periodic(cron="*/15 * * * *", periodic_id="request-ageing")
+@queue.task(name="maintenance.request_ageing", queue="maintenance", queueing_lock="maint-ageing")
+def maintenance_request_ageing(timestamp: int) -> dict[str, int]:
+    with SessionLocal() as db:
+        result = request_ageing.run(db)
+        for request_id in result["nudged"]:
+            enqueue(db, push_request_nudge, best_effort=True, request_id=request_id)
+        db.commit()
+    return {key: len(ids) for key, ids in result.items()}
 
 
 # --- the queue's own retention ------------------------------------------------------

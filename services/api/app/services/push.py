@@ -122,6 +122,7 @@ TITLE = "Mento"
 TEMPLATES = {
     "request": "Someone would like to talk with you",
     "accepted": "%(persona)s is ready to talk",
+    "request_nudge": "Your question has not had a reply yet. You can choose what happens next.",
     "message_from_member": "%(persona)s sent a message",
     "message_from_listener": "%(persona)s replied",
 }
@@ -332,6 +333,17 @@ def _delivery_allowed(db: Session, kind: PushOwnerKind, owner_id: str, data: dic
             return True
         _suppressed("request_not_pending")
         return False
+    if event == "request_nudge":
+        req = db.get(ConversationRequest, data.get("request_id"))
+        if (
+            kind != PushOwnerKind.member
+            or req is None
+            or req.requester_id != owner_id
+            or req.status != RequestStatus.pending
+        ):
+            _suppressed("request_not_pending")
+            return False
+        return True
     if event not in {"message", "accepted"}:
         _suppressed("unknown_event")
         return False
@@ -473,6 +485,26 @@ def notify_request_broadcast(db: Session, *, request_id: str) -> None:
             TEMPLATES["request"],
             {"kind": "request", "request_id": req.id},
         )
+
+
+def notify_request_nudge(db: Session, *, request_id: str) -> None:
+    """The 24-hour "no reply yet" page to the member (DECISIONS section P.5): no mentor name, no
+    text of the question. Callers must commit their own state before calling."""
+    req = db.get(ConversationRequest, request_id)
+    if req is None or req.status != RequestStatus.pending:
+        return
+    tokens = tokens_for(db, PushOwnerKind.member, req.requester_id)
+    if not tokens:
+        _suppressed("no_token")
+        return
+    _send(
+        db,
+        PushOwnerKind.member,
+        req.requester_id,
+        tokens,
+        TEMPLATES["request_nudge"],
+        {"kind": "request_nudge", "request_id": req.id},
+    )
 
 
 def notify_request_accepted(db: Session, *, request_id: str) -> None:

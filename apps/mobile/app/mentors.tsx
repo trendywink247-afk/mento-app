@@ -245,6 +245,11 @@ export default function BrowseMentors() {
           <Text style={[styles.availability, { color: l.available ? washInk.green : colors.inkMuted }]} numberOfLines={1}>
             {availability}
           </Text>
+          {l.reply_within ? (
+            <Text style={[type.micro, { color: colors.inkMuted }]} numberOfLines={1} testID={`mentor-reply-${l.id}`}>
+              {l.reply_within === 'day' ? t('browse.replyDay') : t('browse.replyTwoDays')}
+            </Text>
+          ) : null}
           {d?.public_line ? (
             <Text style={[type.note, styles.line, { color: colors.ink }]} numberOfLines={3}>
               {t('browse.quoted', { line: d.public_line })}

@@ -896,6 +896,8 @@
     "oneAtATime": "One question goes to one mentor at a time."
   },
   "browse": {
+    "replyDay": "Usually replies within a day",
+    "replyTwoDays": "Usually replies within 2 days",
     "title": "Mentors",
     "sub": "Real people. Always private.",
     "backA11y": "Back to My Chats",
@@ -1335,6 +1337,9 @@
     "toAll": "Your question went to every verified mentor who is online. The first to reply takes it, and we will notify you.",
     "slowAll": "No reply yet. Mentors answer when they are free, and you can keep waiting. Or choose a mentor yourself.",
     "chooseMentor": "Choose a mentor",
+    "nudge": "No reply yet, after a day. You choose what happens next. Nothing is sent to anyone else unless you say so.",
+    "nudgeAll": "Send to all verified mentors",
+    "nudgeWait": "Keep waiting",
     "slowLine": "No reply yet. Some mentors answer after a while, and you can keep waiting. Or ask someone else.",
     "tryAnother": "Ask another mentor",
     "helpline": "If it feels urgent, Tele-MANAS is free and open any time: %{number}",

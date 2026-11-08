@@ -39,6 +39,9 @@ class ConversationRequest(UUIDMixin, TimestampMixin, Base):
         String(36), ForeignKey("conversations.id", ondelete="SET NULL"), nullable=True
     )
 
+    # When the 24-hour "no reply yet, what would you like to do?" nudge went out (§P.5).
+    nudged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # When this question first appeared in the target mentor's console inbox — the only
     # honest "Seen" the member's letter (board A04) can light. Never set for a request
     # nobody has been shown.

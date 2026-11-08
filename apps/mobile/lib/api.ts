@@ -110,6 +110,8 @@ export type Listener = {
   companion_colour?: string;
   /** An admin certified this mentor for exam mentoring (DECISIONS §O): the gold badge. */
   certified?: boolean;
+  /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
+  reply_within?: 'day' | 'two_days' | null;
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -137,6 +139,8 @@ export type ListenerProfile = {
   /** The server's member-facing words for `categories`, same order (never a raw slug). */
   category_labels?: string[];
   certified?: boolean;
+  /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
+  reply_within?: 'day' | 'two_days' | null;
 };
 
 export type PersonalRequest = {
@@ -153,6 +157,8 @@ export type PersonalRequest = {
   replying?: boolean;
   /** Offered to every verified mentor, the first to accept takes it (DECISIONS §P.4). */
   broadcast?: boolean;
+  /** No reply after 24 hours: the letter asks what to do next (DECISIONS §P.5). */
+  nudged?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
   listener_companion_animal?: string | null;
   listener_companion_colour?: string | null;

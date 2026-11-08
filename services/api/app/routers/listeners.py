@@ -40,6 +40,7 @@ from app.services import (
     mentor_face,
     mentor_names,
     open_question,
+    reply_time,
     terms,
 )
 from app.services.matching import (
@@ -67,6 +68,7 @@ def _request_out(r: ConversationRequest, db: Session) -> RequestOut:
         seen_at=r.seen_at.isoformat() if r.seen_at else None,
         replying=r.status == RequestStatus.matched,
         broadcast=r.broadcast,
+        nudged=r.nudged_at is not None and r.status == RequestStatus.pending,
         listener_companion_animal=animal,
         listener_companion_colour=colour,
     )
@@ -144,8 +146,14 @@ def list_listeners(
         ).all()
     )
     links = in_touch.in_touch_listener_ids(db, user_id)
+    replies = reply_time.reply_within(db, page_ids)
     return [
-        listener_profiles.card(r[0], is_favourite=r[0].id in favourite_ids, link=links.get(r[0].id))
+        listener_profiles.card(
+            r[0],
+            is_favourite=r[0].id in favourite_ids,
+            link=links.get(r[0].id),
+            reply_within=replies.get(r[0].id),
+        )
         for r in rows
     ]
 

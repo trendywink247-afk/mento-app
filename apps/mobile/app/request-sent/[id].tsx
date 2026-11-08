@@ -51,6 +51,7 @@ import { MentorFace } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { useHeroBreath } from '@/components/motion/useHeroBreath';
+import { askIntro, openAsked } from '@/lib/startChat';
 import { api, type PersonalRequest } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
@@ -96,6 +97,8 @@ export default function RequestSentScreen() {
   // ask another once they reply or you close it"). Still, never red.
   const [closedByMe, setClosedByMe] = useState(false);
   const [closing, setClosing] = useState(false);
+  // "Keep waiting" on the 24-hour card: this screen stops asking until it is opened again.
+  const [keepWaiting, setKeepWaiting] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -198,6 +201,20 @@ export default function RequestSentScreen() {
       .finally(() => setClosing(false));
   };
 
+  // 24 hours without a reply (DECISIONS §P.5): the member chooses what happens next. Nothing
+  // moves to another mentor, and their words reach nobody new, unless they say so here.
+  const nudge = phase === 'pending' && Boolean(request?.nudged) && !keepWaiting;
+  const sendToAll = () => {
+    if (!id || closing) return;
+    setClosing(true);
+    void api
+      .withdrawRequest(id)
+      .then(() => api.ask({ issue_category: null, intro_message: askIntro(request?.intro_message) }))
+      .then((r) => openAsked(router, r))
+      .catch(() => setLoadError(true))
+      .finally(() => setClosing(false));
+  };
+
   const line =
     phase === 'accepted'
       ? t('requestSent.accepted', { name })
@@ -259,7 +276,15 @@ export default function RequestSentScreen() {
                   <Text style={[type.note, { color: colors.inkMuted }]} testID="request-sent-line">
                     {name ? line : ' '}
                   </Text>
-                  {slow ? (
+                  {nudge ? (
+                    <View style={styles.slow} testID="request-sent-nudge">
+                      <Text style={[type.note, { color: colors.ink }]}>{t('requestSent.nudge')}</Text>
+                      <QuietKey label={t('requestSent.nudgeAll')} onPress={sendToAll} disabled={closing} testID="request-sent-nudge-all" />
+                      <QuietKey label={t('requestSent.chooseMentor')} onPress={tryAnother} disabled={closing} testID="request-sent-nudge-choose" />
+                      <QuietKey label={t('requestSent.nudgeWait')} onPress={() => setKeepWaiting(true)} testID="request-sent-nudge-wait" />
+                    </View>
+                  ) : null}
+                  {slow && !nudge ? (
                     <View style={styles.slow} testID="request-sent-slow">
                       <Text style={[type.note, { color: colors.ink }]}>{toAll ? t('requestSent.slowAll') : t('requestSent.slowLine')}</Text>
                       <QuietKey

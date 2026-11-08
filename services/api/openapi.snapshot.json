@@ -1620,6 +1620,17 @@
             ],
             "title": "Public Line"
           },
+          "reply_within": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Within"
+          },
           "reply_within_a_day": {
             "default": false,
             "title": "Reply Within A Day",
@@ -3385,6 +3396,17 @@
             "title": "Persona Name",
             "type": "string"
           },
+          "reply_within": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Within"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -3547,6 +3569,17 @@
               }
             ],
             "title": "Public Line"
+          },
+          "reply_within": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Within"
           },
           "status": {
             "title": "Status",
@@ -4927,6 +4960,11 @@
               }
             ],
             "title": "Listener Companion Colour"
+          },
+          "nudged": {
+            "default": false,
+            "title": "Nudged",
+            "type": "boolean"
           },
           "replying": {
             "default": false,
