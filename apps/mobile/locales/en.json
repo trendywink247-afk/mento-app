@@ -1083,6 +1083,7 @@
     "whyPlaceholder": "A few honest sentences. What brings you here?",
     "communitiesLabel": "Communities you know",
     "communitiesHint": "Pick any",
+    "communitiesMax": "Up to %{max}. Tap one to swap it.",
     "community_upsc": "UPSC",
     "community_neet": "NEET",
     "community_jee": "JEE",

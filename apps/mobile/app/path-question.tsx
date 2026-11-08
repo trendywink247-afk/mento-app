@@ -161,15 +161,15 @@ export default function PathQuestion() {
   const lens =
     params.lens ?? (path?.community && path.stage ? `${path.community.name} · ${path.stage.title}` : '');
 
-  const offered = useMemo(() => chipsFor(community), [community]);
+  const offered = useMemo(() => chipsFor(community, acceptFirst), [community, acceptFirst]);
   const assembled = useMemo(
     () =>
       assembleQuestion(
         starter,
-        chosenChips(choice, community).map((id) => t(CHIP_CLAUSE[id])),
+        chosenChips(choice, community, acceptFirst).map((id) => t(CHIP_CLAUSE[id])),
         { joinList: t('pathQuestion.joinList'), joinLast: t('pathQuestion.joinLast'), stop: t('pathQuestion.stop') },
       ),
-    [starter, choice, community, t],
+    [starter, choice, community, acceptFirst, t],
   );
 
   const another = () => {

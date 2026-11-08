@@ -97,4 +97,12 @@ assert.deepEqual(c, EMPTY_CHOICE);
 assert.deepEqual(toggleChip(EMPTY_CHOICE, 'first'), { attempt: 'first', working: false, tried: null }); // pure: input untouched
 assert.deepEqual(EMPTY_CHOICE, { attempt: null, working: false, tried: null });
 
+// An exam road added after this build (the server says accept_first) gets the exam chips; Life never does.
+assert.deepEqual(chipsFor('ssc', true).where, ['first', 'second', 'third', 'working']);
+assert.deepEqual(chipsFor('ssc').where, []); // unknown to this build and no server word: only chips true for anyone
+assert.deepEqual(chipsFor('life', false).where, []);
+assert.deepEqual(chosenChips({ attempt: 'second', working: true, tried: null }, 'banking', true), ['second', 'working']);
+assert.deepEqual(chosenChips({ attempt: 'second', working: true, tried: null }, 'banking'), []);
+assert.equal(chipsFor('ssc', true).tried.includes('prep'), false); // interview prep stays UPSC-only
+
 console.log('QUESTION BUILDER TEST PASSED');

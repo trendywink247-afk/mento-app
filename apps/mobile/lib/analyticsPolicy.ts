@@ -28,7 +28,13 @@ const RULES: Record<keyof EventMap, Record<string, readonly (string | boolean)[]
     companion: ['Panda', 'Elephant', 'Fox', 'Turtle', 'Deer', 'Owl', 'Dog', 'Cat', 'Capybara'],
   },
   onboarding_completed: {},
-  path_chosen: { community: ['upsc', 'neet', 'jee', 'exams', 'life'] },
+  // Coarse public road names only (services/api paths_exams.py); never a stage, never an id.
+  path_chosen: {
+    community: [
+      'upsc', 'neet', 'jee', 'exams', 'life', 'ssc', 'banking', 'railways', 'psc', 'defence', 'teaching',
+      'gate', 'cuet', 'law', 'mba', 'ugcnet', 'ca', 'boards',
+    ],
+  },
   match_requested: { mode: ['general', 'personal'] },
   match_found: { wait_bucket: ['<5s', '5-15s', '15-60s', '>60s'] },
   chat_first_message_sent: {},

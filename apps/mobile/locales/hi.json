@@ -1083,6 +1083,7 @@
     "whyPlaceholder": "कुछ सच्ची पंक्तियाँ। आपको यहाँ क्या लाया?",
     "communitiesLabel": "जिन समुदायों को आप जानते हैं",
     "communitiesHint": "कोई भी चुनें",
+    "communitiesMax": "अधिकतम %{max}। बदलने के लिए किसी एक को हटाएँ।",
     "community_upsc": "UPSC",
     "community_neet": "NEET",
     "community_jee": "JEE",

@@ -46,8 +46,13 @@ const INTERVIEW_COMMUNITIES: readonly string[] = ['upsc'];
 /** The chips a community is offered. A chip that would be untrue for the member's road
  * is simply not there (no "second attempt" on the Life path); an unknown community
  * gets only the chips that are true for anyone. A group with no chips is not shown. */
-export function chipsFor(community: string | null | undefined): { where: ChipId[]; tried: ChipId[] } {
-  const exam = !!community && EXAM_COMMUNITIES.includes(community);
+export function chipsFor(
+  community: string | null | undefined,
+  /** The server's word that this road waits for a mentor's accept: every exam road, including
+   * ones added after this build (`PathState.community.accept_first`). */
+  acceptFirst = false,
+): { where: ChipId[]; tried: ChipId[] } {
+  const exam = (!!community && EXAM_COMMUNITIES.includes(community)) || acceptFirst;
   const interview = !!community && INTERVIEW_COMMUNITIES.includes(community);
   return {
     where: exam ? [...ATTEMPTS, 'working'] : [],
@@ -71,8 +76,12 @@ export function isChipOn(choice: BuilderChoice, id: ChipId): boolean {
 
 /** The chosen chips in the order their clauses are spoken: where I am (attempt, then
  * working), then what I've tried. Chips the community is not offered never speak. */
-export function chosenChips(choice: BuilderChoice, community: string | null | undefined): ChipId[] {
-  const offered = chipsFor(community);
+export function chosenChips(
+  choice: BuilderChoice,
+  community: string | null | undefined,
+  acceptFirst = false,
+): ChipId[] {
+  const offered = chipsFor(community, acceptFirst);
   const allowed = new Set<ChipId>([...offered.where, ...offered.tried]);
   const order: (ChipId | null)[] = [choice.attempt, choice.working ? 'working' : null, choice.tried];
   return order.filter((id): id is ChipId => id !== null && allowed.has(id));
