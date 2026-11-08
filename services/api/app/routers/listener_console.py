@@ -69,6 +69,7 @@ from app.services import (
     mentor_names,
     paths,
     push,
+    reply_time,
     snooze,
     stream,
 )
@@ -94,7 +95,7 @@ def current_listener(
     return listener
 
 
-def _me_out(li: ListenerProfile) -> ListenerMeOut:
+def _me_out(li: ListenerProfile, db: Session) -> ListenerMeOut:
     return ListenerMeOut(
         id=li.id,
         persona_name=li.persona_name,
@@ -114,6 +115,7 @@ def _me_out(li: ListenerProfile) -> ListenerMeOut:
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
         certified=bool(li.certified_exam),
+        reply_within=reply_time.reply_within(db, [li.id])[li.id],
     )
 
 
@@ -210,8 +212,10 @@ def dev_token(listener_id: str, db: Session = Depends(get_db)) -> DevTokenOut:
 
 
 @router.get("/me", response_model=ListenerMeOut, dependencies=[Depends(mentor_names.fresh_names)])
-def me(listener: ListenerProfile = Depends(current_listener)) -> ListenerMeOut:
-    return _me_out(listener)
+def me(
+    listener: ListenerProfile = Depends(current_listener), db: Session = Depends(get_db)
+) -> ListenerMeOut:
+    return _me_out(listener, db)
 
 
 @router.patch("/me/status", response_model=ListenerMeOut)
@@ -233,7 +237,7 @@ def set_status(
         listener.last_seen_at = None
     db.commit()
     db.refresh(listener)
-    return _me_out(listener)
+    return _me_out(listener, db)
 
 
 @router.put("/me/profile", response_model=ListenerMeOut)
@@ -263,7 +267,7 @@ def update_profile(
         listener.availability_note = (" ".join(value.split()) if value else "") or None
     db.commit()
     db.refresh(listener)
-    return _me_out(listener)
+    return _me_out(listener, db)
 
 
 @router.post("/me/heartbeat", response_model=OkResult)
@@ -476,6 +480,8 @@ def my_pending_requests(
             requester_companion_colour=user.companion_colour,
             issue_category_label=categories.label(req.issue_category),
             broadcast=req.broadcast,
+            community_label=paths.community_label(user.community_slug),
+            stage_label=paths.stage_label(user.community_slug, user.journey_stage),
         )
         for req, user in rows
     ]
@@ -721,7 +727,7 @@ def suggest_certified_mentor(
         raise ApiProblem(
             status.HTTP_409_CONFLICT,
             "already_certified",
-            "You are certified for exam mentoring, so there is no one to hand this to.",
+            "You are Mento Verified for exam mentoring, so there is no one to hand this to.",
         )
     convo = _snooze_target(db, convo_id, listener)
     if convo.exam_redirect_at is None:

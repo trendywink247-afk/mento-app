@@ -681,7 +681,7 @@ def approve_application(
     if certify and not _wants_exam(a.communities):
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
-            "This applicant did not choose an exam road, so there is nothing to certify.",
+            "This applicant did not choose an exam road, so there is nothing to verify.",
         )
     li = ListenerProfile(
         persona_name=applicant.persona_name,

@@ -3307,6 +3307,17 @@
             ],
             "title": "Public Line"
           },
+          "reply_within": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Within"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -3646,6 +3657,17 @@
             "title": "Broadcast",
             "type": "boolean"
           },
+          "community_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Community Label"
+          },
           "created_at": {
             "title": "Created At",
             "type": "string"
@@ -3712,6 +3734,17 @@
           "requester_persona_name": {
             "title": "Requester Persona Name",
             "type": "string"
+          },
+          "stage_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage Label"
           }
         },
         "required": [

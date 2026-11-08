@@ -25,6 +25,9 @@ class ListenerMeOut(BaseModel):
     # Certified for exam mentoring (DECISIONS section O): decides whether the chat menu offers
     # "This is about an exam".
     certified: bool = False
+    # The usual time to accept a request over 30 days ("day" / "two_days"), only once there is enough
+    # to say (DECISIONS section P.6). Null otherwise.
+    reply_within: str | None = None
     # Rotating names (DECISIONS §L.6): when this name is replaced (next 04:00 IST, as
     # UTC). Null while rotation is switched off.
     name_changes_at: str | None = None
@@ -142,6 +145,9 @@ class ListenerRequestItem(BaseModel):
     issue_category_label: str | None = None
     # Offered to every certified mentor, first to accept takes it (DECISIONS section P.4). Additive.
     broadcast: bool = False
+    # What the member chose to share: their road and stage, as words. Never a name or contact.
+    community_label: str | None = None
+    stage_label: str | None = None
 
 
 class RequestsSeenIn(BaseModel):
