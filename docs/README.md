@@ -20,4 +20,5 @@ Current documents only. `archive/` holds stale history: don't read it or use it 
 | [DEPENDENCY_AUDIT_2026-10-05.md](DEPENDENCY_AUDIT_2026-10-05.md) | npm advisories and required treatment |
 | [specs/qa-deploy-path.md](specs/qa-deploy-path.md) | QA deploy paths compared (Actions receiver vs `ops/qa-deploy-api.sh`), the `master` rename finding, recommendation |
 | [specs/2026-09-20-mento-balanced-architecture-design.md](specs/2026-09-20-mento-balanced-architecture-design.md) | Balanced architecture design (current baseline) |
+| [proposals/self-assessment-and-community.md](proposals/self-assessment-and-community.md) | Thinking on the deferred self-assessment suite and Community (not built) |
 | [diagrams/](diagrams/) | Current and target architecture images, plus their renderer |
