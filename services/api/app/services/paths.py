@@ -106,11 +106,11 @@ def tree_payload() -> dict:
             "options": [
                 {
                     **o,
-                    "enabled": is_open(o["community"])
-                    if o.get("community")
-                    else _node_open(o["next"])
-                    if o.get("next")
-                    else True,
+                    "enabled": (
+                        is_open(o["community"])
+                        if o.get("community")
+                        else _node_open(o["next"]) if o.get("next") else True
+                    ),
                 }
                 for o in node["options"]
             ],

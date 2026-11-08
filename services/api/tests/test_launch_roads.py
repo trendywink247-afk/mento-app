@@ -77,10 +77,14 @@ def test_communities_say_which_roads_are_enabled(client, launch):
 def test_a_closed_road_cannot_be_chosen_and_an_open_one_can(client, launch):
     uid = _member()
     stage = next(iter(COMMUNITIES["jee"]["stages"]))
-    r = client.put("/api/v1/paths/me", json={"community": "jee", "stage": stage}, headers=_auth(uid))
+    r = client.put(
+        "/api/v1/paths/me", json={"community": "jee", "stage": stage}, headers=_auth(uid)
+    )
     assert r.status_code == 422
     stage = next(iter(COMMUNITIES["upsc"]["stages"]))
-    r = client.put("/api/v1/paths/me", json={"community": "upsc", "stage": stage}, headers=_auth(uid))
+    r = client.put(
+        "/api/v1/paths/me", json={"community": "upsc", "stage": stage}, headers=_auth(uid)
+    )
     assert r.status_code == 200 and r.json()["community"]["enabled"] is True
 
 
