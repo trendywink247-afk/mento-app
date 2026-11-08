@@ -8,16 +8,15 @@ from datetime import datetime
 
 REQUIRED = {
     "api-ci.yml": {"api-lint", "api-test", "lint", "test", "full-suite"},
-    "test-ci.yml": {"mobile-web", "release-tooling", "recovery-receipts",
+    "test-ci.yml": {"mobile-unit", "mobile-browser", "release-tooling", "recovery-receipts",
                     "receiver-isolation", "test-gate", "full-suite"},
-    "maestro.yml": {"check-secrets", "maestro", "native-gate", "full-suite"},
 }
 
 
 def trusted_run(run, sha):
     return (
         run["head_sha"] == sha
-        and run["head_branch"] == "master"
+        and run["head_branch"] == "main"
         and run["event"] in {"push", "workflow_dispatch"}
     )
 
@@ -66,13 +65,13 @@ def checks(repo, sha):
         # A queued rerun can still expose the previous attempt's start time.
         # Never release while any trusted attempt for this candidate is pending.
         if any(run["status"] != "completed" for run in runs):
-            raise RuntimeError(f"{workflow}: pending trusted master run for {sha}")
+            raise RuntimeError(f"{workflow}: pending trusted main run for {sha}")
         # A rerun of an older run is newer evidence too. GitHub's run list is
         # creation-ordered, so compare attempt starts rather than completions.
         runs.sort(key=attempt_order, reverse=True)
         # The newest attempt must pass: an earlier green run cannot hide a rerun.
         if not runs or not valid_run(runs[0], sha):
-            raise RuntimeError(f"{workflow}: latest trusted master run is not green for {sha}")
+            raise RuntimeError(f"{workflow}: latest trusted main run is not green for {sha}")
         run = runs[0]
         jobs = api(f"repos/{repo}/actions/runs/{run['id']}/jobs?filter=latest&per_page=100")["jobs"]
         require_jobs(jobs, expected)
@@ -86,12 +85,12 @@ def staging(repo, run_id, sha, accepted=True):
     run = api(f"repos/{repo}/actions/runs/{run_id}")
     if not (
         run["path"] == ".github/workflows/staging-release.yml"
-        and run["head_branch"] == "master"
+        and run["head_branch"] == "main"
         and run["event"] == "workflow_dispatch"
         and run["status"] == "completed"
         and (not accepted or run["conclusion"] == "success")
     ):
-        raise RuntimeError("Not a successful staging release from master")
+        raise RuntimeError("Not a successful staging release from main")
     if accepted:
         require_jobs(api(f"repos/{repo}/actions/runs/{run_id}/jobs?filter=latest&per_page=100")["jobs"], {"stage"})
     # Artifact provenance is tied to this exact successful run; download only it.

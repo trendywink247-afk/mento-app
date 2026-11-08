@@ -2,7 +2,7 @@
 # Ship one commit of the API on the box. Runs ON the VPS, from its checkout
 # (/opt/mento). Safe to re-run; one deploy at a time (a lock refuses a second).
 #
-#   ./deploy/deploy.sh                  # deploy origin/master
+#   ./deploy/deploy.sh                  # deploy origin/main
 #   ./deploy/deploy.sh <sha>            # deploy exactly this commit (40 hex, on origin)
 #   ./deploy/deploy.sh --backup [<sha>] # take deploy/backup-postgres.sh first; abort if it fails
 #   ./deploy/deploy.sh --rollback       # put the previous image back (no migrations)
@@ -74,16 +74,16 @@ main() {
 
     log "fetching"
     git fetch --quiet origin
-    # CI may only ship commits that are on origin/master.
-    [ -z "$ref" ] || git merge-base --is-ancestor "$ref" origin/master 2>/dev/null \
-        || die "$ref is not on origin/master — refusing"
+    # CI may only ship commits that are on origin/main.
+    [ -z "$ref" ] || git merge-base --is-ancestor "$ref" origin/main 2>/dev/null \
+        || die "$ref is not on origin/main — refusing"
 
     if [ "$backup" = 1 ]; then
         log "backup first"
         "$HERE/backup-postgres.sh" || die "backup failed — nothing deployed"
     fi
 
-    git reset --quiet --hard "${ref:-origin/master}"
+    git reset --quiet --hard "${ref:-origin/main}"
     local TAG; TAG="$(git rev-parse --short=12 HEAD)"
     log "commit $TAG ($STACK stack)"
 

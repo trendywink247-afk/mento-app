@@ -236,7 +236,7 @@ every site into a throwaway `nginx:1.22` and asserts the host map), re-render,
 copy, `nginx -t`, reload. Back up the installed file first; never hand-edit it.
 
 **Auto-deploy on push (`.github/workflows/console-deploy.yml`, active):** runs
-`deploy-web.sh` on pushes to `master` touching `apps/mobile/**`. Needs two repo secrets:
+`deploy-web.sh` on pushes to `main` touching `apps/mobile/**`. Needs two repo secrets:
 `MOBILE_ENV_PRODUCTION` (full contents of `apps/mobile/.env.production`) and
 `CONSOLE_DEPLOY_SSH_KEY` (a **dedicated** ed25519 private key whose `.pub` is in
 `~mento-ops/.ssh/authorized_keys`). Until both exist the workflow fails loudly.
@@ -317,7 +317,7 @@ rollback is not free; plan destructive migrations accordingly.
 
 ### CI deploys (`.github/workflows/api-deploy.yml`) — off until you turn them on
 
-After **API CI** passes on master, the workflow can SSH to the box with a deploy-only
+After **API CI** passes on main, the workflow can SSH to the box with a deploy-only
 key that can run nothing but `deploy.sh --from-ssh` (backup, then deploy that exact
 commit). It is inert until all of this exists:
 
@@ -327,14 +327,14 @@ ssh-keygen -t ed25519 -N '' -C mento-ci-deploy -f mento-ci-deploy
 # On the box, as mento-ops: append ONE line to ~/.ssh/authorized_keys —
 #   restrict,command="/opt/mento/deploy/deploy.sh --from-ssh" <contents of mento-ci-deploy.pub>
 # `restrict` = no shell, no pty, no forwarding; the command ignores what the client asks
-# for except "deploy <40-hex sha>", and that sha must be on origin/master.
+# for except "deploy <40-hex sha>", and that sha must be on origin/main.
 # The box's host key line, for pinning (run from the laptop, check it against the box):
 ssh-keyscan -t ed25519 <vps-ip>
 ```
 
 GitHub → Settings → Secrets and variables → Actions: secrets `API_DEPLOY_SSH_KEY`
 (private key file contents) and `API_DEPLOY_KNOWN_HOSTS` (the keyscan line); then the
-variable `API_AUTO_DEPLOY=true` to deploy after every green API CI on master. Manual
+variable `API_AUTO_DEPLOY=true` to deploy after every green API CI on main. Manual
 runs (Actions → API Deploy → Run workflow) work without the variable. Optional:
 Settings → Environments → `production` → required reviewers, to approve each deploy.
 CI deploys do not ship the web build or the OTA — `ship.sh` still does.

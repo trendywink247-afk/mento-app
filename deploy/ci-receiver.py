@@ -266,7 +266,7 @@ def main():
                 run(*dc, "run", "--rm", "--no-deps", "migrate")
                 run(*dc, "up", "-d", "--wait", "--wait-timeout", "120", "api", "worker")
             else:
-                # The existing operator script checks master ancestry, backs up,
+                # The existing operator script checks main ancestry, backs up,
                 # migrates once and reuses the preloaded SHA-tagged image.
                 run("sudo", "-Hu", "mento-ops", "env", f"SSH_ORIGINAL_COMMAND=deploy {sha}",
                     "MENTO_CHECKOUT_ROOT=/opt/mento", "bash",

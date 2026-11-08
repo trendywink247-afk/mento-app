@@ -5,7 +5,7 @@ from release_gate import REQUIRED, attempt_order, checks, require_jobs, valid_ru
 
 class ReleaseGateTests(unittest.TestCase):
     def test_only_successful_trusted_exact_sha_passes(self):
-        run = dict(head_sha="a" * 40, head_branch="master", event="push",
+        run = dict(head_sha="a" * 40, head_branch="main", event="push",
                    status="completed", conclusion="success")
         self.assertTrue(valid_run(run, "a" * 40))
         self.assertTrue(valid_run({**run, "event": "workflow_dispatch"}, "a" * 40))
@@ -16,7 +16,7 @@ class ReleaseGateTests(unittest.TestCase):
                 self.assertFalse(valid_run({**run, field: value}, "a" * 40))
 
     def ci_run(self, run_id=123, **overrides):
-        return {**dict(head_sha="a" * 40, head_branch="master", event="push",
+        return {**dict(head_sha="a" * 40, head_branch="main", event="push",
                        status="completed", conclusion="success", id=run_id,
                        run_attempt=1, created_at="2026-10-05T01:00:00Z",
                        run_started_at="2026-10-05T01:00:00Z",
@@ -174,7 +174,7 @@ class ReleaseGateTests(unittest.TestCase):
         require_jobs([{"name": "maestro", "conclusion": "success"}], {"maestro"})
 
     def test_production_rejects_failed_or_untrusted_staging_before_download(self):
-        run = dict(path=".github/workflows/staging-release.yml", head_branch="master",
+        run = dict(path=".github/workflows/staging-release.yml", head_branch="main",
                    event="workflow_dispatch", status="completed", conclusion="success")
         for field, value in [("path", ".github/workflows/test-ci.yml"),
                              ("head_branch", "feature"), ("event", "pull_request"),
@@ -186,7 +186,7 @@ class ReleaseGateTests(unittest.TestCase):
                 download.assert_not_called()
 
     def test_production_rejects_skipped_acceptance_job(self):
-        run = dict(path=".github/workflows/staging-release.yml", head_branch="master",
+        run = dict(path=".github/workflows/staging-release.yml", head_branch="main",
                    event="workflow_dispatch", status="completed", conclusion="success")
         with patch("release_gate.api", side_effect=[run, {"jobs": [{"name": "stage", "conclusion": "skipped"}]}]), patch("release_gate.subprocess.run") as download:
             with self.assertRaises(RuntimeError):

@@ -20,7 +20,7 @@ Status: option 2 chosen by the founder on 2026-10-25 ("go with everything"). `qa
 - `staging-release.yml` and `production-release.yml` gate on `github.ref == 'refs/heads/master'`, check out `master` and compare against `origin/master`.
 - `test-ci.yml` triggers `push` only on `master`, so it no longer runs on pushes to `main`.
 
-Until those are changed, nothing deploys through Actions. (This also means the release workflows have not been triggered, and must not be, without the founder's say-so.)
+Until those are changed, nothing deploys through Actions. *Update 2026-11-08: changed to `main` on `feat/ci-streamline` (workflows, release gate, `deploy/deploy.sh`, `deploy/test-deploy.sh`); the Maestro requirement is removed. Untested here (no Docker): run the Rollback Rehearsal before use.* (This also means the release workflows have not been triggered, and must not be, without the founder's say-so.)
 
 ## Options
 

@@ -10,7 +10,7 @@
 #             migration blocked by a held lock gives up after lock_timeout (3 s)
 #             and fails the deploy; --rollback puts the previous image back with
 #             zero failed requests; the forced command refuses anything but
-#             "deploy <40-hex sha on origin/master>".
+#             "deploy <40-hex sha on origin/main>".
 #   legacy    (today's prod stack) a broken migration leaves the api untouched; an
 #             image that never turns healthy is rolled back to the previous tag.
 #
@@ -80,8 +80,8 @@ git -C "$ROOT" add -A
 git -C "$ROOT" update-index --force-remove -- deploy/secrets/prod.env.sops.yaml
 SNAP="$(git -C "$ROOT" commit-tree "$(git -C "$ROOT" write-tree)" -p HEAD -m "test-deploy snapshot")"
 unset GIT_INDEX_FILE
-git init -q --bare --initial-branch=master "$REMOTE"
-git -C "$ROOT" push -q "$REMOTE" "$SNAP:refs/heads/master"
+git init -q --bare --initial-branch=main "$REMOTE"
+git -C "$ROOT" push -q "$REMOTE" "$SNAP:refs/heads/main"
 git clone -q "$REMOTE" "$BOX"
 git clone -q "$REMOTE" "$DEV"
 git -C "$DEV" config user.email test@deploy.local; git -C "$DEV" config user.name test-deploy
@@ -108,7 +108,7 @@ prebuild() {  # prebuild <sha> — only when TEST_PREBUILD_ARGS is set
 }
 commit() {  # commit <message> — commits whatever is staged in $DEV, pushes, prints the sha
     git -C "$DEV" commit -q -m "$1"
-    git -C "$DEV" push -q origin master
+    git -C "$DEV" push -q origin main
     git -C "$DEV" rev-parse HEAD
 }
 deploy() { "$BOX/deploy/deploy.sh" "$@" > "$TMP/deploy.log" 2>&1; }
