@@ -108,6 +108,8 @@ export type Listener = {
    * colour every screen draws for this mentor. Stable across name rotation. */
   companion_animal?: string;
   companion_colour?: string;
+  /** An admin certified this mentor for exam mentoring (DECISIONS §O): the gold badge. */
+  certified?: boolean;
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -134,6 +136,7 @@ export type ListenerProfile = {
   companion_colour?: string;
   /** The server's member-facing words for `categories`, same order (never a raw slug). */
   category_labels?: string[];
+  certified?: boolean;
 };
 
 export type PersonalRequest = {
@@ -392,6 +395,9 @@ export type Allowance = {
   /** The conversation is inside its crisis-exempt window: nothing is held or counted, and
    * the client never shows the three-in-a-row note. Optional — an older server omits it. */
   exempt?: boolean;
+  /** False when this conversation is not with a certified exam mentor (DECISIONS §O): no cap and
+   * no meter. Optional — an older server omits it, and the cap then shows as before. */
+  applies?: boolean;
 };
 
 // --- Product feedback (board A11) ---

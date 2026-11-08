@@ -23,6 +23,9 @@ class AllowanceOut(BaseModel):
     can_send: bool
     held_reason: str | None
     enforced: bool
+    # False when this conversation is not with a certified exam mentor (DECISIONS section O): no
+    # cap, no meter. Additive; an older client ignores it.
+    applies: bool = True
 
 
 class AdminAllowanceDay(BaseModel):

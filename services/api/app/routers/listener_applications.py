@@ -137,6 +137,7 @@ def apply(
         ),
         email=payload.email,
         mentor_interest=payload.mentor_interest,
+        exam_credential=(payload.exam_credential or "").strip() or None,
         pledge_accepted_at=datetime.now(UTC),
     )
     db.add(row)

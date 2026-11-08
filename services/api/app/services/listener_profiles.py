@@ -48,6 +48,7 @@ def card(
         ),
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
+        certified=bool(li.certified_exam),
     )
 
 
@@ -82,6 +83,7 @@ def profile(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOu
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
         category_labels=category_labels(li.categories or []),
+        certified=bool(li.certified_exam),
     )
 
 

@@ -20,6 +20,7 @@ import { useI18n } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
+import { CertifiedBadge } from '@/components/CertifiedBadge';
 import { matchesRoad, roadChips } from '@/lib/mentorFilters';
 import { screenCache } from '@/lib/screenCache';
 import { topicLabelKey } from '@/lib/topics';
@@ -159,6 +160,7 @@ export default function BrowseMentors() {
         const community = details.get(l.id)?.community_slug ?? null;
         if (filter === 'online') return l.available;
         if (filter === 'touch') return Boolean(l.in_touch);
+        if (filter === 'certified') return Boolean(l.certified);
         return matchesRoad(filter, community, l.categories);
       }),
     // reason: `details` is a module map; the tick state re-renders when it fills
@@ -176,6 +178,8 @@ export default function BrowseMentors() {
     ).map((c) => ({ key: c.key, label: c.label })),
     { key: 'life', label: t('browse.filterLife') },
     { key: 'touch', label: t('inTouch.badge') },
+    // Only when at least one mentor is certified: an empty filter would be a dead end.
+    ...(listeners.some((l) => l.certified) ? [{ key: 'certified', label: t('certified.badge') }] : []),
   ];
 
   const communityTag = (slug: string | null | undefined): string | null =>
@@ -224,6 +228,7 @@ export default function BrowseMentors() {
               {l.persona_name}
             </Text>
             {l.in_touch ? <InTouchBadge flat testID={`mentor-in-touch-${l.id}`} /> : null}
+            {l.certified ? <CertifiedBadge testID={`mentor-certified-${l.id}`} /> : null}
             <View style={styles.grow} />
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
           </View>

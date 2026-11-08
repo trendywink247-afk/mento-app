@@ -1297,6 +1297,12 @@
     "soon": "Coming soon",
     "body": "We have not confirmed this yet. Nothing changes for you today."
   },
+  "certified": {
+    "badge": "Certified",
+    "a11y": "Certified for exam mentoring",
+    "filter": "Certified exam mentors",
+    "hint": "Only mentors an admin has certified for exam mentoring"
+  },
   "requestSent": {
     "slowLine": "No reply yet. Some mentors answer after a while, and you can keep waiting. Or ask someone else.",
     "tryAnother": "Ask another mentor",

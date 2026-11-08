@@ -28,6 +28,8 @@ class ListenerOut(BaseModel):
     # every screen draws for this mentor. Stable — never rotates with the name (§L.6 l).
     companion_animal: str = "Owl"
     companion_colour: str = "sage"
+    # An admin certified this mentor for exam mentoring (DECISIONS section O): the badge.
+    certified: bool = False
 
 
 class ListenerProfileOut(BaseModel):
@@ -54,6 +56,7 @@ class ListenerProfileOut(BaseModel):
     # every screen draws for this mentor. Stable — never rotates with the name (§L.6 l).
     companion_animal: str = "Owl"
     companion_colour: str = "sage"
+    certified: bool = False
     # The member-facing words for `categories`, same order (services/categories.py), so
     # the app never shows a raw slug. Additive.
     category_labels: list[str] = []

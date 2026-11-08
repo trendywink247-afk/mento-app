@@ -20,6 +20,9 @@ class ListenerApplicationIn(BaseModel):
     available_times: list[AvailableTime] | None = Field(default=None, max_length=5)
     email: EmailStr | None = None  # same pattern as OnboardingStart.email
     mentor_interest: bool = False
+    # Exam mentoring (DECISIONS section O): what the applicant says they hold, in their own words.
+    # Optional, so older builds still submit; the admin reads it and decides on certification.
+    exam_credential: str | None = Field(default=None, max_length=200)
     pledge_accepted: bool
 
 

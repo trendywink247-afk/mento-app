@@ -6,9 +6,11 @@ every router and service — add a model to its surface module AND to this list.
 
 from app.schemas.admin import (
     AdminAccountItem,
+    AdminApplicationApproveIn,
     AdminApplicationDeclineIn,
     AdminApplicationItem,
     AdminAuditItem,
+    AdminCertifyIn,
     AdminConsoleLinkOut,
     AdminContributionItem,
     AdminCreatedOut,
@@ -140,7 +142,9 @@ __all__ = [
     "AdminAllowanceDay",
     "AdminAllowanceOut",
     "AdminAllowanceRule",
+    "AdminApplicationApproveIn",
     "AdminApplicationDeclineIn",
+    "AdminCertifyIn",
     "AdminApplicationItem",
     "AdminAuditItem",
     "AdminConsoleLinkOut",

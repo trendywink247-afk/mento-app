@@ -36,7 +36,7 @@ APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
 def seed_conversation(db_session):
     """(member, conversation) — the plan's helper, over tests/chat_helpers.seed_chat."""
-    seeded = seed_chat(db_session)
+    seeded = seed_chat(db_session, certified=True)
     return db_session.get(User, seeded.member_id), _Conv(seeded)
 
 

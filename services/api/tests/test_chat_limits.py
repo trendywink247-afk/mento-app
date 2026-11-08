@@ -48,7 +48,7 @@ def client():
 @pytest.fixture
 def room(db_session):
     with TestSession() as s:
-        return seed_chat(s)
+        return seed_chat(s, certified=True)
 
 
 def _open(client, room, who, after=0):
@@ -270,7 +270,7 @@ def test_hello_is_one_database_round(client, room, monkeypatch):
 def test_a_message_and_its_allowance_count_commit_together(db_session, monkeypatch):
     """One commit for the message + count (then one for its jobs) — and a message that
     fails to land leaves no count behind."""
-    room = seed_chat(db_session)
+    room = seed_chat(db_session, certified=True)
     monkeypatch.setattr(chat, "publish", lambda cid, ev: None)
     # Real COMMITs on the wire (a savepoint release is a different event).
     commits: list[int] = []

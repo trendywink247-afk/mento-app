@@ -56,6 +56,7 @@ def _pair(s, *, name: str = "Gentle Harbor") -> tuple[str, str, str, str]:
         categories=[],
         status=ListenerStatus.online,
         vetting_status=VettingStatus.approved,
+        certified_exam=True,
     )
     s.add_all([u, li])
     s.flush()
@@ -243,6 +244,7 @@ def test_ten_a_day_across_conversations(client, db_session, enforced):
         categories=[],
         status=ListenerStatus.online,
         vetting_status=VettingStatus.approved,
+        certified_exam=True,
     )
     db_session.add(li2)
     db_session.flush()
@@ -467,6 +469,7 @@ def test_own_chat_counts_through_the_real_write_path(client, db_session, enforce
         categories=[],
         status=ListenerStatus.online,
         vetting_status=VettingStatus.approved,
+        certified_exam=True,
     )
     db_session.add_all([u, li])
     db_session.flush()

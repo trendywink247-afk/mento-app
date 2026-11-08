@@ -228,7 +228,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
     held: !!allowanceView.note,
     above: allowanceView.note && allowanceView.allowance ?
       <AllowanceNote allowance={allowanceView.allowance} reason={allowanceView.note} name={name}
-        onJournal={() => router.dismissTo('/journals')} /> : allowanceView.allowance ?
+        onJournal={() => router.dismissTo('/journals')} /> : allowanceView.allowance && allowanceView.allowance.applies !== false ?
       <AllowanceRow allowance={allowanceView.allowance} exempt={allowanceView.exempt} /> : null,
   } : {};
 
