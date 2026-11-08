@@ -3434,6 +3434,37 @@
         "title": "LockRequest",
         "type": "object"
       },
+      "MatchAsk": {
+        "description": "Ask the best available mentor for an exam niche; they accept before any chat opens.",
+        "properties": {
+          "intro_message": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intro Message"
+          },
+          "issue_category": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Issue Category"
+          }
+        },
+        "title": "MatchAsk",
+        "type": "object"
+      },
       "MatchRequest": {
         "properties": {
           "intro_message": {
@@ -4195,6 +4226,11 @@
       },
       "PathCommunityOut": {
         "properties": {
+          "accept_first": {
+            "default": false,
+            "title": "Accept First",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -9735,6 +9771,53 @@
         ]
       }
     },
+    "/api/v1/match/ask": {
+      "post": {
+        "description": "Next available mentor for an exam niche, by request: the best online mentor (same\nranking as the instant match, the member's community preferred) gets the question in\ntheir inbox and the chat opens only when they accept. Nothing is reserved until then.",
+        "operationId": "ask_best_mentor_api_v1_match_ask_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MatchAsk"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Ask Best Mentor",
+        "tags": [
+          "match"
+        ]
+      }
+    },
     "/api/v1/me": {
       "delete": {
         "description": "Start fresh, for real (audit F24, DECISIONS §L.11): erase this member and\neverything keyed to them — see `services/erasure.py` for exactly what is deleted,\nwhat is kept detached (safety flags, reports) and why.\n\nIdempotent: once erased, the same session gets 200 again and nothing happens.\nFail-safe: when Stream cannot confirm a deletion the answer is 503 `erase_incomplete`\n— chats are ended, nothing else is claimed, the member row stays so the app retries\nwith the same session. Refused with 409 `mentor_active` while the member is also a\nlive mentor (nothing touched).",
@@ -10121,6 +10204,32 @@
         "summary": "Start",
         "tags": [
           "onboarding"
+        ]
+      }
+    },
+    "/api/v1/paths/communities": {
+      "get": {
+        "description": "Every road with its plain name and whether it waits for a mentor's accept. Static\nconfig, no member data: the app words its filters from this, never from its own list.",
+        "operationId": "path_communities_api_v1_paths_communities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PathCommunityOut"
+                  },
+                  "title": "Response Path Communities Api V1 Paths Communities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Path Communities",
+        "tags": [
+          "paths"
         ]
       }
     },

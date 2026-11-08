@@ -3,7 +3,7 @@
  */
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -17,6 +17,7 @@ import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
+import { MessageActions } from '@/components/chat/MessageActions';
 import { ThreadRow, type ThreadMsg } from '@/components/chat/ThreadRow';
 import { HelplinesSheet } from '@/components/mentor/HelplinesSheet';
 import { MentorChatHeader } from '@/components/mentor/MentorChatHeader';
@@ -37,7 +38,7 @@ import { createOwnChatScreenController, type OwnScreenMessage } from '@/lib/ownC
 import { pendingOption } from '@/lib/pendingOption';
 import { CRISIS_EXEMPT_MS, useAllowance, type HeldAllowance } from '@/lib/useAllowance';
 import { useChatHeader } from '@/lib/useChatHeader';
-import { measureScreenTop, useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
+import { useKeyboardPad } from '@/lib/useKeyboardPad';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -71,17 +72,17 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [crisisAt, setCrisisAt] = useState(0);
   const [options, setOptions] = useState(false);
   const [initialOption, setInitialOption] = useState<'report' | undefined>();
+  const [held, setHeld] = useState<ThreadMsg | null>(null);
   const [menu, setMenu] = useState<'closed' | 'open' | 'confirmEnd'>('closed');
   const [ending, setEnding] = useState(false);
   const [helplines, setHelplines] = useState(false);
   const [saveOpen, setSaveOpen] = useState<string | null>(null);
   const [savedNow, setSavedNow] = useState<Set<string>>(new Set());
-  const [offset, setOffset] = useState(0);
   const [mentorOnline, setMentorOnline] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isForeground, setIsForeground] = useState(AppState.currentState === 'active');
   useListenerHeartbeat(!member && mentorOnline && isFocused && isForeground);
-  const keyboardBoundary = useChatKeyboardBoundary(offset);
+  const keyboardPad = useKeyboardPad();
   const allowanceView = useAllowance(member ? conversationId : undefined,
     crisisAt > 0 && Date.now() - crisisAt < CRISIS_EXEMPT_MS);
   const allowanceRef = useRef(allowanceView);
@@ -224,7 +225,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         snapshot?.reason === 'wiped' ? 'reflection.ended' : 'chat.errOpen')}</Text>
       {retryable ? <PrimaryButton label={t('common.retry')} onPress={onRetry} testID="own-native-retry" /> : null}
     </View> : <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.flex, keyboardBoundary]} onLayout={event => measureScreenTop(event.currentTarget, setOffset)}
+      style={[styles.flex, keyboardPad]}
       testID={ready ? 'own-native-chat-ready' : 'own-native-chat-connecting'}>
       <FlatList ref={list} data={rows} keyExtractor={item => item.id} style={styles.flex}
         contentContainerStyle={[styles.thread, { paddingBottom: space.md + threadFoot }]} keyboardShouldPersistTaps="handled"
@@ -239,9 +240,12 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
             latest?.id === item.id && item.user.id !== actor)} nudge={member && latest?.id === item.id}
           isSaved={member && saved.has(item.id)} savedNow={savedNow.has(item.id)}
           onToggleSave={id => { if (member) setSaveOpen(previous => previous === id ? null : id); }}
-          onSave={message => void save(message)} onArrived={() => {}} /> :
+          onSave={message => void save(message)} onArrived={() => {}} onLongPress={setHeld} /> :
           <View style={{ alignItems: item.user.id === actor ? 'flex-end' : 'flex-start' }}>
-            <Bubble mine={item.user.id === actor} text={item.text} testID={`own-native-message-${item.id}`} />
+            <Pressable delayLongPress={380} testID={`own-native-hold-${item.id}`}
+              onLongPress={() => setHeld({ id: item.id, text: item.text, mine: item.user.id === actor, at: item.created_at })}>
+              <Bubble mine={item.user.id === actor} text={item.text} testID={`own-native-message-${item.id}`} />
+            </Pressable>
             {item.id === lastMine ? <Text style={[type.caption, { color: colors.inkMuted }]}>
               {controller.current?.isRead(item.id) ? t('mentorChatPage.read') : t('allowance.delivered')}
             </Text> : null}
@@ -261,6 +265,9 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         </ComposerPerchContext.Provider>
       </ComposerChromeContext.Provider>
     </KeyboardAvoidingView>}
+    <MessageActions visible={!!held} text={held?.text ?? ''} onClose={() => setHeld(null)}
+      onSave={member && held && !held.mine && !saved.has(held.id) ? () => void save(held) : undefined}
+      onReport={member && held && !held.mine ? () => { setInitialOption('report'); setOptions(true); } : undefined} />
     {member ? <ConversationOptions conversationId={conversationId} visible={options} depth={depth}
       listenerName={name} initial={initialOption} onClose={() => { setOptions(false); setInitialOption(undefined); }}
       onLeft={leave} onSaveToJournal={() => setSaveOpen([...rows].reverse().find(row =>
