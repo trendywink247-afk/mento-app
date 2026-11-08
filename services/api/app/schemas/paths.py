@@ -21,6 +21,8 @@ class PathCommunityOut(BaseModel):
     slug: str
     name: str
     tagline: str
+    # Exam niche: a request waits for a mentor's accept (DECISIONS §N.2). Additive.
+    accept_first: bool = False
 
 
 class PathStageOut(BaseModel):

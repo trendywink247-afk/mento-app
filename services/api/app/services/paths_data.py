@@ -329,3 +329,9 @@ TREE: dict[str, dict] = {
         ],
     },
 }
+
+
+# More exam roads, the extra JEE/NEET stages and the accept-first flags (DECISIONS §N).
+from app.services import paths_exams  # noqa: E402  (needs COMMUNITIES and TREE above)
+
+paths_exams.extend(COMMUNITIES, TREE)

@@ -12,9 +12,22 @@ def is_valid(community: str, stage: str) -> bool:
     return bool(c and stage in c["stages"])
 
 
+def accept_first(slug: str | None) -> bool:
+    """An exam niche (DECISIONS §N.2): the member's request waits for a mentor's accept,
+    even when a mentor is online. Life in general, no Path, or an unknown slug keep the
+    instant General match."""
+    c = COMMUNITIES.get(slug) if slug else None
+    return bool(c and c.get("accept_first"))
+
+
 def community_info(slug: str) -> dict:
     c = COMMUNITIES[slug]
-    return {"slug": slug, "name": c["name"], "tagline": c["tagline"]}
+    return {
+        "slug": slug,
+        "name": c["name"],
+        "tagline": c["tagline"],
+        "accept_first": bool(c.get("accept_first")),
+    }
 
 
 def stage_info(community: str, stage: str) -> dict:
