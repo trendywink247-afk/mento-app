@@ -8,7 +8,7 @@ from datetime import datetime
 
 REQUIRED = {
     "api-ci.yml": {"api-lint", "api-test", "lint", "test", "full-suite"},
-    "test-ci.yml": {"mobile-web", "release-tooling", "recovery-receipts",
+    "test-ci.yml": {"mobile-unit", "mobile-browser", "release-tooling", "recovery-receipts",
                     "receiver-isolation", "test-gate", "full-suite"},
 }
 

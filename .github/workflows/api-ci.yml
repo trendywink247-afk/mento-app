@@ -22,6 +22,7 @@ defaults:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       api: ${{ steps.classify.outputs.api }}
       full: ${{ steps.classify.outputs.full }}
@@ -36,6 +37,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -58,6 +60,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.api == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     env:
       # Matches the docker-compose Postgres published on localhost:5432.
       DATABASE_URL: postgresql+psycopg://mento:mento@localhost:5432/mento
