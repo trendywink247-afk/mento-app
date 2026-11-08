@@ -46,7 +46,11 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
+      # These jobs run Node and browser-web tests only; Skia's native binaries (a GitHub release
+      # download that 504'd on 2026-11-08) are never used.
       - run: npm ci
+        env:
+          SKIP_SKIA_DOWNLOAD: '1'
       - run: npm run typecheck
       - name: Unit tests (every e2e/*.test.cjs, same command as ops/ci.sh)
         run: node --test e2e/*.test.cjs
@@ -69,7 +73,11 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
+      # These jobs run Node and browser-web tests only; Skia's native binaries (a GitHub release
+      # download that 504'd on 2026-11-08) are never used.
       - run: npm ci
+        env:
+          SKIP_SKIA_DOWNLOAD: '1'
       - run: npx expo export --platform web
       - name: Install isolated browser test tools
         run: |
