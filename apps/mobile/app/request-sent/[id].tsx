@@ -25,7 +25,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   interpolate,
@@ -44,6 +44,8 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { FeedbackPill } from '@/components/FeedbackPill';
 import { GroundFade } from '@/components/GroundFade';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { HELPLINES, telHref } from '@/lib/helplines';
+import { openNewChat } from '@/lib/askLoop';
 import { Companion } from '@/components/art/Companion';
 import { MentorFace } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
@@ -63,6 +65,8 @@ import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
 
 /** How often the focused letter re-reads its question (ms). Quiet: no spinner, no motion. */
 const REFRESH_MS = 15000;
+/** How long a question may wait before the letter offers another mentor (the member decides). */
+const SLOW_AFTER_MS = 120_000;
 /** The scene's geometry (board A04): the arc starts right of the companion and ends left of
  * the mentor's avatar; the note's top edge sits `NOTE_TOP` below the scene's top. */
 const NOTE_TOP = 84;
@@ -146,6 +150,14 @@ export default function RequestSentScreen() {
   const phase: Phase =
     request?.status === 'matched' ? 'accepted' : request && request.status !== 'pending' ? 'closed' : 'pending';
   phaseRef.current = phase;
+  // A calm clock: it only decides whether to OFFER another mentor, never counts down at anyone.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (phase !== 'pending') return;
+    const timer = setInterval(() => setNow(Date.now()), 10_000);
+    return () => clearInterval(timer);
+  }, [phase]);
+  const slow = phase === 'pending' && request ? now - new Date(request.created_at).getTime() >= SLOW_AFTER_MS : false;
   // A closed or failed question is a still state (T&S #11).
   const still = reduced || phase !== 'pending' || loadError || missing;
 
@@ -169,6 +181,17 @@ export default function RequestSentScreen() {
         setRequest(r);
         if (r.status !== 'matched') setClosedByMe(true);
       })
+      .catch(() => setLoadError(true))
+      .finally(() => setClosing(false));
+  };
+
+  // "Ask another mentor": close this question (one open question at a time), then the same sheet.
+  const tryAnother = () => {
+    if (!id || closing) return;
+    setClosing(true);
+    void api
+      .withdrawRequest(id)
+      .then(() => openNewChat(router))
       .catch(() => setLoadError(true))
       .finally(() => setClosing(false));
   };
@@ -232,6 +255,28 @@ export default function RequestSentScreen() {
                   <Text style={[type.note, { color: colors.inkMuted }]} testID="request-sent-line">
                     {name ? line : ' '}
                   </Text>
+                  {slow ? (
+                    <View style={styles.slow} testID="request-sent-slow">
+                      <Text style={[type.note, { color: colors.ink }]}>{t('requestSent.slowLine')}</Text>
+                      <QuietKey
+                        label={t('requestSent.tryAnother')}
+                        onPress={tryAnother}
+                        disabled={closing}
+                        testID="request-sent-try-another"
+                      />
+                    </View>
+                  ) : null}
+                  {phase === 'pending' ? (
+                    <Text
+                      style={[type.caption, { color: colors.inkMuted }]}
+                      onPress={() => void Linking.openURL(telHref(HELPLINES[0].tel)).catch(() => {})}
+                      accessibilityRole="link"
+                      accessibilityLabel={t('requestSent.helplineA11y', { number: HELPLINES[0].display })}
+                      testID="request-sent-helpline"
+                    >
+                      {t('requestSent.helpline', { number: HELPLINES[0].display })}
+                    </Text>
+                  ) : null}
                   {loadError ? (
                     <Text style={[type.caption, { color: colors.inkMuted }]} testID="request-sent-error">
                       {t('requestSent.loadError')}
@@ -618,6 +663,7 @@ function MeanwhileKey({
 }
 
 const styles = StyleSheet.create({
+  slow: { gap: 2 },
   safe: { flex: 1 },
   body: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.md, gap: 12 },

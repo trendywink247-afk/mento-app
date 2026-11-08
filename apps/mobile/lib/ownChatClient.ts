@@ -69,6 +69,9 @@ export type OwnChatDependencies = {
   timers?: { set(callback: () => void, ms: number): unknown; clear(handle: unknown): void };
 };
 
+/** Peers show "typing" for 6 s after a frame, so one frame every 2.5 s keeps it steady. */
+const TYPING_COOLDOWN_MS = 2_500;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 const isSeq = (value: unknown): value is number =>
@@ -104,6 +107,7 @@ export function createOwnChatClient(scopeInput: OwnChatScope, dependencies: OwnC
   let read: Record<string, number> = {};
   let pongDeadline: unknown;
   let typingDeadline: unknown;
+  let typingCooling = false;
 
   function snapshot(): OwnChatSnapshot {
     return {
@@ -151,6 +155,7 @@ export function createOwnChatClient(scopeInput: OwnChatScope, dependencies: OwnC
       try { old.close(); } catch { /* Cleanup must finish even if native close fails. */ }
     }
     peerOnline = peerTyping = false;
+    typingCooling = false;
     for (const item of pending.values()) if (item.status === 'sending') item.status = 'queued';
   }
   function finish(code: string, wipe = false) {
@@ -382,7 +387,17 @@ export function createOwnChatClient(scopeInput: OwnChatScope, dependencies: OwnC
       flush();
     },
     discard(clientId: string) { pending.delete(clientId); notify(); },
-    typing(on: boolean) { if (status === 'ready') write({ t: 'typing', on }); },
+    /** One `typing: true` per cooldown while the member keeps typing: a frame per keystroke
+     * floods the socket and spends the person's frame budget, which can rate-limit a real send. */
+    typing(on: boolean) {
+      if (status !== 'ready') return;
+      if (on) {
+        if (typingCooling) return;
+        typingCooling = true;
+        later(() => { typingCooling = false; }, TYPING_COOLDOWN_MS);
+      }
+      write({ t: 'typing', on });
+    },
     markRead(seq: number) {
       if (status === 'ready' && isSeq(seq)) write({ t: 'read', seq: Math.min(seq, after) });
     },

@@ -22,3 +22,10 @@ class MatchResult(BaseModel):
     # The mentor's face (services/mentor_face.py) — the connecting orb's "found" mentor.
     listener_companion_animal: str = "Owl"
     listener_companion_colour: str = "sage"
+
+
+class MatchAsk(BaseModel):
+    """Ask the best available mentor for an exam niche; they accept before any chat opens."""
+
+    issue_category: str | None = Field(default=None, max_length=40)
+    intro_message: str | None = Field(default=None, max_length=160)

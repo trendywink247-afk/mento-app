@@ -287,3 +287,14 @@ test('read markers are monotonic, typing expires, and queue validation is bounde
   assert.throws(() => h.client.send('draft-0', 'changed'), /client_id_reused/);
   h.client.forget();
 });
+
+test('typing frames are throttled to one per cooldown, restart after it, and reset on reconnect', async () => {
+  const h = harness({ store: [message(1)] }); await h.client.start(); const socket = await h.open(1);
+  const typing = () => socket.sent.filter(frame => frame.t === 'typing').length;
+  for (let i = 0; i < 20; i++) h.client.typing(true);
+  assert.equal(typing(), 1);
+  await h.advance(2400); h.client.typing(true); assert.equal(typing(), 1);
+  await h.advance(200); h.client.typing(true); assert.equal(typing(), 2);
+  h.client.typing(false); assert.equal(typing(), 3);
+  h.client.forget();
+});

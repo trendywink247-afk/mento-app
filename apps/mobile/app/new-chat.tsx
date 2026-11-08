@@ -12,6 +12,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
+import { matchOrAsk, openAsked } from '@/lib/startChat';
 import { TOPICS } from '@/lib/topics';
 import { useI18n } from '@/lib/i18n';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -67,7 +68,13 @@ export default function NewChatSheet() {
     setMatching(true);
     setNote(null);
     try {
-      const match = await api.match({ kind: 'general', issue_category: topic });
+      const started = await matchOrAsk({ issue_category: topic });
+      // An exam road waits for the mentor's accept: the letter, not a chat (DECISIONS §N.2).
+      if (started.kind === 'ask') {
+        sheet.current?.close(() => openAsked(router, started.request));
+        return;
+      }
+      const match = started.match;
       sheet.current?.close(() =>
         router.replace({
           pathname: '/chat/[id]',
