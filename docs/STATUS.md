@@ -8,11 +8,11 @@ On dev 2026-11-08 (#118 to #124): QA build beside store, CI streamline, DECISION
 **Next 3 tasks:**
 1. PR for `feat/accept-flow-fixes`, then OTA is already on QA preview; remaining device passes: decline, snooze, End, report, crisis view, push for a new request, busy card (nobody online), dark mode, large font, rotation, TalkBack.
 2. Chat-list preview for own chats shows a placeholder, not the last message (needs it in the list response); an ended own chat shows no transcript to the member and its header still says "here now"; the undismissable Feedback sheet (needs a repro).
-3. Not yet on a device: snooze, the busy card with nobody online (needs a second online mentor taken offline), dark mode, large font, rotation, TalkBack.
+3. Not yet on a device: the busy card (both online mentors must be offline), rotation, TalkBack, large font beyond My Chats. The app has no dark theme at all (light only, DECISIONS silent): ask whether it is wanted.
 
 **Open questions:**
 - Run the Rollback Rehearsal on GitHub before relying on the `main` repair in the release workflows.
 - Production URL/host, FCM key mount, Play Console declarations, trademark check, privacy policy finalisation.
 - Safety gap to rule on: a request's intro text (Personal request and the new ask) is not crisis-scanned when it is created, only once it is sent as the first chat message after a mentor accepts. Mentors see it in the inbox before that. Needs your decision (scan at creation, flag, and show the helpline card).
 - Erasure for suspended/banned members is blocked (403): product/legal decision. 426 upgrade screen in the app is still to do.
-- Revoke the "Founder QA" admin when testing is done.
+- Revoke the "Founder QA" admin when testing is done. DECISIONS §O (10-message limit only for certified exam mentors; no verification for general listening) is on `docs/decisions-limit-verification`; not built: three open points are listed there.
