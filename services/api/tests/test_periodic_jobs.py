@@ -61,6 +61,8 @@ def test_the_schedule():
         "maintenance.prune_jobs": "17 3 * * *",
         # Own-chat partitions (WS5 T5.6): ready ahead, expired ones dropped.
         "maintenance.chat_partitions": "41 2 * * *",
+        # Unanswered requests (DECISIONS section P.5): nudge at 24 hours, close at 48.
+        "maintenance.request_ageing": "*/15 * * * *",
     }
     rotation = datetime(2026, 3, 1, 22, 30, tzinfo=UTC).astimezone(mentor_names.IST)
     assert (rotation.hour, rotation.minute) == (mentor_names.ROTATION_HOUR_IST, 0)
@@ -151,6 +153,10 @@ def test_the_prune_job_keeps_recent_failures_and_drops_old_ones(db_session):
 
 def test_the_worker_runs_a_maintenance_job_from_the_queue(db_session):
     """Registration, not just the function: the worker finds the task by name."""
+    # A worker start also runs the request-ageing job (DECISIONS section P.5); requests left
+    # over by earlier tests must not make it queue pushes into this count.
+    db_session.execute(text("TRUNCATE conversation_requests CASCADE"))
+    db_session.commit()
     _listener(db_session, "Far Hill", last_seen_at=datetime.now(UTC) - timedelta(hours=1))
     jobs.enqueue(db_session, tasks.maintenance_capacity, timestamp=0)
     db_session.commit()

@@ -36,6 +36,12 @@ from app.models.push_token import PushToken
 from app.models.request import ConversationRequest
 from app.models.user import User
 from app.services import fcm, member_status, snooze, stream
+from app.services.matching import (
+    blocked_listener_ids,
+    broadcast_candidate_ids,
+    can_take_broadcast,
+    own_listener_ids,
+)
 
 logger = logging.getLogger("mento.push")
 
@@ -116,6 +122,7 @@ TITLE = "Mento"
 TEMPLATES = {
     "request": "Someone would like to talk with you",
     "accepted": "%(persona)s is ready to talk",
+    "request_nudge": "Your question has not had a reply yet. You can choose what happens next.",
     "message_from_member": "%(persona)s sent a message",
     "message_from_listener": "%(persona)s replied",
 }
@@ -314,10 +321,24 @@ def _delivery_allowed(db: Session, kind: PushOwnerKind, owner_id: str, data: dic
     event = data.get("kind")
     if event == "request":
         req = db.get(ConversationRequest, data.get("request_id"))
+        if kind != PushOwnerKind.listener or req is None or req.status != RequestStatus.pending:
+            _suppressed("request_not_pending")
+            return False
+        if req.target_listener_id == owner_id:
+            return True
+        # A broadcast: pushed to each certified mentor who may still take it; once one has,
+        # or this mentor passed, the page is dropped.
+        taker = db.get(ListenerProfile, owner_id) if req.broadcast else None
+        if taker is not None and can_take_broadcast(db, req, taker):
+            return True
+        _suppressed("request_not_pending")
+        return False
+    if event == "request_nudge":
+        req = db.get(ConversationRequest, data.get("request_id"))
         if (
-            kind != PushOwnerKind.listener
+            kind != PushOwnerKind.member
             or req is None
-            or req.target_listener_id != owner_id
+            or req.requester_id != owner_id
             or req.status != RequestStatus.pending
         ):
             _suppressed("request_not_pending")
@@ -435,6 +456,54 @@ def notify_request_created(db: Session, *, request_id: str) -> None:
         tokens,
         TEMPLATES["request"],
         {"kind": "request", "request_id": req.id},
+    )
+
+
+def notify_request_broadcast(db: Session, *, request_id: str) -> None:
+    """Page the certified mentors who can take a broadcast question (at most 20, best match
+    first). Callers must commit their own state before calling."""
+    req = db.get(ConversationRequest, request_id)
+    if req is None or not req.broadcast or req.status != RequestStatus.pending:
+        return
+    member = db.get(User, req.requester_id)
+    blocked = blocked_listener_ids(db, req.requester_id) | own_listener_ids(db, req.requester_id)
+    for listener_id in broadcast_candidate_ids(
+        db,
+        req.issue_category,
+        blocked,
+        community=member.community_slug if member else None,
+    ):
+        tokens = tokens_for(db, PushOwnerKind.listener, listener_id)
+        if not tokens:
+            _suppressed("no_token")
+            continue
+        _send(
+            db,
+            PushOwnerKind.listener,
+            listener_id,
+            tokens,
+            TEMPLATES["request"],
+            {"kind": "request", "request_id": req.id},
+        )
+
+
+def notify_request_nudge(db: Session, *, request_id: str) -> None:
+    """The 24-hour "no reply yet" page to the member (DECISIONS section P.5): no mentor name, no
+    text of the question. Callers must commit their own state before calling."""
+    req = db.get(ConversationRequest, request_id)
+    if req is None or req.status != RequestStatus.pending:
+        return
+    tokens = tokens_for(db, PushOwnerKind.member, req.requester_id)
+    if not tokens:
+        _suppressed("no_token")
+        return
+    _send(
+        db,
+        PushOwnerKind.member,
+        req.requester_id,
+        tokens,
+        TEMPLATES["request_nudge"],
+        {"kind": "request_nudge", "request_id": req.id},
     )
 
 

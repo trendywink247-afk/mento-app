@@ -141,6 +141,9 @@ class Settings(BaseSettings):
     chat_frames_per_window: int = 40
     chat_frames_window_s: int = 10
     chat_idle_deadline_s: float = 75.0
+    # Roads open for a launch (DECISIONS §P.1), comma-separated slugs. Other roads stay in the
+    # app greyed out as "Coming soon" and are refused here. Empty = every road is open.
+    launch_roads: str = "upsc,life"
     allowance_enabled: bool = True
     allowance_enforced: bool = False
     allowance_in_a_row: int = 3

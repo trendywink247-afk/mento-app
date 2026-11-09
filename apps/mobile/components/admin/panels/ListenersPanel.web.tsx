@@ -12,7 +12,7 @@ import {
 import { MentorFace } from '@/components/art/MentorFace';
 import { MemberDisc } from '@/components/mentor/MemberDisc';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
-import { adminApi, type AdminApplication, type AdminListener } from '@/lib/adminApi';
+import { adminApi, type AdminApplication, type AdminListener, type AdminMentorInvite } from '@/lib/adminApi';
 import { formatTimestamp, formatTopic } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type, wash, washInk } from '@/theme/tokens';
@@ -39,6 +39,54 @@ export default function ListenersPanel() {
   const [declineId, setDeclineId] = useState<string | null>(null);
   const [declineReason, setDeclineReason] = useState('');
 
+  // Gold invitations: the code is shown once, right after it is made, and never again.
+  const [invites, setInvites] = useState<AdminMentorInvite[] | null>(null);
+  const [inviteNote, setInviteNote] = useState('');
+  const [newInvite, setNewInvite] = useState<string | null>(null);
+
+  const loadInvites = async () => {
+    try {
+      setInvites(await adminApi.listMentorInvites());
+    } catch {
+      setError('Could not load invitations. Retry shortly.');
+    }
+  };
+
+  const makeInvite = async () => {
+    setBusy('invite');
+    setError(null);
+    try {
+      const made = await adminApi.createMentorInvite(inviteNote.trim() || null);
+      setNewInvite(made.code);
+      setInviteNote('');
+      try {
+        await navigator.clipboard.writeText(made.code);
+        setToast('Invitation made. The code is copied; it is shown only once.');
+      } catch {
+        setToast('Invitation made. Copy the code below; it is shown only once.');
+      }
+      await loadInvites();
+    } catch {
+      setError('Could not make an invitation. Try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const revokeInvite = async (id: string) => {
+    setBusy(id);
+    setError(null);
+    try {
+      await adminApi.revokeMentorInvite(id);
+      setToast('Invitation revoked');
+      await loadInvites();
+    } catch {
+      setError('Could not revoke that invitation. Try again.');
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const load = async () => {
     try {
       setListeners(await adminApi.listeners());
@@ -59,15 +107,20 @@ export default function ListenersPanel() {
   useEffect(() => {
     void load();
     void loadApplications();
+    void loadInvites();
   }, []);
 
-  const approve = async (id: string) => {
+  const approve = async (id: string, certify = false) => {
     setBusy(id);
     setError(null);
     setConfirmId(null);
     try {
-      await adminApi.approveApplication(id);
-      setToast('Application approved — listener added to the roster');
+      await adminApi.approveApplication(id, certify);
+      setToast(
+        certify
+          ? 'Approved and verified for exam mentoring — listener added to the roster'
+          : 'Application approved — listener added to the roster',
+      );
       await Promise.all([loadApplications(), load()]);
     } catch {
       setError('Could not approve that application. Try again.');
@@ -119,6 +172,20 @@ export default function ListenersPanel() {
       setError('Could not create that listener. Try again.');
     } finally {
       setCreating(false);
+    }
+  };
+
+  const certify = async (id: string, certified: boolean) => {
+    setBusy(id);
+    setError(null);
+    try {
+      await adminApi.certifyListener(id, certified);
+      setToast(certified ? 'Verified for exam mentoring' : 'Verification removed');
+      await load();
+    } catch {
+      setError("Couldn't update that verification. Try again.");
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -212,6 +279,62 @@ export default function ListenersPanel() {
         </ConsolePressable>
       </View>
 
+      {/* Gold invitations: a single-use code the founder sends himself. No email is stored. */}
+      <View style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]} testID="admin-invites">
+        <Text style={[type.bodySemi, { color: colors.ink }]}>Gold mentor invitations</Text>
+        <Text style={[type.caption, { color: colors.inkMuted }]}>
+          Makes a single-use code, valid 7 days. Send it yourself. The mentor enters it in the app under
+          Become a mentor and is verified at once. Keep the note free of real names and contacts.
+        </Text>
+        <TextInput
+          value={inviteNote}
+          onChangeText={setInviteNote}
+          maxLength={80}
+          placeholder="Private note (optional), e.g. cleared mains 2019"
+          placeholderTextColor={colors.inkMuted}
+          accessibilityLabel="Private note for the invitation"
+          style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
+          testID="admin-invite-note"
+        />
+        <ConsolePressable
+          onPress={() => void makeInvite()}
+          disabled={busy === 'invite'}
+          accessibilityRole="button"
+          testID="admin-invite-create"
+          style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
+        >
+          <Text style={[type.label, { color: colors.onAccent }]}>
+            {busy === 'invite' ? 'Making…' : 'Make an invitation'}
+          </Text>
+        </ConsolePressable>
+        {newInvite ? (
+          <Text selectable style={[type.bodySemi, { color: colors.ink, letterSpacing: 1 }]} testID="admin-invite-code">
+            {newInvite}
+          </Text>
+        ) : null}
+        {(invites ?? []).map((i) => (
+          <View key={i.id} style={styles.actions} testID={`admin-invite-${i.id}`}>
+            <Text style={[type.caption, { color: colors.ink, flex: 1 }]}>
+              {`${i.status.toUpperCase()} · ${i.note ?? 'no note'} · ${
+                i.status === 'claimed' && i.claimed_at ? `claimed ${formatTimestamp(i.claimed_at)}` : `expires ${formatTimestamp(i.expires_at)}`
+              }`}
+            </Text>
+            {i.status === 'open' ? (
+              <ConsolePressable
+                onPress={() => void revokeInvite(i.id)}
+                disabled={busy === i.id}
+                accessibilityRole="button"
+                accessibilityLabel="Revoke this invitation"
+                testID={`admin-invite-revoke-${i.id}`}
+                style={[styles.secondaryBtn, { borderColor: colors.border }]}
+              >
+                <Text style={[type.label, { color: colors.ink }]}>Revoke</Text>
+              </ConsolePressable>
+            ) : null}
+          </View>
+        ))}
+      </View>
+
       {error ? <Text style={[type.caption, { color: colors.danger }]}>{error}</Text> : null}
       {toast ? <Text style={[type.caption, { color: colors.ink }]}>{toast}</Text> : null}
 
@@ -253,6 +376,14 @@ export default function ListenersPanel() {
 
               <Text style={[type.body, { color: colors.ink }]}>{app.motivation}</Text>
 
+              {app.wants_exam ? (
+                <Text style={[type.caption, { color: colors.ink }]} testID={`admin-app-credential-${app.id}`}>
+                  {app.exam_credential
+                    ? `Exam credential (their words, unverified): ${app.exam_credential}`
+                    : 'Chose an exam road; gave no credential.'}
+                </Text>
+              ) : null}
+
               {app.communities.length > 0 ? (
                 <View style={styles.chips}>
                   {app.communities.map((c) => (
@@ -288,6 +419,18 @@ export default function ListenersPanel() {
                     {busy === app.id ? 'Working…' : 'Approve'}
                   </Text>
                 </ConsolePressable>
+                {app.wants_exam ? (
+                  <ConsolePressable
+                    onPress={() => void approve(app.id, true)}
+                    disabled={busy === app.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Approve and verify ${app.persona_name} for exam mentoring`}
+                    testID={`admin-app-approve-certify-${app.id}`}
+                    style={[styles.secondaryBtn, { borderColor: colors.accent }]}
+                  >
+                    <Text style={[type.label, { color: colors.ink }]}>Approve + verify</Text>
+                  </ConsolePressable>
+                ) : null}
                 <ConsolePressable
                   onPress={() => void decline(app.id)}
                   disabled={
@@ -375,6 +518,20 @@ export default function ListenersPanel() {
               ) : null}
 
               <View style={styles.actions}>
+                {approved ? (
+                  <ConsolePressable
+                    onPress={() => void certify(li.id, !li.certified)}
+                    disabled={busy === li.id}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${li.certified ? 'Remove verification from' : 'Verify'} ${li.persona_name}`}
+                    testID={`admin-listener-${li.id}-certify`}
+                    style={[styles.secondaryBtn, { borderColor: li.certified ? colors.accent : colors.border }]}
+                  >
+                    <Text style={[type.label, { color: colors.ink }]}>
+                      {li.certified ? 'Verified ✓ (remove)' : 'Verify for exams'}
+                    </Text>
+                  </ConsolePressable>
+                ) : null}
                 {approved ? (
                   <ConsolePressable
                     onPress={() => void setStatus(li.id, 'suspend')}

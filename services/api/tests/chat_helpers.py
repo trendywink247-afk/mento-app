@@ -24,7 +24,7 @@ class SeededChat:
         return getattr(self, key)
 
 
-def seed_chat(s) -> SeededChat:
+def seed_chat(s, *, certified: bool = False) -> SeededChat:
     """A member, a mentor and an active conversation between them, committed on `s`.
     The conversation's channel key is its own id, as own-chat conversations have."""
     u = User(persona_name="Quiet Cove", persona_avatar="x", dob=date(1996, 1, 1), age_at_signup=30)
@@ -37,6 +37,9 @@ def seed_chat(s) -> SeededChat:
         rank=10,
         active_conversations=1,
         max_concurrent=3,
+        # The 10-a-day / 3-in-a-row allowance applies only to a certified exam mentor
+        # (DECISIONS section O); tests of the cap seed one.
+        certified_exam=certified,
     )
     s.add_all([u, li])
     s.flush()

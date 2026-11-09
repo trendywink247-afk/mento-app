@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -17,13 +17,16 @@ from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
 from app.models.admin import AdminAuditLog
-from app.models.enums import ApplicationStatus, VettingStatus
+from app.models.enums import ApplicationStatus, ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentor_invite import MentorInvite
+from app.models.user import User
 from app.schemas import ConsoleSessionOut, ListenerApplicationIn, ListenerApplicationOut
 from app.schemas.applications import ConsoleCodeOut, StepBackIn, StepBackOut
+from app.schemas.mentor_invites import InviteClaimIn
 from app.security import current_user_id, issue_listener_token
-from app.services import categories, console_codes, locks, moderation, stream
+from app.services import categories, console_codes, locks, mentor_invites, moderation, stream
 from app.services.links import mentor_console_code_link
 from app.services.paths_data import COMMUNITIES
 
@@ -137,11 +140,93 @@ def apply(
         ),
         email=payload.email,
         mentor_interest=payload.mentor_interest,
+        exam_credential=(payload.exam_credential or "").strip() or None,
         pledge_accepted_at=datetime.now(UTC),
     )
     db.add(row)
     db.commit()
     db.refresh(row)
+    return _out(db, row)
+
+
+@router.post("/invite", response_model=ListenerApplicationOut)
+def claim_invite(
+    payload: InviteClaimIn,
+    request: Request,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> ListenerApplicationOut:
+    """Claim a gold mentor invitation (DECISIONS section P.2-3). The invite replaces the
+    application and the admin's review: the founder vetted this person before handing over the
+    code. The member's own anonymous account becomes a certified mentor, so their recovery code
+    restores the role on a new phone. Wrong, used, expired and revoked codes are all the same 404.
+    """
+    ratelimit.enforce(
+        f"invite-ip:{ratelimit.client_ip(request)}",
+        10,
+        900,
+        detail="Too many tries — please wait a little and try again.",
+        fail_closed=True,
+    )
+    ratelimit.enforce(
+        f"invite-user:{user_id}",
+        5,
+        3600,
+        detail="Too many tries — please try again in an hour.",
+        fail_closed=True,
+    )
+    if not payload.pledge_accepted:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "The listener pledge must be accepted."
+        )
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "unknown session")
+    locks.serialize_member(db, user_id)
+    latest = _latest(db, user_id)
+    if latest is not None and latest.status in (
+        ApplicationStatus.pending,
+        ApplicationStatus.approved,
+    ):
+        raise HTTPException(status.HTTP_409_CONFLICT, "An application is already on file.")
+    invite_id = mentor_invites.redeem(db, payload.code, user_id)
+    if invite_id is None:
+        db.rollback()
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "that invitation did not work")
+    now = datetime.now(UTC)
+    launch = [r for r in get_settings().launch_roads.split(",") if r.strip() and r != "life"]
+    road = launch[0].strip() if launch else "upsc"
+    listener = ListenerProfile(
+        persona_name=user.persona_name,
+        persona_avatar=user.persona_avatar,
+        categories=[],
+        certified_exam=True,
+        certified_at=now,
+        community_slug=road,
+        status=ListenerStatus.offline,
+        vetting_status=VettingStatus.approved,
+        rank=0,
+        active_conversations=0,
+        max_concurrent=3,
+    )
+    db.add(listener)
+    db.flush()
+    row = ListenerApplication(
+        user_id=user_id,
+        motivation="Invited as a verified mentor",
+        communities=[road],
+        availability="invited",
+        mentor_interest=False,
+        status=ApplicationStatus.approved,
+        listener_id=listener.id,
+        pledge_accepted_at=now,
+    )
+    db.add(row)
+    invite = db.get(MentorInvite, invite_id)
+    invite.listener_id = listener.id
+    db.commit()
+    db.refresh(row)
+    stream.ensure_user(listener.id, user.persona_name, user.persona_avatar)
     return _out(db, row)
 
 

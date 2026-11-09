@@ -108,6 +108,10 @@ export type Listener = {
    * colour every screen draws for this mentor. Stable across name rotation. */
   companion_animal?: string;
   companion_colour?: string;
+  /** An admin certified this mentor for exam mentoring (DECISIONS §O): the gold badge. */
+  certified?: boolean;
+  /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
+  reply_within?: 'day' | 'two_days' | null;
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -134,6 +138,9 @@ export type ListenerProfile = {
   companion_colour?: string;
   /** The server's member-facing words for `categories`, same order (never a raw slug). */
   category_labels?: string[];
+  certified?: boolean;
+  /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
+  reply_within?: 'day' | 'two_days' | null;
 };
 
 export type PersonalRequest = {
@@ -148,6 +155,10 @@ export type PersonalRequest = {
   seen_at?: string | null;
   /** The mentor said yes and the chat is open — the letter's "Replying". */
   replying?: boolean;
+  /** Offered to every verified mentor, the first to accept takes it (DECISIONS §P.4). */
+  broadcast?: boolean;
+  /** No reply after 24 hours: the letter asks what to do next (DECISIONS §P.5). */
+  nudged?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
   listener_companion_animal?: string | null;
   listener_companion_colour?: string | null;
@@ -243,6 +254,8 @@ export type ConversationState = {
   is_locked: boolean;
   is_paused: boolean;
   status_mask: string | null;
+  /** The mentor suggested a certified exam mentor for this conversation (DECISIONS §O). */
+  exam_redirect?: boolean;
 };
 
 export type JournalEntry = {
@@ -392,6 +405,9 @@ export type Allowance = {
   /** The conversation is inside its crisis-exempt window: nothing is held or counted, and
    * the client never shows the three-in-a-row note. Optional — an older server omits it. */
   exempt?: boolean;
+  /** False when this conversation is not with a certified exam mentor (DECISIONS §O): no cap and
+   * no meter. Optional — an older server omits it, and the cap then shows as before. */
+  applies?: boolean;
 };
 
 // --- Product feedback (board A11) ---
@@ -410,9 +426,11 @@ export type PathOption = {
   next?: string;
   community?: string;
   stage?: string;
+  /** Open for this launch; false = greyed out as "Coming soon" (DECISIONS §P.1). Absent on old servers. */
+  enabled?: boolean;
 };
 export type PathNode = { question: string; options: PathOption[] };
-export type PathCommunity = { slug: string; name: string; tagline: string; accept_first: boolean };
+export type PathCommunity = { slug: string; name: string; tagline: string; accept_first: boolean; enabled?: boolean };
 export type PathTree = { root: string; nodes: Record<string, PathNode> };
 export type PathState = {
   community: { slug: string; name: string; tagline: string; accept_first?: boolean } | null;
@@ -448,6 +466,8 @@ export type ListenerApplicationIn = {
   available_times?: Array<'mornings' | 'afternoons' | 'evenings' | 'late_nights' | 'weekends'>;
   email: string | null;
   mentor_interest: boolean;
+  /** Exam mentoring (DECISIONS §O): what the applicant says they hold; an admin reads it. */
+  exam_credential?: string | null;
   pledge_accepted: boolean;
 };
 
@@ -780,6 +800,14 @@ export const api = {
   // --- Become a listener (spec 2026-07-24) ---
   submitListenerApplication: (payload: ListenerApplicationIn) =>
     request<ListenerApplication>('/listener-applications', { method: 'POST', body: JSON.stringify(payload) }, true),
+
+  /** Claim a gold mentor invitation (DECISIONS §P.3): the account becomes a certified mentor. 404 = the code did not work. */
+  claimMentorInvite: (code: string, pledge_accepted: boolean) =>
+    request<ListenerApplication>(
+      '/listener-applications/invite',
+      { method: 'POST', body: JSON.stringify({ code, pledge_accepted }) },
+      true,
+    ),
 
   getListenerApplication: () => request<ListenerApplication | null>('/listener-applications/me', {}, true),
 

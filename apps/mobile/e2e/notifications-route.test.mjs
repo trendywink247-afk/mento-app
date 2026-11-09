@@ -5,6 +5,8 @@ import { routeForNotification } from '../.tmp-route/notificationRoute.js';
 const both = { hasMemberSession: true, hasListenerToken: true, memberConversationIds: new Set(['c-mine']) };
 assert.deepEqual(routeForNotification({ kind: 'request', request_id: 'r' }, both), { pathname: '/mentor-home' });
 assert.equal(routeForNotification({ kind: 'request', request_id: 'r' }, { hasMemberSession: true, hasListenerToken: false }), null);
+assert.deepEqual(routeForNotification({ kind: 'request_nudge', request_id: 'r9' }, both), { pathname: '/request-sent/[id]', params: { id: 'r9' } });
+assert.equal(routeForNotification({ kind: 'request_nudge', request_id: 'r9' }, { hasMemberSession: false, hasListenerToken: true }), null);
 assert.deepEqual(routeForNotification({ kind: 'accepted', conversation_id: 'c1', stream_channel_id: 'ch' }, both), { pathname: '/chat/[id]', params: { id: 'c1', channel: 'ch' } });
 assert.deepEqual(routeForNotification({ kind: 'message', conversation_id: 'c-mine', stream_channel_id: 'ch' }, both), { pathname: '/chat/[id]', params: { id: 'c-mine', channel: 'ch' } });
 assert.deepEqual(routeForNotification({ kind: 'message', conversation_id: 'c-theirs', stream_channel_id: 'ch' }, both), { pathname: '/mentor/chat/[id]', params: { id: 'c-theirs', channel: 'ch' } });

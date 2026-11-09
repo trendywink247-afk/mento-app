@@ -205,7 +205,10 @@ export default function Pathfinder() {
     const on = r.key === routeKey;
     const look = r.kind === 'unsure' ? UNSURE_DISC : disc(i);
     const childLabels =
-      r.kind === 'branch' ? (tree?.nodes[r.next]?.options ?? []).map((o) => o.label).join(' · ') : '';
+      r.kind === 'branch' ? (tree?.nodes[r.next]?.options ?? [])
+            .filter((o) => o.enabled !== false) // roads that are not open yet are not advertised here
+            .map((o) => o.label)
+            .join(' · ') : '';
     const title =
       r.kind === 'group'
         ? r.community === 'life'
@@ -329,11 +332,13 @@ export default function Pathfinder() {
                     >
                       {segments.map((s, i) => {
                         const on = s.next === segment;
+                        const closed = s.enabled === false;
                         return (
                           <PressKey
                             key={s.label}
+                            disabled={closed}
                             onPress={() => {
-                              if (saving) return;
+                              if (saving || closed) return;
                               setSegment(s.next ?? null);
                               setMoment(null);
                             }}
@@ -342,7 +347,8 @@ export default function Pathfinder() {
                             radius={radius.sm}
                             intent="select"
                             accessibilityRole="radio"
-                            accessibilityState={{ selected: on }}
+                            accessibilityState={{ selected: on, disabled: closed }}
+                            accessibilityHint={closed ? t('pathfinder.comingSoon') : undefined}
                             testID={`pathfinder-seg-${i}`}
                             containerStyle={segments.length > MAX_ONE_ROW ? styles.segBoxWrap : styles.segBox}
                             style={[
@@ -353,11 +359,20 @@ export default function Pathfinder() {
                             ]}
                           >
                             <Text
-                              style={[styles.segText, { color: on ? colors.accentEdge : colors.inkMuted }]}
-                              numberOfLines={3}
+                              style={[
+                                styles.segText,
+                                { color: on ? colors.accentEdge : colors.inkMuted },
+                                closed && styles.segClosed,
+                              ]}
+                              numberOfLines={closed ? 2 : 3}
                             >
                               {s.label}
                             </Text>
+                            {closed ? (
+                              <Text style={[styles.segText, styles.segClosed, { color: colors.inkMuted }]} numberOfLines={1}>
+                                {t('pathfinder.comingSoon')}
+                              </Text>
+                            ) : null}
                           </PressKey>
                         );
                       })}
@@ -512,6 +527,7 @@ const styles = StyleSheet.create({
   stepLabel: { lineHeight: 18, paddingHorizontal: space.xs },
   segments: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.md, borderWidth: 1 },
   segmentsWrap: { flexWrap: 'wrap' },
+  segClosed: { opacity: 0.55 },
   segBox: { flex: 1, minWidth: 0 },
   segBoxWrap: { flexGrow: 1, flexBasis: '30%', minWidth: 0 },
   seg: { minHeight: 44, paddingHorizontal: 6, paddingVertical: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },

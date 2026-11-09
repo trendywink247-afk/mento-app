@@ -64,14 +64,14 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         ? t('mentorApply.gateAvailability')
         : null;
 
-  const [roads, setRoads] = useState<{ slug: string; name: string | null }[]>(
-    KNOWN_COMMUNITIES.map((slug) => ({ slug, name: null })),
+  const [roads, setRoads] = useState<{ slug: string; name: string | null; exam: boolean }[]>(
+    KNOWN_COMMUNITIES.map((slug) => ({ slug, name: null, exam: slug !== 'life' })),
   );
   useEffect(() => {
     let live = true;
     void api
       .pathCommunities()
-      .then((all) => live && all.length > 0 && setRoads(all.map((c) => ({ slug: c.slug, name: c.name }))))
+      .then((all) => live && all.length > 0 && setRoads(all.map((c) => ({ slug: c.slug, name: c.name, exam: c.accept_first }))))
       .catch(() => {
         /* reason: the five known roads stay; an older server has no such route */
       });
@@ -80,6 +80,10 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
     };
   }, []);
   const atCap = communities.length >= MAX_COMMUNITIES;
+  // Exam mentoring (DECISIONS §O): a mentor who picks an exam road may say what they hold. An admin
+  // reads it and decides on certification; it is their own words, never proof.
+  const [credential, setCredential] = useState('');
+  const wantsExam = roads.some((r) => r.exam && communities.includes(r.slug));
   const toggleCommunity = (slug: string) =>
     setCommunities((cs) =>
       cs.includes(slug) ? cs.filter((c) => c !== slug) : cs.length >= MAX_COMMUNITIES ? cs : [...cs, slug],
@@ -108,6 +112,7 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         // The board has no paid-mentoring opt-in (never hint at a paid tier); the
         // server field stays, always false from this form.
         mentor_interest: false,
+        exam_credential: wantsExam && credential.trim() ? credential.trim() : null,
         pledge_accepted: true,
       });
       onSuccess(result);
@@ -179,6 +184,25 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
           )}
         </View>
       </Entrance>
+
+      {wantsExam ? (
+        <Entrance index={2} style={styles.group}>
+          <Text style={[type.rowTitle, { color: colors.ink }]}>{t('mentorApply.credentialLabel')}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.credentialHint')}</Text>
+          <EdgeSurface edge={colors.edgeSurface} travel={4} radius={radius.md} style={styles.bare}>
+            <TextInput
+              value={credential}
+              onChangeText={setCredential}
+              maxLength={200}
+              placeholder={t('mentorApply.credentialPlaceholder')}
+              placeholderTextColor={colors.inkMuted}
+              accessibilityLabel={t('mentorApply.credentialLabel')}
+              style={field}
+              testID="apply-credential"
+            />
+          </EdgeSurface>
+        </Entrance>
+      ) : null}
 
       <Entrance index={2} style={styles.group}>
         <View style={styles.labelRow}>

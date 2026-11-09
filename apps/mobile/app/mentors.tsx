@@ -20,6 +20,7 @@ import { useI18n } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
+import { CertifiedBadge } from '@/components/CertifiedBadge';
 import { matchesRoad, roadChips } from '@/lib/mentorFilters';
 import { screenCache } from '@/lib/screenCache';
 import { topicLabelKey } from '@/lib/topics';
@@ -52,14 +53,19 @@ export default function BrowseMentors() {
   const { t } = useI18n();
   // `question`: a draft carried from the first-question builder when nobody was free — it
   // travels on to the mentor page's question step, never sent by itself.
-  const { topic, question } = useLocalSearchParams<{ topic?: string; question?: string }>();
+  const { topic, question, filter: startFilter } = useLocalSearchParams<{
+    topic?: string;
+    question?: string;
+    filter?: string;
+  }>();
   // Last-loaded list first, quiet refresh on focus; spinner only with nothing to show yet
   // (lib/screenCache.ts). Presence moves, so the refresh always runs.
   const cachedMentors = screenCache.get('mentors');
   const [loading, setLoading] = useState(!cachedMentors);
   const [listeners, setListeners] = useState<Listener[]>(cachedMentors ?? []);
   const [, setDetailTick] = useState(0);
-  const [filter, setFilter] = useState<Filter>('all');
+  // A mentor's suggestion (DECISIONS §O) opens Browse already on the certified mentors.
+  const [filter, setFilter] = useState<Filter>(startFilter === 'certified' ? 'certified' : 'all');
   const [roadNames, setRoadNames] = useState<Record<string, string>>({});
   const [myRoad, setMyRoad] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -159,6 +165,7 @@ export default function BrowseMentors() {
         const community = details.get(l.id)?.community_slug ?? null;
         if (filter === 'online') return l.available;
         if (filter === 'touch') return Boolean(l.in_touch);
+        if (filter === 'certified') return Boolean(l.certified);
         return matchesRoad(filter, community, l.categories);
       }),
     // reason: `details` is a module map; the tick state re-renders when it fills
@@ -176,6 +183,8 @@ export default function BrowseMentors() {
     ).map((c) => ({ key: c.key, label: c.label })),
     { key: 'life', label: t('browse.filterLife') },
     { key: 'touch', label: t('inTouch.badge') },
+    // Only when at least one mentor is certified: an empty filter would be a dead end.
+    ...(listeners.some((l) => l.certified) ? [{ key: 'certified', label: t('certified.badge') }] : []),
   ];
 
   const communityTag = (slug: string | null | undefined): string | null =>
@@ -224,6 +233,7 @@ export default function BrowseMentors() {
               {l.persona_name}
             </Text>
             {l.in_touch ? <InTouchBadge flat testID={`mentor-in-touch-${l.id}`} /> : null}
+            {l.certified ? <CertifiedBadge testID={`mentor-certified-${l.id}`} /> : null}
             <View style={styles.grow} />
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
           </View>
@@ -235,6 +245,11 @@ export default function BrowseMentors() {
           <Text style={[styles.availability, { color: l.available ? washInk.green : colors.inkMuted }]} numberOfLines={1}>
             {availability}
           </Text>
+          {l.reply_within ? (
+            <Text style={[type.micro, { color: colors.inkMuted }]} numberOfLines={1} testID={`mentor-reply-${l.id}`}>
+              {l.reply_within === 'day' ? t('browse.replyDay') : t('browse.replyTwoDays')}
+            </Text>
+          ) : null}
           {d?.public_line ? (
             <Text style={[type.note, styles.line, { color: colors.ink }]} numberOfLines={3}>
               {t('browse.quoted', { line: d.public_line })}
@@ -353,7 +368,11 @@ export default function BrowseMentors() {
             }
             ListEmptyComponent={
               <Text style={[type.note, styles.empty, { color: colors.inkMuted }]} testID="browse-empty">
-                {filter === 'touch' ? t('inTouch.emptyBody') : t('browse.empty')}
+                {filter === 'touch'
+                  ? t('inTouch.emptyBody')
+                  : filter === 'certified'
+                    ? t('browse.emptyCertified')
+                    : t('browse.empty')}
               </Text>
             }
             ListFooterComponent={

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app import jobs, ratelimit
@@ -20,8 +21,8 @@ from app.security import current_user_id
 from app.services import locks, mentor_face, mentor_names, open_question, paths, terms
 from app.services.matching import (
     NoListenerAvailable,
-    _pick_available_listener,
     blocked_listener_ids,
+    broadcast_candidate_ids,
     match_general,
     own_listener_ids,
     sweep_stale_presence,
@@ -110,32 +111,49 @@ def ask_best_mentor(
     if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "unknown session")
     terms.require(db, user_id)
+    if not paths.is_open(user.community_slug):
+        raise ApiProblem(409, "road_closed", "This road opens soon. Please choose another for now.")
     locks.serialize_member(db, user_id)
     open_question.enforce(db, user_id)
+
+    # One broadcast at a time: asking again while one is open returns it (a double tap or a
+    # retry must not page every mentor twice).
+    open_broadcast = db.scalars(
+        select(ConversationRequest).where(
+            ConversationRequest.requester_id == user_id,
+            ConversationRequest.broadcast.is_(True),
+            ConversationRequest.status == RequestStatus.pending,
+        )
+    ).first()
+    if open_broadcast is not None:
+        return _request_out(open_broadcast, db)
 
     sweep_stale_presence(db)
     db.commit()
     blocked = blocked_listener_ids(db, user_id) | own_listener_ids(db, user_id)
-    listener = _pick_available_listener(
+    # DECISIONS section P.4: "Next available" on an exam road is offered to every certified mentor
+    # who is online with a free slot; the first to accept takes it and it leaves everyone else's
+    # inbox. Nothing is reserved and no mentor is chosen for the member.
+    if not broadcast_candidate_ids(
         db, payload.issue_category, blocked, community=user.community_slug
-    )
-    if listener is None:
+    ):
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "No listener is available right now. Please try again in a moment.",
         )
     req = ConversationRequest(
-        kind=RequestKind.personal,
+        kind=RequestKind.general,
+        broadcast=True,
         status=RequestStatus.pending,
         requester_id=user_id,
-        target_listener_id=listener.id,
+        target_listener_id=None,
         issue_category=payload.issue_category,
         intro_message=(payload.intro_message or "").strip() or ASK_INTRO,
     )
     db.add(req)
     db.flush()
-    # Same transaction as the request row: the mentor is paged only if it commits.
-    jobs.enqueue(db, tasks.push_request_created, best_effort=True, request_id=req.id)
+    # Same transaction as the request row: the mentors are paged only if it commits.
+    jobs.enqueue(db, tasks.push_request_broadcast, best_effort=True, request_id=req.id)
     db.commit()
     db.refresh(req)
     return _request_out(req, db)

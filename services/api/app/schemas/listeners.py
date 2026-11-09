@@ -28,6 +28,11 @@ class ListenerOut(BaseModel):
     # every screen draws for this mentor. Stable — never rotates with the name (§L.6 l).
     companion_animal: str = "Owl"
     companion_colour: str = "sage"
+    # An admin certified this mentor for exam mentoring (DECISIONS section O): the badge.
+    certified: bool = False
+    # "day" or "two_days": the median time to accept a request over 30 days, shown only after
+    # enough requests (DECISIONS section P.6). Null when there is not enough to say.
+    reply_within: str | None = None
 
 
 class ListenerProfileOut(BaseModel):
@@ -54,6 +59,10 @@ class ListenerProfileOut(BaseModel):
     # every screen draws for this mentor. Stable — never rotates with the name (§L.6 l).
     companion_animal: str = "Owl"
     companion_colour: str = "sage"
+    certified: bool = False
+    # "day" or "two_days": the median time to accept a request over 30 days, shown only after
+    # enough requests (DECISIONS section P.6). Null when there is not enough to say.
+    reply_within: str | None = None
     # The member-facing words for `categories`, same order (services/categories.py), so
     # the app never shows a raw slug. Additive.
     category_labels: list[str] = []
@@ -91,6 +100,10 @@ class RequestOut(BaseModel):
     # (the chat is open). A pending, unseen question lights "Sent" only.
     seen_at: str | None = None
     replying: bool = False
+    # Offered to every certified mentor, not one (DECISIONS section P.4). Additive.
+    broadcast: bool = False
+    # No reply after 24 hours: the app asks the member what to do next (DECISIONS section P.5).
+    nudged: bool = False
     # The mentor this request went to, as every screen draws them (a Personal request's
     # target; null for anything else). Lets the A04 letter paint the right face.
     listener_companion_animal: str | None = None

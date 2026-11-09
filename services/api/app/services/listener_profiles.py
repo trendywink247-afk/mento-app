@@ -16,7 +16,7 @@ from app.models.listener import ListenerProfile
 from app.models.mentor_link import MentorLink
 from app.schemas import ListenerOut, ListenerProfileOut
 from app.services import categories as issue_categories
-from app.services import in_touch, mentor_face, mentor_names
+from app.services import in_touch, mentor_face, mentor_names, reply_time
 
 # Conversation statuses that count toward "conversations held" on a mentor
 # profile — spec 2026-09-06 §3.3: the count is about the mentor's experience,
@@ -29,7 +29,11 @@ def is_favourite(db: Session, user_id: str, listener_id: str) -> bool:
 
 
 def card(
-    li: ListenerProfile, *, is_favourite: bool = False, link: MentorLink | None = None
+    li: ListenerProfile,
+    *,
+    is_favourite: bool = False,
+    link: MentorLink | None = None,
+    reply_within: str | None = None,
 ) -> ListenerOut:
     """`link` = the caller's ACCEPTED stay-in-touch link with this mentor, if any."""
     return ListenerOut(
@@ -48,6 +52,8 @@ def card(
         ),
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
+        certified=bool(li.certified_exam),
+        reply_within=reply_within,
     )
 
 
@@ -82,6 +88,8 @@ def profile(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOu
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
         category_labels=category_labels(li.categories or []),
+        certified=bool(li.certified_exam),
+        reply_within=reply_time.reply_within(db, [li.id])[li.id],
     )
 
 

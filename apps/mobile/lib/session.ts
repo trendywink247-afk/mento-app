@@ -136,5 +136,8 @@ export async function clearSession(): Promise<void> {
     store.deleteItemAsync(COMPANION_COLOR_KEY),
     store.deleteItemAsync(COMPANION_ANIMAL_KEY),
     store.deleteItemAsync(ROLE_KEY),
+    // Prepared answers live on this device only; a cleared session leaves none behind.
+    // reason: dynamic import keeps this module import-safe in plain Node (e2e), like streamClient above.
+    import('./preparedAnswers').then((m) => m.clearPreparedAnswers()).catch(() => {}),
   ]);
 }

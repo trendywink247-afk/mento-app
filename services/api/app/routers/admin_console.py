@@ -30,6 +30,7 @@ from app.models.enums import (
 from app.models.feedback import ProductFeedback
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentor_invite import MentorInvite
 from app.models.moderation import ModerationEvent
 from app.models.safety import SafetyFlag
 from app.models.user import User
@@ -38,9 +39,11 @@ from app.schemas import (
     AdminAllowanceDay,
     AdminAllowanceOut,
     AdminAllowanceRule,
+    AdminApplicationApproveIn,
     AdminApplicationDeclineIn,
     AdminApplicationItem,
     AdminAuditItem,
+    AdminCertifyIn,
     AdminConsoleLinkOut,
     AdminContributionItem,
     AdminCreatedOut,
@@ -63,6 +66,7 @@ from app.schemas import (
     ModerationResolveIn,
     OkResult,
 )
+from app.schemas.mentor_invites import AdminInviteCreated, AdminInviteCreateIn, AdminInviteItem
 from app.security import current_admin_id, issue_admin_token, issue_listener_token
 from app.services import (
     allowance,
@@ -71,6 +75,8 @@ from app.services import (
     in_touch,
     member_status,
     mentor_face,
+    mentor_invites,
+    paths,
     stream,
 )
 from app.services.categories import availability_note, ordered_times
@@ -505,6 +511,7 @@ def _listener_item(li: ListenerProfile) -> AdminListenerItem:
             li.step_back_requested_at.isoformat() if li.step_back_requested_at else None
         ),
         step_back_reason=li.step_back_reason,
+        certified=bool(li.certified_exam),
     )
 
 
@@ -602,7 +609,13 @@ def listener_console_link(
 # --- Listener applications (spec 2026-07-24) ----------------------------------
 
 
-def _application_item(a: ListenerApplication, persona_name: str) -> AdminApplicationItem:
+def _wants_exam(communities: list[str] | None) -> bool:
+    return any(paths.accept_first(c) for c in (communities or []))
+
+
+def _application_item(
+    a: ListenerApplication, persona_name: str, certified: bool = False
+) -> AdminApplicationItem:
     return AdminApplicationItem(
         id=a.id,
         persona_name=persona_name,
@@ -614,6 +627,9 @@ def _application_item(a: ListenerApplication, persona_name: str) -> AdminApplica
         mentor_interest=a.mentor_interest,
         status=a.status.value,
         created_at=a.created_at.isoformat(),
+        wants_exam=_wants_exam(a.communities),
+        exam_credential=a.exam_credential,
+        certified=certified,
     )
 
 
@@ -644,6 +660,7 @@ def admin_applications(
 @router.post("/applications/{app_id}/approve", response_model=AdminApplicationItem)
 def approve_application(
     app_id: str,
+    payload: AdminApplicationApproveIn | None = None,
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> AdminApplicationItem:
@@ -660,10 +677,18 @@ def approve_application(
     if applicant is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "applicant no longer exists")
 
+    certify = bool(payload and payload.certify)
+    if certify and not _wants_exam(a.communities):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "This applicant did not choose an exam road, so there is nothing to verify.",
+        )
     li = ListenerProfile(
         persona_name=applicant.persona_name,
         persona_avatar=applicant.persona_avatar,
         categories=[],
+        certified_exam=certify,
+        certified_at=datetime.now(UTC) if certify else None,
         community_slug=(a.communities[0] if a.communities else None),
         status=ListenerStatus.offline,
         vetting_status=VettingStatus.approved,
@@ -682,13 +707,18 @@ def approve_application(
     a.status = ApplicationStatus.approved
     a.listener_id = li.id
     audit.record(
-        db, admin, "listener.application_approved", subject_type="application", subject_id=a.id
+        db,
+        admin,
+        "listener.application_approved",
+        subject_type="application",
+        subject_id=a.id,
+        meta={"certified_exam": certify},
     )
     # TODO(email-provider): when an email service is wired, send the console
     # link to a.email here (spec: store now, send later).
     db.commit()
     db.refresh(a)
-    item = _application_item(a, applicant.persona_name)
+    item = _application_item(a, applicant.persona_name, certified=certify)
     new_listener = (a.listener_id, applicant.persona_name, applicant.persona_avatar)
     # End refresh's transaction BEFORE the outbound Stream call (onboarding's
     # phasing) — without this upsert the listener's first channel creation fails
@@ -699,6 +729,88 @@ def approve_application(
     # mentor's first console sign-in re-ensures the user either way.
     stream.ensure_user(*new_listener)
     return item
+
+
+def _invite_item(i: MentorInvite) -> AdminInviteItem:
+    return AdminInviteItem(
+        id=i.id,
+        note=i.note,
+        status=mentor_invites.status_of(i),
+        created_at=i.created_at.isoformat(),
+        expires_at=i.expires_at.isoformat(),
+        claimed_at=i.claimed_at.isoformat() if i.claimed_at else None,
+    )
+
+
+@router.post("/mentor-invites", response_model=AdminInviteCreated)
+def create_mentor_invite(
+    payload: AdminInviteCreateIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminInviteCreated:
+    """A single-use gold mentor invitation (DECISIONS section P.3). The code is in this
+    response only; the founder sends it himself, so no email address is ever stored."""
+    invite, code = mentor_invites.create(db, note=payload.note, admin_id=admin.id)
+    audit.record(db, admin, "mentor_invite.created", subject_type="invite", subject_id=invite.id)
+    db.commit()
+    db.refresh(invite)
+    return AdminInviteCreated(**_invite_item(invite).model_dump(), code=code)
+
+
+@router.get("/mentor-invites", response_model=list[AdminInviteItem])
+def list_mentor_invites(
+    _: AdminAccount = Depends(current_admin), db: Session = Depends(get_db)
+) -> list[AdminInviteItem]:
+    rows = db.scalars(select(MentorInvite).order_by(MentorInvite.created_at.desc()).limit(200))
+    return [_invite_item(i) for i in rows]
+
+
+@router.post("/mentor-invites/{invite_id}/revoke", response_model=AdminInviteItem)
+def revoke_mentor_invite(
+    invite_id: str,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> AdminInviteItem:
+    invite = db.get(MentorInvite, invite_id, with_for_update=True)
+    if invite is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "invitation not found")
+    if invite.claimed_at is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "this invitation was already used")
+    if invite.revoked_at is None:
+        invite.revoked_at = datetime.now(UTC)
+        audit.record(
+            db, admin, "mentor_invite.revoked", subject_type="invite", subject_id=invite.id
+        )
+    db.commit()
+    db.refresh(invite)
+    return _invite_item(invite)
+
+
+@router.post("/listeners/{listener_id}/certify", response_model=dict)
+def certify_listener(
+    listener_id: str,
+    payload: AdminCertifyIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Mark an already-approved mentor certified for exam mentoring, or take it away
+    (DECISIONS section O). Audited either way. Taking it away does not end running chats."""
+    li = db.get(ListenerProfile, listener_id, with_for_update=True)
+    if li is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "mentor not found")
+    if li.vetting_status != VettingStatus.approved:
+        raise HTTPException(status.HTTP_409_CONFLICT, "only an approved mentor can be certified")
+    li.certified_exam = payload.certified
+    li.certified_at = datetime.now(UTC) if payload.certified else None
+    audit.record(
+        db,
+        admin,
+        "listener.certified" if payload.certified else "listener.certification_removed",
+        subject_type="listener",
+        subject_id=li.id,
+    )
+    db.commit()
+    return {"id": li.id, "certified": li.certified_exam}
 
 
 @router.post("/applications/{app_id}/decline", response_model=AdminApplicationItem)

@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, case, func, select, tuple_, update
+from sqlalchemy import and_, case, false, func, or_, select, true, tuple_, update
 from sqlalchemy.orm import Session
 
 from app import jobs, pagination, ratelimit
@@ -35,8 +35,9 @@ from app.models.enums import (
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
+from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
-from app.models.request import ConversationRequest
+from app.models.request import ConversationRequest, RequestPass
 from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.schemas import (
@@ -68,6 +69,7 @@ from app.services import (
     mentor_names,
     paths,
     push,
+    reply_time,
     snooze,
     stream,
 )
@@ -93,7 +95,7 @@ def current_listener(
     return listener
 
 
-def _me_out(li: ListenerProfile) -> ListenerMeOut:
+def _me_out(li: ListenerProfile, db: Session) -> ListenerMeOut:
     return ListenerMeOut(
         id=li.id,
         persona_name=li.persona_name,
@@ -112,6 +114,8 @@ def _me_out(li: ListenerProfile) -> ListenerMeOut:
         ),
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
+        certified=bool(li.certified_exam),
+        reply_within=reply_time.reply_within(db, [li.id])[li.id],
     )
 
 
@@ -208,8 +212,10 @@ def dev_token(listener_id: str, db: Session = Depends(get_db)) -> DevTokenOut:
 
 
 @router.get("/me", response_model=ListenerMeOut, dependencies=[Depends(mentor_names.fresh_names)])
-def me(listener: ListenerProfile = Depends(current_listener)) -> ListenerMeOut:
-    return _me_out(listener)
+def me(
+    listener: ListenerProfile = Depends(current_listener), db: Session = Depends(get_db)
+) -> ListenerMeOut:
+    return _me_out(listener, db)
 
 
 @router.patch("/me/status", response_model=ListenerMeOut)
@@ -231,7 +237,7 @@ def set_status(
         listener.last_seen_at = None
     db.commit()
     db.refresh(listener)
-    return _me_out(listener)
+    return _me_out(listener, db)
 
 
 @router.put("/me/profile", response_model=ListenerMeOut)
@@ -261,7 +267,7 @@ def update_profile(
         listener.availability_note = (" ".join(value.split()) if value else "") or None
     db.commit()
     db.refresh(listener)
-    return _me_out(listener)
+    return _me_out(listener, db)
 
 
 @router.post("/me/heartbeat", response_model=OkResult)
@@ -419,8 +425,36 @@ def my_pending_requests(
         select(ConversationRequest, User)
         .join(User, User.id == ConversationRequest.requester_id)
         .where(
-            ConversationRequest.target_listener_id == listener.id,
             ConversationRequest.status == RequestStatus.pending,
+            or_(
+                ConversationRequest.target_listener_id == listener.id,
+                # A broadcast (DECISIONS section P.4) is in every certified mentor's inbox until
+                # one takes it or they pass; never the mentor the member blocked or their own.
+                and_(
+                    ConversationRequest.broadcast.is_(True),
+                    ConversationRequest.target_listener_id.is_(None),
+                    true() if listener.certified_exam else false(),
+                    ~select(RequestPass.id)
+                    .where(
+                        RequestPass.request_id == ConversationRequest.id,
+                        RequestPass.listener_id == listener.id,
+                    )
+                    .exists(),
+                    ~select(ModerationEvent.id)
+                    .where(
+                        ModerationEvent.reporter_id == ConversationRequest.requester_id,
+                        ModerationEvent.subject_id == listener.id,
+                        ModerationEvent.blocked.is_(True),
+                    )
+                    .exists(),
+                    ~select(ListenerApplication.id)
+                    .where(
+                        ListenerApplication.listener_id == listener.id,
+                        ListenerApplication.user_id == ConversationRequest.requester_id,
+                    )
+                    .exists(),
+                ),
+            ),
         )
     )
     if after is not None:
@@ -445,6 +479,9 @@ def my_pending_requests(
             requester_companion_animal=user.companion_animal,
             requester_companion_colour=user.companion_colour,
             issue_category_label=categories.label(req.issue_category),
+            broadcast=req.broadcast,
+            community_label=paths.community_label(user.community_slug),
+            stage_label=paths.stage_label(user.community_slug, user.journey_stage),
         )
         for req, user in rows
     ]
@@ -470,7 +507,14 @@ def mark_requests_seen(
             update(ConversationRequest)
             .where(
                 ConversationRequest.id.in_(payload.request_ids),
-                ConversationRequest.target_listener_id == listener.id,
+                or_(
+                    ConversationRequest.target_listener_id == listener.id,
+                    and_(
+                        ConversationRequest.broadcast.is_(True),
+                        ConversationRequest.target_listener_id.is_(None),
+                        true() if listener.certified_exam else false(),
+                    ),
+                ),
                 ConversationRequest.status == RequestStatus.pending,
                 ConversationRequest.seen_at.is_(None),
             )
@@ -668,6 +712,28 @@ def snooze_conversation(
     until = snooze.snooze(convo)
     db.commit()
     return SnoozeOut(id=convo_id, snoozed_until=until.isoformat())
+
+
+@router.post("/me/conversations/{convo_id}/suggest-certified", response_model=OkResult)
+def suggest_certified_mentor(
+    convo_id: str,
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> OkResult:
+    """ "This is about an exam" (DECISIONS section O): the mentor suggests the conversation move to a
+    certified exam mentor. It records a time only; the member sees a gentle card and chooses
+    (the chat stays open). A certified mentor has nothing to suggest, and it is idempotent."""
+    if listener.certified_exam:
+        raise ApiProblem(
+            status.HTTP_409_CONFLICT,
+            "already_certified",
+            "You are Mento Verified for exam mentoring, so there is no one to hand this to.",
+        )
+    convo = _snooze_target(db, convo_id, listener)
+    if convo.exam_redirect_at is None:
+        convo.exam_redirect_at = datetime.now(UTC)
+        db.commit()
+    return OkResult(status="ok")
 
 
 @router.delete("/me/conversations/{convo_id}/snooze", response_model=SnoozeOut)

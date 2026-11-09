@@ -78,7 +78,9 @@ def _member(s, community: str | None = None) -> str:
     return u.id
 
 
-def _mentor(s, name="Open River", *, community=None, status=ListenerStatus.online) -> str:
+def _mentor(
+    s, name="Open River", *, community=None, status=ListenerStatus.online, certified=True
+) -> str:
     li = ListenerProfile(
         persona_name=name,
         persona_avatar="seed",
@@ -89,6 +91,7 @@ def _mentor(s, name="Open River", *, community=None, status=ListenerStatus.onlin
         active_conversations=0,
         max_concurrent=3,
         community_slug=community,
+        certified_exam=certified,
     )
     s.add(li)
     s.flush()
@@ -202,10 +205,10 @@ def test_life_in_general_and_no_path_keep_the_instant_match(client, community):
 
 
 @requires_postgres
-def test_ask_sends_the_question_to_the_best_online_mentor_and_opens_no_chat(client):
+def test_ask_is_offered_to_certified_mentors_and_opens_no_chat(client):
     with TestSession() as s:
         member = _member(s, "banking")
-        other = _mentor(s, "Open River")
+        _mentor(s, "Open River")
         niche = _mentor(s, "Quiet Pine", community="banking")
         _mentor(s, "Away Owl", status=ListenerStatus.away)
         s.commit()
@@ -217,10 +220,11 @@ def test_ask_sends_the_question_to_the_best_online_mentor_and_opens_no_chat(clie
     assert r.status_code == 200, r.text
     body = r.json()
     assert body["status"] == "pending" and body["conversation_id"] is None
-    assert body["target_listener_id"] == niche != other  # the same-road mentor is preferred
+    assert body["target_listener_id"] is None  # a broadcast: nobody is chosen for the member
     assert body["intro_message"] == "Mock scores swing a lot"
     with TestSession() as s:
-        assert s.scalars(select(ConversationRequest)).one().status == RequestStatus.pending
+        row = s.scalars(select(ConversationRequest)).one()
+        assert row.status == RequestStatus.pending and row.broadcast is True
         listener = s.get(ListenerProfile, niche)
         assert listener.active_conversations == 0  # no capacity is reserved until they accept
 
@@ -238,7 +242,7 @@ def test_ask_with_nobody_online_is_503_so_the_app_can_offer_the_other_doors(clie
 
 
 @requires_postgres
-def test_ask_default_intro_and_one_open_question_at_a_time(client):
+def test_ask_default_intro_and_asking_again_returns_the_open_broadcast(client):
     with TestSession() as s:
         member = _member(s, "mba")
         _mentor(s)
@@ -247,7 +251,10 @@ def test_ask_default_intro_and_one_open_question_at_a_time(client):
     assert first.status_code == 200
     assert first.json()["intro_message"].startswith("I'd like to talk")
     second = client.post("/api/v1/match/ask", json={}, headers=_auth(member))
-    assert second.status_code == 409 and second.json()["code"] == "question_open"
+    # A double tap or a retry must not page every mentor twice: the open request comes back.
+    assert second.status_code == 200 and second.json()["id"] == first.json()["id"]
+    with TestSession() as s:
+        assert len(s.scalars(select(ConversationRequest)).all()) == 1
 
 
 @requires_postgres
@@ -289,3 +296,20 @@ def test_communities_endpoint_names_every_road(client):
     assert by_slug["life"]["accept_first"] is False
     assert by_slug["upsc"]["accept_first"] is True and by_slug["upsc"]["name"] == "UPSC"
     assert {"ssc", "banking", "railways", "gate", "cuet"} <= set(by_slug)
+
+
+def test_an_exam_ask_goes_only_to_a_certified_mentor(client):
+    """DECISIONS section O: an ordinary listener never receives an exam question."""
+    with TestSession() as s:
+        _mentor(s, "Plain Willow", community="upsc", certified=False)
+        member = _member(s, "upsc")
+        s.commit()
+    r = client.post("/api/v1/match/ask", json={}, headers=_auth(member))
+    assert r.status_code == 503  # nobody certified is online: the busy card, not a wrong mentor
+
+    with TestSession() as s:
+        certified = _mentor(s, "Certified Cedar", certified=True)
+        s.commit()
+    r = client.post("/api/v1/match/ask", json={}, headers=_auth(member))
+    assert r.status_code == 200, r.text
+    assert r.json()["target_listener_id"] is None and certified  # broadcast, not one mentor

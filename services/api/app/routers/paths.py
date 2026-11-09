@@ -73,6 +73,10 @@ def choose_path(
 ) -> PathState:
     if not paths.is_valid(payload.community, payload.stage):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown community or stage")
+    if not paths.is_open(payload.community):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "this road is not open yet (coming soon)"
+        )
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "user not found")

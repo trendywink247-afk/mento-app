@@ -40,7 +40,7 @@ def client():
 def chat(db_session):
     """A member, a mentor and an active conversation between them."""
     with TestSession() as s:
-        return seed_chat(s)
+        return seed_chat(s, certified=True)
 
 
 def _open(client, chat, who, after=0):

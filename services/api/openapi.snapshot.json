@@ -135,6 +135,18 @@
         "title": "AdminAllowanceRule",
         "type": "object"
       },
+      "AdminApplicationApproveIn": {
+        "description": "Optional body on approve: certify the mentor for exam roads at the same time. Omitted =\napprove as a general listener, exactly as before.",
+        "properties": {
+          "certify": {
+            "default": false,
+            "title": "Certify",
+            "type": "boolean"
+          }
+        },
+        "title": "AdminApplicationApproveIn",
+        "type": "object"
+      },
       "AdminApplicationDeclineIn": {
         "properties": {
           "reason": {
@@ -164,6 +176,11 @@
             "title": "Available Times",
             "type": "array"
           },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
+          },
           "communities": {
             "items": {
               "type": "string"
@@ -186,6 +203,17 @@
             ],
             "title": "Email"
           },
+          "exam_credential": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam Credential"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -205,6 +233,11 @@
           "status": {
             "title": "Status",
             "type": "string"
+          },
+          "wants_exam": {
+            "default": false,
+            "title": "Wants Exam",
+            "type": "boolean"
           }
         },
         "required": [
@@ -271,6 +304,19 @@
           "created_at"
         ],
         "title": "AdminAuditItem",
+        "type": "object"
+      },
+      "AdminCertifyIn": {
+        "properties": {
+          "certified": {
+            "title": "Certified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "certified"
+        ],
+        "title": "AdminCertifyIn",
         "type": "object"
       },
       "AdminConsoleLinkOut": {
@@ -573,6 +619,133 @@
         "title": "AdminHealthOut",
         "type": "object"
       },
+      "AdminInviteCreateIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "AdminInviteCreateIn",
+        "type": "object"
+      },
+      "AdminInviteCreated": {
+        "properties": {
+          "claimed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "note",
+          "status",
+          "created_at",
+          "expires_at",
+          "claimed_at",
+          "code"
+        ],
+        "title": "AdminInviteCreated",
+        "type": "object"
+      },
+      "AdminInviteItem": {
+        "properties": {
+          "claimed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "note",
+          "status",
+          "created_at",
+          "expires_at",
+          "claimed_at"
+        ],
+        "title": "AdminInviteItem",
+        "type": "object"
+      },
       "AdminJobsHealth": {
         "description": "The job queue (WS4): backlog, backoff, failures by TASK NAME, the worker's\npulse. Never a job's arguments. `available` is False if the queue can't be read.",
         "properties": {
@@ -669,6 +842,11 @@
             },
             "title": "Categories",
             "type": "array"
+          },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
           },
           "companion_animal": {
             "default": "Owl",
@@ -925,6 +1103,11 @@
       "AllowanceOut": {
         "description": "The member's allowance right now. `GET /conversations/{id}/allowance` fills\nevery field; `GET /me/allowance` (no conversation yet) reports `in_a_row` as 0.\n\n`held_reason` is what the NEXT send would be held for: null (send away),\n\"in_a_row\" (wait for the mentor) or \"daily\" (wait for `resets_at`). It is always\nnull while holding is switched off (`enforced` false) and in a conversation the\ncrisis scan has recently flagged — urgent words are never held back or counted.",
         "properties": {
+          "applies": {
+            "default": true,
+            "title": "Applies",
+            "type": "boolean"
+          },
           "can_send": {
             "title": "Can Send",
             "type": "boolean"
@@ -1334,6 +1517,11 @@
             "title": "Category Labels",
             "type": "array"
           },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
+          },
           "community_slug": {
             "anyOf": [
               {
@@ -1432,6 +1620,17 @@
             ],
             "title": "Public Line"
           },
+          "reply_within": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Within"
+          },
           "reply_within_a_day": {
             "default": false,
             "title": "Reply Within A Day",
@@ -1481,6 +1680,11 @@
             ],
             "title": "Chat Backend",
             "type": "string"
+          },
+          "exam_redirect": {
+            "default": false,
+            "title": "Exam Redirect",
+            "type": "boolean"
           },
           "id": {
             "title": "Id",
@@ -2660,6 +2864,26 @@
         "title": "InTouchSlots",
         "type": "object"
       },
+      "InviteClaimIn": {
+        "properties": {
+          "code": {
+            "maxLength": 64,
+            "minLength": 4,
+            "title": "Code",
+            "type": "string"
+          },
+          "pledge_accepted": {
+            "default": false,
+            "title": "Pledge Accepted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "InviteClaimIn",
+        "type": "object"
+      },
       "JournalEntryIn": {
         "properties": {
           "body": {
@@ -2776,6 +3000,18 @@
               }
             ],
             "title": "Email"
+          },
+          "exam_credential": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam Credential"
           },
           "mentor_interest": {
             "default": false,
@@ -3018,6 +3254,11 @@
             "title": "Categories",
             "type": "array"
           },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
+          },
           "companion_animal": {
             "default": "Owl",
             "title": "Companion Animal",
@@ -3066,6 +3307,17 @@
             ],
             "title": "Public Line"
           },
+          "reply_within": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Within"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -3103,6 +3355,11 @@
             },
             "title": "Categories",
             "type": "array"
+          },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
           },
           "companion_animal": {
             "default": "Owl",
@@ -3149,6 +3406,17 @@
           "persona_name": {
             "title": "Persona Name",
             "type": "string"
+          },
+          "reply_within": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Within"
           },
           "status": {
             "title": "Status",
@@ -3232,6 +3500,11 @@
             "title": "Category Labels",
             "type": "array"
           },
+          "certified": {
+            "default": false,
+            "title": "Certified",
+            "type": "boolean"
+          },
           "community_slug": {
             "anyOf": [
               {
@@ -3308,6 +3581,17 @@
             ],
             "title": "Public Line"
           },
+          "reply_within": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Within"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -3368,6 +3652,22 @@
       },
       "ListenerRequestItem": {
         "properties": {
+          "broadcast": {
+            "default": false,
+            "title": "Broadcast",
+            "type": "boolean"
+          },
+          "community_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Community Label"
+          },
           "created_at": {
             "title": "Created At",
             "type": "string"
@@ -3434,6 +3734,17 @@
           "requester_persona_name": {
             "title": "Requester Persona Name",
             "type": "string"
+          },
+          "stage_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage Label"
           }
         },
         "required": [
@@ -4274,6 +4585,11 @@
             "title": "Accept First",
             "type": "boolean"
           },
+          "enabled": {
+            "default": true,
+            "title": "Enabled",
+            "type": "boolean"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -4621,6 +4937,11 @@
       },
       "RequestOut": {
         "properties": {
+          "broadcast": {
+            "default": false,
+            "title": "Broadcast",
+            "type": "boolean"
+          },
           "conversation_id": {
             "anyOf": [
               {
@@ -4672,6 +4993,11 @@
               }
             ],
             "title": "Listener Companion Colour"
+          },
+          "nudged": {
+            "default": false,
+            "title": "Nudged",
+            "type": "boolean"
           },
           "replying": {
             "default": false,
@@ -5425,6 +5751,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AdminApplicationApproveIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -5922,6 +6265,65 @@
         ]
       }
     },
+    "/api/v1/admin/listeners/{listener_id}/certify": {
+      "post": {
+        "description": "Mark an already-approved mentor certified for exam mentoring, or take it away\n(DECISIONS section O). Audited either way. Taking it away does not end running chats.",
+        "operationId": "certify_listener_api_v1_admin_listeners__listener_id__certify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listener_id",
+            "required": true,
+            "schema": {
+              "title": "Listener Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminCertifyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Certify Listener Api V1 Admin Listeners  Listener Id  Certify Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Certify Listener",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/listeners/{listener_id}/clear-line": {
       "post": {
         "description": "Listeners panel → \"Clear line\" (spec 2026-09-06 §3.3). The mentor's public\nline goes live without pre-approval on save; this is the moderation backstop —\nsame admin gate as suspend, always audited.",
@@ -6132,6 +6534,128 @@
           }
         ],
         "summary": "Me",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/mentor-invites": {
+      "get": {
+        "operationId": "list_mentor_invites_api_v1_admin_mentor_invites_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminInviteItem"
+                  },
+                  "title": "Response List Mentor Invites Api V1 Admin Mentor Invites Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "List Mentor Invites",
+        "tags": [
+          "admin"
+        ]
+      },
+      "post": {
+        "description": "A single-use gold mentor invitation (DECISIONS section P.3). The code is in this\nresponse only; the founder sends it himself, so no email address is ever stored.",
+        "operationId": "create_mentor_invite_api_v1_admin_mentor_invites_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminInviteCreateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminInviteCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Create Mentor Invite",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/mentor-invites/{invite_id}/revoke": {
+      "post": {
+        "operationId": "revoke_mentor_invite_api_v1_admin_mentor_invites__invite_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "title": "Invite Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminInviteItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Revoke Mentor Invite",
         "tags": [
           "admin"
         ]
@@ -8091,6 +8615,53 @@
         ]
       }
     },
+    "/api/v1/listener-applications/invite": {
+      "post": {
+        "description": "Claim a gold mentor invitation (DECISIONS section P.2-3). The invite replaces the\napplication and the admin's review: the founder vetted this person before handing over the\ncode. The member's own anonymous account becomes a certified mentor, so their recovery code\nrestores the role on a new phone. Wrong, used, expired and revoked codes are all the same 404.",
+        "operationId": "claim_invite_api_v1_listener_applications_invite_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteClaimIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListenerApplicationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Claim Invite",
+        "tags": [
+          "listener-applications"
+        ]
+      }
+    },
     "/api/v1/listener-applications/me": {
       "get": {
         "operationId": "my_application_api_v1_listener_applications_me_get",
@@ -8687,6 +9258,54 @@
         "summary": "Mentor Ends Link",
         "tags": [
           "stay-in-touch"
+        ]
+      }
+    },
+    "/api/v1/listener/me/conversations/{convo_id}/suggest-certified": {
+      "post": {
+        "description": "\"This is about an exam\" (DECISIONS section O): the mentor suggests the conversation move to a\ncertified exam mentor. It records a time only; the member sees a gentle card and chooses\n(the chat stays open). A certified mentor has nothing to suggest, and it is idempotent.",
+        "operationId": "suggest_certified_mentor_api_v1_listener_me_conversations__convo_id__suggest_certified_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "convo_id",
+            "required": true,
+            "schema": {
+              "title": "Convo Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Suggest Certified Mentor",
+        "tags": [
+          "listener-console"
         ]
       }
     },

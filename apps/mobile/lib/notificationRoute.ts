@@ -1,6 +1,7 @@
 /** Where a notification tap lands (spec 2026-09-05 push §6). Pure: no I/O, no RN. */
 export type PushData =
   | { kind: 'request'; request_id: string }
+  | { kind: 'request_nudge'; request_id: string }
   | { kind: 'accepted'; conversation_id: string; stream_channel_id: string | null }
   | { kind: 'message'; conversation_id: string; stream_channel_id: string | null };
 
@@ -16,6 +17,10 @@ export type Route = { pathname: string; params?: Record<string, string> };
 export function routeForNotification(data: PushData | null | undefined, ctx: RouteCtx): Route | null {
   if (!data) return null;
   if (data.kind === 'request') return ctx.hasListenerToken ? { pathname: '/mentor-home' } : null;
+  // The 24-hour "no reply yet, what next?" page goes to the member's question screen.
+  if (data.kind === 'request_nudge') {
+    return ctx.hasMemberSession ? { pathname: '/request-sent/[id]', params: { id: data.request_id } } : null;
+  }
   if (data.kind === 'accepted') {
     return ctx.hasMemberSession
       ? { pathname: '/chat/[id]', params: { id: data.conversation_id, channel: data.stream_channel_id ?? '' } }

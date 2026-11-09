@@ -380,6 +380,21 @@ export default function PathQuestion() {
             </Text>
           ) : null}
         </Entrance>
+        {busyExit ? (
+          // Inside the scrolling content, not the footer: the card is tall, and in the footer it squeezed the
+          // message above it until its last line was cut off.
+          <View style={styles.busyInScroll}>
+            <BusyExits
+              // The one ask loop (lib/askLoop.ts): the New chat sheet over My Chats →
+              // Pick a mentor → Browse → a mentor → the question step, pre-filled with
+              // what they wrote — never sent for them.
+              onSendInstead={() => openNewChat(router, { question: assembled.text, busy: true })}
+              onRetry={() => void go('continue')}
+              retrying={busy !== null}
+              testID="pq-busy"
+            />
+          </View>
+        ) : null}
       </ScrollView>
       </DeepArrival>
 
@@ -393,18 +408,6 @@ export default function PathQuestion() {
                 setNote(t('askFlow.openClosed'));
               }}
               testID="pq-open"
-            />
-          </View>
-        ) : busyExit ? (
-          <View style={styles.footNote}>
-            <BusyExits
-              // The one ask loop (lib/askLoop.ts): the New chat sheet over My Chats →
-              // Pick a mentor → Browse → a mentor → the question step, pre-filled with
-              // what they wrote — never sent for them.
-              onSendInstead={() => openNewChat(router, { question: assembled.text, busy: true })}
-              onRetry={() => void go('continue')}
-              retrying={busy !== null}
-              testID="pq-busy"
             />
           </View>
         ) : null}
@@ -513,6 +516,7 @@ const styles = StyleSheet.create({
   caret: { width: 2, height: 18, borderRadius: 2, marginLeft: 3, transform: [{ translateY: 3 }] },
   dropped: { fontFamily: font.sansBold, marginTop: space.xs },
   footer: { paddingHorizontal: GUTTER, paddingTop: space.sm, paddingBottom: space.md },
+  busyInScroll: { marginTop: space.md },
   note: { textAlign: 'center', marginBottom: space.sm },
   footNote: { marginBottom: space.sm },
   actions: { flexDirection: 'row', gap: 12 },

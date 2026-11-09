@@ -68,7 +68,7 @@ export type MentorConsole = {
 
 const EMPTY_LIVE: ChannelLive = { unread: 0, preview: null, typing: false, waitingSince: null };
 
-export function useMentorConsole(atCapacityText: string): MentorConsole {
+export function useMentorConsole(atCapacityText: string, takenText = ''): MentorConsole {
   const [me, setMe] = useState<ListenerMe | null>(null);
   const [requests, setRequests] = useState<ListenerRequest[]>([]);
   const [conversations, setConversations] = useState<ListenerConversation[]>([]);
@@ -278,11 +278,16 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
         await refresh();
       } catch (e) {
         if (e instanceof ApiError && e.status === 409) setNote(atCapacityText);
+        else if (e instanceof ApiError && e.status === 404 && action === 'accept') {
+          // Another mentor took an open request first (DECISIONS §P.4): it leaves the list.
+          if (takenText) setNote(takenText);
+          await refresh();
+        }
       } finally {
         setBusy(null);
       }
     },
-    [busy, refresh, atCapacityText],
+    [busy, refresh, atCapacityText, takenText],
   );
 
   const setSnooze = useCallback(

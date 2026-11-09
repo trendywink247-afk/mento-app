@@ -4,12 +4,19 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
+from app.config import get_settings
 from app.services.paths_data import COMMUNITIES, TREE, TREE_ROOT
 
 
 def is_valid(community: str, stage: str) -> bool:
     c = COMMUNITIES.get(community)
     return bool(c and stage in c["stages"])
+
+
+def is_open(slug: str | None) -> bool:
+    """A road people can pick now (DECISIONS §P.1). No road, or an empty launch list, is open."""
+    open_roads = {r.strip() for r in get_settings().launch_roads.split(",") if r.strip()}
+    return not slug or not open_roads or slug in open_roads
 
 
 def accept_first(slug: str | None) -> bool:
@@ -27,6 +34,7 @@ def community_info(slug: str) -> dict:
         "name": c["name"],
         "tagline": c["tagline"],
         "accept_first": bool(c.get("accept_first")),
+        "enabled": is_open(slug),
     }
 
 
@@ -75,5 +83,38 @@ def seasonal_card(community: str, today: date | None = None) -> dict | None:
     return None
 
 
+def _node_open(node_id: str, seen: frozenset[str] = frozenset()) -> bool:
+    """A question node is open when any road reachable from it is (DECISIONS §P.1)."""
+    node = TREE.get(node_id)
+    if node is None or node_id in seen:
+        return False
+    for o in node["options"]:
+        if o.get("community"):
+            if is_open(o["community"]):
+                return True
+        elif o.get("next") and _node_open(o["next"], seen | {node_id}):
+            return True
+    return False
+
+
 def tree_payload() -> dict:
-    return {"root": TREE_ROOT, "nodes": TREE}
+    """The tree the app walks. Every option also says whether it is open for this launch;
+    a closed one is shown greyed out as "Coming soon" and cannot be chosen."""
+    nodes = {
+        node_id: {
+            **node,
+            "options": [
+                {
+                    **o,
+                    "enabled": (
+                        is_open(o["community"])
+                        if o.get("community")
+                        else _node_open(o["next"]) if o.get("next") else True
+                    ),
+                }
+                for o in node["options"]
+            ],
+        }
+        for node_id, node in TREE.items()
+    }
+    return {"root": TREE_ROOT, "nodes": nodes}

@@ -27,7 +27,7 @@ Numbers only — nothing here ever sees or stores message text.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, date, datetime, timedelta, timezone
 
 from sqlalchemy import and_, delete, func, or_, select, update
@@ -38,6 +38,7 @@ from app.config import get_settings
 from app.models.allowance import RETENTION_DAYS, MessageAllowanceDay
 from app.models.conversation import Conversation
 from app.models.enums import SafetySignal
+from app.models.listener import ListenerProfile
 from app.models.safety import SafetyFlag
 from app.schemas import AllowanceOut
 from app.services import locks
@@ -72,6 +73,10 @@ class AllowanceState:
     # None = the member may send. Otherwise REASON_IN_A_ROW / REASON_DAILY.
     held_reason: str | None
     enforced: bool
+    # False = this conversation is not with a certified exam mentor (DECISIONS section O):
+    # nothing is counted or held, and the app shows no meter. Default True keeps every
+    # existing caller's meaning.
+    applies: bool = True
 
     @property
     def can_send(self) -> bool:
@@ -89,6 +94,7 @@ def to_out(state: AllowanceState) -> AllowanceOut:
         can_send=state.can_send,
         held_reason=state.held_reason,
         enforced=state.enforced,
+        applies=state.applies,
     )
 
 
@@ -185,6 +191,15 @@ def _state(streak: int, sent: int, now: datetime, *, exempt: bool) -> AllowanceS
     )
 
 
+def _certified_mentor(db: Session, listener_id: str | None) -> bool:
+    """The cap is for conversations with a certified exam mentor only (DECISIONS section O)."""
+    if listener_id is None:
+        return False
+    return bool(
+        db.scalar(select(ListenerProfile.certified_exam).where(ListenerProfile.id == listener_id))
+    )
+
+
 def state_for(
     db: Session, user_id: str, convo: Conversation | None, now: datetime | None = None
 ) -> AllowanceState:
@@ -192,6 +207,8 @@ def state_for(
     `convo=None`, the daily half only — the first-question builder has no chat yet)."""
     now = now or datetime.now(UTC)
     row = _day_row(db, user_id, ist_day(now), create=False)
+    if convo is not None and not _certified_mentor(db, convo.listener_id):
+        return replace(_state(0, 0, now, exempt=True), applies=False, enforced=False)
     exempt = convo is not None and _conversation_exempt(db, convo.id, now)
     return _state(
         convo.member_streak if convo is not None else 0,
@@ -262,6 +279,10 @@ def register(
         _done(db, commit)
         return None
     if sender_id != member_id:
+        return None
+
+    if not _certified_mentor(db, listener_id):
+        # General listening: no cap, nothing counted (DECISIONS section O).
         return None
 
     locks.serialize_member(db, member_id)
