@@ -10,7 +10,8 @@ real and testable today without a mentor app.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, case, exists, select, tuple_
+from sqlalchemy import and_, case, cast, exists, select, tuple_
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -35,6 +36,7 @@ from app.security import current_user_id
 from app.services import (
     audit,
     in_touch,
+    languages,
     listener_profiles,
     locks,
     mentor_face,
@@ -80,6 +82,7 @@ def list_listeners(
     user_id: str = Depends(current_user_id),
     db: Session = Depends(get_db),
     page: pagination.Page = Depends(pagination.page_params(5)),
+    language: str | None = Query(default=None, max_length=8),
 ) -> list[ListenerOut]:
     """Approved listeners (minus anyone this user blocked — and minus the user's
     own listener profile, if their application was approved). Ordered IN TOUCH first
@@ -126,6 +129,15 @@ def list_listeners(
     )
     neg_rank = -ListenerProfile.rank
     key = (touch, fav, avail, neg_rank, li_id)
+    # A language is a PREFERENCE (services/languages.py): mentors who talk it come first among the
+    # rest, nobody is hidden. Only part of the order when asked for, so cursors stay consistent.
+    wanted = languages.clean([language])[:1] if language else []
+    if wanted:
+        speaks = case(
+            (cast(ListenerProfile.languages, JSONB).contains(wanted), 0),
+            else_=1,
+        )
+        key = (touch, speaks, fav, avail, neg_rank, li_id)
     labelled = [k.label(f"k{i}") for i, k in enumerate(key)]
     stmt = select(ListenerProfile, *labelled).where(
         ListenerProfile.vetting_status == VettingStatus.approved

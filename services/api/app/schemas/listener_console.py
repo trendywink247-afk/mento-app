@@ -28,6 +28,8 @@ class ListenerMeOut(BaseModel):
     # The usual time to accept a request over 30 days ("day" / "two_days"), only once there is enough
     # to say (DECISIONS section P.6). Null otherwise.
     reply_within: str | None = None
+    # The languages this mentor talks in (services/languages.py).
+    languages: list[str] = []
     # Rotating names (DECISIONS §L.6): when this name is replaced (next 04:00 IST, as
     # UTC). Null while rotation is switched off.
     name_changes_at: str | None = None
@@ -44,6 +46,7 @@ class ListenerProfileEditIn(BaseModel):
 
     public_line: str | None = Field(default=None, max_length=120)
     availability_note: str | None = Field(default=None, max_length=60)
+    languages: list[str] | None = Field(default=None, max_length=12)
 
 
 class DevListenerItem(BaseModel):

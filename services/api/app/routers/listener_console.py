@@ -65,6 +65,7 @@ from app.services import (
     console_codes,
     conversations,
     in_touch,
+    languages,
     mentor_face,
     mentor_names,
     paths,
@@ -107,6 +108,7 @@ def _me_out(li: ListenerProfile, db: Session) -> ListenerMeOut:
         stream_token=stream.user_token(li.id),
         public_line=li.public_line,
         availability_note=li.availability_note,
+        languages=list(li.languages or []),
         name_changes_at=(
             mentor_names.next_rotation_at(datetime.now(UTC)).isoformat()
             if mentor_names.is_enabled()
@@ -265,6 +267,8 @@ def update_profile(
     if "availability_note" in fields:
         value = payload.availability_note
         listener.availability_note = (" ".join(value.split()) if value else "") or None
+    if "languages" in fields:
+        listener.languages = languages.clean(payload.languages)
     db.commit()
     db.refresh(listener)
     return _me_out(listener, db)

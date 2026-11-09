@@ -26,7 +26,15 @@ from app.schemas import ConsoleSessionOut, ListenerApplicationIn, ListenerApplic
 from app.schemas.applications import ConsoleCodeOut, StepBackIn, StepBackOut
 from app.schemas.mentor_invites import InviteClaimIn
 from app.security import current_user_id, issue_listener_token
-from app.services import categories, console_codes, locks, mentor_invites, moderation, stream
+from app.services import (
+    categories,
+    console_codes,
+    languages,
+    locks,
+    mentor_invites,
+    moderation,
+    stream,
+)
 from app.services.links import mentor_console_code_link
 from app.services.paths_data import COMMUNITIES
 
@@ -141,6 +149,7 @@ def apply(
         email=payload.email,
         mentor_interest=payload.mentor_interest,
         exam_credential=(payload.exam_credential or "").strip() or None,
+        languages=languages.clean(payload.languages) if payload.languages is not None else None,
         pledge_accepted_at=datetime.now(UTC),
     )
     db.add(row)

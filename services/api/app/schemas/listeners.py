@@ -33,6 +33,8 @@ class ListenerOut(BaseModel):
     # "day" or "two_days": the median time to accept a request over 30 days, shown only after
     # enough requests (DECISIONS section P.6). Null when there is not enough to say.
     reply_within: str | None = None
+    # Language codes this mentor talks in (services/languages.py); empty when not said. Additive.
+    languages: list[str] = []
 
 
 class ListenerProfileOut(BaseModel):
@@ -66,6 +68,7 @@ class ListenerProfileOut(BaseModel):
     # The member-facing words for `categories`, same order (services/categories.py), so
     # the app never shows a raw slug. Additive.
     category_labels: list[str] = []
+    languages: list[str] = []
 
 
 class ConversationMentorOut(ListenerProfileOut):

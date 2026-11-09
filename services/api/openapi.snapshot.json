@@ -1597,6 +1597,14 @@
             ],
             "title": "Issue Category Label"
           },
+          "languages": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
+          },
           "listening_since": {
             "title": "Listening Since",
             "type": "string"
@@ -3013,6 +3021,21 @@
             ],
             "title": "Exam Credential"
           },
+          "languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages"
+          },
           "mentor_interest": {
             "default": false,
             "title": "Mentor Interest",
@@ -3273,6 +3296,14 @@
             "title": "Id",
             "type": "string"
           },
+          "languages": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
+          },
           "max_concurrent": {
             "title": "Max Concurrent",
             "type": "integer"
@@ -3399,6 +3430,14 @@
             "title": "Is Favourite",
             "type": "boolean"
           },
+          "languages": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
+          },
           "persona_avatar": {
             "title": "Persona Avatar",
             "type": "string"
@@ -3450,6 +3489,21 @@
               }
             ],
             "title": "Availability Note"
+          },
+          "languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages"
           },
           "public_line": {
             "anyOf": [
@@ -3557,6 +3611,14 @@
           "is_favourite": {
             "title": "Is Favourite",
             "type": "boolean"
+          },
+          "languages": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
           },
           "listening_since": {
             "title": "Listening Since",
@@ -9910,6 +9972,23 @@
         "description": "Approved listeners (minus anyone this user blocked — and minus the user's\nown listener profile, if their application was approved). Ordered IN TOUCH first\n(DECISIONS §L.7 — the consented link that replaces the favourite), then the\ndeprecated favourites, then available, then rank (spec 2026-09-06 §3.4), then id.\n\nPaged (T2.3): `limit` + `cursor`, next cursor in `X-Next-Cursor`. The order is\nbuilt IN SQL so a page is a keyset slice of it. `available` can change between two\npage reads — a mentor going away may then appear twice or not at all across pages,\nthe accepted price of a live directory (a refresh starts over).",
         "operationId": "list_listeners_api_v1_listeners_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          },
           {
             "in": "query",
             "name": "limit",

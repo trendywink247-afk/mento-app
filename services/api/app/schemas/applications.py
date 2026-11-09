@@ -23,6 +23,8 @@ class ListenerApplicationIn(BaseModel):
     # Exam mentoring (DECISIONS section O): what the applicant says they hold, in their own words.
     # Optional, so older builds still submit; the admin reads it and decides on certification.
     exam_credential: str | None = Field(default=None, max_length=200)
+    # Up to five language codes (services/languages.py). Optional so older builds still submit.
+    languages: list[str] | None = Field(default=None, max_length=12)
     pledge_accepted: bool
 
 

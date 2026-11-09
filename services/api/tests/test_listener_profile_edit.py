@@ -183,3 +183,22 @@ def test_rate_limit_is_enforced_on_the_listener_profile_key(client, db_session):
         assert statuses[10] == 429
     finally:
         ratelimit.ENABLED = False
+
+
+@requires_postgres
+def test_languages_are_saved_cleaned_and_left_alone_when_omitted(client, db_session):
+    lid = _seed_listener(db_session)
+    db_session.commit()
+
+    r = client.put(
+        "/api/v1/listener/me/profile",
+        json={"languages": ["HI", "en", "xx", "hi"]},
+        headers=_auth(lid),
+    )
+    assert r.status_code == 200
+    assert r.json()["languages"] == ["hi", "en"]
+
+    again = client.put(
+        "/api/v1/listener/me/profile", json={"public_line": "Still here."}, headers=_auth(lid)
+    )
+    assert again.json()["languages"] == ["hi", "en"]

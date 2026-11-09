@@ -73,6 +73,7 @@ from app.services import (
     audit,
     conversations,
     in_touch,
+    languages,
     member_status,
     mentor_face,
     mentor_invites,
@@ -701,6 +702,7 @@ def approve_application(
         # (AVAILABILITY_NOTES; unknown drift falls back to the raw text, capped at
         # 60). The mentor can edit it afterwards via PUT /listener/me/profile.
         availability_note=availability_note(a.available_times, a.availability),
+        languages=languages.clean(a.languages),
     )
     db.add(li)
     db.flush()
