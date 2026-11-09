@@ -4,3 +4,4 @@ export function useNotificationTaps(): void {}
 export function hasPendingTap(): boolean {
   return false;
 }
+export async function clearConversationNotifications(_conversationId: string): Promise<void> {}
