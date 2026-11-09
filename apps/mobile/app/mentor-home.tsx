@@ -685,6 +685,14 @@ function ConsoleBody({
             testID="mentor-profile-reading"
           />
           <ProfileRow
+            icon="contrast-outline"
+            tone="indigo"
+            title={t('appearance.row')}
+            sub={t('appearance.rowSub')}
+            onPress={() => router.push('/appearance')}
+            testID="mentor-profile-appearance"
+          />
+          <ProfileRow
             icon="shield-checkmark-outline"
             tone="indigo"
             title={t('mentor.profileHelp')}

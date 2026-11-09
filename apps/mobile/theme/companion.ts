@@ -53,3 +53,24 @@ export function accentFor(color: CompanionColor | string | null | undefined): Ac
   if (color && color in COMPANION_COLORS) return COMPANION_COLORS[color as CompanionColor];
   return COMPANION_COLORS[DEFAULT_COMPANION_COLOR];
 }
+
+function mix(a: string, b: string, t: number): string {
+  const n = (h: string, i: number) => parseInt(h.slice(i, i + 2), 16);
+  const c = (i: number) => Math.round(n(a, i) * (1 - t) + n(b, i) * t).toString(16).padStart(2, '0');
+  return `#${c(1)}${c(3)}${c(5)}`;
+}
+
+/** The companion colour on the dark look: a lighter accent (carries text and keys on the dark ground),
+ * a dark tint, and dark text on the accent. Checked by scripts/contrast_gate.py. */
+export function darkAccentFor(color: CompanionColor | string | null | undefined): AccentSet {
+  const a = accentFor(color).accent;
+  const ground = '#0F1419';
+  return {
+    accent: mix(a, '#FFFFFF', 0.5),
+    accentPress: mix(a, '#FFFFFF', 0.42),
+    accentEdge: mix(a, '#000000', 0.2),
+    accentTint: mix(a, ground, 0.8),
+    accentTintEdge: mix(a, ground, 0.65),
+    onAccent: ground,
+  };
+}

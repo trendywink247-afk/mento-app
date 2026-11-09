@@ -357,6 +357,16 @@ export default function ProfileTab() {
                 }
               />
 
+              <Row
+                icon="contrast-outline"
+                tone="indigo"
+                title={t('appearance.row')}
+                body={t('appearance.rowSub')}
+                right={chevron}
+                onPress={() => router.push('/appearance')}
+                testID="profile-appearance"
+              />
+
               <MentorRow application={application} onPress={openMentor} chevron={chevron} />
 
               <Row

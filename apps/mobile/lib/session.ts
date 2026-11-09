@@ -88,6 +88,17 @@ export async function getPersona(): Promise<Persona | null> {
   return raw ? (JSON.parse(raw) as Persona) : null;
 }
 
+const APPEARANCE_KEY = 'mento.appearance';
+
+/** pastel | light | dark | system. Kept on this phone only. */
+export async function saveAppearance(value: string): Promise<void> {
+  await store.setItemAsync(APPEARANCE_KEY, value);
+}
+
+export async function getAppearance(): Promise<string | null> {
+  return store.getItemAsync(APPEARANCE_KEY);
+}
+
 /** Growth-companion colour drives the per-user accent theme (see ThemeProvider). */
 export async function saveCompanionColor(color: string): Promise<void> {
   await store.setItemAsync(COMPANION_COLOR_KEY, color);

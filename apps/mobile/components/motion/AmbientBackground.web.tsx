@@ -10,6 +10,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import { StaticAmbient } from '@/components/motion/StaticAmbient';
 import { duration } from '@/theme/motion';
+import { useTheme } from '@/theme/ThemeProvider';
 
 // Must match @shopify/react-native-skia's canvaskit-wasm dependency version.
 const CANVASKIT_CDN = 'https://cdn.jsdelivr.net/npm/canvaskit-wasm@0.39.1/bin/full/';
@@ -37,8 +38,15 @@ function loadSkia(): Promise<boolean> {
   return skiaReady;
 }
 
-/** `paused`: see AuroraCanvas — the root sky holds still under an opaque screen. */
+/** Light and Dark are a plain ground: no aurora. Pastel keeps the sky. */
 export function AmbientBackground({ paused = false }: { paused?: boolean }) {
+  const { look, colors } = useTheme();
+  if (look !== 'pastel') return <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} pointerEvents="none" />;
+  return <PastelAmbient paused={paused} />;
+}
+
+/** `paused`: see AuroraCanvas — the root sky holds still under an opaque screen. */
+function PastelAmbient({ paused = false }: { paused?: boolean }) {
   const [ready, setReady] = useState(skiaLoaded);
   const opacity = useSharedValue(skiaLoaded ? 1 : 0);
 

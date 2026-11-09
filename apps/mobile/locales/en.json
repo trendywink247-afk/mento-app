@@ -1590,5 +1590,19 @@
     "errDuplicate": "You already use that word.",
     "errFull": "You have reached 30 answers. Delete one to add another.",
     "count": "%{count} saved"
+  },
+  "appearance": {
+    "title": "Your look",
+    "sub": "Saved on this phone only.",
+    "pastel": "Pastel",
+    "pastelSub": "Today's look. Cream, soft colour and companions.",
+    "light": "Light",
+    "lightSub": "A soft off-white, plainer and easy on the eyes.",
+    "dark": "Dark",
+    "darkSub": "Easy on the eyes at night.",
+    "system": "System",
+    "systemSub": "Follows your phone.",
+    "row": "Appearance",
+    "rowSub": "Pastel, Light, Dark or System"
   }
 }

@@ -33,6 +33,49 @@ def ratio(a: str, b: str) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
+def mix(a: str, b: str, t: float) -> str:
+    """Mirror of mix() in theme/companion.ts."""
+    c = lambda i: format(round(int(a[i : i + 2], 16) * (1 - t) + int(b[i : i + 2], 16) * t), "02x")
+    return f"#{c(1)}{c(3)}{c(5)}"
+
+
+def looks(tokens: str, base: dict[str, str]) -> dict[str, dict[str, str]]:
+    """The Light and Dark overrides in tokens.ts layered over the pastel base."""
+    out = {}
+    for name in ("LIGHT", "DARK"):
+        block = re.search(rf"const {name}: ColorMap = \{{[\s\S]*?\n\}};", tokens)
+        if not block:
+            sys.exit(f"{name} not found")
+        text = re.sub(r"//[^\n]*", "", block.group(0))
+        out[name.lower()] = {**base, **dict(re.findall(r"(\w+): '(#[0-9A-Fa-f]{6})'", text))}
+    return out
+
+
+def appearance_pairs(tokens: str, companion: str, base: dict[str, str]) -> list[tuple[str, str, str, float]]:
+    pairs: list[tuple[str, str, str, float]] = []
+    wash_dark = dict(re.findall(r"(\w+): '(#[0-9A-Fa-f]{6})'", re.search(r"const WASH_DARK = \{([^}]*)\}", tokens).group(1)))
+    ink_dark = dict(re.findall(r"(\w+): '(#[0-9A-Fa-f]{6})'", re.search(r"const WASH_INK_DARK = \{([^}]*)\}", tokens).group(1)))
+    for look, c in looks(tokens, base).items():
+        for key in ("ink", "inkMuted", "success", "warning", "danger"):
+            for ground in ("bg", "surface", "bgLavender"):
+                pairs.append((f"{look}: {key} on {ground}", c[key], c[ground], 4.5))
+        if look == "dark":
+            for k in ("green", "orange", "danger", "indigo"):
+                w = {"green": "green", "orange": "orange", "danger": "danger", "indigo": "indigo"}[k]
+                pairs.append((f"dark: wash ink {k} on its wash", ink_dark[k], wash_dark[w], 4.5))
+            pairs.append(("dark: dangerInk on dangerWash", c["dangerInk"], wash_dark["danger"], 4.5))
+            for name, block in re.findall(r"(\w+): \{ (accent: '#[^}]*) \}", companion):
+                a = dict(re.findall(r"(\w+): '(#[0-9A-Fa-f]{6})'", block))["accent"]
+                ground, accent = "#0F1419", mix(a, "#FFFFFF", 0.5)
+                tint = mix(a, ground, 0.8)
+                pairs.append((f"dark {name}: accent on bg", accent, c["bg"], 4.5))
+                pairs.append((f"dark {name}: accent on surface", accent, c["surface"], 4.5))
+                pairs.append((f"dark {name}: dark text on accent", ground, accent, 4.5))
+                pairs.append((f"dark {name}: ink on tint", c["ink"], tint, 4.5))
+                pairs.append((f"dark {name}: accent on tint", accent, tint, 4.5))
+    return pairs
+
+
 def main() -> int:
     tokens = (ROOT / "tokens.ts").read_text(encoding="utf-8")
     companion = (ROOT / "companion.ts").read_text(encoding="utf-8")
@@ -56,6 +99,7 @@ def main() -> int:
         # only (the date wheels' selected value); small labels on a tint face use the edge.
         pairs.append((f"{name}: accent on tint (large only)", vals["accent"], vals["accentTint"], 3.0))
         pairs.append((f"{name}: edge on tint", vals["accentEdge"], vals["accentTint"], 4.5))
+    pairs += appearance_pairs(tokens, companion, colors)
     failed = 0
     for label, fg, bg, minimum in pairs:
         r = ratio(fg, bg)

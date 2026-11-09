@@ -12,11 +12,17 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useFrameSize } from '@/lib/useFrameSize';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { duration, easing } from '@/theme/motion';
+import { useTheme } from '@/theme/ThemeProvider';
 import { wash } from '@/theme/tokens';
 
 /** 'journey' = A34's glow high on the left; 'top' = the mentor pages' soft wash across the
  * top edge (A35 / A36 / A37: a wide ellipse, sage tint fading to the ground). */
-export function SageSky({ on = true, shape = 'journey' }: { on?: boolean; shape?: 'journey' | 'top' }) {
+export function SageSky(props: { on?: boolean; shape?: 'journey' | 'top' }) {
+  const { look } = useTheme();
+  return look === 'pastel' ? <PastelSageSky {...props} /> : null;
+}
+
+function PastelSageSky({ on = true, shape = 'journey' }: { on?: boolean; shape?: 'journey' | 'top' }) {
   const reduced = useReducedMotion();
   const { width } = useFrameSize();
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
