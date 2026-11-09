@@ -45,6 +45,9 @@ def client(monkeypatch):
 @pytest.fixture
 def enforced(monkeypatch):
     monkeypatch.setattr(get_settings(), "allowance_enforced", True)
+    monkeypatch.setattr(
+        get_settings(), "allowance_in_a_row", 3
+    )  # the rule under test, not the default
 
 
 def _pair(s, *, name: str = "Gentle Harbor") -> tuple[str, str, str, str]:

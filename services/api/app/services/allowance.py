@@ -1,4 +1,4 @@
-"""Member message allowance (DECISIONS §L.2): 3 in a row, 10 a day.
+"""Member message allowance (DECISIONS §L.2): 10 in a row (founder, 2026-11-10; was 3), 10 a day.
 
 Where it sits — and why the ORDER is the safety property
 --------------------------------------------------------

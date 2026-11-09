@@ -171,6 +171,7 @@ def test_publish_happens_only_after_the_row_is_committed(monkeypatch, db_session
 
 def test_a_crisis_message_is_never_held_or_counted(monkeypatch, db_session):
     monkeypatch.setattr(get_settings(), "allowance_enforced", True)
+    monkeypatch.setattr(get_settings(), "allowance_in_a_row", 3)
     member, conv = seed_conversation(db_session)
     for i in range(3):
         assert (

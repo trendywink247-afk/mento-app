@@ -213,7 +213,8 @@ Source: the developer relayed these after the recovered 2026-09-06 walkthrough c
 Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code already follows; strike or amend any of them. Client wiring: `docs/superpowers/specs/2026-09-19-board-port-api.md`.
 
 **L.2 message allowance**
-- **a. "10 per day" is per member across all their conversations; "3 in a row" is per conversation.** Any mentor message in that conversation resets the run.
+- **a. "10 per day" is per member across all their conversations; "in a row" is per conversation.** Any mentor message in that conversation resets the run.
+- **a2. In a row is now 10 (founder, 2026-11-10; was 3).** Set by `ALLOWANCE_IN_A_ROW`, default 10. The 10-a-day cap is unchanged, so on its own the run limit can no longer bind before the day limit; raise the day limit too if the intent was a longer run.
 - **b. The day is the IST calendar day** (00:00 Asia/Kolkata, fixed UTC+05:30). A member abroad resets at India's midnight.
 - **c. "(or conversation)" is read kindly: for 24 hours after the scan flags anything in a conversation, that whole conversation is exempt** — follow-ups to something frightening are not rationed. They are tallied as crisis-exempt sends. (A member could lift their own limit by typing a crisis phrase; that also puts them in the human-review queue, which is the right outcome.)
 - **d. Both limits reached → the note names the daily one** (the longer wait is the honest one).
