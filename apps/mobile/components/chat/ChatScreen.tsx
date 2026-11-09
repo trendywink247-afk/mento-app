@@ -47,6 +47,7 @@ import type { PlacementSlot } from '@/lib/companionPlacement';
 import { haptic } from '@/lib/haptics';
 import { useI18n } from '@/lib/i18n';
 import { measureScreenTop, useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { NativeChatOwnerError, requireNativeStreamOwner } from '@/lib/nativeChatOwner';
 import { chatFaceKey } from '@/lib/originStore';
@@ -498,6 +499,7 @@ function StreamChatScreen() {
       {error ? (
         <View style={styles.center}>
           <Text style={[type.body, { color: colors.danger, textAlign: 'center' }]}>{error}</Text>
+          <PrimaryButton label={t('chat.errBack')} variant="link" onPress={() => leaveToChats(router)} testID="chat-error-back" />
         </View>
       ) : channel ? (
         <View style={[{ flex: 1 }, keyboardBoundary]} testID="chat-ready"
