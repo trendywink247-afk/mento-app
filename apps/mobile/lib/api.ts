@@ -785,6 +785,9 @@ export const api = {
 
   listMentorNotes: () => request<JournalEntry[]>('/journals/mentor-notes', {}, true),
 
+  deleteJournalEntry: (id: string) =>
+    request<void>(`/journals/entries/${encodeURIComponent(id)}`, { method: 'DELETE' }, true),
+
   journalSummary: () => request<Record<string, number>>('/journals/summary', {}, true),
 
   createJournalEntry: (body: { channel: string; body: string; meta?: Record<string, unknown> }) =>

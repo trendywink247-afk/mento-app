@@ -724,6 +724,9 @@
     "stop": "."
   },
   "journals": {
+    "remove": "Remove",
+    "removeTitle": "Remove this from your journal?",
+    "removeBody": "It is deleted for good. It cannot be brought back.",
     "title": "Journal",
     "sub": "A space for your thoughts, reflections and everything in between.",
     "aiTitle": "AI Journal Assistant",

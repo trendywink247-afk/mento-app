@@ -8309,6 +8309,47 @@
         ]
       }
     },
+    "/api/v1/journals/entries/{entry_id}": {
+      "delete": {
+        "description": "Take back an entry — a manual one or a kept mentor message. Real deletion, own entries\nonly; someone else's id (or one already gone) is a 404, never a hint that it exists.",
+        "operationId": "delete_entry_api_v1_journals_entries__entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Delete Entry",
+        "tags": [
+          "journals"
+        ]
+      }
+    },
     "/api/v1/journals/mentor-notes": {
       "get": {
         "description": "Newest-first Mentor Notes for the journals surface; `conversation_id` narrows\nto the notes kept from one chat.",

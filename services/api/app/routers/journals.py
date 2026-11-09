@@ -147,6 +147,23 @@ def create_entry(
     return _out(entry)
 
 
+@router.delete("/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_entry(
+    entry_id: str,
+    user_id: str = Depends(current_user_id),
+    db: Session = Depends(get_db),
+) -> None:
+    """Take back an entry — a manual one or a kept mentor message. Real deletion, own entries
+    only; someone else's id (or one already gone) is a 404, never a hint that it exists."""
+    entry = db.scalar(
+        select(JournalEntry).where(JournalEntry.id == entry_id, JournalEntry.user_id == user_id)
+    )
+    if entry is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "no such entry")
+    db.delete(entry)
+    db.commit()
+
+
 @router.get("/entries", response_model=list[JournalEntryOut])
 def list_entries(
     channel: str,
