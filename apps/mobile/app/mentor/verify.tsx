@@ -31,13 +31,17 @@ export default function MentorVerify() {
   const [note, setNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      const [m, d] = await Promise.all([listenerApi.me(), listenerApi.documents()]);
-      setMe(m);
-      setDocs(d);
-    } catch {
-      /* the page still draws; sending reports its own errors */
-    }
+    // Separate on purpose: a mentor who is already verified must see that even if the list of documents cannot load.
+    void listenerApi
+      .me()
+      .then(setMe)
+      .catch(() => {});
+    void listenerApi
+      .documents()
+      .then(setDocs)
+      .catch(() => {
+        /* the page still draws; sending reports its own errors */
+      });
   }, []);
   useEffect(() => {
     void load();
