@@ -3407,6 +3407,11 @@
             ],
             "title": "Public Line"
           },
+          "push_preview": {
+            "default": false,
+            "title": "Push Preview",
+            "type": "boolean"
+          },
           "reply_within": {
             "anyOf": [
               {
@@ -3585,6 +3590,17 @@
               }
             ],
             "title": "Public Line"
+          },
+          "push_preview": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Push Preview"
           }
         },
         "title": "ListenerProfileEditIn",
@@ -4129,6 +4145,11 @@
             "title": "Persona Name",
             "type": "string"
           },
+          "push_preview": {
+            "default": false,
+            "title": "Push Preview",
+            "type": "boolean"
+          },
           "status": {
             "default": "active",
             "title": "Status",
@@ -4497,6 +4518,19 @@
           "reason"
         ],
         "title": "ModerationResolveIn",
+        "type": "object"
+      },
+      "NotificationStyleIn": {
+        "properties": {
+          "push_preview": {
+            "title": "Push Preview",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "push_preview"
+        ],
+        "title": "NotificationStyleIn",
         "type": "object"
       },
       "OkResult": {
@@ -11251,6 +11285,53 @@
           }
         ],
         "summary": "Export Me",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/notification-style": {
+      "put": {
+        "description": "Show the text of a message in its notification, or only that one arrived (the default). The text then\ntravels through the phone maker's push service, which is why the person chooses it.",
+        "operationId": "set_notification_style_api_v1_me_notification_style_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationStyleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Set Notification Style",
         "tags": [
           "me"
         ]

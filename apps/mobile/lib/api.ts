@@ -35,6 +35,8 @@ export type Me = Persona & {
   member_setup_complete?: boolean;
   /** The member's own name for the companion — only ever shown back to them. */
   companion_name?: string | null;
+  /** Notifications show the words of a message (off by default). */
+  push_preview?: boolean;
   /** Standing (WS3 T3.7). While not 'active' every other member call answers 403
    * `member_suspended` / `member_banned`. Optional: an older server omits it. */
   status?: 'active' | 'suspended' | 'banned';
@@ -674,6 +676,8 @@ export const api = {
 
   // --- The member's own record (companion saved on the account, not just the device) ---
   me: () => request<Me>('/me', {}, true),
+  setNotificationStyle: (pushPreview: boolean) =>
+    request<Me>('/me/notification-style', { method: 'PUT', body: JSON.stringify({ push_preview: pushPreview }) }, true),
   /** A fresh recovery code (WS3 T3.5), returned ONCE; a new one replaces the old. */
   makeRecoveryCode: () => request<{ phrase: string }>('/me/recovery', { method: 'POST' }, true),
   /** Sign this device in with a recovery code: 401 for a wrong code, 429 after too many

@@ -109,6 +109,7 @@ from app.schemas.matching import (
 from app.schemas.onboarding import (
     CompanionUpdateIn,
     MeOut,
+    NotificationStyleIn,
     OnboardingResult,
     OnboardingStart,
     PersonaOut,
@@ -167,6 +168,7 @@ __all__ = [
     "AllowanceOut",
     "AttentionItem",
     "CompanionUpdateIn",
+    "NotificationStyleIn",
     "ConsoleSessionOut",
     "ConversationListItem",
     "ConversationMentorOut",

@@ -30,6 +30,8 @@ class ListenerMeOut(BaseModel):
     reply_within: str | None = None
     # The languages this mentor talks in (services/languages.py).
     languages: list[str] = []
+    # Notifications show the text of a message (off by default).
+    push_preview: bool = False
     # Rotating names (DECISIONS §L.6): when this name is replaced (next 04:00 IST, as
     # UTC). Null while rotation is switched off.
     name_changes_at: str | None = None
@@ -47,6 +49,7 @@ class ListenerProfileEditIn(BaseModel):
     public_line: str | None = Field(default=None, max_length=120)
     availability_note: str | None = Field(default=None, max_length=60)
     languages: list[str] | None = Field(default=None, max_length=12)
+    push_preview: bool | None = None
 
 
 class DevListenerItem(BaseModel):

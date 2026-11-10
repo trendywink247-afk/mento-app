@@ -61,6 +61,12 @@ person seeking support and the listener — appears only as an auto-assigned per
 - **Your look and your pinned and archived chats** — kept on your phone only (Pastel,
   Light, Dark or System; which chats you pinned or archived). Never sent to us. A
   cleared session removes the pins and archives; the look is a device setting.
+- **Whether notifications show the words of a message** (member and mentor, optional, off
+  by default). Only a yes/no is stored. When it is on, the words of a message in an own
+  chat travel to the person's phone inside the push notification, so they pass through the
+  phone maker's push service (Google). Chats a person has locked, messages the crisis
+  scan flagged and messages that were redacted never have their words put in a
+  notification. Turning it off stops it at once.
 - **The languages a mentor talks in** (mentors only) — up to five, shown on the mentor's
   card so members can find a mentor who talks their language.
 - **Sign-in sessions** — the app refreshes its sign-in every few minutes; we keep a

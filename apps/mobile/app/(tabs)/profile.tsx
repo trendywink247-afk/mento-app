@@ -5,6 +5,7 @@ import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { PushStyleSwitch } from '@/components/PushStyleSwitch';
 import { IconBadge } from '@/components/IconBadge';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
@@ -148,6 +149,16 @@ export default function ProfileTab() {
   const [openNote, setOpenNote] = useState<'mentors' | 'privacy' | null>(null);
   // null until GET /me answers (the recovery card waits for it).
   const [hasRecovery, setHasRecovery] = useState<boolean | null>(null);
+  const [pushPreview, setPushPreview] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const changePushStyle = (next: boolean) => {
+    setPushPreview(next);
+    setPushBusy(true);
+    void api
+      .setNotificationStyle(next)
+      .catch(() => setPushPreview(!next))
+      .finally(() => setPushBusy(false));
+  };
   const [swatch, setSwatch] = useState(SWATCH);
   const running = runningUpdate();
   // The hero place only exists once the animal is known — until then there is no home slot.
@@ -183,7 +194,10 @@ export default function ProfileTab() {
     void api
       .me()
       .then((me) => {
-        if (active) setHasRecovery(Boolean(me.has_recovery));
+        if (active) {
+          setHasRecovery(Boolean(me.has_recovery));
+          setPushPreview(Boolean(me.push_preview));
+        }
       })
       .catch(() => {
         if (active) setHasRecovery(false);
@@ -356,6 +370,8 @@ export default function ProfileTab() {
                   </View>
                 }
               />
+
+              <PushStyleSwitch value={pushPreview} onChange={changePushStyle} disabled={pushBusy} testID="profile-push-style" />
 
               <Row
                 icon="contrast-outline"

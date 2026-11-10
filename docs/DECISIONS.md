@@ -360,4 +360,6 @@ Recorded from the founder's answers of 2026-11-10; the founder approved each rec
 
 **6. Chat list.** Long-press or swipe a chat for **Pin, Archive, Mute, Delete**. Pin and Archive stay on the phone; Mute is the chat's Quiet Pause; Delete is the real wipe (Clean Wipe) and asks once more. Archived chats show as one row on top. **Screenshots and the recent-apps preview are blocked inside a chat only.**
 
-**7. Decided later:** telling a member when a mentor comes online (a suggestion, not built).
+**7. Notification style.** A switch on both Profiles, **off by default**: when on, a notification shows what the message says (cut at 120 characters), like a chat app. Own chat only; never for a locked chat, a crisis-flagged message or a redacted one. The words then pass through the phone maker's push service, so it is the person's choice and the privacy policy says so. Notifications are one per conversation and clear when the chat opens.
+
+**8. Decided later:** telling a member when a mentor comes online (a suggestion, not built).

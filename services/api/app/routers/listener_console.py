@@ -111,6 +111,7 @@ def _me_out(li: ListenerProfile, db: Session) -> ListenerMeOut:
         public_line=li.public_line,
         availability_note=li.availability_note,
         languages=list(li.languages or []),
+        push_preview=bool(li.push_preview),
         name_changes_at=(
             mentor_names.next_rotation_at(datetime.now(UTC)).isoformat()
             if mentor_names.is_enabled()
@@ -271,6 +272,8 @@ def update_profile(
         listener.availability_note = (" ".join(value.split()) if value else "") or None
     if "languages" in fields:
         listener.languages = languages.clean(payload.languages)
+    if "push_preview" in fields and payload.push_preview is not None:
+        listener.push_preview = payload.push_preview
     db.commit()
     db.refresh(listener)
     return _me_out(listener, db)

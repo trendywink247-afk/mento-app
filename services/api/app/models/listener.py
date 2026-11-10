@@ -41,6 +41,11 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     # matching members, never a filter.
     languages: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
 
+    # Notifications show the text of a message (off by default; the mentor turns it on).
+    push_preview: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=expression.false()
+    )
+
     # Non-cash reputation (PRD §9). Higher rank → higher match priority.
     rank: Mapped[int] = mapped_column(Integer, default=0)
     active_conversations: Mapped[int] = mapped_column(Integer, default=0)

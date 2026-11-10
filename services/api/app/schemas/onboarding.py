@@ -86,6 +86,12 @@ class MeOut(BaseModel):
     terms_required: bool = False
     # A recovery code exists (T3.5); the code itself is never readable again.
     has_recovery: bool = False
+    # Notifications show the text of a message (off by default). Additive.
+    push_preview: bool = False
+
+
+class NotificationStyleIn(BaseModel):
+    push_preview: bool
 
 
 class CompanionUpdateIn(BaseModel):
