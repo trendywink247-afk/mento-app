@@ -164,7 +164,13 @@ def test_the_worker_runs_a_maintenance_job_from_the_queue(db_session):
     db_session.commit()
     worker.drain(queues=["maintenance"])
     with TestSession() as s:
-        assert s.execute(text("SELECT count(*) FROM procrastinate_jobs")).scalar() == 0
+        # The job this test queued is gone (it ran). Not the whole table: a worker start also defers the
+        # periodic jobs whose slot has just passed (request-ageing runs every 15 minutes), and one of
+        # those may legitimately still be waiting depending on the clock.
+        left = s.execute(
+            text("SELECT count(*) FROM procrastinate_jobs WHERE task_name = 'maintenance.capacity'")
+        ).scalar()
+        assert left == 0
         assert s.query(ListenerProfile).one().status == ListenerStatus.away
 
 
