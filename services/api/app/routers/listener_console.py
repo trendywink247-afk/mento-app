@@ -60,6 +60,7 @@ from app.schemas import (
 from app.schemas.applications import ConsoleExchangeIn, ConsoleExchangeOut
 from app.security import current_listener_id, issue_listener_token
 from app.services import (
+    age_band,
     care_prompts,
     categories,
     console_codes,
@@ -487,6 +488,8 @@ def my_pending_requests(
             broadcast=req.broadcast,
             community_label=paths.community_label(user.community_slug),
             stage_label=paths.stage_label(user.community_slug, user.journey_stage),
+            age_band=age_band.age_band(user.dob),
+            audience=req.audience,
         )
         for req, user in rows
     ]

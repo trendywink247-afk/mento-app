@@ -3783,6 +3783,22 @@
       },
       "ListenerRequestItem": {
         "properties": {
+          "age_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Band"
+          },
+          "audience": {
+            "default": "any",
+            "title": "Audience",
+            "type": "string"
+          },
           "broadcast": {
             "default": false,
             "title": "Broadcast",

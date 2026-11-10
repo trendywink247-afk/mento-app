@@ -151,6 +151,10 @@ class ListenerRequestItem(BaseModel):
     # What the member chose to share: their road and stage, as words. Never a name or contact.
     community_label: str | None = None
     stage_label: str | None = None
+    # The member's age as a band ("18–24"); never a date of birth. Additive.
+    age_band: str | None = None
+    # Who the request was offered to ("any", "in_service" or "peer"). Additive.
+    audience: str = "any"
 
 
 class RequestsSeenIn(BaseModel):
