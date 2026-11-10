@@ -305,3 +305,59 @@ Source: the founder, in session, 2026-11-08. These supersede the "connected righ
 **5. Exam options are broad and tappable.** The Path offers the common Indian exams as one-tap choices with a one-line plain description each, the most used first, and a search for the rest. UPSC and JEE get extra shortcuts for the usual preparation stages.
 
 **6. Scope.** Everything above is inside v1. The self-assessment suite (§D.8), Module B mentoring and Community stay deferred; the founder asked for the thinking only, which lives in `docs/proposals/self-assessment-and-community.md`.
+
+## O. Founder rulings — 2026-11-08 (message limit and verification by kind of listening)
+
+**1. The 10-message limit applies only to certified exam mentors** (UPSC, JEE and the other exam roads), **not to general listening.** This narrows §L.2: the 3-in-a-row / 10-a-day allowance stays for conversations with a certified exam mentor; a general emotional or life conversation has no daily or in-a-row cap. Crisis-flagged messages stay never blocked and never counted (T&S #1), as before.
+
+**2. Every mentor, now and in future, is approved by an admin.** Nothing about mentor vetting is relaxed. What differs by kind of listening is only whether a mentor is also **certified** for exams. General emotional or life listening needs no certification.
+
+**3. Certification is part of the application and is decided by an admin.** A mentor who wants to mentor an exam road says so in their application; the admin panel shows that certification status with the application. When the admin verifies and approves it the mentor is marked **certified** (shown explicitly, for example a gold badge). A mentor approved for general listening only is not certified.
+
+**4. Exam talk belongs with a certified mentor, and the mentor can say so.** A mentor who is not certified has a key in the chat menu, **"This is about an exam"** (founder's choice, 2026-11-08: the mentor's key, not scanning message text). It records only that the suggestion was made (a time, never text). The member then sees a gentle card: a certified exam mentor may help most with this; they can **choose** one (Browse opens on the certified mentors) or say not now, and **the chat stays open** — nothing is cut off. The cap does not apply to that general conversation. An exam question asked through "Next available" on an exam road goes **only to certified mentors**; with none online the member gets the same offers as any busy moment.
+
+**5. Message text is never scanned for this.** Detection is the mentor's key and the member's own choice of road; the crisis scan remains the only reader of message text for safety.
+
+_Recorded as the founder stated them, 2026-11-08. Built as proposed pending the founder's objection: what a mentor submits as proof of certification is a self-declared credential (free text, 200 characters) that an admin reads; a document upload would add stored personal data and a privacy-policy change and is not built._
+
+## P. Founder rulings — 2026-11-08 (UPSC launch scope, gold mentors, requests)
+
+Recorded from the founder's meeting notes and answers; items marked _proposed_ are built as recommended pending the founder's objection.
+
+**1. Launch covers UPSC only.** JEE, NEET and the other exam roads stay in the app **greyed out ("Coming soon"), not hidden**, and cannot be selected. The server holds the list of enabled roads (UPSC plus life in general) and rejects an ask for a disabled road, so an older app build cannot bypass it. Enabling a road later is a setting, not a release. UPSC prelims / mains / interview classification is deferred; people ask general questions at first.
+
+**2. Gold tier: "Mento verified mentors".** In-service officers, onboarded **only by invitation** from the founder's vetted personal contacts (the founder will supply contacts who cleared prelims or mains). A gold mentor may keep an optional mentee profile; switching persona changes the whole app and mutes mentor notifications. Gold mentors have the capped allowance (§O.1); listeners stay unlimited. There is one listener category for now: peer listeners, all tagged **unverified**.
+
+**3. Invite and recovery (_proposed_).** An admin creates a single-use invite (expires in 7 days) and sends the link or code himself; **no email address is stored**. Claiming it creates a mentor who is certified from the start, with no application, and shows a **recovery code once** (hash stored only), reusing the member recovery mechanism, so access survives a deleted app or a new phone. The code is rate-limited and an admin can revoke and reissue. The self-applied path never produces gold.
+
+**4. Requests (_proposed_).** Requests are **personal** (one mentor) or **general** (broadcast). On the UPSC road "Next available" **broadcasts to online gold mentors** (about 20 at most); the **first to accept takes it** (atomic) and it disappears for the others. Life in general keeps the instant match. Mentors get a **Requests tab** with Personal and General. A mentor's profile also keeps a **notes area** of reusable prepared answers.
+
+**5. Unanswered personal requests (_proposed_).** After 24 hours the member is asked (push and card): send to all gold mentors, pick another, keep waiting, or withdraw. Nothing moves without their say-so, because their text would otherwise reach other mentors. At 48 hours the request expires with a kind message and the same options.
+
+**6. Response time (_proposed_).** Mentors and listeners show "Usually replies within a day / 2 days", from the median first reply over 30 days, only after at least 5 requests.
+
+_Build order: UPSC gate, invite-only gold with recovery, broadcast and Requests tab, then the 24/48-hour rule and the response-time badge._
+
+**7. Mentor screens, 2026-11-08 (founder choices).** The mentor side has a bottom bar: Requests (with a count of waiting requests), Chats, Home, Profile. **Home** shows the week (conversations, usual reply time, free seats), presence, the reading card, then the oldest waiting request that can be accepted from there. **Requests** are shown one at a time with what the member chose to share (road, stage, topic; never a name or contact), and a Next key. **Chats** has three tabs: Active, Waiting on you, **In touch**; "Ended" is dropped. A finished chat is kept only while the member and mentor stay in touch (§L.6-7), and stay-in-touch asks sit on top of the In touch tab. **Profile** is a persona card, the mentor's line, prepared answers, in touch, reading and helplines.
+
+**8. Prepared answers (device only).** A mentor keeps reusable replies, each with a /shortcut. Typing "/" and a few letters in a chat lists the matches; choosing one only fills the box, and the mentor reads and sends it. The list is hidden while a crisis card is showing, the crisis scan is unchanged, and message text is never scanned for the shortcut. They are stored on the phone only and removed with the session (sign-out, Clean Wipe). Server storage is a separate branch needing review (stored user content, privacy policy).
+
+**9. The mark is "Mento Verified"** in everything people see (was "Certified"); the code and database keep `certified_exam`.
+
+## Q. Founder rulings — 2026-11-10 (looks, who answers, languages, verification by document)
+
+Recorded from the founder's answers of 2026-11-10; the founder approved each recommendation unless noted.
+
+**1. In a row is now 10 (was 3).** `ALLOWANCE_IN_A_ROW` defaults to 10; the 10-a-day cap is unchanged (so the run limit cannot bind before the day limit; raise the day limit if a longer run was meant). This amends §L.2 and §O.1.
+
+**2. Appearance.** Four looks, set from Profile on both sides and kept on the phone only: **Pastel** (today's look, the default), **Light** (a soft off-white, plainer), **Dark**, and **System**. Light and Dark use a plain ground, with no sky and no companion motion. Every text and tint pair passes the contrast gate (`scripts/contrast_gate.py`). One bottom bar design (`TabPill`) serves the member and mentor sides.
+
+**3. Who answers a question.** A member asks **any mentor** (default), **Mento Verified only**, or **peers**. This narrows §O.4 and §P.4: an exam question no longer goes only to Mento Verified mentors unless the member asks for that. A Personal request is unchanged. A mentor sees whether a request was asked to everyone or to them.
+
+**4. Mentor languages.** A mentor names up to five of twelve languages when applying and can change them later. A member's language is a **preference** (Browse puts mentors who talk it first) and never hides anyone.
+
+**5. Mento Verified by document.** A mentor can send one document (ID card, posting letter, exam result or other; a photo or PDF up to 3 MB). The founder and admins read it in the admin Documents tab and approve or decline with a short reason. **The file is deleted the moment a decision is made, and after 30 days if unread**; only the fact of it is kept (kind, size, status, who decided, when). Every read of a file is in the admin audit log. Approval does what an admin's certify does. An unverified mentor keeps mentoring meanwhile. This supersedes the note under §O (a document upload was "not built").
+
+**6. Chat list.** Long-press or swipe a chat for **Pin, Archive, Mute, Delete**. Pin and Archive stay on the phone; Mute is the chat's Quiet Pause; Delete is the real wipe (Clean Wipe) and asks once more. Archived chats show as one row on top. **Screenshots and the recent-apps preview are blocked inside a chat only.**
+
+**7. Decided later:** telling a member when a mentor comes online (a suggestion, not built).
