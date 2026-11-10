@@ -36,6 +36,13 @@ export function installNotificationHandler(): void {
 /** Take a conversation's notifications out of the tray. Called while that chat is open and in
  *  front, so reading a chat clears what it sent (and the launcher badge that counts them). */
 export async function clearConversationNotifications(conversationId: string): Promise<void> {
+  // A push the system posted itself carries the conversation as its tag (id 0): dismiss that directly, since
+  // the platform's list of presented notifications does not always report such a push's data or identifier.
+  try {
+    await Notifications.dismissNotificationAsync(conversationId);
+  } catch {
+    // nothing with that tag
+  }
   try {
     const shown = await Notifications.getPresentedNotificationsAsync();
     await Promise.all(
