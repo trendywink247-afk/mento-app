@@ -8,6 +8,7 @@ Current documents only. `archive/` holds stale history: don't read it or use it 
 | [DECISIONS.md](DECISIONS.md) | Authoritative product rulings; wins over the PRD and mockups |
 | [PRD.md](PRD.md) | Product requirements v2.0 |
 | [PRIVACY.md](PRIVACY.md) | Engineering-draft privacy policy, kept in step with real data flows |
+| [PRODUCTION_AND_PLAY_STEPS.md](PRODUCTION_AND_PLAY_STEPS.md) | The production and Play Console steps only the founder can do (keys, address, Data safety answers) |
 | [MOCKUP_INVENTORY.md](MOCKUP_INVENTORY.md) | Catalogue of the 64 UI mockups in `Mockups/` |
 | [Mockups/](Mockups/) | Original UI mockup images |
 | [ANDROID_BUILD.md](ANDROID_BUILD.md) | Local Android APK build and self-hosted OTA updates |
