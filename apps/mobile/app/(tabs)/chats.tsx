@@ -11,7 +11,10 @@ import { LinkedRings } from '@/components/InTouchBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PinPad } from '@/components/chat/options/bits';
+import { ChatActionsSheet } from '@/components/chats/ChatActionsSheet';
 import { ChatRow, type ChatRowState } from '@/components/chats/ChatRow';
+import { SwipeRow } from '@/components/chats/SwipeRow';
+import { useChatPrefs } from '@/lib/chatPrefs';
 import { chatFaceKey } from '@/lib/originStore';
 import { ChatsEmpty } from '@/components/chats/ChatsEmpty';
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
@@ -51,7 +54,10 @@ type Filter = 'all' | 'active' | 'completed';
 type View2 = 'all' | 'touch';
 type Row =
   | { kind: 'convo'; key: string; at: number; convo: ConversationListItem }
-  | { kind: 'waiting'; key: string; at: number; ask: WaitingQuestion };
+  | { kind: 'waiting'; key: string; at: number; ask: WaitingQuestion }
+  // "Archived · n" on top of the list when any chat is archived, and the way back from it.
+  | { kind: 'archive'; key: string; at: number; count: number }
+  | { kind: 'archiveBack'; key: string; at: number };
 
 export default function ChatsTab() {
   const router = useRouter();
@@ -77,6 +83,13 @@ export default function ChatsTab() {
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinBusy, setPinBusy] = useState(false);
+  // Pin and Archive live on this phone; Mute is the chat's Quiet Pause; Delete is the real wipe.
+  const { prefs: chatPrefs, pin: togglePinned, archive: toggleArchived, prune: pruneChatPrefs } = useChatPrefs();
+  const [showArchived, setShowArchived] = useState(false);
+  const [actionFor, setActionFor] = useState<{ convo: ConversationListItem; confirm: boolean } | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [mutedLocal, setMutedLocal] = useState<Record<string, boolean>>({});
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const remember = (patch: Partial<NonNullable<ReturnType<typeof screenCache.get<'chats'>>>>) => {
@@ -268,6 +281,8 @@ export default function ChatsTab() {
   const merged: Row[] = useMemo(() => {
     const out: Row[] = [];
     for (const c of rows) {
+      const isArchived = chatPrefs.archived.includes(c.id);
+      if (showArchived ? !isArchived : isArchived) continue;
       if (filter === 'active' && c.status !== 'active') continue;
       if (filter === 'completed' && c.status === 'active') continue;
       if (
@@ -284,16 +299,60 @@ export default function ChatsTab() {
         convo: c,
       });
     }
-    if (filter !== 'completed') {
+    if (filter !== 'completed' && !showArchived) {
       for (const w of waiting) {
         if (needle && !w.name.toLowerCase().includes(needle)) continue;
         out.push({ kind: 'waiting', key: `ask-${w.id}`, at: new Date(w.createdAt).getTime(), ask: w });
       }
     }
     // Open chats first, then open questions, then what is finished — newest first in each.
-    const rank = (r: Row) => (r.kind === 'waiting' ? 1 : r.convo.status === 'active' ? 0 : 2);
-    return out.sort((a, b) => rank(a) - rank(b) || b.at - a.at);
-  }, [rows, waiting, previews, filter, needle]);
+    const rank = (r: Row) => (r.kind === 'waiting' ? 1 : r.kind === 'convo' ? (r.convo.status === 'active' ? 0 : 2) : 3);
+    // Pinned chats lead their group, the most recently pinned first.
+    const pinRank = (r: Row) => (r.kind === 'convo' ? (chatPrefs.pinned.indexOf(r.convo.id) + 1 || Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER);
+    const sorted = out.sort((a, b) => rank(a) - rank(b) || pinRank(a) - pinRank(b) || b.at - a.at);
+    const archivedCount = rows.filter((c) => chatPrefs.archived.includes(c.id)).length;
+    if (showArchived) return [{ kind: 'archiveBack', key: 'archive-back', at: 0 } as Row, ...sorted];
+    if (archivedCount > 0 && filter === 'all' && !needle) return [{ kind: 'archive', key: 'archive-row', at: 0, count: archivedCount } as Row, ...sorted];
+    return sorted;
+  }, [rows, waiting, previews, filter, needle, chatPrefs, showArchived]);
+
+  // A chat that is gone leaves no pin or archive behind.
+  useEffect(() => {
+    if (rows.length) pruneChatPrefs(rows.map((c) => c.id));
+    // reason: only when the list of chats changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
+  const doMute = async (c: ConversationListItem) => {
+    const now = mutedLocal[c.id] ?? Boolean(c.is_paused);
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await api.setPause(c.id, !now);
+      setMutedLocal((m) => ({ ...m, [c.id]: !now }));
+      setActionFor(null);
+    } catch {
+      setActionError(t('chatActions.muteFailed'));
+      setActionFor(null);
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const doDelete = async (c: ConversationListItem) => {
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await api.wipeConversation(c.id);
+      setRows((r) => r.filter((x) => x.id !== c.id));
+      setActionFor(null);
+    } catch {
+      setActionError(t('chatActions.muteFailed'));
+      setActionFor(null);
+    } finally {
+      setActionBusy(false);
+    }
+  };
 
   // The In touch badge's linked rings breathe on the first two badges only (motion budget).
   const breathingBadges = useMemo(
@@ -324,7 +383,7 @@ export default function ChatsTab() {
   const dock = useTabDockHeight();
   const perch = useCompanionPlacement('chats', perches, {
     still: loadError !== null,
-    hidden: sheetOpen || gate !== null || showEmpty,
+    hidden: sheetOpen || gate !== null || actionFor !== null || showEmpty,
   });
 
   const stateOf = (c: ConversationListItem): ChatRowState =>
@@ -340,6 +399,21 @@ export default function ChatsTab() {
 
   const renderRow = ({ item, index }: { item: Row; index: number }) => {
     let row;
+    if (item.kind === 'archive' || item.kind === 'archiveBack') {
+      const back = item.kind === 'archiveBack';
+      return (
+        <Pressable
+          onPress={() => setShowArchived(!back)}
+          accessibilityRole="button"
+          style={styles.archiveRow}
+          testID={back ? 'archived-back' : 'archived-row'}
+        >
+          <Ionicons name={back ? 'chevron-back' : 'archive-outline'} size={22} color={colors.accent} />
+          <Text style={[type.label, { color: colors.ink, flex: 1 }]}>{back ? t('chatActions.archivedBack') : t('chatActions.archivedRow')}</Text>
+          {!back ? <Text style={[type.label, { color: colors.accent }]}>{item.count}</Text> : null}
+        </Pressable>
+      );
+    }
     if (item.kind === 'waiting') {
       const w = item.ask;
       row = (
@@ -392,7 +466,19 @@ export default function ChatsTab() {
           lockedLabel={c.is_locked ? t('chatsList.locked') : null}
           accessibilityLabel={t('chats.convoA11y', { name: c.listener_persona_name })}
           onPress={() => open(c)}
+          onLongPress={() => setActionFor({ convo: c, confirm: false })}
+          pinned={chatPrefs.pinned.includes(c.id)}
+          muted={mutedLocal[c.id] ?? Boolean(c.is_paused)}
         />
+      );
+      row = (
+        <SwipeRow
+          archived={chatPrefs.archived.includes(c.id)}
+          onArchive={() => toggleArchived(c.id)}
+          onDelete={() => setActionFor({ convo: c, confirm: true })}
+        >
+          {row}
+        </SwipeRow>
       );
     }
     // Reading-order arrival for the first screenful only; later rows are simply there.
@@ -639,6 +725,13 @@ export default function ChatsTab() {
               ListEmptyComponent={
                 <Text style={[type.note, styles.centerText, { color: colors.inkMuted }]}>{t('chatsList.noMatches')}</Text>
               }
+              ListHeaderComponent={
+                actionError ? (
+                  <Text style={[type.caption, styles.centerText, { color: colors.warning }]} testID="chat-action-error">
+                    {actionError}
+                  </Text>
+                ) : null
+              }
               ListFooterComponent={<View style={styles.footerGap}>{footer}</View>}
               renderItem={renderRow}
             />
@@ -721,6 +814,29 @@ export default function ChatsTab() {
               </View>
             </View>
           ) : null}
+          {actionFor ? (
+            <ChatActionsSheet
+              key={actionFor.convo.id + String(actionFor.confirm)}
+              name={actionFor.convo.listener_persona_name}
+              startConfirming={actionFor.confirm}
+              pinned={chatPrefs.pinned.includes(actionFor.convo.id)}
+              archived={chatPrefs.archived.includes(actionFor.convo.id)}
+              muted={mutedLocal[actionFor.convo.id] ?? Boolean(actionFor.convo.is_paused)}
+              canMute={actionFor.convo.status === 'active'}
+              busy={actionBusy}
+              onPin={() => {
+                togglePinned(actionFor.convo.id);
+                setActionFor(null);
+              }}
+              onArchive={() => {
+                toggleArchived(actionFor.convo.id);
+                setActionFor(null);
+              }}
+              onMute={() => void doMute(actionFor.convo)}
+              onDelete={() => void doDelete(actionFor.convo)}
+              onClose={() => setActionFor(null)}
+            />
+          ) : null}
         </CompanionPerches>
       </SafeAreaView>
     </SettleBack>
@@ -729,6 +845,7 @@ export default function ChatsTab() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  archiveRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: space.md },
   head: { paddingTop: space.xs, paddingHorizontal: space.lg, paddingBottom: 10 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   tools: { zIndex: 3, paddingHorizontal: space.md, paddingBottom: 10, gap: 10, borderBottomWidth: 1 },

@@ -244,6 +244,8 @@ export type ConversationListItem = {
   last_message?: string | null;
   last_message_at?: string | null;
   last_message_mine?: boolean;
+  /** The member muted this chat (Quiet Pause). */
+  is_paused?: boolean;
 };
 
 export type ConversationState = {

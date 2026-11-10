@@ -1624,5 +1624,26 @@
     "systemSub": "Follows your phone.",
     "row": "Appearance",
     "rowSub": "Pastel, Light, Dark or System"
+  },
+  "chatActions": {
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "delete": "Delete",
+    "deleteTitle": "Delete this chat?",
+    "deleteBody": "It is deleted for good, for you and for your mentor. This cannot be undone.",
+    "deleteConfirm": "Delete for good",
+    "archivedRow": "Archived",
+    "archivedBack": "Back to chats",
+    "archivedEmpty": "No archived chats.",
+    "actionsA11y": "Chat options for %{name}",
+    "pinned": "Pinned",
+    "muted": "Muted",
+    "archivedDone": "Archived",
+    "unarchivedDone": "Moved back to your chats",
+    "muteFailed": "Could not change that. Please try again."
   }
 }

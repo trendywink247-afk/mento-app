@@ -89,6 +89,9 @@ export function ChatRow({
   lockedLabel,
   accessibilityLabel,
   onPress,
+  onLongPress,
+  pinned = false,
+  muted = false,
   faceOriginKey,
 }: {
   testID: string;
@@ -113,6 +116,10 @@ export function ChatRow({
   lockedLabel?: string | null;
   accessibilityLabel: string;
   onPress: () => void;
+  /** Long-press opens the chat's options (Pin, Archive, Mute, Delete). */
+  onLongPress?: () => void;
+  pinned?: boolean;
+  muted?: boolean;
   /** The origin key this row's face flies from when the chat opens (board T05). */
   faceOriginKey?: string;
 }) {
@@ -128,6 +135,7 @@ export function ChatRow({
         if (faceOriginKey) measureRect(faceRef.current, (rect) => rememberOrigin(faceOriginKey, rect));
         onPress();
       }}
+      onLongPress={onLongPress}
       edge={wiped ? colors.edgeAlt : colors.edgeSurface}
       radius={radius.lg}
       accessibilityLabel={accessibilityLabel}
@@ -149,6 +157,8 @@ export function ChatRow({
           </Text>
           {inTouch ? <InTouchBadge still={badgeStill} /> : null}
           {state !== 'active' ? <StateChip state={state} label={stateLabel} /> : null}
+          {pinned ? <Ionicons name="pin" size={13} color={colors.inkMuted} accessibilityLabel="pinned" /> : null}
+          {muted ? <Ionicons name="notifications-off-outline" size={13} color={colors.inkMuted} accessibilityLabel="muted" /> : null}
           <Text style={[type.micro, styles.time, { color: colors.inkMuted }]} numberOfLines={1}>
             {time}
           </Text>
