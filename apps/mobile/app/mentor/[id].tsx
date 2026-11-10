@@ -279,7 +279,7 @@ export default function MentorBeforeAsk() {
                           : { backgroundColor: colors.surface, borderColor: colors.border },
                       ]}
                     >
-                      <Text style={[styles.chipText, { color: on ? colors.accentEdge : colors.ink }]}>{t(label)}</Text>
+                      <Text style={[styles.chipText, { color: on ? colors.accentInk : colors.ink }]}>{t(label)}</Text>
                     </PressKey>
                   );
                 })}

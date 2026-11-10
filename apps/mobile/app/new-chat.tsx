@@ -255,7 +255,7 @@ export default function NewChatSheet() {
                   ]}
                 >
                   <Text
-                    style={[styles.topicText, { color: on ? colors.accentEdge : colors.ink }]}
+                    style={[styles.topicText, { color: on ? colors.accentInk : colors.ink }]}
                     numberOfLines={2}
                     adjustsFontSizeToFit
                   >

@@ -39,7 +39,7 @@ export function SlashSuggest({
             >
               <View style={styles.head}>
                 <View style={[styles.chip, { backgroundColor: i === 0 ? colors.surface : colors.accentTint }]}>
-                  <Text style={[type.caption, { color: colors.accentEdge, fontFamily: type.label.fontFamily }]}>/{a.shortcut}</Text>
+                  <Text style={[type.caption, { color: colors.accentInk, fontFamily: type.label.fontFamily }]}>/{a.shortcut}</Text>
                 </View>
               </View>
               <Text style={[type.body, { color: colors.ink }]} numberOfLines={2}>

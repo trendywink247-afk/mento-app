@@ -338,7 +338,7 @@ export default function Landing() {
                   containerStyle={styles.recoverBox}
                   style={styles.recover}
                 >
-                  <Text style={[type.caption, { color: colors.accentEdge }]}>{t('recovery.landingLink')}</Text>
+                  <Text style={[type.caption, { color: colors.accentInk }]}>{t('recovery.landingLink')}</Text>
                 </PressKey>
               </Animated.View>
             </Entrance>

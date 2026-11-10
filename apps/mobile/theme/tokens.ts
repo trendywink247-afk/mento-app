@@ -203,6 +203,8 @@ export const elevation = {
 export const theme = { colors, wash, space, radius, type, elevation, font };
 export type Theme = typeof theme;
 
+import { COMPANION_COLORS, darkAccentFor, type CompanionColor } from '@/theme/companion';
+
 /**
  * Appearance (founder, 2026-11-10): Pastel is today's look and the default. Light is a soft off-white
  * for people who want a plainer page; Dark is for night. System follows the phone.
@@ -300,4 +302,14 @@ export function applyStaticPalette(look: Look): void {
   Object.assign(washInk, washInkFor(look));
   Object.assign(washEdge, look === 'dark' ? { green: '#2C5A3C' } : WASH_EDGE_PASTEL);
   (type.caption as { color: string }).color = colorsFor(look).inkMuted;
+  // A few places read COMPANION_COLORS.<hue>.accentEdge directly, always as ink (text, an icon). On dark
+  // that ink must be light, so those hues' edge is rewritten too; components that need the pillow edge
+  // read it from useTheme().
+  for (const key of Object.keys(COMPANION_COLORS) as CompanionColor[]) {
+    COMPANION_COLORS[key].accentEdge = look === 'dark' ? darkAccentFor(key).accentInk : PASTEL_EDGE[key];
+  }
 }
+
+const PASTEL_EDGE = Object.fromEntries(
+  (Object.keys(COMPANION_COLORS) as CompanionColor[]).map((k) => [k, COMPANION_COLORS[k].accentEdge]),
+) as Record<CompanionColor, string>;

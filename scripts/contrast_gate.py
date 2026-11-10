@@ -73,6 +73,10 @@ def appearance_pairs(tokens: str, companion: str, base: dict[str, str]) -> list[
                 pairs.append((f"dark {name}: dark text on accent", ground, accent, 4.5))
                 pairs.append((f"dark {name}: ink on tint", c["ink"], tint, 4.5))
                 pairs.append((f"dark {name}: accent on tint", accent, tint, 4.5))
+                ink = mix(a, "#FFFFFF", 0.74)
+                pairs.append((f"dark {name}: ink on tint", ink, tint, 4.5))
+                pairs.append((f"dark {name}: ink on surface", ink, c["surface"], 4.5))
+                pairs.append((f"dark {name}: ink on bg", ink, c["bg"], 4.5))
     return pairs
 
 
