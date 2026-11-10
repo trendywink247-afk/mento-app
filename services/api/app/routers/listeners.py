@@ -31,7 +31,14 @@ from app.models.listener import ListenerProfile
 from app.models.mentor_link import MentorLink
 from app.models.request import ConversationRequest
 from app.routers.admin_console import current_admin
-from app.schemas import ListenerOut, ListenerProfileOut, OkResult, PersonalRequestIn, RequestOut
+from app.schemas import (
+    ListenerOut,
+    ListenerProfileOut,
+    OkResult,
+    PersonalRequestIn,
+    RequestOut,
+    SupportOut,
+)
 from app.security import current_user_id
 from app.services import (
     audit,
@@ -43,6 +50,7 @@ from app.services import (
     mentor_names,
     open_question,
     reply_time,
+    safety,
     terms,
 )
 from app.services.matching import (
@@ -55,6 +63,13 @@ from app.services.matching import (
 )
 
 router = APIRouter(prefix="/listeners", tags=["listeners"])
+
+
+def with_support(out: RequestOut, crisis_result) -> RequestOut:
+    """Attach the helpline card to the response that created a request whose words tripped the crisis scan."""
+    if crisis_result is not None:
+        out.support = SupportOut(message=safety.SUPPORT_COPY, helplines=crisis_result.helplines)
+    return out
 
 
 def _request_out(r: ConversationRequest, db: Session) -> RequestOut:
@@ -290,6 +305,8 @@ def create_personal_request(
     # the member recently (services/open_question.py).
     open_question.enforce(db, user_id, target_listener_id=listener_id)
 
+    # The words a mentor will read get the crisis scan now (founder, 2026-11-10); the request is still sent.
+    crisis_result = safety.scan_request_intro(db, text=payload.intro_message, user_id=user_id)
     req = ConversationRequest(
         kind=RequestKind.personal,
         status=RequestStatus.pending,
@@ -304,7 +321,7 @@ def create_personal_request(
     jobs.enqueue(db, tasks.push_request_created, best_effort=True, request_id=req.id)
     db.commit()
     db.refresh(req)
-    return _request_out(req, db)
+    return with_support(_request_out(req, db), crisis_result)
 
 
 @router.get("/requests/mine", response_model=list[RequestOut])

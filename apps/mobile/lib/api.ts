@@ -167,6 +167,8 @@ export type PersonalRequest = {
   broadcast?: boolean;
   /** Who it was offered to. */
   audience?: Audience;
+  /** Only on the response that created a request whose words tripped the crisis scan: the helpline card. */
+  support?: { message: string; helplines: { name: string; number: string; hours: string }[] } | null;
   /** No reply after 24 hours: the letter asks what to do next (DECISIONS §P.5). */
   nudged?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
