@@ -39,6 +39,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api, type PathState } from '@/lib/api';
 import { openNewChat } from '@/lib/askLoop';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { pathCopy } from '@/lib/pathCopy';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { AudiencePicker } from '@/components/AudiencePicker';
 import type { Audience } from '@/lib/api';
@@ -114,7 +115,7 @@ export default function PathQuestion() {
   useSessionGuard();
   const router = useRouter();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const params = useLocalSearchParams<{ starter?: string; community?: string; lens?: string }>();
 
@@ -147,7 +148,7 @@ export default function PathQuestion() {
     };
   }, []);
 
-  const prompts = useMemo(() => path?.prompts ?? [], [path]);
+  const prompts = useMemo(() => (path?.prompts ?? []).map((p) => pathCopy(locale, p)), [path, locale]);
   useEffect(() => {
     if (!pathLoaded || starter) return;
     // Opened without a starter (a stray deep link): take the path's first one, or
@@ -161,7 +162,7 @@ export default function PathQuestion() {
   const acceptFirst = Boolean(path?.community?.accept_first);
   const community = params.community ?? path?.community?.slug ?? null;
   const lens =
-    params.lens ?? (path?.community && path.stage ? `${path.community.name} · ${path.stage.title}` : '');
+    params.lens ?? (path?.community && path.stage ? `${path.community.name} · ${pathCopy(locale, path.stage.title)}` : '');
 
   const offered = useMemo(() => chipsFor(community, acceptFirst), [community, acceptFirst]);
   const assembled = useMemo(
