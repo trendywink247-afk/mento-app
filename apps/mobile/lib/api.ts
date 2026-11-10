@@ -11,6 +11,7 @@ import {
   getSessionToken,
   saveTokenPair,
 } from './session';
+import { isUpgradeRefusal, raiseUpgradeRequired } from './upgradeGate';
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
@@ -398,6 +399,7 @@ async function apiFetch(
     } catch {
       /* non-JSON error body */
     }
+    if (isUpgradeRefusal(res.status, code)) raiseUpgradeRequired();
     throw new ApiError(res.status, detail, code, body);
   }
   return res;
