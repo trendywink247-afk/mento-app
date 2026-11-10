@@ -132,6 +132,8 @@ def test_me_returns_persona_and_companion_and_nothing_private(client, db_session
         "terms_required": False,
         # Only THAT a recovery code exists (T3.5) — never the code.
         "has_recovery": False,
+        # Whether notifications show the words of a message: a yes/no the member chose, off by default.
+        "push_preview": False,
     }
 
 
