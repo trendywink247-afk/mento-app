@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  title: { lineHeight: 34, flexShrink: 1 },
+  title: { lineHeight: 34, flex: 1 },
   inviteTop: { paddingTop: space.xs, paddingHorizontal: space.md },
   hero: { alignItems: 'center', gap: space.sm },
   inviteCta: { alignSelf: 'stretch' },
