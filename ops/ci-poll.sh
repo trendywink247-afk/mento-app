@@ -41,7 +41,10 @@ while read -r sha ref; do
     [ "$ran" -lt "$MAX_PER_RUN" ] || { echo "ci-poll: limit reached; rest next tick"; break; }
     echo "ci-poll: ops/ci.sh $sha ($ref)"
     "$REPO/ops/ci.sh" "$sha"
-    echo "rc=$? ref=$ref $(date -u +%FT%TZ)" > "$STATE/$sha"
+    rc=$?
+    # 4 = someone else is already running this commit: leave it unseen and look again next tick.
+    [ "$rc" -eq 4 ] && continue
+    echo "rc=$rc ref=$ref $(date -u +%FT%TZ)" > "$STATE/$sha"
     ran=$((ran + 1))
 done < <(git -C "$REPO" for-each-ref --format='%(objectname) %(refname:short)' \
             refs/remotes/origin/dev refs/remotes/origin/main 'refs/remotes/origin/feat/*')
