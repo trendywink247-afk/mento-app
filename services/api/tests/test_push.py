@@ -849,3 +849,113 @@ def test_queued_retry_does_not_follow_token_to_new_account(sent, monkeypatch):
     with TestSession() as s:
         row = s.scalars(select(PushToken)).one()
         assert row.owner_id == new_uid
+
+
+# --- notification style: show the words of a message (founder, 2026-11-10) -------
+
+
+def _own_pair(s, *, member_wants=False, mentor_wants=False, locked=False):
+    from app.services import message_crypto  # noqa: PLC0415
+
+    uid, lid = _user(s, "Quiet Cove"), _listener(s, name="Open River")
+    s.get(User, uid).push_preview = member_wants
+    s.get(ListenerProfile, lid).push_preview = mentor_wants
+    cid = _convo(s, uid, lid)
+    convo = s.get(Conversation, cid)
+    convo.chat_backend, convo.is_locked = "own", locked
+    _token(s, PushOwnerKind.member, uid, "ExponentPushToken[member]")
+    _token(s, PushOwnerKind.listener, lid, "ExponentPushToken[listener]")
+    s.commit()
+    return uid, lid, cid, message_crypto
+
+
+def _say(s, cid, sender_kind, sender_id, text, seq, *, crisis=None, redacted=False):
+    from app.models.chat_message import ChatMessage  # noqa: PLC0415
+
+    m = ChatMessage(
+        conversation_id=cid,
+        sender_kind=sender_kind,
+        sender_id=sender_id,
+        seq=seq,
+        client_id=f"c{seq}",
+        body=b"",
+        key_id="x",
+        crisis_signal=crisis,
+        redacted=redacted,
+    )
+    s.add(m)
+    s.flush()
+    from app.services import message_crypto  # noqa: PLC0415
+
+    m.body, m.key_id = message_crypto.encrypt(text, message_id=m.id, conversation_id=cid)
+    s.commit()
+
+
+def test_a_notification_shows_the_words_only_for_someone_who_turned_it_on(sent):
+    with TestSession() as s:
+        uid, lid, cid, _ = _own_pair(s, member_wants=True, mentor_wants=False)
+        _say(s, cid, "mentor", lid, "Thank   you  for\nsharing this", 1)
+        _say(s, cid, "member", uid, "I keep failing prelims", 2)
+    with TestSession() as s:
+        push.notify_message(
+            s, conversation_id=cid, sender_stream_user_id=lid
+        )  # to the member (opted in)
+    assert sent[-1]["body"] == "Open River: Thank you for sharing this"
+    with TestSession() as s:
+        push.notify_message(
+            s, conversation_id=cid, sender_stream_user_id=uid
+        )  # to the mentor (not)
+    assert sent[-1]["body"] == "Quiet Cove sent a message"
+
+
+@pytest.mark.parametrize("kind", ["locked", "crisis", "redacted"])
+def test_the_words_never_appear_for_a_locked_chat_a_flagged_message_or_a_redacted_one(sent, kind):
+    with TestSession() as s:
+        uid, lid, cid, _ = _own_pair(s, member_wants=True, locked=(kind == "locked"))
+        _say(
+            s,
+            cid,
+            "mentor",
+            lid,
+            "secret words",
+            1,
+            crisis="x" if kind == "crisis" else None,
+            redacted=(kind == "redacted"),
+        )
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
+    assert sent and sent[-1]["body"] == "Open River replied"
+
+
+def test_a_long_message_is_cut_for_the_notification(sent):
+    with TestSession() as s:
+        uid, lid, cid, _ = _own_pair(s, member_wants=True)
+        _say(s, cid, "mentor", lid, "word " * 100, 1)
+    with TestSession() as s:
+        push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
+    body = sent[-1]["body"]
+    assert (
+        body.startswith("Open River: word word")
+        and body.endswith("…")
+        and len(body) <= len("Open River: ") + push.PREVIEW_CHARS
+    )
+
+
+def test_the_notification_style_can_be_set_by_a_member_and_by_a_mentor(client):
+    with TestSession() as s:
+        uid, lid = _user(s, "Quiet Cove"), _listener(s, name="Open River")
+        s.commit()
+    assert client.get("/api/v1/me", headers=member_auth(uid)).json()["push_preview"] is False
+    r = client.put(
+        "/api/v1/me/notification-style", json={"push_preview": True}, headers=member_auth(uid)
+    )
+    assert r.status_code == 200 and r.json()["push_preview"] is True
+    assert client.get("/api/v1/me", headers=member_auth(uid)).json()["push_preview"] is True
+    r = client.put(
+        "/api/v1/listener/me/profile", json={"push_preview": True}, headers=listener_auth(lid)
+    )
+    assert r.status_code == 200 and r.json()["push_preview"] is True
+    r = client.put(
+        "/api/v1/listener/me/profile", json={"public_line": "Hi."}, headers=listener_auth(lid)
+    )
+    assert r.json()["push_preview"] is True  # an omitted field is left alone

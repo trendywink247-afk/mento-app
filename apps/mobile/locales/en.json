@@ -187,7 +187,7 @@
     "reqUpNext": "Up next",
     "reqTotWaiting": "waiting",
     "reqTotOldest": "oldest",
-    "reqTotReply": "you usually reply in",
+    "reqTotReply": "you reply in",
     "reqTotDay": "a day",
     "reqTotTwoDays": "2 days",
     "languages": "Languages",
@@ -1705,5 +1705,11 @@
     "unreadable": "That file could not be read. Please try another.",
     "alreadyVerified": "You are already Mento Verified. Nothing more to send.",
     "error": "Could not send it. Please try again."
+  },
+  "pushStyle": {
+    "title": "Show message text",
+    "off": "A notification says only that a message arrived.",
+    "on": "A notification shows what the message says, like a chat app.",
+    "note": "The words then pass through your phone maker's notification service. Chats you have locked never show their words."
   }
 }

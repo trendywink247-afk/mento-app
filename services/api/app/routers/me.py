@@ -13,7 +13,15 @@ from app import ratelimit
 from app.db import get_db
 from app.errors import ApiProblem
 from app.models.user import User
-from app.schemas import AllowanceOut, CompanionUpdateIn, ExportOut, MeOut, OkResult, RecoveryOut
+from app.schemas import (
+    AllowanceOut,
+    CompanionUpdateIn,
+    ExportOut,
+    MeOut,
+    NotificationStyleIn,
+    OkResult,
+    RecoveryOut,
+)
 from app.security import current_user_id, current_user_id_any_standing
 from app.services import allowance, companions, erasure, export, member_status, recovery, terms
 
@@ -48,6 +56,7 @@ def _out(user: User) -> MeOut:
         has_dob=user.dob is not None,
         member_setup_complete=user.dob is not None and user.companion_animal is not None,
         companion_name=user.companion_name,
+        push_preview=bool(user.push_preview),
     )
 
 
@@ -114,6 +123,20 @@ def export_me(
     response.headers["Content-Disposition"] = 'attachment; filename="mento-export.json"'
     response.headers["Cache-Control"] = "no-store"
     return export.build(db, user)
+
+
+@router.put("/notification-style", response_model=MeOut)
+def set_notification_style(
+    payload: NotificationStyleIn,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+) -> MeOut:
+    """Show the text of a message in its notification, or only that one arrived (the default). The text then
+    travels through the phone maker's push service, which is why the person chooses it."""
+    user.push_preview = payload.push_preview
+    db.commit()
+    db.refresh(user)
+    return _out(user)
 
 
 @router.put("/companion", response_model=MeOut)

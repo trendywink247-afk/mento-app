@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, Integer, String
+from sqlalchemy import Boolean, Date, DateTime, Integer, String, false
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -14,6 +14,9 @@ from app.models.mixins import TimestampMixin, UUIDMixin
 
 class User(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "users"
+
+    # Notifications show the text of a message (off by default; the person turns it on).
+    push_preview: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
     # Anonymous persona shown in chat (e.g. "Purple Valley").
     persona_name: Mapped[str] = mapped_column(String(64), index=True)

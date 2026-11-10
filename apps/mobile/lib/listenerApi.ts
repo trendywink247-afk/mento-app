@@ -24,6 +24,8 @@ export type ListenerMe = {
   /** Usual time to accept a request over 30 days, once there is enough to say (DECISIONS §P.6). */
   reply_within?: 'day' | 'two_days' | null;
   languages?: string[];
+  /** Notifications show the words of a message (off by default). */
+  push_preview?: boolean;
 };
 
 export type DocumentKind = 'id_card' | 'posting_letter' | 'result' | 'other';
@@ -192,7 +194,7 @@ export const listenerApi = {
   brief: (convoId: string) => req<MemberBrief>(`/listener/me/conversations/${convoId}/brief`),
 
   /** PATCH-like semantics on a PUT: an omitted field is left unchanged server-side. */
-  updateProfile: (body: { public_line?: string | null; availability_note?: string | null; languages?: string[] }) =>
+  updateProfile: (body: { public_line?: string | null; availability_note?: string | null; languages?: string[]; push_preview?: boolean }) =>
     req<ListenerMe>('/listener/me/profile', { method: 'PUT', body: JSON.stringify(body) }),
 
   /** Mento Verified by document (services/api/app/services/verification.py). Never returns the file. */

@@ -9,6 +9,7 @@ import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
+import { PushStyleSwitch } from '@/components/PushStyleSwitch';
 import { ChatActionsSheet } from '@/components/chats/ChatActionsSheet';
 import { ConversationRow, isSnoozed } from '@/components/mentor/ConversationRow';
 import { useChatPrefs } from '@/lib/chatPrefs';
@@ -346,6 +347,10 @@ function ConsoleBody({
   useListenerHeartbeat(c.me?.status === 'online');
   // Pin and Archive on this phone (long-press a chat); there is no Mute or Delete for a mentor, who ends a chat instead.
   const { prefs: chatPrefs, pin: togglePinned, archive: toggleArchived } = useChatPrefs();
+  const [pushPreview, setPushPreview] = useState(false);
+  useEffect(() => {
+    if (c.me) setPushPreview(Boolean(c.me.push_preview));
+  }, [c.me?.push_preview]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showArchived, setShowArchived] = useState(false);
   const [actionFor, setActionFor] = useState<string | null>(null);
   const prepared = usePreparedAnswers();
@@ -760,6 +765,14 @@ function ConsoleBody({
             sub={t('mentorHomePage.readingTitle')}
             onPress={() => router.push('/mentor/reading')}
             testID="mentor-profile-reading"
+          />
+          <PushStyleSwitch
+            value={pushPreview}
+            onChange={(next) => {
+              setPushPreview(next);
+              void listenerApi.updateProfile({ push_preview: next }).catch(() => setPushPreview(!next));
+            }}
+            testID="mentor-push-style"
           />
           <ProfileRow
             icon="contrast-outline"

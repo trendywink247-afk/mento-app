@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.config import get_settings
+from app.models.chat_message import ChatMessage
 from app.models.conversation import Conversation
 from app.models.enums import (
     ConversationStatus,
@@ -35,7 +36,7 @@ from app.models.listener import ListenerProfile
 from app.models.push_token import PushToken
 from app.models.request import ConversationRequest
 from app.models.user import User
-from app.services import fcm, member_status, snooze, stream
+from app.services import fcm, member_status, message_crypto, snooze, stream
 from app.services.matching import (
     blocked_listener_ids,
     broadcast_candidate_ids,
@@ -381,6 +382,36 @@ def _delivery_allowed(db: Session, kind: PushOwnerKind, owner_id: str, data: dic
     return True
 
 
+PREVIEW_CHARS = 120
+
+
+def _preview(db: Session, convo: Conversation, sender_id: str) -> str | None:
+    """The words of the sender's latest message for a notification, for a recipient who turned that on.
+    Own chat only (it is the only store we can read), never a locked chat, never a message the crisis scan
+    flagged, never one that was redacted; None whenever any of that applies or the text cannot be read.
+    """
+    if convo.chat_backend != "own" or convo.is_locked:
+        return None
+    msg = db.scalars(
+        select(ChatMessage)
+        .where(ChatMessage.conversation_id == convo.id, ChatMessage.sender_id == sender_id)
+        .order_by(ChatMessage.seq.desc())
+        .limit(1)
+    ).first()
+    if msg is None or msg.redacted or msg.crisis_signal:
+        return None
+    try:
+        text = message_crypto.decrypt(
+            msg.body, msg.key_id, message_id=msg.id, conversation_id=convo.id
+        )
+    except Exception:
+        return None
+    text = " ".join(text.split())
+    if not text:
+        return None
+    return text if len(text) <= PREVIEW_CHARS else text[: PREVIEW_CHARS - 1].rstrip() + "…"
+
+
 def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: str) -> None:
     """message.new → push the OTHER party unless suppressed (spec §4).
 
@@ -401,12 +432,18 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
         body = TEMPLATES["message_from_member"] % {
             "persona": persona.persona_name if persona else "Someone"
         }
+        who = persona.persona_name if persona else "Someone"
+        mentor = db.get(ListenerProfile, convo.listener_id)
+        wants_text = bool(mentor and mentor.push_preview)
     elif sender_stream_user_id == convo.listener_id:
         recipient_kind, recipient_id = PushOwnerKind.member, convo.user_id
         li = db.get(ListenerProfile, convo.listener_id)
         body = TEMPLATES["message_from_listener"] % {
             "persona": li.persona_name if li else "Your mentor"
         }
+        who = li.persona_name if li else "Your mentor"
+        member = db.get(User, convo.user_id)
+        wants_text = bool(member and member.push_preview)
     else:
         _suppressed("not_party")
         return
@@ -414,6 +451,10 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
     if not tokens:
         _suppressed("no_token")
         return
+    if wants_text:
+        said = _preview(db, convo, sender_stream_user_id)
+        if said:
+            body = f"{who}: {said}"
     data = {
         "kind": "message",
         "conversation_id": convo.id,
