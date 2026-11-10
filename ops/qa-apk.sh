@@ -20,7 +20,7 @@ LIVE=${QA_WEB_LIVE:-/opt/mento-staging/web}
 LOG=$OUT/build-$SHA.log
 
 [ -r "$ENVF" ] || { echo "qa-apk: missing $ENVF (one line: EXPO_PUBLIC_STREAM_API_KEY=...)" >&2; exit 2; }
-[ -d "$BUILD/.git" ] || { echo "qa-apk: $BUILD is not a git checkout" >&2; exit 2; }
+[ -e "$BUILD/.git" ] || { echo "qa-apk: $BUILD is not a git checkout" >&2; exit 2; }
 mkdir -p "$OUT"
 exec 9>"$OUT/.lock"
 flock -n 9 || { echo "qa-apk: a build is already running" >&2; exit 4; }
