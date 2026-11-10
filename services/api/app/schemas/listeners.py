@@ -105,6 +105,8 @@ class RequestOut(BaseModel):
     replying: bool = False
     # Offered to every certified mentor, not one (DECISIONS section P.4). Additive.
     broadcast: bool = False
+    # Who it was offered to: "any", "in_service" or "peer". Additive.
+    audience: str = "any"
     # No reply after 24 hours: the app asks the member what to do next (DECISIONS section P.5).
     nudged: bool = False
     # The mentor this request went to, as every screen draws them (a Personal request's

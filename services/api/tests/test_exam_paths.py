@@ -298,18 +298,19 @@ def test_communities_endpoint_names_every_road(client):
     assert {"ssc", "banking", "railways", "gate", "cuet"} <= set(by_slug)
 
 
-def test_an_exam_ask_goes_only_to_a_certified_mentor(client):
-    """DECISIONS section O: an ordinary listener never receives an exam question."""
+def test_an_in_service_exam_ask_goes_only_to_a_certified_mentor(client):
+    """DECISIONS section O, now opt-in: a question asked to "in_service" never reaches an ordinary
+    listener. (The default audience is any approved mentor, founder 2026-11-10.)"""
     with TestSession() as s:
         _mentor(s, "Plain Willow", community="upsc", certified=False)
         member = _member(s, "upsc")
         s.commit()
-    r = client.post("/api/v1/match/ask", json={}, headers=_auth(member))
+    r = client.post("/api/v1/match/ask", json={"audience": "in_service"}, headers=_auth(member))
     assert r.status_code == 503  # nobody certified is online: the busy card, not a wrong mentor
 
     with TestSession() as s:
         certified = _mentor(s, "Certified Cedar", certified=True)
         s.commit()
-    r = client.post("/api/v1/match/ask", json={}, headers=_auth(member))
+    r = client.post("/api/v1/match/ask", json={"audience": "in_service"}, headers=_auth(member))
     assert r.status_code == 200, r.text
     assert r.json()["target_listener_id"] is None and certified  # broadcast, not one mentor

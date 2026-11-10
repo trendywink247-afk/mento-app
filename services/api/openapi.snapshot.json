@@ -3853,6 +3853,16 @@
       "MatchAsk": {
         "description": "Ask the best available mentor for an exam niche; they accept before any chat opens.",
         "properties": {
+          "audience": {
+            "default": "any",
+            "enum": [
+              "any",
+              "in_service",
+              "peer"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
           "intro_message": {
             "anyOf": [
               {
@@ -4999,6 +5009,11 @@
       },
       "RequestOut": {
         "properties": {
+          "audience": {
+            "default": "any",
+            "title": "Audience",
+            "type": "string"
+          },
           "broadcast": {
             "default": false,
             "title": "Broadcast",

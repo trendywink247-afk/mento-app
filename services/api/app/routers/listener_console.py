@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, case, false, func, or_, select, true, tuple_, update
+from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app import jobs, pagination, ratelimit
@@ -78,6 +78,7 @@ from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
     accept_personal_request,
+    audiences_for,
     decline_personal_request,
 )
 
@@ -437,7 +438,7 @@ def my_pending_requests(
                 and_(
                     ConversationRequest.broadcast.is_(True),
                     ConversationRequest.target_listener_id.is_(None),
-                    true() if listener.certified_exam else false(),
+                    ConversationRequest.audience.in_(audiences_for(bool(listener.certified_exam))),
                     ~select(RequestPass.id)
                     .where(
                         RequestPass.request_id == ConversationRequest.id,
@@ -516,7 +517,9 @@ def mark_requests_seen(
                     and_(
                         ConversationRequest.broadcast.is_(True),
                         ConversationRequest.target_listener_id.is_(None),
-                        true() if listener.certified_exam else false(),
+                        ConversationRequest.audience.in_(
+                            audiences_for(bool(listener.certified_exam))
+                        ),
                     ),
                 ),
                 ConversationRequest.status == RequestStatus.pending,
