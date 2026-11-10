@@ -1447,6 +1447,11 @@
             "title": "Is Locked",
             "type": "boolean"
           },
+          "is_paused": {
+            "default": false,
+            "title": "Is Paused",
+            "type": "boolean"
+          },
           "issue_category": {
             "anyOf": [
               {
