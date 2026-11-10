@@ -146,7 +146,7 @@ class Settings(BaseSettings):
     launch_roads: str = "upsc,life"
     allowance_enabled: bool = True
     allowance_enforced: bool = False
-    allowance_in_a_row: int = 3
+    allowance_in_a_row: int = 10
     allowance_per_day: int = 10
     allowance_crisis_exempt_hours: int = 24
     allowance_budget_ms: int = 800
