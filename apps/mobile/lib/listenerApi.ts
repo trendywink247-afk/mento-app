@@ -28,7 +28,7 @@ export type ListenerMe = {
   push_preview?: boolean;
 };
 
-export type DocumentKind = 'id_card' | 'posting_letter' | 'result' | 'other';
+export type DocumentKind = 'id_card' | 'posting_letter' | 'mains_admit_card' | 'interview_letter' | 'result' | 'other';
 export type VerificationDoc = {
   id: string;
   kind: DocumentKind;

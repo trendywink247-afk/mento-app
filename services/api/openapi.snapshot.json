@@ -5735,6 +5735,8 @@
             "enum": [
               "id_card",
               "posting_letter",
+              "mains_admit_card",
+              "interview_letter",
               "result",
               "other"
             ],

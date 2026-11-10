@@ -18,7 +18,7 @@ from app.errors import ApiProblem
 from app.models.listener import ListenerProfile
 from app.models.mentor_document import MentorDocument
 
-KINDS = ("id_card", "posting_letter", "result", "other")
+KINDS = ("id_card", "posting_letter", "mains_admit_card", "interview_letter", "result", "other")
 MAX_BYTES = 3 * 1024 * 1024  # base64 of this stays under the 5 MB request limit
 MAX_ON_FILE = 5  # documents one mentor may have sent in all
 UNREAD_DAYS = 30

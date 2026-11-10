@@ -194,3 +194,31 @@ def test_unread_files_are_wiped_after_thirty_days(db_session):
         assert s.get(MentorDocument, old_id).content is None
         assert s.get(MentorDocument, old_id).status == "expired"
         assert s.get(MentorDocument, fresh_id).content == b"def"
+
+
+@requires_postgres
+def test_mains_admission_card_and_interview_letter_are_accepted_kinds(client, db_session):
+    with TestSession() as s:
+        lid = _mentor(s)
+        s.commit()
+    for kind in ("mains_admit_card", "interview_letter"):
+        r = client.post(
+            "/api/v1/listener/me/verification",
+            json={"kind": kind, "content_base64": _b64(JPG)},
+            headers=_l(lid),
+        )
+        assert r.status_code == 201 and r.json()["kind"] == kind
+        # one pending at a time: clear it so the next kind can be sent
+        with TestSession() as s:
+            doc = s.get(MentorDocument, r.json()["id"])
+            doc.status = "rejected"
+            doc.content = None
+            s.commit()
+    assert (
+        client.post(
+            "/api/v1/listener/me/verification",
+            json={"kind": "driving_licence", "content_base64": _b64(JPG)},
+            headers=_l(lid),
+        ).status_code
+        == 422
+    )
