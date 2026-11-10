@@ -23,7 +23,7 @@
         "monochromeImage": "./assets/icon/adaptive-monochrome.png",
         "backgroundColor": "#F4EFE6"
       },
-      "versionCode": 10,
+      "versionCode": 11,
       "permissions": [],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
