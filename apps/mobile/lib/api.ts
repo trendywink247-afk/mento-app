@@ -112,6 +112,8 @@ export type Listener = {
   certified?: boolean;
   /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
   reply_within?: 'day' | 'two_days' | null;
+  /** Language codes this mentor talks in; empty when they have not said. */
+  languages?: string[];
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -141,7 +143,11 @@ export type ListenerProfile = {
   certified?: boolean;
   /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
   reply_within?: 'day' | 'two_days' | null;
+  languages?: string[];
 };
+
+/** Who may take a question: any approved mentor (the default), Mento Verified only, or peers. */
+export type Audience = 'any' | 'in_service' | 'peer';
 
 export type PersonalRequest = {
   id: string;
@@ -157,6 +163,8 @@ export type PersonalRequest = {
   replying?: boolean;
   /** Offered to every verified mentor, the first to accept takes it (DECISIONS §P.4). */
   broadcast?: boolean;
+  /** Who it was offered to. */
+  audience?: Audience;
   /** No reply after 24 hours: the letter asks what to do next (DECISIONS §P.5). */
   nudged?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
@@ -244,6 +252,8 @@ export type ConversationListItem = {
   last_message?: string | null;
   last_message_at?: string | null;
   last_message_mine?: boolean;
+  /** The member muted this chat (Quiet Pause). */
+  is_paused?: boolean;
 };
 
 export type ConversationState = {
@@ -468,6 +478,8 @@ export type ListenerApplicationIn = {
   mentor_interest: boolean;
   /** Exam mentoring (DECISIONS §O): what the applicant says they hold; an admin reads it. */
   exam_credential?: string | null;
+  /** Up to five language codes the mentor talks in (lib/languages.ts). */
+  languages?: string[];
   pledge_accepted: boolean;
 };
 
@@ -681,7 +693,7 @@ export const api = {
 
   /** Exam niche: the best online mentor gets the question and the chat opens only when they
    * accept (DECISIONS §N.2). 503 when nobody is online. */
-  ask: (body: { issue_category?: string | null; intro_message?: string | null }) =>
+  ask: (body: { issue_category?: string | null; intro_message?: string | null; audience?: Audience }) =>
     request<PersonalRequest>('/match/ask', { method: 'POST', body: JSON.stringify(body) }, true),
 
   scan: (body: { text: string; conversation_id?: string | null }) =>
@@ -704,7 +716,9 @@ export const api = {
 
   // --- Mentor discovery + personal requests ---
   // Paged server-side (API T2.3); Browse still shows one list, walked here up to 200.
-  listListeners: () => collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}`)),
+  /** `language`: a preference, not a filter. Mentors who talk it come first; nobody is hidden. */
+  listListeners: (language?: string) =>
+    collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}${language ? `&language=${encodeURIComponent(language)}` : ''}`)),
 
   requestListener: (id: string, intro_message: string, issue_category?: string | null) =>
     request<PersonalRequest>(`/listeners/${id}/request`, { method: 'POST', body: JSON.stringify({ intro_message, issue_category }) }, true),
@@ -784,6 +798,9 @@ export const api = {
   }) => request<JournalEntry>('/journals/mentor-notes', { method: 'POST', body: JSON.stringify(body) }, true),
 
   listMentorNotes: () => request<JournalEntry[]>('/journals/mentor-notes', {}, true),
+
+  deleteJournalEntry: (id: string) =>
+    request<void>(`/journals/entries/${encodeURIComponent(id)}`, { method: 'DELETE' }, true),
 
   journalSummary: () => request<Record<string, number>>('/journals/summary', {}, true),
 

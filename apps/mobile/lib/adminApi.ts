@@ -1,5 +1,5 @@
 /** Typed client for the admin dashboard (/admin endpoints), bound to the admin token. */
-import { apiRequest } from '@/lib/api';
+import { API_BASE_URL, apiRequest } from '@/lib/api';
 import { getAdminToken } from '@/lib/adminSession';
 
 export type AdminMe = { id: string; name: string; role: 'owner' | 'helper' };
@@ -158,6 +158,19 @@ export type AdminMentorInvite = {
   claimed_at: string | null;
 };
 
+export type AdminVerification = {
+  id: string;
+  listener_id: string;
+  persona_name: string;
+  kind: string;
+  content_type: string;
+  size_bytes: number;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  created_at: string;
+  decided_at: string | null;
+  has_file: boolean;
+};
+
 export const adminApi = {
   me: () => req<AdminMe>('/admin/me'),
   overview: () => req<AdminOverview>('/admin/overview'),
@@ -214,6 +227,18 @@ export const adminApi = {
       method: 'POST',
       ...(certify ? { body: JSON.stringify({ certify: true }) } : {}),
     }),
+  // --- Mento Verified by document (founder, 2026-11-10) ---
+  listVerifications: (status = 'pending') => req<AdminVerification[]>(`/admin/verifications?status_filter=${status}`),
+  approveVerification: (id: string) => req<AdminVerification>(`/admin/verifications/${id}/approve`, { method: 'POST' }),
+  rejectVerification: (id: string, note: string | null) =>
+    req<AdminVerification>(`/admin/verifications/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) }),
+  /** The file as a temporary browser address (web only). Every read is written to the audit log. */
+  verificationFileUrl: async (id: string): Promise<string> => {
+    const token = await getAdminToken();
+    const res = await fetch(`${API_BASE_URL}/admin/verifications/${id}/file`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    if (!res.ok) throw new Error(`file ${res.status}`);
+    return URL.createObjectURL(await res.blob());
+  },
   // --- Gold mentor invitations (DECISIONS §P.3) ---
   listMentorInvites: () => req<AdminMentorInvite[]>('/admin/mentor-invites'),
   createMentorInvite: (note: string | null) =>

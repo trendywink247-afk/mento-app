@@ -23,6 +23,18 @@ export type ListenerMe = {
   certified?: boolean;
   /** Usual time to accept a request over 30 days, once there is enough to say (DECISIONS §P.6). */
   reply_within?: 'day' | 'two_days' | null;
+  languages?: string[];
+};
+
+export type DocumentKind = 'id_card' | 'posting_letter' | 'result' | 'other';
+export type VerificationDoc = {
+  id: string;
+  kind: DocumentKind;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  created_at: string;
+  decided_at: string | null;
+  /** Why, when it was not approved (written by the team). */
+  note: string | null;
 };
 
 /** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
@@ -97,6 +109,10 @@ export type ListenerRequest = {
   /** What the member chose to share: their road and stage, as words. */
   community_label?: string | null;
   stage_label?: string | null;
+  /** "18–24": the member's age as a band, never a date of birth. */
+  age_band?: string | null;
+  /** Who it was offered to: any approved mentor, Mento Verified only, or peers. */
+  audience?: 'any' | 'in_service' | 'peer';
 };
 
 /** Dev-only picker row (the /listener/dev/* endpoints 404 in production). */
@@ -176,8 +192,13 @@ export const listenerApi = {
   brief: (convoId: string) => req<MemberBrief>(`/listener/me/conversations/${convoId}/brief`),
 
   /** PATCH-like semantics on a PUT: an omitted field is left unchanged server-side. */
-  updateProfile: (body: { public_line?: string | null; availability_note?: string | null }) =>
+  updateProfile: (body: { public_line?: string | null; availability_note?: string | null; languages?: string[] }) =>
     req<ListenerMe>('/listener/me/profile', { method: 'PUT', body: JSON.stringify(body) }),
+
+  /** Mento Verified by document (services/api/app/services/verification.py). Never returns the file. */
+  documents: () => req<VerificationDoc[]>('/listener/me/verification'),
+  sendDocument: (body: { kind: DocumentKind; content_base64: string }) =>
+    req<VerificationDoc>('/listener/me/verification', { method: 'POST', body: JSON.stringify(body) }),
 
   accept: (id: string) =>
     req<{ id: string; status: string; conversation_id: string | null }>(

@@ -202,3 +202,114 @@ export const elevation = {
 
 export const theme = { colors, wash, space, radius, type, elevation, font };
 export type Theme = typeof theme;
+
+import { COMPANION_COLORS, darkAccentFor, type CompanionColor } from '@/theme/companion';
+
+/**
+ * Appearance (founder, 2026-11-10): Pastel is today's look and the default. Light is a soft off-white
+ * for people who want a plainer page; Dark is for night. System follows the phone.
+ *
+ * `colors`, `wash`, `washInk`, `washEdge`, `dangerKeyEdge` and `type.caption` above hold the PASTEL
+ * values. `applyStaticPalette` rewrites them in place for the other looks, so the few places that
+ * read them without useTheme() (art, a module-level style) follow too. Components that call
+ * useTheme() get the same values through the context and re-render when the look changes.
+ */
+export type Appearance = 'pastel' | 'light' | 'dark' | 'system';
+export type Look = 'pastel' | 'light' | 'dark';
+
+type ColorMap = { [K in keyof typeof colors]: string };
+
+const PASTEL: ColorMap = { ...colors };
+
+const LIGHT: ColorMap = {
+  ...colors,
+  bg: '#F7F7F4',
+  bgLavender: '#F1F1EC',
+  surface: '#FDFDFC',
+  surfaceAlt: '#F2F2EE',
+  ink: '#222426',
+  inkMuted: '#62666A',
+  border: '#E3E4DF',
+  scrim: 'rgba(34,36,38,0.4)',
+  scrimSheet: 'rgba(34,36,38,0.35)',
+  handle: '#D4D6D0',
+  edgeSurface: '#E3E4DF',
+  edgeAlt: '#D8DAD3',
+  dotIdle: '#C9CCC4',
+  dashIdle: '#B4B8AE',
+  borderStrong: '#D6D8D1',
+  heldFace: '#E8E9E3',
+  heldInk: '#7B7F78',
+};
+
+const DARK: ColorMap = {
+  ...colors,
+  bg: '#0F1419',
+  bgLavender: '#0C1116',
+  surface: '#182028',
+  surfaceAlt: '#141B22',
+  ink: '#ECE8DF',
+  inkMuted: '#A3ACB4',
+  border: '#2A3440',
+  onBrand: '#0F1419',
+  scrim: 'rgba(0,0,0,0.6)',
+  scrimSheet: 'rgba(0,0,0,0.55)',
+  handle: '#3A4756',
+  edgeSurface: '#0B1015',
+  edgeAlt: '#0B1015',
+  edgeInk: '#000000',
+  dotIdle: '#3A4756',
+  dashIdle: '#4A5A6C',
+  brand: '#E0A184',
+  brandPress: '#D69274',
+  brandTint: '#3B2B25',
+  accentSoft: '#E0A184',
+  accentWarm: '#E6C27A',
+  success: '#6CC287',
+  warning: '#E6C27A',
+  danger: '#F0968F',
+  borderStrong: '#364353',
+  heldFace: '#1E2832',
+  heldInk: '#8A97A4',
+  successWashBorder: '#2C5A3C',
+  dangerWashBorder: '#6B3A37',
+  dangerWashEdge: '#4A2523',
+  dangerInk: '#F5B5B0',
+};
+
+const WASH_DARK = { accent: '#3B2B25', indigo: '#2D2740', orange: '#3A3020', green: '#1F3A2A', danger: '#3F2423', sky: '#1F3447' };
+const WASH_INK_DARK = { green: '#8FD3A4', orange: '#E6C27A', danger: '#F5B5B0', indigo: '#BFA9E0' };
+
+export function colorsFor(look: Look): ColorMap {
+  return look === 'dark' ? DARK : look === 'light' ? LIGHT : PASTEL;
+}
+
+const WASH_PASTEL = { ...wash };
+const WASH_INK_PASTEL = { ...washInk };
+const WASH_EDGE_PASTEL = { ...washEdge };
+
+export function washFor(look: Look): { [K in Wash]: string } {
+  return look === 'dark' ? WASH_DARK : WASH_PASTEL;
+}
+export function washInkFor(look: Look) {
+  return look === 'dark' ? WASH_INK_DARK : WASH_INK_PASTEL;
+}
+
+/** Rewrite the module-level palettes in place (see the note above). */
+export function applyStaticPalette(look: Look): void {
+  Object.assign(colors, colorsFor(look));
+  Object.assign(wash, washFor(look));
+  Object.assign(washInk, washInkFor(look));
+  Object.assign(washEdge, look === 'dark' ? { green: '#2C5A3C' } : WASH_EDGE_PASTEL);
+  (type.caption as { color: string }).color = colorsFor(look).inkMuted;
+  // A few places read COMPANION_COLORS.<hue>.accentEdge directly, always as ink (text, an icon). On dark
+  // that ink must be light, so those hues' edge is rewritten too; components that need the pillow edge
+  // read it from useTheme().
+  for (const key of Object.keys(COMPANION_COLORS) as CompanionColor[]) {
+    COMPANION_COLORS[key].accentEdge = look === 'dark' ? darkAccentFor(key).accentInk : PASTEL_EDGE[key];
+  }
+}
+
+const PASTEL_EDGE = Object.fromEntries(
+  (Object.keys(COMPANION_COLORS) as CompanionColor[]).map((k) => [k, COMPANION_COLORS[k].accentEdge]),
+) as Record<CompanionColor, string>;

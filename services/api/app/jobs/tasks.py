@@ -12,7 +12,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import enqueue, queue, retention
-from app.services import matching, mentor_names, push, request_ageing, snooze
+from app.services import matching, mentor_names, push, request_ageing, snooze, verification
 
 logger = logging.getLogger("mento.jobs")
 
@@ -127,6 +127,21 @@ def maintenance_request_ageing(timestamp: int) -> dict[str, int]:
             enqueue(db, push_request_nudge, best_effort=True, request_id=request_id)
         db.commit()
     return {key: len(ids) for key, ids in result.items()}
+
+
+# --- documents nobody read (founder, 2026-11-10) -------------------------------------
+
+
+# Daily: a document still unread after 30 days is wiped and marked expired. The file never outlives its review.
+@queue.periodic(cron="29 3 * * *", periodic_id="verification-purge")
+@queue.task(
+    name="maintenance.verification_purge", queue="maintenance", queueing_lock="maint-verify"
+)
+def maintenance_verification_purge(timestamp: int) -> dict[str, int]:
+    with SessionLocal() as db:
+        wiped = verification.purge_unread(db)
+        db.commit()
+    return {"wiped": wiped}
 
 
 # --- the queue's own retention ------------------------------------------------------

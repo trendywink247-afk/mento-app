@@ -19,6 +19,7 @@
 # - Exit code: 0 all checks passed; 1 a check failed; 2 usage/setup error;
 #   3 the status post failed for a reason other than 403. A 403 is reported and
 #   is NOT worked around; the exit code then reflects the checks alone.
+#   4 another run for the same commit is in progress (nothing was started).
 set -uo pipefail
 
 ROOT=/srv/mento
@@ -36,6 +37,10 @@ REPO="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)" || d
 SHA="$(git -C "$REPO" rev-parse --verify --quiet "$1^{commit}")" || die "unknown commit: $1"
 
 mkdir -p "$LOG_DIR" "$LOCK_DIR" "$WORK_DIR" "$CACHE_DIR"
+# One run per commit at a time: a second run for the same sha would share its worktree and
+# log, and whichever finished first would delete the worktree out from under the other.
+exec 7>"$LOCK_DIR/ci-$SHA.lock"
+flock --nonblock 7 || { echo "ops/ci: a run for $SHA is already in progress" >&2; exit 4; }
 LOG="$LOG_DIR/$SHA.log"
 : > "$LOG"
 SUMMARY="$(mktemp)"

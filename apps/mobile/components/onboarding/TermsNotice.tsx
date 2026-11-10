@@ -28,7 +28,7 @@ export function TermsNotice() {
         containerStyle={styles.linkBox}
         style={styles.link}
       >
-        <Text style={[type.caption, { color: colors.accentEdge }]}>{t('terms.noticeLink')}</Text>
+        <Text style={[type.caption, { color: colors.accentInk }]}>{t('terms.noticeLink')}</Text>
       </PressKey>
     </View>
   );

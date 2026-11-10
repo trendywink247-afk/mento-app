@@ -208,3 +208,34 @@ def test_organize_returns_themes_when_enabled(client, db_session, monkeypatch):
     assert out["entry_count"] == 3
     assert out["themes"][0]["title"] == "Exam stress"
     assert out["overview"]
+
+
+@requires_postgres
+def test_delete_entry_removes_only_my_own(client, db_session):
+    with TestSession() as s:
+        me, other = _seed_user(s), _seed_user(s)
+        mine = JournalEntry(
+            user_id=me, channel=JournalChannel.mentor_notes, body="keep", source="chat"
+        )
+        theirs = JournalEntry(user_id=other, channel=JournalChannel.mood, body="private")
+        s.add_all([mine, theirs])
+        s.commit()
+        mine_id, theirs_id = mine.id, theirs.id
+
+    assert (
+        client.delete(f"/api/v1/journals/entries/{theirs_id}", headers=_auth(me)).status_code == 404
+    )
+    assert (
+        client.delete(f"/api/v1/journals/entries/{mine_id}", headers=_auth(me)).status_code == 204
+    )
+    assert (
+        client.delete(f"/api/v1/journals/entries/{mine_id}", headers=_auth(me)).status_code == 404
+    )
+    with TestSession() as s:
+        assert s.get(JournalEntry, mine_id) is None
+        assert s.get(JournalEntry, theirs_id) is not None
+
+
+@requires_postgres
+def test_delete_entry_needs_a_session(client, db_session):
+    assert client.delete("/api/v1/journals/entries/abc").status_code in (401, 403)

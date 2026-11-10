@@ -91,7 +91,7 @@ export function InTouchBadge({
       <View pointerEvents="none" style={[styles.edge, { backgroundColor: colors.accent }]} />
       <View style={[styles.face, { backgroundColor: colors.accentTint, borderColor: colors.accent }]}>
         <LinkedRings color={colors.accent} still={still} />
-        <Text style={[styles.label, { color: colors.accentEdge }]} numberOfLines={1}>
+        <Text style={[styles.label, { color: colors.accentInk }]} numberOfLines={1}>
           {t('inTouch.badge')}
         </Text>
       </View>

@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n';
 import { listenerApi } from '@/lib/listenerApi';
 import { leaveToChats, leaveToMentorHome } from '@/lib/leaveToChats';
 import { nativeChatRenderer } from '@/lib/nativeChatOwner';
+import { usePreventScreenshots } from '@/lib/usePreventScreenshots';
 import { useTheme } from '@/theme/ThemeProvider';
 
 /** Authoritative selection precedes either renderer. The native gate is separate
@@ -19,6 +20,8 @@ export function NativeChatProvider({ role, stream }: {
 }) {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  // Every conversation, either side, either engine: no screenshots or recents preview inside a chat.
+  usePreventScreenshots();
   const { colors } = useTheme();
   const { t } = useI18n();
   const [owner, setOwner] = useState<'stream' | 'own' | null>(null);

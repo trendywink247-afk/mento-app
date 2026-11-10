@@ -2,19 +2,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { EdgeSurface } from '@/components/EdgeSurface';
-import { TAB_BAR_HEIGHT, TAB_DOCK_MIN_INSET } from '@/components/tabDock';
+import { TabPill } from '@/components/TabPill';
 import { tabSceneInterpolator, tabTransitionSpec } from '@/components/motion/tabTransition';
 import { api } from '@/lib/api';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { registerForPushNotifications } from '@/lib/pushNotifications';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useSessionGuard } from '@/lib/useSessionGuard';
-import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space } from '@/theme/tokens';
 
 /**
  * Tab set (founder ruling 2026-07-13, spec 2026-07-13-path-communities.md):
@@ -34,69 +29,38 @@ const TABS: {
   { name: 'profile', label: 'tabs.profile', active: 'person', idle: 'person-outline' },
 ];
 
-/** Board bar (A06–A09): a white pill floating over the oat ground, 16 in from the sides.
- * Each tab is a 48px cell — icon over label; the active cell is an accent-tint pillow
- * (3px edge) with both in the accent. The bar keeps its own place in the layout (screens
- * end at its top edge — that edge is the companion's floor on My Chats). */
+/** The member's bottom bar: the shared pill (components/TabPill.tsx), floating over the screens.
+ * The bar keeps its own place in the layout (screens end at its top edge — that edge is the
+ * companion's floor on My Chats). */
 function TabBar({ state, navigation }: BottomTabBarProps) {
-  const { colors, elevation } = useTheme();
   const { t } = useI18n();
-  const insets = useSafeAreaInsets();
-
   return (
-    <View
-      pointerEvents="box-none"
-      style={[styles.dock, { paddingBottom: Math.max(insets.bottom, TAB_DOCK_MIN_INSET) }]}
-    >
-      <View style={[styles.bar, elevation.md, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {TABS.map((tab) => {
-          // Name-based lookup: hidden routes (mentors) share this navigator, so the
-          // bar's order no longer mirrors the route array's indexes.
-          const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
-          const focused = state.index === routeIndex;
-          const route = state.routes[routeIndex];
-          if (!route) return null;
-          const ink = focused ? colors.accent : colors.inkMuted;
-          return (
-            <Pressable
-              key={tab.name}
-              style={styles.tab}
-              onPress={() => {
-                const event = navigation.emit({
-                  type: 'tabPress',
-                  target: route.key,
-                  canPreventDefault: true,
-                });
-                if (!focused && !event.defaultPrevented) {
-                  navigation.navigate(route.name);
-                }
-              }}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: focused }}
-              accessibilityLabel={t(tab.label)}
-              testID={`tab-${tab.name}`}
-            >
-              {/* Remount on focus change and always set a background: on Android (Fabric) a face
-                  that gains its backgroundColor after mount paints without its border radius, so
-                  every tab but the one focused at launch showed a square highlight. */}
-              <EdgeSurface
-                key={focused ? 'on' : 'off'}
-                edge={focused ? colors.accentTintEdge : 'transparent'}
-                travel={3}
-                radius={radius.pill}
-                containerStyle={styles.cellBox}
-                style={[styles.cell, { backgroundColor: focused ? colors.accentTint : 'transparent' }]}
-              >
-                <Ionicons name={tab.idle} size={22} color={ink} />
-                <Text style={[styles.label, { color: ink }]} numberOfLines={1}>
-                  {t(tab.label)}
-                </Text>
-              </EdgeSurface>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
+    <TabPill
+      floating
+      items={TABS.flatMap((tab) => {
+        // Name-based lookup: hidden routes (mentors) share this navigator, so the bar's order no
+        // longer mirrors the route array's indexes.
+        const routeIndex = state.routes.findIndex((r) => r.name === tab.name);
+        const route = state.routes[routeIndex];
+        if (!route) return [];
+        const focused = state.index === routeIndex;
+        return [
+          {
+            key: tab.name,
+            label: t(tab.label),
+            icon: tab.idle,
+            iconOn: tab.active,
+            focused,
+            onPress: () => {
+              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+              if (!focused && !event.defaultPrevented) navigation.navigate(route.name);
+            },
+            accessibilityLabel: t(tab.label),
+            testID: `tab-${tab.name}`,
+          },
+        ];
+      })}
+    />
   );
 }
 
@@ -153,22 +117,3 @@ export default function TabsLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  // Absolute, so the screens run the full height and scroll visibly behind and around the
-  // pill; box-none lets touches in the clear space around it reach the screen.
-  dock: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: space.md },
-  bar: {
-    height: TAB_BAR_HEIGHT,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.xs,
-    padding: space.sm,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-  },
-  tab: { flex: 1 },
-  cellBox: { alignSelf: 'stretch' },
-  cell: { height: 48, alignItems: 'center', justifyContent: 'center', gap: 1 },
-  label: { fontSize: 12, fontFamily: font.sansBold, lineHeight: 14 },
-});

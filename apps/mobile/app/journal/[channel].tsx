@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -168,6 +169,19 @@ export default function JournalScreen() {
     }
   };
 
+  const remove = (id: string) =>
+    Alert.alert(t('journals.removeTitle'), t('journals.removeBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('journals.remove'),
+        style: 'destructive',
+        onPress: () => {
+          setEntries((rows) => rows.filter((r) => r.id !== id));
+          void api.deleteJournalEntry(id).catch(() => load());
+        },
+      },
+    ]);
+
   const renderEntry = ({ item }: { item: JournalEntry }) => {
     const when = new Date(item.created_at).toLocaleDateString([], {
       month: 'short',
@@ -209,6 +223,12 @@ export default function JournalScreen() {
         {cfg.composer === 'note' || (cfg.channel === 'mood' && !item.meta.mood) ? (
           <Text style={[type.caption, { color: colors.inkMuted, marginTop: space.xs }]}>{when}</Text>
         ) : null}
+        <PrimaryButton
+          label={t('journals.remove')}
+          variant="link"
+          onPress={() => remove(item.id)}
+          testID={`entry-remove-${item.id}`}
+        />
       </EdgeSurface>
     );
   };

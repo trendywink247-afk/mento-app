@@ -31,6 +31,7 @@ import { captureFirstMessage } from '@/lib/analytics';
 import { clearAcknowledgedDraft } from '@/lib/acknowledgedDraft';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { clearConversationNotifications } from '@/lib/notifications';
 import { leaveToChats, leaveToMentorHome } from '@/lib/leaveToChats';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { createNativeOwnChatLifecycle } from '@/lib/nativeOwnChatLifecycle';
@@ -93,6 +94,9 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [isFocused, setIsFocused] = useState(false);
   const [isForeground, setIsForeground] = useState(AppState.currentState === 'active');
   useListenerHeartbeat(!member && mentorOnline && isFocused && isForeground);
+  useEffect(() => {
+    if (isFocused && isForeground) void clearConversationNotifications(conversationId);
+  }, [isFocused, isForeground, conversationId, rows.length]);
   const keyboardPad = useKeyboardPad();
   const allowanceView = useAllowance(member ? conversationId : undefined,
     crisisAt > 0 && Date.now() - crisisAt < CRISIS_EXEMPT_MS);

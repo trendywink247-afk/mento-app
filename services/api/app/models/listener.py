@@ -37,6 +37,10 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     )
     certified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Languages this mentor talks in (services/languages.py). Empty = not said; a preference for
+    # matching members, never a filter.
+    languages: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
+
     # Non-cash reputation (PRD §9). Higher rank → higher match priority.
     rank: Mapped[int] = mapped_column(Integer, default=0)
     active_conversations: Mapped[int] = mapped_column(Integer, default=0)

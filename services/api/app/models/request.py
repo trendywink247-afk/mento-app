@@ -22,6 +22,9 @@ class ConversationRequest(UUIDMixin, TimestampMixin, Base):
     # One question offered to every certified mentor (DECISIONS section P.4): no target until
     # the first to accept takes it. `target_listener_id` is then set to that mentor.
     broadcast: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    # Who a broadcast is offered to: "any" (everyone approved), "in_service" (Mento Verified only) or
+    # "peer" (the other approved mentors). A Personal request ignores it.
+    audience: Mapped[str] = mapped_column(String(16), default="any", server_default="any")
     kind: Mapped[RequestKind] = mapped_column(default=RequestKind.general)
     status: Mapped[RequestStatus] = mapped_column(default=RequestStatus.pending, index=True)
 

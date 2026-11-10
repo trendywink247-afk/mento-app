@@ -68,6 +68,12 @@ qa-api.mento.chat {
 		request_body {
 			max_size 5MB
 		}
+		# Public download page and the Mento QA app file (the same folder the web release carries).
+		# Only /downloads/* is served here; every other path still goes to the API.
+		handle /downloads/* {
+			root * /opt/mento-staging/web
+			file_server
+		}
 		# Caddy upgrades WebSocket connections automatically (own-chat, WS5) —
 		# no special config needed beyond a read_timeout long enough for an
 		# idle chat socket, matching deploy/caddy/Caddyfile's own-chat value.

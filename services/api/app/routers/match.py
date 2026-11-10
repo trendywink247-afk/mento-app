@@ -135,7 +135,11 @@ def ask_best_mentor(
     # who is online with a free slot; the first to accept takes it and it leaves everyone else's
     # inbox. Nothing is reserved and no mentor is chosen for the member.
     if not broadcast_candidate_ids(
-        db, payload.issue_category, blocked, community=user.community_slug
+        db,
+        payload.issue_category,
+        blocked,
+        community=user.community_slug,
+        audience=payload.audience,
     ):
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -144,6 +148,7 @@ def ask_best_mentor(
     req = ConversationRequest(
         kind=RequestKind.general,
         broadcast=True,
+        audience=payload.audience,
         status=RequestStatus.pending,
         requester_id=user_id,
         target_listener_id=None,

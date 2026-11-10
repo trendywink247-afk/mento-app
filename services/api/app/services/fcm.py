@@ -113,6 +113,9 @@ def send(
     bearer = _access_token(account)
     url = _SEND_URL.format(project=account["project_id"])
     string_data = {str(k): v if isinstance(v, str) else json.dumps(v) for k, v in data.items()}
+    # One tray entry per conversation (or request): a newer push replaces the older one.
+    tag = data.get("conversation_id") or data.get("request_id")
+    notification = {"channel_id": channel_id, **({"tag": str(tag)} if tag else {})}
     tickets: list[dict] = []
     for token in tokens:
         message = {
@@ -120,7 +123,7 @@ def send(
                 "token": token,
                 "notification": {"title": title, "body": body},
                 "data": string_data,
-                "android": {"priority": "HIGH", "notification": {"channel_id": channel_id}},
+                "android": {"priority": "HIGH", "notification": notification},
             }
         }
         resp = httpx.post(

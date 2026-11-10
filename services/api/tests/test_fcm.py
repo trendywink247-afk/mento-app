@@ -81,7 +81,20 @@ def test_send_posts_one_v1_message_per_token_with_persona_only_payload(account, 
     assert msg["notification"] == {"title": "Mento", "body": "Quiet Cove replied"}
     assert msg["data"] == {"conversation_id": "c1", "n": "3"}
     assert msg["android"]["notification"]["channel_id"] == "default"
+    assert msg["android"]["notification"]["tag"] == "c1"
     assert sends[0]["headers"]["Authorization"] == "Bearer tok-1"
+
+
+def test_a_push_without_a_conversation_or_request_has_no_tag(account, wire):
+    fcm.send([RAW], "Mento", "a", {})
+    sends = [c for c in wire.calls if c["url"] != fcm._TOKEN_URL]
+    assert "tag" not in sends[0]["json"]["message"]["android"]["notification"]
+
+
+def test_a_request_push_is_tagged_by_request(account, wire):
+    fcm.send([RAW], "Mento", "a", {"kind": "request", "request_id": "r9"})
+    sends = [c for c in wire.calls if c["url"] != fcm._TOKEN_URL]
+    assert sends[0]["json"]["message"]["android"]["notification"]["tag"] == "r9"
 
 
 def test_access_token_is_fetched_once_and_cached(account, wire):

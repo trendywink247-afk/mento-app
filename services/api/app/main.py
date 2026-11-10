@@ -33,6 +33,7 @@ from app.routers import (
     paths,
     safety,
     stream_hooks,
+    verification,
 )
 
 observability.configure_logging()
@@ -166,6 +167,8 @@ app.include_router(journals.router, prefix=API)
 app.include_router(listener_applications.router, prefix=API)
 app.include_router(listeners.router, prefix=API)
 app.include_router(listener_console.router, prefix=API)
+app.include_router(verification.mentor_router, prefix=API)
+app.include_router(verification.admin_router, prefix=API)
 app.include_router(in_touch.router, prefix=API)
 app.include_router(feedback.router, prefix=API)
 app.include_router(admin_console.router, prefix=API)

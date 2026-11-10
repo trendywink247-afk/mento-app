@@ -180,10 +180,10 @@ export default function AllowancePanel({ onGoto }: { onGoto: (tab: string) => vo
           >
             <Text style={[type.cardTitle, styles.cardTitle, { color: colors.ink }]}>The rule in force</Text>
             <View style={styles.chips}>
-              <Text style={[styles.chip, { backgroundColor: colors.accentTint, color: colors.accentEdge }]}>
+              <Text style={[styles.chip, { backgroundColor: colors.accentTint, color: colors.accentInk }]}>
                 {rule.in_a_row} in a row
               </Text>
-              <Text style={[styles.chip, { backgroundColor: colors.accentTint, color: colors.accentEdge }]}>
+              <Text style={[styles.chip, { backgroundColor: colors.accentTint, color: colors.accentInk }]}>
                 {rule.per_day} per day
               </Text>
               <Text style={[styles.chip, { backgroundColor: wash.danger, color: washInk.danger }]}>

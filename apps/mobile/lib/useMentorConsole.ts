@@ -60,7 +60,8 @@ export type MentorConsole = {
   note: string | null;
   refresh: () => Promise<void>;
   toggleStatus: () => Promise<void>;
-  act: (requestId: string, action: 'accept' | 'decline') => Promise<void>;
+  /** Accept returns the new conversation's id (so the page can open the chat); decline returns null. */
+  act: (requestId: string, action: 'accept' | 'decline') => Promise<string | null>;
   /** Board A10: snooze (true) or undo (false) one conversation; false on failure. */
   setSnooze: (conversationId: string, on: boolean) => Promise<boolean>;
   busy: string | null;
@@ -268,14 +269,16 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
   }, [me, busy]);
 
   const act = useCallback(
-    async (requestId: string, action: 'accept' | 'decline') => {
-      if (busy) return;
+    async (requestId: string, action: 'accept' | 'decline'): Promise<string | null> => {
+      if (busy) return null;
       setBusy(requestId);
       setNote(null);
       try {
-        if (action === 'accept') await listenerApi.accept(requestId);
+        let opened: string | null = null;
+        if (action === 'accept') opened = (await listenerApi.accept(requestId)).conversation_id ?? null;
         else await listenerApi.decline(requestId);
         await refresh();
+        return opened;
       } catch (e) {
         if (e instanceof ApiError && e.status === 409) setNote(atCapacityText);
         else if (e instanceof ApiError && e.status === 404 && action === 'accept') {
@@ -283,6 +286,7 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
           if (takenText) setNote(takenText);
           await refresh();
         }
+        return null;
       } finally {
         setBusy(null);
       }

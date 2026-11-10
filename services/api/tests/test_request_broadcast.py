@@ -89,8 +89,9 @@ def _lauth(listener_id):
     return {"Authorization": f"Bearer {issue_listener_token(listener_id)}"}
 
 
-def _ask(client, member):
-    r = client.post("/api/v1/match/ask", json={}, headers=_auth(member))
+def _ask(client, member, audience=None):
+    body = {} if audience is None else {"audience": audience}
+    r = client.post("/api/v1/match/ask", json=body, headers=_auth(member))
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -108,11 +109,50 @@ def test_a_broadcast_is_in_every_certified_mentors_inbox_and_nobody_else(client)
         b = _mentor(s, "Maple")
         plain = _mentor(s, "Willow", certified=False)
         s.commit()
-    asked = _ask(client, member)
+    asked = _ask(client, member, "in_service")
     assert _inbox(client, a) == [asked["id"]] and _inbox(client, b) == [asked["id"]]
     assert _inbox(client, plain) == []
     row = client.get("/api/v1/listener/me/requests", headers=_lauth(a)).json()[0]
     assert row["broadcast"] is True
+    assert asked["audience"] == "in_service"
+
+
+def test_the_default_audience_is_any_approved_mentor(client):
+    with TestSession() as s:
+        member = _member(s)
+        verified = _mentor(s, "Cedar")
+        plain = _mentor(s, "Willow", certified=False)
+        s.commit()
+    asked = _ask(client, member)
+    assert asked["audience"] == "any"
+    assert _inbox(client, verified) == [asked["id"]]
+    assert _inbox(client, plain) == [asked["id"]]
+
+
+def test_a_peer_audience_reaches_only_the_peers_and_verified_mentors_cannot_take_it(client):
+    with TestSession() as s:
+        member = _member(s)
+        verified = _mentor(s, "Cedar")
+        plain = _mentor(s, "Willow", certified=False)
+        s.commit()
+    asked = _ask(client, member, "peer")
+    assert _inbox(client, plain) == [asked["id"]]
+    assert _inbox(client, verified) == []
+    refused = client.post(
+        f"/api/v1/listener/me/requests/{asked['id']}/accept", headers=_lauth(verified)
+    )
+    assert refused.status_code == 404
+    taken = client.post(f"/api/v1/listener/me/requests/{asked['id']}/accept", headers=_lauth(plain))
+    assert taken.status_code == 200 and taken.json()["conversation_id"]
+
+
+def test_no_one_in_the_audience_online_is_a_503(client):
+    with TestSession() as s:
+        member = _member(s)
+        _mentor(s, "Cedar")  # verified only
+        s.commit()
+    r = client.post("/api/v1/match/ask", json={"audience": "peer"}, headers=_auth(member))
+    assert r.status_code == 503
 
 
 def test_the_first_to_accept_takes_it_and_it_leaves_the_others(client):

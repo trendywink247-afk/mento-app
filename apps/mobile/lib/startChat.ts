@@ -12,7 +12,7 @@
  */
 import type { useRouter } from 'expo-router';
 
-import { ApiError, api, type MatchResult, type PersonalRequest } from '@/lib/api';
+import { ApiError, api, type Audience, type MatchResult, type PersonalRequest } from '@/lib/api';
 import { requestLetter } from '@/lib/requestLetter';
 
 export const ASK_INTRO_MAX = 160;
@@ -32,17 +32,19 @@ export function askIntro(text: string | undefined | null): string | null {
 type Client = Pick<typeof api, 'match' | 'ask'>;
 
 export async function matchOrAsk(
-  body: { issue_category?: string | null },
+  body: { issue_category?: string | null; audience?: Audience },
   intro?: string | null,
   client: Client = api,
 ): Promise<Started> {
+  // The audience matters only to an ask; the instant match has no such choice.
+  const { audience, ...matchBody } = body;
   try {
-    return { kind: 'chat', match: await client.match({ kind: 'general', ...body }) };
+    return { kind: 'chat', match: await client.match({ kind: 'general', ...matchBody }) };
   } catch (e) {
     if (!acceptRequired(e)) throw e;
     return {
       kind: 'ask',
-      request: await client.ask({ issue_category: body.issue_category ?? null, intro_message: askIntro(intro) }),
+      request: await client.ask({ issue_category: body.issue_category ?? null, intro_message: askIntro(intro), audience: audience ?? 'any' }),
     };
   }
 }

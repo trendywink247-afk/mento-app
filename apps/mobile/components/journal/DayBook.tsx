@@ -155,10 +155,10 @@ export function DayBook({
                             containerStyle={styles.fromBox}
                             style={styles.from}
                           >
-                            <Text style={[styles.fromText, { color: colors.accentEdge }]}>
+                            <Text style={[styles.fromText, { color: colors.accentInk }]}>
                               {t('journals.keptFrom', { name: g.name })}
                             </Text>
-                            <Ionicons name="chevron-forward" size={16} color={colors.accentEdge} />
+                            <Ionicons name="chevron-forward" size={16} color={colors.accentInk} />
                           </PressKey>
                         ) : (
                           <View style={styles.fromGap} />

@@ -50,6 +50,19 @@ person seeking support and the listener — appears only as an auto-assigned per
   account; mentors and admins do not have a journal-reading feature. Start fresh
   deletes your journal entries from active application storage. Recovery archives
   can contain saved entries; their treatment is described in §5.
+- **A document a mentor sends to become Mento Verified** (mentors only, optional). One
+  photo or PDF (an ID card, a posting letter, an exam result or similar) is read by the
+  founder and the admins to decide whether the mentor is marked Mento Verified. The file
+  is **deleted the moment a decision is made**, and after 30 days if nobody has read it;
+  what stays is only that a document of that kind was sent, its size, the decision and
+  when. It is never shown to members or other mentors, and every time an admin opens it
+  the audit log records that. Until backups roll off, a copy can exist in a database
+  backup (§5, backups). It is deleted with the mentor's profile.
+- **Your look and your pinned and archived chats** — kept on your phone only (Pastel,
+  Light, Dark or System; which chats you pinned or archived). Never sent to us. A
+  cleared session removes the pins and archives; the look is a device setting.
+- **The languages a mentor talks in** (mentors only) — up to five, shown on the mentor's
+  card so members can find a mentor who talks their language.
 - **Sign-in sessions** — the app refreshes its sign-in every few minutes; we keep a
   record of each sign-in session (which device session it is, when it started and
   ends) as a one-way hash, never the token itself. Start fresh deletes them.
@@ -268,6 +281,7 @@ updated in the same change as any data-handling change described above.
 ## 10. Open items before this can be published
 
 - Founder + legal (India, DPDP Act 2023) sign-off.
+- Document upload for Mento Verified (§2) needs the same sign-off; confirm how long a database backup keeps a document that was deleted at decision time.
 - Reconfirm the deployed application and backup behavior before turning §5's
   preparation notes into public promises. Verify the backup inventory, retention
   and access rules, recoverable external keys, deletion-receipt coverage and

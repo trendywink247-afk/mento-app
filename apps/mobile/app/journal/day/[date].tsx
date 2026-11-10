@@ -240,9 +240,9 @@ export default function JournalDayScreen() {
               >
                 <View style={styles.right}>
                   <Text style={[styles.keyHint, { color: colors.ink }]}>{t('journalPage.nextDay')}</Text>
-                  <Text style={[styles.keyLabel, { color: colors.accentEdge }]}>{t('journals.today')}</Text>
+                  <Text style={[styles.keyLabel, { color: colors.accentInk }]}>{t('journals.today')}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={colors.accentEdge} />
+                <Ionicons name="chevron-forward" size={20} color={colors.accentInk} />
               </PressKey>
             )}
           </Entrance>

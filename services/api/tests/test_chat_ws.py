@@ -149,6 +149,7 @@ def test_crisis_message_is_flagged_and_carries_the_helpline_card(client, chat):
 
 def test_allowance_holds_the_fourth_message_but_never_a_crisis_one(client, chat, monkeypatch):
     monkeypatch.setattr(get_settings(), "allowance_enforced", True)
+    monkeypatch.setattr(get_settings(), "allowance_in_a_row", 3)
     mws, member, _ = _open(client, chat, "member")
     for i in range(3):
         member.send_json({"t": "send", "client_id": f"m{i}", "text": f"line {i}"})

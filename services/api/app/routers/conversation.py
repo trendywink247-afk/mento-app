@@ -214,6 +214,7 @@ def list_conversations(
             in_touch=c.listener_id in links,
             first_met_as=first_met(c),
             reply_within_a_day=snooze.is_snoozed(c),
+            is_paused=bool(c.is_paused),
             listener_companion_animal=mentor_face.face(listeners.get(c.listener_id))[0],
             listener_companion_colour=mentor_face.face(listeners.get(c.listener_id))[1],
             **previews.get(c.id, {}),

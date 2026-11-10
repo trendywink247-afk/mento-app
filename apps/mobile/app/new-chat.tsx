@@ -13,6 +13,8 @@ import { ApiError, api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { screenCache } from '@/lib/screenCache';
+import { AudiencePicker } from '@/components/AudiencePicker';
+import type { Audience } from '@/lib/api';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
 import { TOPICS } from '@/lib/topics';
 import { useI18n } from '@/lib/i18n';
@@ -58,6 +60,7 @@ export default function NewChatSheet() {
   const params = useLocalSearchParams<{ topic?: string; question?: string; busy?: string }>();
   const [topic, setTopic] = useState<string | null>(params.topic ?? null);
   const [matching, setMatching] = useState(false);
+  const [audience, setAudience] = useState<Audience>('any');
   // An exam road waits for the mentor's accept: the sheet must not promise "right away" there.
   // The server decides what happens; this only words the door truthfully.
   const [acceptFirst, setAcceptFirst] = useState(Boolean(screenCache.get('path')?.community?.accept_first));
@@ -84,7 +87,7 @@ export default function NewChatSheet() {
     setMatching(true);
     setNote(null);
     try {
-      const started = await matchOrAsk({ issue_category: topic });
+      const started = await matchOrAsk({ issue_category: topic, audience });
       // An exam road waits for the mentor's accept: the letter, not a chat (DECISIONS §N.2).
       if (started.kind === 'ask') {
         sheet.current?.close(() => openAsked(router, started.request));
@@ -155,6 +158,11 @@ export default function NewChatSheet() {
         </Entrance>
 
         <View style={styles.doors}>
+          {acceptFirst ? (
+            <Entrance index={3}>
+              <AudiencePicker value={audience} onChange={setAudience} />
+            </Entrance>
+          ) : null}
           <Entrance index={3}>
             <PressKey
               onPress={() => void nextAvailable()}
@@ -255,7 +263,7 @@ export default function NewChatSheet() {
                   ]}
                 >
                   <Text
-                    style={[styles.topicText, { color: on ? colors.accentEdge : colors.ink }]}
+                    style={[styles.topicText, { color: on ? colors.accentInk : colors.ink }]}
                     numberOfLines={2}
                     adjustsFontSizeToFit
                   >
