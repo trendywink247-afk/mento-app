@@ -342,3 +342,21 @@ _Build order: UPSC gate, invite-only gold with recovery, broadcast and Requests 
 **8. Prepared answers (device only).** A mentor keeps reusable replies, each with a /shortcut. Typing "/" and a few letters in a chat lists the matches; choosing one only fills the box, and the mentor reads and sends it. The list is hidden while a crisis card is showing, the crisis scan is unchanged, and message text is never scanned for the shortcut. They are stored on the phone only and removed with the session (sign-out, Clean Wipe). Server storage is a separate branch needing review (stored user content, privacy policy).
 
 **9. The mark is "Mento Verified"** in everything people see (was "Certified"); the code and database keep `certified_exam`.
+
+## Q. Founder rulings — 2026-11-10 (looks, who answers, languages, verification by document)
+
+Recorded from the founder's answers of 2026-11-10; the founder approved each recommendation unless noted.
+
+**1. In a row is now 10 (was 3).** `ALLOWANCE_IN_A_ROW` defaults to 10; the 10-a-day cap is unchanged (so the run limit cannot bind before the day limit; raise the day limit if a longer run was meant). This amends §L.2 and §O.1.
+
+**2. Appearance.** Four looks, set from Profile on both sides and kept on the phone only: **Pastel** (today's look, the default), **Light** (a soft off-white, plainer), **Dark**, and **System**. Light and Dark use a plain ground, with no sky and no companion motion. Every text and tint pair passes the contrast gate (`scripts/contrast_gate.py`). One bottom bar design (`TabPill`) serves the member and mentor sides.
+
+**3. Who answers a question.** A member asks **any mentor** (default), **Mento Verified only**, or **peers**. This narrows §O.4 and §P.4: an exam question no longer goes only to Mento Verified mentors unless the member asks for that. A Personal request is unchanged. A mentor sees whether a request was asked to everyone or to them.
+
+**4. Mentor languages.** A mentor names up to five of twelve languages when applying and can change them later. A member's language is a **preference** (Browse puts mentors who talk it first) and never hides anyone.
+
+**5. Mento Verified by document.** A mentor can send one document (ID card, posting letter, exam result or other; a photo or PDF up to 3 MB). The founder and admins read it in the admin Documents tab and approve or decline with a short reason. **The file is deleted the moment a decision is made, and after 30 days if unread**; only the fact of it is kept (kind, size, status, who decided, when). Every read of a file is in the admin audit log. Approval does what an admin's certify does. An unverified mentor keeps mentoring meanwhile. This supersedes the note under §O (a document upload was "not built").
+
+**6. Chat list.** Long-press or swipe a chat for **Pin, Archive, Mute, Delete**. Pin and Archive stay on the phone; Mute is the chat's Quiet Pause; Delete is the real wipe (Clean Wipe) and asks once more. Archived chats show as one row on top. **Screenshots and the recent-apps preview are blocked inside a chat only.**
+
+**7. Decided later:** telling a member when a mentor comes online (a suggestion, not built).

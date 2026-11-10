@@ -1,18 +1,17 @@
 # Status
 
-Updated 2026-11-08. v1 scope only (CLAUDE.md); Module B, the UPSC self-assessment suite and Community stay deferred (thinking in `docs/proposals/self-assessment-and-community.md`).
+Updated 2026-11-10. v1 scope only (CLAUDE.md); Module B, the UPSC self-assessment suite and Community stay deferred.
 
-**State:** Own chat is proven on QA for allowlisted members (live both ways, replay, direct FCM push, tap routing). The side-by-side "Mento QA" app (`chat.mento.app.qa`) is how the phone is tested; OTA on channel `preview`. Section N of DECISIONS (2026-11-08): the Path can be set before connecting; exam roads (UPSC, NEET, JEE and 13 more) wait for a mentor's accept, life in general keeps the instant match; with nobody online the screen offers Become a mentor / Invite a mentor.
-Merged to dev 2026-11-08: #118 (QA build beside store), #122 (CI streamline), #123 (DECISIONS N). Composer fixes, exam roads and the Path accept app (#119 to #121) were merged into stacked branches by mistake and land via `feat/land-path-accept`. Old branch names: `feat/qa-side-by-side` > `feat/chat-composer-fixes` > `feat/exam-paths-accept` > `feat/path-accept-app` (stacked); `feat/decisions-path-accept`; `feat/ci-streamline` (Maestro removed, `master` to `main`, split mobile jobs; the repaired release path is not exercised yet).
+**State:** DECISIONS §Q (2026-11-10) is built on stacked branches, not merged: Appearance (Pastel, Light, Dark, System) with one shared bottom bar; 10 in a row; who answers a question (any, Mento Verified, peers); mentor languages; Mento Verified by document (mentor upload, admin Documents tab, file wiped at decision); chat-list long-press and swipe (Pin, Archive, Mute, Delete, Archived row); the Requests page with how it was asked, what they shared, up next and totals; no screenshots inside a chat. Notifications are one per conversation and clear when the chat opens. PR #126 (mentor tab bar, gold invites, broadcast) is merged to dev.
+The phone test build is the side-by-side "Mento QA" app, OTA on channel `preview`. New native modules (expo-system-ui, expo-screen-capture, expo-document-picker) need a new APK: System appearance on Android, the screenshot block and picking a document work only on that build.
 
 **Next 3 tasks:**
-1. Merge `feat/land-path-accept`; deploy `feat/path-accept-app` to QA (`qa-release <sha>`, root) so the accept flow can be tested on the phone.
-2. Test mentor and mentee sides together on devices (Island profile = mentor): accept, decline, snooze, End, report, crisis view, push.
-3. Chat-list preview for own chats (needs last message in the list response); the undismissable Feedback sheet (needs a repro); rotation, dark mode, large font, TalkBack.
+1. Test on devices (member on the phone's main profile, mentor on the Island profile), then raise the PRs from the stacked branches; deploy the API with `qa-release <sha>`.
+2. Build and install the new APK; check System appearance, the screenshot block and the document picker.
+3. Mentor-side chat list actions (Pin, Archive, Mute, Delete); the message meter (not reproduced: the server counts correctly, ask the tester for steps).
 
 **Open questions:**
-- Run the Rollback Rehearsal on GitHub before relying on the `main` repair in the release workflows.
-- Production URL/host, FCM key mount, Play Console declarations, trademark check, privacy policy finalisation.
-- Safety gap to rule on: a request's intro text (Personal request and the new ask) is not crisis-scanned when it is created, only once it is sent as the first chat message after a mentor accepts. Mentors see it in the inbox before that. Needs your decision (scan at creation, flag, and show the helpline card).
-- Erasure for suspended/banned members is blocked (403): product/legal decision. 426 upgrade screen in the app is still to do.
-- Revoke the "Founder QA" admin when testing is done.
+- Production URL/host, FCM key mount, Play Console declarations, trademark check, privacy policy finalisation (now incl. document upload).
+- Run the Rollback Rehearsal before relying on the `main` repair; `native-gate` is still a required check on `main` but nothing produces it (admin must remove it).
+- Check `ALLOWANCE_IN_A_ROW` in the QA and production env (the secrets file may still say 3).
+- A request's intro text is not crisis-scanned at creation; erasure for suspended members is blocked (403); a 426 upgrade screen is still to do.
