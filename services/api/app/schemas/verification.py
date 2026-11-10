@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 
 
 class VerificationIn(BaseModel):
-    kind: Literal["id_card", "posting_letter", "result", "other"]
+    kind: Literal[
+        "id_card", "posting_letter", "mains_admit_card", "interview_letter", "result", "other"
+    ]
     # The file as base64: a JPG or PNG photo, or a PDF, up to 3 MB before encoding.
     content_base64: str = Field(min_length=8, max_length=4_400_000)
 

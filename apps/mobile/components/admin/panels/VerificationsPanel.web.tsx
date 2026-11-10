@@ -7,7 +7,7 @@ import { formatTimestamp } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
-const KIND: Record<string, string> = { id_card: 'ID card', posting_letter: 'Posting letter', result: 'Exam result', other: 'Something else' };
+const KIND: Record<string, string> = { id_card: 'ID card', posting_letter: 'Posting letter', mains_admit_card: 'Mains admission card', interview_letter: 'Interview letter', result: 'Exam result', other: 'Something else' };
 
 /**
  * Mento Verified by document (founder, 2026-11-10): the mentors who sent a document, oldest first. The
