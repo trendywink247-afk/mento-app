@@ -2,16 +2,16 @@
 
 Updated 2026-11-10. v1 scope only (CLAUDE.md); Module B, the UPSC self-assessment suite and Community stay deferred.
 
-**State:** DECISIONS §Q (2026-11-10) is built on stacked branches, not merged: Appearance (Pastel, Light, Dark, System) with one shared bottom bar; 10 in a row; who answers a question (any, Mento Verified, peers); mentor languages; Mento Verified by document (mentor upload, admin Documents tab, file wiped at decision); chat-list long-press and swipe (Pin, Archive, Mute, Delete, Archived row); the Requests page with how it was asked, what they shared, up next and totals; no screenshots inside a chat. Notifications are one per conversation and clear when the chat opens. PR #126 (mentor tab bar, gold invites, broadcast) is merged to dev.
-The phone test build is the side-by-side "Mento QA" app, OTA on channel `preview`. New native modules (expo-system-ui, expo-screen-capture, expo-document-picker) need a new APK: System appearance on Android, the screenshot block and picking a document work only on that build.
+**State:** DECISIONS §Q is merged to dev and running on QA (API at 03396ee; app fixes by OTA on channel `preview`): Appearance (Pastel, Light, Dark, System), one shared bottom bar, who answers a question, mentor languages, Mento Verified by document, chat-list actions, the Requests page, no screenshots inside a chat, one notification per conversation, "Show message text", the helpline card on a sent question, erasure for suspended members, the 426 "update the app" screen.
+Full QA pass 2026-11-10 (phone, both profiles, four looks, Hindi, font 1.3 and 1.0; API 1039 tests, mobile 151): fixed the My Chats fade/bar overlap and the Hindi Path title. Branch `chore/qa-apk-publish` (not a PR yet) holds those fixes and `ops/qa-apk.sh`, which builds the QA APK (versionCode 11) plus a fresh web export and stages them for `qa-install-web`.
+The QA web app and admin console were still the 2026-10-23 build (no Documents or invitations panels) until that release is installed.
 
 **Next 3 tasks:**
-1. Test on devices (member on the phone's main profile, mentor on the Island profile), then raise the PRs from the stacked branches; deploy the API with `qa-release <sha>`.
-2. Build and install the new APK; check System appearance, the screenshot block and the document picker.
-3. Mentor-side chat list actions (Pin, Archive, Mute, Delete); the message meter (not reproduced: the server counts correctly, ask the tester for steps).
+1. Root: `sudo qa-install-web /home/agent/qa-apk-out/web-d2b38e6-qa-apk11.tar.gz` (APK page, web app, admin Documents). Then test document approval in the admin UI.
+2. Raise the PR from `chore/qa-apk-publish` once approved; optionally install `infra/qa-agent/apk-publish.sh` so APK builds publish themselves.
+3. Hindi for path stages and starters (server sends English only); mentor-side chat-list actions.
 
 **Open questions:**
-- Production URL/host, FCM key mount, Play Console declarations, trademark check, privacy policy finalisation (now incl. document upload).
-- Run the Rollback Rehearsal before relying on the `main` repair; `native-gate` is still a required check on `main` but nothing produces it (admin must remove it).
-- Check `ALLOWANCE_IN_A_ROW` in the QA and production env (the secrets file may still say 3).
-- A request's intro text is not crisis-scanned at creation; erasure for suspended members is blocked (403); a 426 upgrade screen is still to do.
+- Production URL/host, FCM key mount, Play Console declarations, trademark check, privacy policy sign-off (document upload, "Show message text", blocked-install hash).
+- `native-gate` is a required check on `main` that nothing produces (admin must remove it); run the Rollback Rehearsal.
+- `ALLOWANCE_IN_A_ROW` in production secrets; 29 old QA safety flags are unreviewed.
