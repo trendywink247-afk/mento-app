@@ -246,7 +246,7 @@ export default function RequestSentScreen() {
               and the helplines are here at once (never a block). */}
           {support ? (
             <Entrance index={1}>
-              <CrisisCard crisis={{ support: support.message, signal: '', helplines: support.helplines }} audience="feedback" inset={false} />
+              <CrisisCard crisis={{ support: support.message, signal: '', helplines: support.helplines }} audience="request" inset={false} />
             </Entrance>
           ) : null}
 
