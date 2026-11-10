@@ -146,6 +146,9 @@ export type ListenerProfile = {
   languages?: string[];
 };
 
+/** Who may take a question: any approved mentor (the default), Mento Verified only, or peers. */
+export type Audience = 'any' | 'in_service' | 'peer';
+
 export type PersonalRequest = {
   id: string;
   status: 'pending' | 'matched' | 'declined' | 'expired';
@@ -160,6 +163,8 @@ export type PersonalRequest = {
   replying?: boolean;
   /** Offered to every verified mentor, the first to accept takes it (DECISIONS §P.4). */
   broadcast?: boolean;
+  /** Who it was offered to. */
+  audience?: Audience;
   /** No reply after 24 hours: the letter asks what to do next (DECISIONS §P.5). */
   nudged?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
@@ -688,7 +693,7 @@ export const api = {
 
   /** Exam niche: the best online mentor gets the question and the chat opens only when they
    * accept (DECISIONS §N.2). 503 when nobody is online. */
-  ask: (body: { issue_category?: string | null; intro_message?: string | null }) =>
+  ask: (body: { issue_category?: string | null; intro_message?: string | null; audience?: Audience }) =>
     request<PersonalRequest>('/match/ask', { method: 'POST', body: JSON.stringify(body) }, true),
 
   scan: (body: { text: string; conversation_id?: string | null }) =>

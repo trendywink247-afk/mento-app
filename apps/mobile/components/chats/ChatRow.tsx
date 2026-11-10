@@ -92,6 +92,7 @@ export function ChatRow({
   onLongPress,
   pinned = false,
   muted = false,
+  askedAs,
   faceOriginKey,
 }: {
   testID: string;
@@ -120,6 +121,8 @@ export function ChatRow({
   onLongPress?: () => void;
   pinned?: boolean;
   muted?: boolean;
+  /** An open question: asked to one mentor (a person mark) or to everyone (a radio mark). */
+  askedAs?: 'one' | 'everyone';
   /** The origin key this row's face flies from when the chat opens (board T05). */
   faceOriginKey?: string;
 }) {
@@ -157,6 +160,7 @@ export function ChatRow({
           </Text>
           {inTouch ? <InTouchBadge still={badgeStill} /> : null}
           {state !== 'active' ? <StateChip state={state} label={stateLabel} /> : null}
+          {askedAs ? <Ionicons name={askedAs === 'everyone' ? 'radio-outline' : 'person-outline'} size={14} color={colors.inkMuted} testID="row-asked-as" /> : null}
           {pinned ? <Ionicons name="pin" size={13} color={colors.inkMuted} accessibilityLabel="pinned" /> : null}
           {muted ? <Ionicons name="notifications-off-outline" size={13} color={colors.inkMuted} accessibilityLabel="muted" /> : null}
           <Text style={[type.micro, styles.time, { color: colors.inkMuted }]} numberOfLines={1}>

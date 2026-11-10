@@ -127,7 +127,23 @@ export default function ChatsTab() {
         .then(([requests, mentors]) => {
           const open: WaitingQuestion[] = [];
           for (const r of requests) {
-            if (r.status !== 'pending' || !r.target_listener_id) continue;
+            if (r.status !== 'pending') continue;
+            if (!r.target_listener_id) {
+              // Asked to everyone: no single mentor yet, so the row says so (the radio mark).
+              if (!r.broadcast) continue;
+              open.push({
+                id: r.id,
+                listenerId: '',
+                name: t('audience.anyMentor'),
+                avatar: '',
+                animal: null,
+                colour: null,
+                intro: r.intro_message,
+                createdAt: r.created_at,
+                broadcast: true,
+              });
+              continue;
+            }
             const m = mentors.find((x) => x.id === r.target_listener_id);
             if (!m) continue;
             open.push({
@@ -265,12 +281,13 @@ export default function ChatsTab() {
       request: {
         id: w.id,
         status: 'pending',
-        target_listener_id: w.listenerId,
+        target_listener_id: w.broadcast ? null : w.listenerId,
+        broadcast: Boolean(w.broadcast),
         intro_message: w.intro,
         conversation_id: null,
         created_at: w.createdAt,
       },
-      mentor: { id: w.listenerId, name: w.name, avatar: w.avatar, animal: w.animal, colour: w.colour },
+      mentor: w.broadcast ? null : { id: w.listenerId, name: w.name, avatar: w.avatar, animal: w.animal, colour: w.colour },
     });
     router.push({ pathname: '/request-sent/[id]', params: { id: w.id } });
   };
@@ -423,7 +440,8 @@ export default function ChatsTab() {
           name={w.name}
           state="waiting"
           stateLabel={stateLabel('waiting')}
-          secondLine={t('chatsList.waitingLine', { name: w.name })}
+          askedAs={w.broadcast ? 'everyone' : 'one'}
+          secondLine={w.broadcast ? t('audience.toEveryone') : t('chatsList.waitingLine', { name: w.name })}
           lastLine=""
           quietLine={w.intro ? t('chatsList.youSaid', { text: w.intro }) : null}
           time={relativeTime(w.createdAt, t)}

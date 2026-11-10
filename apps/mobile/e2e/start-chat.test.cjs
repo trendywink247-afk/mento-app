@@ -30,7 +30,18 @@ test('accept_required turns into an ask with the member\'s words', async () => {
     ask: async (b) => ((asked = b), { id: 'r1', status: 'pending' }),
   });
   assert.equal(r.kind, 'ask');
-  assert.deepEqual(JSON.parse(JSON.stringify(asked)), { issue_category: 'upsc', intro_message: 'I keep failing prelims' });
+  assert.deepEqual(JSON.parse(JSON.stringify(asked)), { issue_category: 'upsc', intro_message: 'I keep failing prelims', audience: 'any' });
+});
+
+test('the audience the member chose goes with the ask, and never to the instant match', async () => {
+  let asked, matched;
+  const r = await matchOrAsk({ issue_category: 'upsc', audience: 'peer' }, null, {
+    match: async (b) => { matched = b; throw new ApiError(409, 'x', 'accept_required'); },
+    ask: async (b) => ((asked = b), { id: 'r1', status: 'pending' }),
+  });
+  assert.equal(r.kind, 'ask');
+  assert.equal(asked.audience, 'peer');
+  assert.equal('audience' in matched, false);
 });
 
 test('other refusals pass through untouched (busy, open question, network)', async () => {

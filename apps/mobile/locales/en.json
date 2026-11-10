@@ -1656,5 +1656,17 @@
     "archivedDone": "Archived",
     "unarchivedDone": "Moved back to your chats",
     "muteFailed": "Could not change that. Please try again."
+  },
+  "audience": {
+    "title": "Who should answer?",
+    "any": "Any mentor",
+    "anyHint": "The first free mentor takes it",
+    "verified": "Mento Verified",
+    "verifiedHint": "Mentors who showed a document",
+    "peers": "Peers",
+    "peersHint": "Other mentors who have walked this road",
+    "anyMentor": "Any mentor",
+    "toEveryone": "Asked to everyone",
+    "toOne": "Asked to one mentor"
   }
 }
