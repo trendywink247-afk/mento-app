@@ -913,7 +913,7 @@
     "newMessageA11y": "New message",
     "waitingA11y": "Your open question with %{name}, waiting for a reply",
     "peersLine": "Mentors are peers, not therapists.",
-    "newChatFree": "A new question goes to one mentor. Ask whenever you are ready.",
+    "newChatFree": "Ask whenever you are ready. You choose who answers.",
     "newChatWaiting": "You have a question open with %{name}. You can ask another once they reply or you close it.",
     "noMatches": "Nothing matches that yet.",
     "lockedLine": "Locked. Enter your PIN to read."

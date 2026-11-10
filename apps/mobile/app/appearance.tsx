@@ -25,4 +25,4 @@ export default function Appearance() {
   );
 }
 
-const styles = StyleSheet.create({ page: { paddingHorizontal: space.lg, gap: space.md, paddingBottom: space.xl } });
+const styles = StyleSheet.create({ page: { gap: space.md, paddingBottom: space.xl } });
