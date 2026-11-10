@@ -339,6 +339,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
     </KeyboardAvoidingView>}
     <MessageActions visible={!!held} text={held?.text ?? ''} onClose={() => setHeld(null)}
       onSave={member && held && !held.mine && !saved.has(held.id) ? () => void save(held) : undefined}
+      onPrepare={!member && held ? () => router.push({ pathname: '/mentor/answers', params: { body: held.text } }) : undefined}
       onReport={member && held && !held.mine ? () => { setInitialOption('report'); setOptions(true); } : undefined} />
     {member ? <ConversationOptions conversationId={conversationId} visible={options} depth={depth}
       listenerName={name} initial={initialOption} onClose={() => { setOptions(false); setInitialOption(undefined); }}
