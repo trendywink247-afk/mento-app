@@ -33,7 +33,7 @@ export function RequestTotals({
           <Text style={[styles.num, { color: colors.ink }]} numberOfLines={1}>
             {x.n}
           </Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{x.l}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]} numberOfLines={1}>{x.l}</Text>
         </EdgeSurface>
       ))}
     </View>
@@ -75,8 +75,8 @@ export function UpNext({
 
 const styles = StyleSheet.create({
   tiles: { flexDirection: 'row', gap: space.sm },
-  tileBox: { flex: 1 },
-  tile: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 0 },
+  tileBox: { flex: 1, alignSelf: 'stretch' },
+  tile: { borderWidth: 1, paddingHorizontal: 12, paddingVertical: 10, gap: 0, flex: 1 },
   num: { fontSize: 22, lineHeight: 26, fontFamily: type.displaySerif.fontFamily },
   next: { gap: space.sm, marginTop: space.sm },
   eyebrow: { textTransform: 'uppercase', letterSpacing: 0.6, paddingHorizontal: 4 },
