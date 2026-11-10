@@ -150,5 +150,7 @@ export async function clearSession(): Promise<void> {
     // Prepared answers live on this device only; a cleared session leaves none behind.
     // reason: dynamic import keeps this module import-safe in plain Node (e2e), like streamClient above.
     import('./preparedAnswers').then((m) => m.clearPreparedAnswers()).catch(() => {}),
+    // Pin and Archive are also this device's own; a cleared session leaves none behind.
+    import('./chatPrefs').then((m) => m.clearChatPrefs()).catch(() => {}),
   ]);
 }
