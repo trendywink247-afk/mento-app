@@ -63,6 +63,8 @@ def test_the_schedule():
         "maintenance.chat_partitions": "41 2 * * *",
         # Unanswered requests (DECISIONS section P.5): nudge at 24 hours, close at 48.
         "maintenance.request_ageing": "*/15 * * * *",
+        # Documents nobody read in 30 days are wiped (founder, 2026-11-10).
+        "maintenance.verification_purge": "29 3 * * *",
     }
     rotation = datetime(2026, 3, 1, 22, 30, tzinfo=UTC).astimezone(mentor_names.IST)
     assert (rotation.hour, rotation.minute) == (mentor_names.ROTATION_HOUR_IST, 0)
