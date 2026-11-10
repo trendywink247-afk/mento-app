@@ -423,6 +423,12 @@ function ConsoleBody({
     void c.toggleStatus();
   };
 
+  /** Accept opens the chat it made (the key says "Accept and open the chat"). */
+  const openAccepted = (conversationId: string | null) => {
+    if (!conversationId) return;
+    router.push({ pathname: '/mentor/chat/[id]', params: { id: conversationId, channel: '', member: '', masked: '0' } });
+  };
+
   const openConversation = (conversation: {
     id: string;
     stream_channel_id: string | null;
@@ -552,7 +558,7 @@ function ConsoleBody({
                 request={c.requests[0]}
                 total={c.requests.length}
                 busy={c.busy === c.requests[0].id}
-                onAccept={() => void c.act(c.requests[0].id, 'accept')}
+                onAccept={() => void c.act(c.requests[0].id, 'accept').then(openAccepted)}
                 onSeeAll={() => onTab('requests')}
               />
             </Entrance>
@@ -600,7 +606,7 @@ function ConsoleBody({
               key={request.id}
               request={request}
               busy={c.busy === request.id}
-              onAccept={() => void c.act(request.id, 'accept')}
+              onAccept={() => void c.act(request.id, 'accept').then(openAccepted)}
               onDecline={() => void c.act(request.id, 'decline')}
               onNext={() => setReqIndex(reqIdx + 1 >= c.requests.length ? 0 : reqIdx + 1)}
               canNext={c.requests.length > 1}

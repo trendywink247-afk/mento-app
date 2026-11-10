@@ -1248,7 +1248,7 @@
     "readingBack": "Back to Mentor Home",
     "greeting": "Good to see you,",
     "rotationHint": "Today you are %{name}. Names change every day at 4 am.",
-    "namesIn": "new name in %{hours} h",
+    "namesIn": "new name in %{hours} h",
     "lineLabel": "Your line",
     "lineA11y": "Edit your line",
     "pickedAtMatch": "Picked %{topic} at match",
@@ -1449,7 +1449,11 @@
     "postmarkA11y": "Sent through Mento",
     "notFound": "We could not find this question. It may have been closed.",
     "loadError": "We could not load your question just now. It is still on its way.",
-    "stripA11yReplying": "All three are done. Sent, seen, and your mentor is replying."
+    "stripA11yReplying": "All three are done. Sent, seen, and your mentor is replying.",
+    "allMentorsAny": "the mentors online",
+    "allMentorsPeer": "peer mentors",
+    "toAllAny": "Your question went to the mentors who are online. The first to reply takes it, and we will notify you.",
+    "toAllPeer": "Your question went to the peer mentors who are online. The first to reply takes it, and we will notify you."
   },
   "chatsEmpty": {
     "companionA11y": "Your companion, here with you"

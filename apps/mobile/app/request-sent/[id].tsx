@@ -54,7 +54,7 @@ import { useHeroBreath } from '@/components/motion/useHeroBreath';
 import { askIntro, openAsked } from '@/lib/startChat';
 import { api, type PersonalRequest } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { requestLetter, type LetterMentor } from '@/lib/requestLetter';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
@@ -166,7 +166,10 @@ export default function RequestSentScreen() {
 
   // A broadcast has no one mentor until somebody accepts: the screen says "verified mentors".
   const toAll = Boolean(request?.broadcast) && !mentor;
-  const name = mentor?.name ?? (toAll ? t('requestSent.allMentors') : '');
+  // Who a question to everyone went to follows what the member chose: any mentor, Mento Verified, or peers.
+  const audience = request?.audience ?? 'in_service';
+  const allKey = audience === 'peer' ? 'Peer' : audience === 'any' ? 'Any' : '';
+  const name = mentor?.name ?? (toAll ? t(`requestSent.allMentors${allKey}` as TKey) : '');
   const question = request?.intro_message ?? '';
 
   const openChat = () => {
@@ -223,7 +226,7 @@ export default function RequestSentScreen() {
           ? t('askFlow.closedByYou')
           : t('requestSent.closed', { name })
         : toAll
-          ? t('requestSent.toAll')
+          ? t(`requestSent.toAll${allKey}` as TKey)
           : t('requestSent.oneAtATime', { name });
 
   return (
