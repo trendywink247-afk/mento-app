@@ -2,8 +2,8 @@
 
 Best-effort, never blocking: a push failure can never delay or degrade a
 conversation, the crisis scan, or a request. Content is persona-only — no
-message text ever leaves the chat path. Sends go to Expo's push API (FCM/APNs
-relay) over httpx.
+message text ever leaves the chat path. Expo device tokens go to Expo's push API
+(FCM/APNs relay); any other token goes straight to FCM HTTP v1 (services/fcm.py).
 
 Where it runs (WS4): every entry point below runs in the job WORKER (app/jobs/tasks.py),
 enqueued with the row that caused it — never inside a request. A notify_* job decides
@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.config import get_settings
+from app.models.chat_message import ChatMessage
 from app.models.conversation import Conversation
 from app.models.enums import (
     ConversationStatus,
@@ -35,7 +36,13 @@ from app.models.listener import ListenerProfile
 from app.models.push_token import PushToken
 from app.models.request import ConversationRequest
 from app.models.user import User
-from app.services import member_status, snooze, stream
+from app.services import fcm, member_status, message_crypto, snooze, stream
+from app.services.matching import (
+    blocked_listener_ids,
+    broadcast_candidate_ids,
+    can_take_broadcast,
+    own_listener_ids,
+)
 
 logger = logging.getLogger("mento.push")
 
@@ -116,6 +123,7 @@ TITLE = "Mento"
 TEMPLATES = {
     "request": "Someone would like to talk with you",
     "accepted": "%(persona)s is ready to talk",
+    "request_nudge": "Your question has not had a reply yet. You can choose what happens next.",
     "message_from_member": "%(persona)s sent a message",
     "message_from_listener": "%(persona)s replied",
 }
@@ -188,13 +196,25 @@ class PushTransportError(Exception):
 
 
 def _post_or_raise(tokens: list[str], body: str, data: dict) -> list[dict]:
-    messages = [
-        {"to": t, "title": TITLE, "body": body, "sound": None, "data": data} for t in tokens
-    ]
+    """Expo tokens go to Expo's relay, everything else straight to FCM. Tickets come back
+    in the order of `tokens`. A transient failure raises so the whole send is retried."""
+    tickets: list[dict | None] = [None] * len(tokens)
+    expo_at = [i for i, t in enumerate(tokens) if fcm.is_expo_token(t)]
+    fcm_at = [i for i, t in enumerate(tokens) if not fcm.is_expo_token(t)]
     try:
-        return _post_expo(messages)
-    except (httpx.HTTPError, ValueError) as exc:
+        if fcm_at:
+            for i, ticket in zip(fcm_at, fcm.send([tokens[i] for i in fcm_at], TITLE, body, data)):
+                tickets[i] = ticket
+        if expo_at:
+            messages = [
+                {"to": tokens[i], "title": TITLE, "body": body, "sound": None, "data": data}
+                for i in expo_at
+            ]
+            for i, ticket in zip(expo_at, _post_expo(messages)):
+                tickets[i] = ticket
+    except (httpx.HTTPError, ValueError, fcm.FcmConfigError) as exc:
         raise PushTransportError(type(exc).__name__) from exc
+    return [t or {"status": "error"} for t in tickets]
 
 
 def _send(
@@ -302,10 +322,24 @@ def _delivery_allowed(db: Session, kind: PushOwnerKind, owner_id: str, data: dic
     event = data.get("kind")
     if event == "request":
         req = db.get(ConversationRequest, data.get("request_id"))
+        if kind != PushOwnerKind.listener or req is None or req.status != RequestStatus.pending:
+            _suppressed("request_not_pending")
+            return False
+        if req.target_listener_id == owner_id:
+            return True
+        # A broadcast: pushed to each certified mentor who may still take it; once one has,
+        # or this mentor passed, the page is dropped.
+        taker = db.get(ListenerProfile, owner_id) if req.broadcast else None
+        if taker is not None and can_take_broadcast(db, req, taker):
+            return True
+        _suppressed("request_not_pending")
+        return False
+    if event == "request_nudge":
+        req = db.get(ConversationRequest, data.get("request_id"))
         if (
-            kind != PushOwnerKind.listener
+            kind != PushOwnerKind.member
             or req is None
-            or req.target_listener_id != owner_id
+            or req.requester_id != owner_id
             or req.status != RequestStatus.pending
         ):
             _suppressed("request_not_pending")
@@ -348,6 +382,36 @@ def _delivery_allowed(db: Session, kind: PushOwnerKind, owner_id: str, data: dic
     return True
 
 
+PREVIEW_CHARS = 120
+
+
+def _preview(db: Session, convo: Conversation, sender_id: str) -> str | None:
+    """The words of the sender's latest message for a notification, for a recipient who turned that on.
+    Own chat only (it is the only store we can read), never a locked chat, never a message the crisis scan
+    flagged, never one that was redacted; None whenever any of that applies or the text cannot be read.
+    """
+    if convo.chat_backend != "own" or convo.is_locked:
+        return None
+    msg = db.scalars(
+        select(ChatMessage)
+        .where(ChatMessage.conversation_id == convo.id, ChatMessage.sender_id == sender_id)
+        .order_by(ChatMessage.seq.desc())
+        .limit(1)
+    ).first()
+    if msg is None or msg.redacted or msg.crisis_signal:
+        return None
+    try:
+        text = message_crypto.decrypt(
+            msg.body, msg.key_id, message_id=msg.id, conversation_id=convo.id
+        )
+    except Exception:
+        return None
+    text = " ".join(text.split())
+    if not text:
+        return None
+    return text if len(text) <= PREVIEW_CHARS else text[: PREVIEW_CHARS - 1].rstrip() + "…"
+
+
 def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: str) -> None:
     """message.new → push the OTHER party unless suppressed (spec §4).
 
@@ -368,12 +432,18 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
         body = TEMPLATES["message_from_member"] % {
             "persona": persona.persona_name if persona else "Someone"
         }
+        who = persona.persona_name if persona else "Someone"
+        mentor = db.get(ListenerProfile, convo.listener_id)
+        wants_text = bool(mentor and mentor.push_preview)
     elif sender_stream_user_id == convo.listener_id:
         recipient_kind, recipient_id = PushOwnerKind.member, convo.user_id
         li = db.get(ListenerProfile, convo.listener_id)
         body = TEMPLATES["message_from_listener"] % {
             "persona": li.persona_name if li else "Your mentor"
         }
+        who = li.persona_name if li else "Your mentor"
+        member = db.get(User, convo.user_id)
+        wants_text = bool(member and member.push_preview)
     else:
         _suppressed("not_party")
         return
@@ -381,6 +451,10 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
     if not tokens:
         _suppressed("no_token")
         return
+    if wants_text:
+        said = _preview(db, convo, sender_stream_user_id)
+        if said:
+            body = f"{who}: {said}"
     data = {
         "kind": "message",
         "conversation_id": convo.id,
@@ -423,6 +497,55 @@ def notify_request_created(db: Session, *, request_id: str) -> None:
         tokens,
         TEMPLATES["request"],
         {"kind": "request", "request_id": req.id},
+    )
+
+
+def notify_request_broadcast(db: Session, *, request_id: str) -> None:
+    """Page the certified mentors who can take a broadcast question (at most 20, best match
+    first). Callers must commit their own state before calling."""
+    req = db.get(ConversationRequest, request_id)
+    if req is None or not req.broadcast or req.status != RequestStatus.pending:
+        return
+    member = db.get(User, req.requester_id)
+    blocked = blocked_listener_ids(db, req.requester_id) | own_listener_ids(db, req.requester_id)
+    for listener_id in broadcast_candidate_ids(
+        db,
+        req.issue_category,
+        blocked,
+        community=member.community_slug if member else None,
+        audience=req.audience,
+    ):
+        tokens = tokens_for(db, PushOwnerKind.listener, listener_id)
+        if not tokens:
+            _suppressed("no_token")
+            continue
+        _send(
+            db,
+            PushOwnerKind.listener,
+            listener_id,
+            tokens,
+            TEMPLATES["request"],
+            {"kind": "request", "request_id": req.id},
+        )
+
+
+def notify_request_nudge(db: Session, *, request_id: str) -> None:
+    """The 24-hour "no reply yet" page to the member (DECISIONS section P.5): no mentor name, no
+    text of the question. Callers must commit their own state before calling."""
+    req = db.get(ConversationRequest, request_id)
+    if req is None or req.status != RequestStatus.pending:
+        return
+    tokens = tokens_for(db, PushOwnerKind.member, req.requester_id)
+    if not tokens:
+        _suppressed("no_token")
+        return
+    _send(
+        db,
+        PushOwnerKind.member,
+        req.requester_id,
+        tokens,
+        TEMPLATES["request_nudge"],
+        {"kind": "request_nudge", "request_id": req.id},
     )
 
 

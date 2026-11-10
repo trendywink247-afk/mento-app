@@ -42,6 +42,8 @@ import { font, radius, space, type, wash, washInk, type Wash } from '@/theme/tok
 
 const PERCHES: PlacementSlot[] = [{ id: 'firstChoice', type: 'top', level: 'high', home: true }];
 const UNSURE = '__unsure';
+/** More groups than this wrap onto rows so every label reads whole (six exam groups, 2026-11-08). */
+const MAX_ONE_ROW = 3;
 
 type Leaf = PathOption & { community: string; stage: string };
 type RouteRow =
@@ -203,7 +205,10 @@ export default function Pathfinder() {
     const on = r.key === routeKey;
     const look = r.kind === 'unsure' ? UNSURE_DISC : disc(i);
     const childLabels =
-      r.kind === 'branch' ? (tree?.nodes[r.next]?.options ?? []).map((o) => o.label).join(' · ') : '';
+      r.kind === 'branch' ? (tree?.nodes[r.next]?.options ?? [])
+            .filter((o) => o.enabled !== false) // roads that are not open yet are not advertised here
+            .map((o) => o.label)
+            .join(' · ') : '';
     const title =
       r.kind === 'group'
         ? r.community === 'life'
@@ -318,16 +323,22 @@ export default function Pathfinder() {
 
                   {segments.length > 0 ? (
                     <View
-                      style={[styles.segments, { backgroundColor: colors.bgLavender, borderColor: colors.border }]}
+                      style={[
+                        styles.segments,
+                        segments.length > MAX_ONE_ROW && styles.segmentsWrap,
+                        { backgroundColor: colors.bgLavender, borderColor: colors.border },
+                      ]}
                       accessibilityRole="radiogroup"
                     >
                       {segments.map((s, i) => {
                         const on = s.next === segment;
+                        const closed = s.enabled === false;
                         return (
                           <PressKey
                             key={s.label}
+                            disabled={closed}
                             onPress={() => {
-                              if (saving) return;
+                              if (saving || closed) return;
                               setSegment(s.next ?? null);
                               setMoment(null);
                             }}
@@ -336,9 +347,10 @@ export default function Pathfinder() {
                             radius={radius.sm}
                             intent="select"
                             accessibilityRole="radio"
-                            accessibilityState={{ selected: on }}
+                            accessibilityState={{ selected: on, disabled: closed }}
+                            accessibilityHint={closed ? t('pathfinder.comingSoon') : undefined}
                             testID={`pathfinder-seg-${i}`}
-                            containerStyle={styles.segBox}
+                            containerStyle={segments.length > MAX_ONE_ROW ? styles.segBoxWrap : styles.segBox}
                             style={[
                               styles.seg,
                               on
@@ -347,11 +359,20 @@ export default function Pathfinder() {
                             ]}
                           >
                             <Text
-                              style={[styles.segText, { color: on ? colors.accentEdge : colors.inkMuted }]}
-                              numberOfLines={2}
+                              style={[
+                                styles.segText,
+                                { color: on ? colors.accentInk : colors.inkMuted },
+                                closed && styles.segClosed,
+                              ]}
+                              numberOfLines={closed ? 2 : 3}
                             >
                               {s.label}
                             </Text>
+                            {closed ? (
+                              <Text style={[styles.segText, styles.segClosed, { color: colors.inkMuted }]} numberOfLines={1}>
+                                {t('pathfinder.comingSoon')}
+                              </Text>
+                            ) : null}
                           </PressKey>
                         );
                       })}
@@ -382,7 +403,7 @@ export default function Pathfinder() {
                                   : { backgroundColor: colors.surface, borderColor: colors.border },
                               ]}
                             >
-                              <Text style={[styles.momentText, { color: on ? colors.accentEdge : colors.ink }]}>
+                              <Text style={[styles.momentText, { color: on ? colors.accentInk : colors.ink }]}>
                                 {m.label}
                               </Text>
                             </PressKey>
@@ -505,8 +526,11 @@ const styles = StyleSheet.create({
   step: { gap: 6 },
   stepLabel: { lineHeight: 18, paddingHorizontal: space.xs },
   segments: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.md, borderWidth: 1 },
+  segmentsWrap: { flexWrap: 'wrap' },
+  segClosed: { opacity: 0.55 },
   segBox: { flex: 1, minWidth: 0 },
-  seg: { height: 44, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  segBoxWrap: { flexGrow: 1, flexBasis: '30%', minWidth: 0 },
+  seg: { minHeight: 44, paddingHorizontal: 6, paddingVertical: 4, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   segText: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 14, textAlign: 'center' },
   moments: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4, rowGap: 4 },
   momentCell: { width: '50%', paddingHorizontal: 4 },

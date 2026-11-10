@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DeepHeader } from '@/components/DeepHeader';
@@ -17,8 +17,12 @@ import { ApiError, api, type Listener, type ListenerProfile } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
+import { browseLanguage, languageLine } from '@/lib/languages';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
+import { matchOrAsk, openAsked } from '@/lib/startChat';
+import { CertifiedBadge } from '@/components/CertifiedBadge';
+import { matchesRoad, roadChips } from '@/lib/mentorFilters';
 import { screenCache } from '@/lib/screenCache';
 import { topicLabelKey } from '@/lib/topics';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -35,7 +39,8 @@ import { font, radius, space, type, washInk } from '@/theme/tokens';
  * profile is read once (`GET /listeners/{id}`) and kept in memory for this session. A card
  * shows only what has arrived — never a guessed reply time.
  */
-type Filter = 'all' | 'online' | 'upsc' | 'life' | 'touch';
+// 'road:<slug>' chips are built from the roads mentors serve (lib/mentorFilters.ts).
+type Filter = string;
 type Detail = Pick<ListenerProfile, 'public_line' | 'availability_note' | 'community_slug'>;
 
 const PERCHES: PlacementSlot[] = [{ id: 'nextTop', type: 'top', level: 'high', home: true }];
@@ -46,28 +51,54 @@ export default function BrowseMentors() {
   useSessionGuard();
   const router = useRouter();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // `question`: a draft carried from the first-question builder when nobody was free — it
   // travels on to the mentor page's question step, never sent by itself.
-  const { topic, question } = useLocalSearchParams<{ topic?: string; question?: string }>();
+  const { topic, question, filter: startFilter } = useLocalSearchParams<{
+    topic?: string;
+    question?: string;
+    filter?: string;
+  }>();
   // Last-loaded list first, quiet refresh on focus; spinner only with nothing to show yet
   // (lib/screenCache.ts). Presence moves, so the refresh always runs.
   const cachedMentors = screenCache.get('mentors');
   const [loading, setLoading] = useState(!cachedMentors);
   const [listeners, setListeners] = useState<Listener[]>(cachedMentors ?? []);
   const [, setDetailTick] = useState(0);
-  const [filter, setFilter] = useState<Filter>('all');
+  // A mentor's suggestion (DECISIONS §O) opens Browse already on the certified mentors.
+  const [filter, setFilter] = useState<Filter>(startFilter === 'certified' ? 'certified' : 'all');
+  const [roadNames, setRoadNames] = useState<Record<string, string>>({});
+  const [myRoad, setMyRoad] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   /** One open question at a time (server 409 `question_open`): a still note, never a dead end. */
   const [openQ, setOpenQ] = useState<OpenQuestion | null>(null);
   const [matching, setMatching] = useState(false);
   const perch = useCompanionPlacement('mentors', PERCHES, { still: note !== null });
 
+  // Road names and the member's own road, once: the chips below follow them. Best effort — the
+  // list works without (fewer chips, never a blocked screen).
+  useEffect(() => {
+    let live = true;
+    void Promise.all([api.pathCommunities(), api.myPath().catch(() => null)])
+      .then(([all, mine]) => {
+        if (!live) return;
+        setRoadNames(Object.fromEntries(all.map((c) => [c.slug, c.name])));
+        setMyRoad(mine?.community?.slug ?? null);
+      })
+      .catch(() => {
+        /* reason: filters are a convenience; the list itself already loaded */
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       let active = true;
       void api
-        .listListeners()
+        // The member's own app language is a preference: mentors who talk it come first, nobody is hidden.
+        .listListeners(browseLanguage(locale))
         .then((l) => {
           screenCache.set('mentors', l);
           if (!active) return;
@@ -97,7 +128,7 @@ export default function BrowseMentors() {
       return () => {
         active = false;
       };
-    }, []),
+    }, [locale]),
   );
 
   const nextAvailable = async () => {
@@ -106,7 +137,12 @@ export default function BrowseMentors() {
     setNote(null);
     setOpenQ(null);
     try {
-      const match = await api.match({ kind: 'general', issue_category: topic ?? null });
+      const started = await matchOrAsk({ issue_category: topic ?? null });
+      if (started.kind === 'ask') {
+        openAsked(router, started.request);
+        return;
+      }
+      const match = started.match;
       router.push({
         pathname: '/chat/[id]',
         params: {
@@ -131,9 +167,8 @@ export default function BrowseMentors() {
         const community = details.get(l.id)?.community_slug ?? null;
         if (filter === 'online') return l.available;
         if (filter === 'touch') return Boolean(l.in_touch);
-        if (filter === 'upsc') return community === 'upsc';
-        if (filter === 'life') return community === 'life' || l.categories.includes('life');
-        return true;
+        if (filter === 'certified') return Boolean(l.certified);
+        return matchesRoad(filter, community, l.categories);
       }),
     // reason: `details` is a module map; the tick state re-renders when it fills
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,9 +178,15 @@ export default function BrowseMentors() {
   const filters: { key: Filter; label: string }[] = [
     { key: 'all', label: t('chats.filterAll') },
     { key: 'online', label: t('browse.filterOnline') },
-    { key: 'upsc', label: t('browse.filterUpsc') },
+    ...roadChips(
+      roadNames,
+      listeners.map((l) => details.get(l.id)?.community_slug),
+      myRoad,
+    ).map((c) => ({ key: c.key, label: c.label })),
     { key: 'life', label: t('browse.filterLife') },
     { key: 'touch', label: t('inTouch.badge') },
+    // Only when at least one mentor is certified: an empty filter would be a dead end.
+    ...(listeners.some((l) => l.certified) ? [{ key: 'certified', label: t('certified.badge') }] : []),
   ];
 
   const communityTag = (slug: string | null | undefined): string | null =>
@@ -194,6 +235,7 @@ export default function BrowseMentors() {
               {l.persona_name}
             </Text>
             {l.in_touch ? <InTouchBadge flat testID={`mentor-in-touch-${l.id}`} /> : null}
+            {l.certified ? <CertifiedBadge testID={`mentor-certified-${l.id}`} /> : null}
             <View style={styles.grow} />
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
           </View>
@@ -205,6 +247,16 @@ export default function BrowseMentors() {
           <Text style={[styles.availability, { color: l.available ? washInk.green : colors.inkMuted }]} numberOfLines={1}>
             {availability}
           </Text>
+          {l.reply_within ? (
+            <Text style={[type.micro, { color: colors.inkMuted }]} numberOfLines={1} testID={`mentor-reply-${l.id}`}>
+              {l.reply_within === 'day' ? t('browse.replyDay') : t('browse.replyTwoDays')}
+            </Text>
+          ) : null}
+          {l.languages?.length ? (
+            <Text style={[type.micro, { color: colors.inkMuted }]} numberOfLines={1} testID={`mentor-langs-${l.id}`}>
+              {t('mentor.talksIn', { list: languageLine(l.languages) })}
+            </Text>
+          ) : null}
           {d?.public_line ? (
             <Text style={[type.note, styles.line, { color: colors.ink }]} numberOfLines={3}>
               {t('browse.quoted', { line: d.public_line })}
@@ -260,7 +312,10 @@ export default function BrowseMentors() {
                 </PressKey>
               </View>
             </Entrance>
-            <Entrance index={2} style={styles.filters}>
+            <Entrance index={2}>
+              {/* A row that scrolls: with every road, Life, In touch and Mento Verified there are too many chips to
+                  share one line, and squeezing them left only "U…" and "N…". */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
               {filters.map((f) => {
                 const on = filter === f.key;
                 return (
@@ -271,6 +326,7 @@ export default function BrowseMentors() {
                     travel={4}
                     radius={radius.pill}
                     intent="select"
+                    accessibilityRole="button"
                     accessibilityState={{ selected: on }}
                     testID={`browse-filter-${f.key}`}
                     containerStyle={styles.filterCell}
@@ -287,6 +343,7 @@ export default function BrowseMentors() {
                   </PressKey>
                 );
               })}
+              </ScrollView>
             </Entrance>
           </DeepArrival>
           <View style={[styles.pinnedEdge, { backgroundColor: colors.edgeSurface }]} pointerEvents="none" />
@@ -322,7 +379,11 @@ export default function BrowseMentors() {
             }
             ListEmptyComponent={
               <Text style={[type.note, styles.empty, { color: colors.inkMuted }]} testID="browse-empty">
-                {filter === 'touch' ? t('inTouch.emptyBody') : t('browse.empty')}
+                {filter === 'touch'
+                  ? t('inTouch.emptyBody')
+                  : filter === 'certified'
+                    ? t('browse.emptyCertified')
+                    : t('browse.empty')}
               </Text>
             }
             ListFooterComponent={
@@ -349,8 +410,8 @@ const styles = StyleSheet.create({
   nextIcon: { width: 40, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextTitle: { lineHeight: 22 },
   filters: { flexDirection: 'row', gap: 6 },
-  filterCell: { flexGrow: 1, flexShrink: 1 },
-  filter: { height: 44, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  filterCell: { flexGrow: 0, flexShrink: 0 },
+  filter: { height: 44, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   filterText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { paddingTop: 14, paddingHorizontal: space.md, paddingBottom: 104, gap: 10 },
@@ -366,7 +427,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cardBody: { flex: 1, minWidth: 0, gap: 1 },
-  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // Wraps so a name with both badges is never cut to "Wise …"; the chevron stays on the right of the first line.
+  cardHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 6, rowGap: 2 },
   cardName: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22, flexShrink: 1 },
   grow: { flexGrow: 1 },
   availability: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 16 },

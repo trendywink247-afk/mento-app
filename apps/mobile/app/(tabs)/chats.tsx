@@ -11,12 +11,16 @@ import { LinkedRings } from '@/components/InTouchBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PinPad } from '@/components/chat/options/bits';
+import { ChatActionsSheet } from '@/components/chats/ChatActionsSheet';
 import { ChatRow, type ChatRowState } from '@/components/chats/ChatRow';
+import { SwipeRow } from '@/components/chats/SwipeRow';
+import { useChatPrefs } from '@/lib/chatPrefs';
 import { chatFaceKey } from '@/lib/originStore';
 import { ChatsEmpty } from '@/components/chats/ChatsEmpty';
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
+import { useTabDockHeight } from '@/components/tabDock';
 import { ApiError, api, type ConversationListItem, type InTouchItem, type InTouchList } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { relativeTime } from '@/lib/format';
@@ -50,7 +54,10 @@ type Filter = 'all' | 'active' | 'completed';
 type View2 = 'all' | 'touch';
 type Row =
   | { kind: 'convo'; key: string; at: number; convo: ConversationListItem }
-  | { kind: 'waiting'; key: string; at: number; ask: WaitingQuestion };
+  | { kind: 'waiting'; key: string; at: number; ask: WaitingQuestion }
+  // "Archived · n" on top of the list when any chat is archived, and the way back from it.
+  | { kind: 'archive'; key: string; at: number; count: number }
+  | { kind: 'archiveBack'; key: string; at: number };
 
 export default function ChatsTab() {
   const router = useRouter();
@@ -76,6 +83,13 @@ export default function ChatsTab() {
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState<string | null>(null);
   const [pinBusy, setPinBusy] = useState(false);
+  // Pin and Archive live on this phone; Mute is the chat's Quiet Pause; Delete is the real wipe.
+  const { prefs: chatPrefs, pin: togglePinned, archive: toggleArchived, prune: pruneChatPrefs } = useChatPrefs();
+  const [showArchived, setShowArchived] = useState(false);
+  const [actionFor, setActionFor] = useState<{ convo: ConversationListItem; confirm: boolean } | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+  const [mutedLocal, setMutedLocal] = useState<Record<string, boolean>>({});
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const remember = (patch: Partial<NonNullable<ReturnType<typeof screenCache.get<'chats'>>>>) => {
@@ -113,7 +127,23 @@ export default function ChatsTab() {
         .then(([requests, mentors]) => {
           const open: WaitingQuestion[] = [];
           for (const r of requests) {
-            if (r.status !== 'pending' || !r.target_listener_id) continue;
+            if (r.status !== 'pending') continue;
+            if (!r.target_listener_id) {
+              // Asked to everyone: no single mentor yet, so the row says so (the radio mark).
+              if (!r.broadcast) continue;
+              open.push({
+                id: r.id,
+                listenerId: '',
+                name: t('audience.anyMentor'),
+                avatar: '',
+                animal: null,
+                colour: null,
+                intro: r.intro_message,
+                createdAt: r.created_at,
+                broadcast: true,
+              });
+              continue;
+            }
             const m = mentors.find((x) => x.id === r.target_listener_id);
             if (!m) continue;
             open.push({
@@ -251,12 +281,13 @@ export default function ChatsTab() {
       request: {
         id: w.id,
         status: 'pending',
-        target_listener_id: w.listenerId,
+        target_listener_id: w.broadcast ? null : w.listenerId,
+        broadcast: Boolean(w.broadcast),
         intro_message: w.intro,
         conversation_id: null,
         created_at: w.createdAt,
       },
-      mentor: { id: w.listenerId, name: w.name, avatar: w.avatar, animal: w.animal, colour: w.colour },
+      mentor: w.broadcast ? null : { id: w.listenerId, name: w.name, avatar: w.avatar, animal: w.animal, colour: w.colour },
     });
     router.push({ pathname: '/request-sent/[id]', params: { id: w.id } });
   };
@@ -267,6 +298,8 @@ export default function ChatsTab() {
   const merged: Row[] = useMemo(() => {
     const out: Row[] = [];
     for (const c of rows) {
+      const isArchived = chatPrefs.archived.includes(c.id);
+      if (showArchived ? !isArchived : isArchived) continue;
       if (filter === 'active' && c.status !== 'active') continue;
       if (filter === 'completed' && c.status === 'active') continue;
       if (
@@ -276,18 +309,67 @@ export default function ChatsTab() {
       )
         continue;
       const p = c.stream_channel_id ? previews[c.stream_channel_id] : undefined;
-      out.push({ kind: 'convo', key: c.id, at: (p?.at ?? new Date(c.created_at)).getTime(), convo: c });
+      out.push({
+        kind: 'convo',
+        key: c.id,
+        at: (p?.at ?? new Date(c.last_message_at ?? c.created_at)).getTime(),
+        convo: c,
+      });
     }
-    if (filter !== 'completed') {
+    if (filter !== 'completed' && !showArchived) {
       for (const w of waiting) {
         if (needle && !w.name.toLowerCase().includes(needle)) continue;
         out.push({ kind: 'waiting', key: `ask-${w.id}`, at: new Date(w.createdAt).getTime(), ask: w });
       }
     }
     // Open chats first, then open questions, then what is finished — newest first in each.
-    const rank = (r: Row) => (r.kind === 'waiting' ? 1 : r.convo.status === 'active' ? 0 : 2);
-    return out.sort((a, b) => rank(a) - rank(b) || b.at - a.at);
-  }, [rows, waiting, previews, filter, needle]);
+    const rank = (r: Row) => (r.kind === 'waiting' ? 1 : r.kind === 'convo' ? (r.convo.status === 'active' ? 0 : 2) : 3);
+    // Pinned chats lead their group, the most recently pinned first.
+    const pinRank = (r: Row) => (r.kind === 'convo' ? (chatPrefs.pinned.indexOf(r.convo.id) + 1 || Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER);
+    const sorted = out.sort((a, b) => rank(a) - rank(b) || pinRank(a) - pinRank(b) || b.at - a.at);
+    const archivedCount = rows.filter((c) => chatPrefs.archived.includes(c.id)).length;
+    if (showArchived) return [{ kind: 'archiveBack', key: 'archive-back', at: 0 } as Row, ...sorted];
+    if (archivedCount > 0 && filter === 'all' && !needle) return [{ kind: 'archive', key: 'archive-row', at: 0, count: archivedCount } as Row, ...sorted];
+    return sorted;
+  }, [rows, waiting, previews, filter, needle, chatPrefs, showArchived]);
+
+  // A chat that is gone leaves no pin or archive behind.
+  useEffect(() => {
+    if (rows.length) pruneChatPrefs(rows.map((c) => c.id));
+    // reason: only when the list of chats changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
+  const doMute = async (c: ConversationListItem) => {
+    const now = mutedLocal[c.id] ?? Boolean(c.is_paused);
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await api.setPause(c.id, !now);
+      setMutedLocal((m) => ({ ...m, [c.id]: !now }));
+      setActionFor(null);
+    } catch {
+      setActionError(t('chatActions.muteFailed'));
+      setActionFor(null);
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const doDelete = async (c: ConversationListItem) => {
+    setActionBusy(true);
+    setActionError(null);
+    try {
+      await api.wipeConversation(c.id);
+      setRows((r) => r.filter((x) => x.id !== c.id));
+      setActionFor(null);
+    } catch {
+      setActionError(t('chatActions.muteFailed'));
+      setActionFor(null);
+    } finally {
+      setActionBusy(false);
+    }
+  };
 
   // The In touch badge's linked rings breathe on the first two badges only (motion budget).
   const breathingBadges = useMemo(
@@ -315,9 +397,10 @@ export default function ChatsTab() {
   // stage — so the perch stays empty (never two companions on one screen).
   const showEmpty = !loading && !hasAnything && view === 'all' && loadError === null;
   // An honest error is a still state; a sheet over the list hides the companion.
+  const dock = useTabDockHeight();
   const perch = useCompanionPlacement('chats', perches, {
     still: loadError !== null,
-    hidden: sheetOpen || gate !== null || showEmpty,
+    hidden: sheetOpen || gate !== null || actionFor !== null || showEmpty,
   });
 
   const stateOf = (c: ConversationListItem): ChatRowState =>
@@ -333,6 +416,21 @@ export default function ChatsTab() {
 
   const renderRow = ({ item, index }: { item: Row; index: number }) => {
     let row;
+    if (item.kind === 'archive' || item.kind === 'archiveBack') {
+      const back = item.kind === 'archiveBack';
+      return (
+        <Pressable
+          onPress={() => setShowArchived(!back)}
+          accessibilityRole="button"
+          style={styles.archiveRow}
+          testID={back ? 'archived-back' : 'archived-row'}
+        >
+          <Ionicons name={back ? 'chevron-back' : 'archive-outline'} size={22} color={colors.accent} />
+          <Text style={[type.label, { color: colors.ink, flex: 1 }]}>{back ? t('chatActions.archivedBack') : t('chatActions.archivedRow')}</Text>
+          {!back ? <Text style={[type.label, { color: colors.accent }]}>{item.count}</Text> : null}
+        </Pressable>
+      );
+    }
     if (item.kind === 'waiting') {
       const w = item.ask;
       row = (
@@ -342,7 +440,8 @@ export default function ChatsTab() {
           name={w.name}
           state="waiting"
           stateLabel={stateLabel('waiting')}
-          secondLine={t('chatsList.waitingLine', { name: w.name })}
+          askedAs={w.broadcast ? 'everyone' : 'one'}
+          secondLine={w.broadcast ? t('audience.toEveryone') : t('chatsList.waitingLine', { name: w.name })}
           lastLine=""
           quietLine={w.intro ? t('chatsList.youSaid', { text: w.intro }) : null}
           time={relativeTime(w.createdAt, t)}
@@ -377,7 +476,7 @@ export default function ChatsTab() {
                   ? t('chatsList.yourMentor')
                   : null
           }
-          lastLine={s === 'wiped' ? t('chats.wiped') : p?.text || t('chats.sayHello')}
+          lastLine={s === 'wiped' ? t('chats.wiped') : c.is_locked ? t('chatsList.lockedLine') : p?.text || c.last_message || t('chats.sayHello')}
           time={relativeTime((p?.at ?? new Date(c.created_at)).toISOString(), t)}
           unread={Boolean(p && p.unread > 0) && s === 'active'}
           unreadLabel={t('chatsList.newMessageA11y')}
@@ -385,7 +484,19 @@ export default function ChatsTab() {
           lockedLabel={c.is_locked ? t('chatsList.locked') : null}
           accessibilityLabel={t('chats.convoA11y', { name: c.listener_persona_name })}
           onPress={() => open(c)}
+          onLongPress={() => setActionFor({ convo: c, confirm: false })}
+          pinned={chatPrefs.pinned.includes(c.id)}
+          muted={mutedLocal[c.id] ?? Boolean(c.is_paused)}
         />
+      );
+      row = (
+        <SwipeRow
+          archived={chatPrefs.archived.includes(c.id)}
+          onArchive={() => toggleArchived(c.id)}
+          onDelete={() => setActionFor({ convo: c, confirm: true })}
+        >
+          {row}
+        </SwipeRow>
       );
     }
     // Reading-order arrival for the first screenful only; later rows are simply there.
@@ -457,7 +568,7 @@ export default function ChatsTab() {
                     style={[styles.switchFace, on && { backgroundColor: colors.surface }]}
                   >
                     {v === 'touch' ? <LinkedRings color={on ? colors.ink : colors.inkMuted} size={14} /> : null}
-                    <Text style={[styles.switchText, { color: on ? colors.ink : colors.inkMuted }]} numberOfLines={1}>
+                    <Text style={[styles.switchText, { color: on ? colors.ink : colors.inkMuted }]} numberOfLines={2}>
                       {v === 'all'
                         ? t('chatsList.allChats')
                         : slots
@@ -549,7 +660,7 @@ export default function ChatsTab() {
               data={touch?.items ?? []}
               keyExtractor={(i) => i.link_id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.list}
+              contentContainerStyle={[styles.list, { paddingBottom: 170 + dock }]}
               testID="in-touch-list"
               ListEmptyComponent={
                 // Still on purpose: an empty or failed view is a limit state.
@@ -604,7 +715,9 @@ export default function ChatsTab() {
                       lastLine={
                         c?.status === 'wiped'
                           ? t('chats.wiped')
-                          : p?.text || (item.status === 'online' ? t('inTouch.hereNow') : t('inTouch.away'))
+                          : c?.is_locked
+                            ? t('chatsList.lockedLine')
+                            : p?.text || (item.status === 'online' ? t('inTouch.hereNow') : t('inTouch.away'))
                       }
                       time={relativeTime((p?.at ?? new Date(item.since ?? item.first_met_at)).toISOString(), t)}
                       unread={Boolean(p && p.unread > 0) && live}
@@ -626,9 +739,16 @@ export default function ChatsTab() {
               data={merged}
               keyExtractor={(r) => r.key}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.list}
+              contentContainerStyle={[styles.list, { paddingBottom: 170 + dock }]}
               ListEmptyComponent={
                 <Text style={[type.note, styles.centerText, { color: colors.inkMuted }]}>{t('chatsList.noMatches')}</Text>
+              }
+              ListHeaderComponent={
+                actionError ? (
+                  <Text style={[type.caption, styles.centerText, { color: colors.warning }]} testID="chat-action-error">
+                    {actionError}
+                  </Text>
+                ) : null
               }
               ListFooterComponent={<View style={styles.footerGap}>{footer}</View>}
               renderItem={renderRow}
@@ -637,8 +757,10 @@ export default function ChatsTab() {
 
           {!loading && hasAnything ? (
             <>
-              <GroundFade height={136} />
-              <View style={styles.newChatWrap} pointerEvents="box-none">
+              <View style={[styles.fadeWrap, { bottom: dock }]} pointerEvents="none">
+                <GroundFade height={136} />
+              </View>
+              <View style={[styles.newChatWrap, { bottom: 36 + dock }]} pointerEvents="box-none">
                 <CompanionSlot id="fabTop" size={52} align="left" inset={space.lg} />
                 <CompanionSlot id="fabDangle" size={56} align="left" inset={space.lg} nudge={4} />
                 <View
@@ -679,7 +801,7 @@ export default function ChatsTab() {
                   )}
                 </View>
               </View>
-              <View style={styles.privacy} pointerEvents="none">
+              <View style={[styles.privacy, { bottom: 8 + dock }]} pointerEvents="none">
                 <Ionicons name="lock-closed-outline" size={15} color={colors.inkMuted} />
                 <Text style={[type.caption, { color: colors.inkMuted }]}>{t('chats.privacyFooter')}</Text>
               </View>
@@ -710,6 +832,29 @@ export default function ChatsTab() {
               </View>
             </View>
           ) : null}
+          {actionFor ? (
+            <ChatActionsSheet
+              key={actionFor.convo.id + String(actionFor.confirm)}
+              name={actionFor.convo.listener_persona_name}
+              startConfirming={actionFor.confirm}
+              pinned={chatPrefs.pinned.includes(actionFor.convo.id)}
+              archived={chatPrefs.archived.includes(actionFor.convo.id)}
+              muted={mutedLocal[actionFor.convo.id] ?? Boolean(actionFor.convo.is_paused)}
+              canMute={actionFor.convo.status === 'active'}
+              busy={actionBusy}
+              onPin={() => {
+                togglePinned(actionFor.convo.id);
+                setActionFor(null);
+              }}
+              onArchive={() => {
+                toggleArchived(actionFor.convo.id);
+                setActionFor(null);
+              }}
+              onMute={() => void doMute(actionFor.convo)}
+              onDelete={() => void doDelete(actionFor.convo)}
+              onClose={() => setActionFor(null)}
+            />
+          ) : null}
         </CompanionPerches>
       </SafeAreaView>
     </SettleBack>
@@ -718,24 +863,25 @@ export default function ChatsTab() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
+  archiveRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: space.md },
   head: { paddingTop: space.xs, paddingHorizontal: space.lg, paddingBottom: 10 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   tools: { zIndex: 3, paddingHorizontal: space.md, paddingBottom: 10, gap: 10, borderBottomWidth: 1 },
   toolsEdge: { position: 'absolute', left: 0, right: 0, bottom: -4, height: 3 },
   toolsFloor: { position: 'absolute', left: 0, right: 0, bottom: -1, height: 0 },
   search: {
-    height: 52,
+    minHeight: 52,
     paddingHorizontal: space.md,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     borderWidth: 1,
   },
-  searchInput: { flex: 1, minWidth: 0, height: 44, ...type.body },
+  searchInput: { flex: 1, minWidth: 0, minHeight: 44, paddingVertical: 4, ...type.body },
   switch: { flexDirection: 'row', padding: 4, borderRadius: radius.pill },
   switchCell: { flex: 1 },
-  switchFace: { height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  switchText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20 },
+  switchFace: { minHeight: 44, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  switchText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20, textAlign: 'center', flexShrink: 1 },
   chips: { flexDirection: 'row', gap: space.sm },
   touchLine: { minHeight: 48, justifyContent: 'center', paddingLeft: space.sm, paddingRight: 96 },
   touchLineText: {},
@@ -744,6 +890,8 @@ const styles = StyleSheet.create({
   noteBox: { marginHorizontal: space.md, marginTop: space.sm },
   list: { paddingTop: 14, paddingHorizontal: space.md, paddingBottom: 170, gap: 10 },
   footerGap: { gap: 10 },
+  // The ground fade ends where the floating tab bar's pill begins.
+  fadeWrap: { position: 'absolute', left: 0, right: 0, height: 136 },
   peers: { textAlign: 'center', paddingTop: space.xs, paddingHorizontal: space.sm },
   calm: { padding: space.md, gap: 10, borderRadius: radius.lg, borderWidth: 1 },
   calmHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },

@@ -1,15 +1,18 @@
 /** Native own transport: existing persona/safety furniture, authenticated controller,
  * in-memory drafts only. Mounted solely by the authoritative native provider gate.
  */
+import { SlashSuggest } from '@/components/mentor/SlashSuggest';
+import { applyAnswer, slashQuery, suggest, usePreparedAnswers } from '@/lib/preparedAnswers';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { Bubble } from '@/components/chat/Bubble';
 import { AllowanceNote } from '@/components/chat/AllowanceNote';
+import { ExamRedirectCard } from '@/components/chat/ExamRedirectCard';
 import { AllowanceRow } from '@/components/chat/AllowanceRow';
 import { ChatHeaderCard } from '@/components/chat/ChatHeaderCard';
 import { ComposerChromeContext, ComposerField, ComposerPerchContext } from '@/components/chat/ComposerField';
@@ -17,6 +20,7 @@ import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
 import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
+import { MessageActions } from '@/components/chat/MessageActions';
 import { ThreadRow, type ThreadMsg } from '@/components/chat/ThreadRow';
 import { HelplinesSheet } from '@/components/mentor/HelplinesSheet';
 import { MentorChatHeader } from '@/components/mentor/MentorChatHeader';
@@ -27,6 +31,7 @@ import { captureFirstMessage } from '@/lib/analytics';
 import { clearAcknowledgedDraft } from '@/lib/acknowledgedDraft';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { clearConversationNotifications } from '@/lib/notifications';
 import { leaveToChats, leaveToMentorHome } from '@/lib/leaveToChats';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { createNativeOwnChatLifecycle } from '@/lib/nativeOwnChatLifecycle';
@@ -37,7 +42,7 @@ import { createOwnChatScreenController, type OwnScreenMessage } from '@/lib/ownC
 import { pendingOption } from '@/lib/pendingOption';
 import { CRISIS_EXEMPT_MS, useAllowance, type HeldAllowance } from '@/lib/useAllowance';
 import { useChatHeader } from '@/lib/useChatHeader';
-import { useChatKeyboardBoundary } from '@/lib/useChatKeyboardBoundary';
+import { useKeyboardPad } from '@/lib/useKeyboardPad';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -64,6 +69,8 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [snapshot, setSnapshot] = useState<OwnChatSnapshot | null>(null);
   const [actor, setActor] = useState('');
   const [draft, setDraft] = useState(member ? params.starter ?? '' : '');
+  // The mentor's prepared answers (device only). "/" in the box lists them; choosing one only fills the box.
+  const prepared = usePreparedAnswers();
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState(false);
   const [error, setError] = useState(false);
@@ -71,17 +78,26 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [crisisAt, setCrisisAt] = useState(0);
   const [options, setOptions] = useState(false);
   const [initialOption, setInitialOption] = useState<'report' | undefined>();
+  const [held, setHeld] = useState<ThreadMsg | null>(null);
   const [menu, setMenu] = useState<'closed' | 'open' | 'confirmEnd'>('closed');
+  // Mentor side, DECISIONS §O: not certified for exams -> the menu offers "This is about an exam".
+  const [mentorCertified, setMentorCertified] = useState(true);
+  const [suggested, setSuggested] = useState(false);
+  // Member side: the mentor suggested a certified exam mentor; a gentle card, never a block.
+  const [redirect, setRedirect] = useState(false);
+  const [redirectHidden, setRedirectHidden] = useState(false);
   const [ending, setEnding] = useState(false);
   const [helplines, setHelplines] = useState(false);
   const [saveOpen, setSaveOpen] = useState<string | null>(null);
   const [savedNow, setSavedNow] = useState<Set<string>>(new Set());
-  const [offset, setOffset] = useState(0);
   const [mentorOnline, setMentorOnline] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isForeground, setIsForeground] = useState(AppState.currentState === 'active');
   useListenerHeartbeat(!member && mentorOnline && isFocused && isForeground);
-  const keyboardBoundary = useChatKeyboardBoundary(offset);
+  useEffect(() => {
+    if (isFocused && isForeground) void clearConversationNotifications(conversationId);
+  }, [isFocused, isForeground, conversationId, rows.length]);
+  const keyboardPad = useKeyboardPad();
   const allowanceView = useAllowance(member ? conversationId : undefined,
     crisisAt > 0 && Date.now() - crisisAt < CRISIS_EXEMPT_MS);
   const allowanceRef = useRef(allowanceView);
@@ -127,6 +143,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         }
         if (!live) return;
         if (!member) setMentorOnline('status' in identity && identity.status === 'online');
+        if (!member) setMentorCertified(('certified' in identity && identity.certified) === true);
         setActor(identity.id);
         const scope = { actorId: identity.id, role, conversationId };
         const binding = createOwnChatScreenController(scope,
@@ -159,8 +176,42 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   }, [conversationId, member, role]);
 
   const leave = () => member ? leaveToChats(router) : leaveToMentorHome(router);
+  // A fresh connection to an ended chat is refused with the same close as "not yours" (the server
+  // keeps those answers identical on purpose). The member's own state read tells them apart, so an
+  // ended conversation says so instead of offering a Retry that can never work.
+  const [endedByState, setEndedByState] = useState(false);
+  useEffect(() => {
+    if (!member || snapshot?.reason !== 'not_authorized') return;
+    let live = true;
+    void api.conversationState(conversationId)
+      .then(state => { if (live && state.status === 'ended') setEndedByState(true); })
+      .catch(() => { /* reason: the generic error and Retry stay; nothing is lost */ });
+    return () => { live = false; };
+  }, [member, snapshot?.reason, conversationId]);
+  // The mentor's suggestion reaches the member by a quiet read: on open and every 30 s.
+  useEffect(() => {
+    if (!member) return;
+    let live = true;
+    const read = () => void api.conversationState(conversationId)
+      .then(state => { if (live) setRedirect(state.exam_redirect === true); })
+      .catch(() => { /* reason: the card is a convenience; the chat is unaffected */ });
+    read();
+    const timer = setInterval(read, 30_000);
+    return () => { live = false; clearInterval(timer); };
+  }, [member, conversationId]);
+  // An ended chat is still the member's to read: the socket refuses it, the REST history does not.
+  const [archive, setArchive] = useState<ThreadMsg[] | null>(null);
+  const archiveList = useRef<FlatList<ThreadMsg>>(null);
+  useEffect(() => {
+    if (!member || !endedByState || !actor) return;
+    let live = true;
+    void api.ownChatMessages(conversationId)
+      .then(r => { if (live) setArchive(r.messages.map(m => ({ id: m.id, text: m.text, mine: m.sender === actor, at: m.ts }))); })
+      .catch(() => { /* reason: the ended notice stands without the transcript */ });
+    return () => { live = false; };
+  }, [member, endedByState, actor, conversationId]);
   const closed = snapshot?.status === 'terminal';
-  const retryable = error || snapshot?.reason === 'not_authorized' || snapshot?.reason === 'reconnect_exhausted';
+  const retryable = !endedByState && (error || snapshot?.reason === 'not_authorized' || snapshot?.reason === 'reconnect_exhausted');
   const connectionFailed = error || closed || snapshot?.reason === 'reconnect_exhausted';
   const ready = snapshot?.status === 'ready';
   const saved = new Set([...header.savedMessageIds, ...savedNow]);
@@ -202,29 +253,43 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   }
   const chrome = member ? {
     held: !!allowanceView.note,
-    above: allowanceView.note && allowanceView.allowance ?
+    above: <>
+      {redirect && !redirectHidden ? <ExamRedirectCard name={name}
+        onChoose={() => router.push({ pathname: '/mentors', params: { filter: 'certified' } })}
+        onLater={() => setRedirectHidden(true)} /> : null}
+      {allowanceView.note && allowanceView.allowance ?
       <AllowanceNote allowance={allowanceView.allowance} reason={allowanceView.note} name={name}
-        onJournal={() => router.dismissTo('/journals')} /> : allowanceView.allowance ?
-      <AllowanceRow allowance={allowanceView.allowance} exempt={allowanceView.exempt} /> : null,
+        onJournal={() => router.dismissTo('/journals')} /> : allowanceView.allowance && allowanceView.allowance.applies !== false ?
+      <AllowanceRow allowance={allowanceView.allowance} exempt={allowanceView.exempt} /> : null}
+    </>,
   } : {};
 
   return <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: colors.bg }]}>
     {member ? <MemberSessionGuard /> : null}
     <CompanionPerches placement={perch}>
     {member ? <ChatHeaderCard conversationId={conversationId} name={name} face={header.face ?? undefined}
-      status={header.profile?.status ?? null} replyWithinADay={!!header.profile?.reply_within_a_day}
+      status={endedByState ? null : header.profile?.status ?? null} replyWithinADay={!!header.profile?.reply_within_a_day}
       community={header.community} topic={header.topic} savedCount={header.savedCount} onBack={leave}
       onOpenProfile={() => router.push({ pathname: '/mentor-profile/[id]', params: { id: conversationId, name } })}
       onOpenOptions={() => setOptions(true)} /> : <MentorChatHeader memberName={name} brief={brief}
       here={!!snapshot?.peerOnline} masked={params.masked === '1' || !!brief?.member_masked} onBack={leave}
       onOpenBrief={() => router.push({ pathname: '/mentor/member/[id]', params: { id: conversationId, member: name } })}
       onOptions={() => setMenu('open')} onHelplines={() => setHelplines(true)} />}
-    {connectionFailed ? <View style={styles.center}>
-      <Text style={[type.body, { color: colors.ink }]}>{t(snapshot?.reason === 'ended' ||
+    {connectionFailed && endedByState && archive?.length ? <FlatList data={archive} keyExtractor={item => item.id}
+      style={styles.flex} contentContainerStyle={[styles.thread, { paddingBottom: space.lg }]}
+      testID="own-native-archive"
+      onContentSizeChange={() => archiveList.current?.scrollToEnd({ animated: false })} ref={archiveList}
+      renderItem={({ item }) => <ThreadRow item={item} dayText={null} statusText={null} arrival={null}
+        arrivalStep={0} saveOpen={false} nudge={false} isSaved={false} savedNow={false} onToggleSave={() => {}}
+        onSave={() => {}} onArrived={() => {}} onLongPress={setHeld} />}
+      ListFooterComponent={<Text style={[type.body, { color: colors.inkMuted, textAlign: 'center', paddingTop: space.md }]}
+        testID="own-native-ended">{t('reflection.ended')}</Text>} />
+    : connectionFailed ? <View style={styles.center}>
+      <Text style={[type.body, { color: colors.ink }]}>{t(endedByState || snapshot?.reason === 'ended' ||
         snapshot?.reason === 'wiped' ? 'reflection.ended' : 'chat.errOpen')}</Text>
       {retryable ? <PrimaryButton label={t('common.retry')} onPress={onRetry} testID="own-native-retry" /> : null}
     </View> : <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={[styles.flex, keyboardBoundary]} onLayout={event => event.currentTarget.measureInWindow((_x, y) => setOffset(y))}
+      style={[styles.flex, keyboardPad]}
       testID={ready ? 'own-native-chat-ready' : 'own-native-chat-connecting'}>
       <FlatList ref={list} data={rows} keyExtractor={item => item.id} style={styles.flex}
         contentContainerStyle={[styles.thread, { paddingBottom: space.md + threadFoot }]} keyboardShouldPersistTaps="handled"
@@ -239,9 +304,12 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
             latest?.id === item.id && item.user.id !== actor)} nudge={member && latest?.id === item.id}
           isSaved={member && saved.has(item.id)} savedNow={savedNow.has(item.id)}
           onToggleSave={id => { if (member) setSaveOpen(previous => previous === id ? null : id); }}
-          onSave={message => void save(message)} onArrived={() => {}} /> :
+          onSave={message => void save(message)} onArrived={() => {}} onLongPress={setHeld} /> :
           <View style={{ alignItems: item.user.id === actor ? 'flex-end' : 'flex-start' }}>
-            <Bubble mine={item.user.id === actor} text={item.text} testID={`own-native-message-${item.id}`} />
+            <Pressable delayLongPress={380} testID={`own-native-hold-${item.id}`}
+              onLongPress={() => setHeld({ id: item.id, text: item.text, mine: item.user.id === actor, at: item.created_at })}>
+              <Bubble mine={item.user.id === actor} text={item.text} testID={`own-native-message-${item.id}`} />
+            </Pressable>
             {item.id === lastMine ? <Text style={[type.caption, { color: colors.inkMuted }]}>
               {controller.current?.isRead(item.id) ? t('mentorChatPage.read') : t('allowance.delivered')}
             </Text> : null}
@@ -251,6 +319,14 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         testID="own-native-typing">{t('chat.typing', { name })}</Text> : null}
       {!member ? <MentorComposerHint /> : null}
       {sendError ? <Text style={[type.caption, styles.typing, { color: colors.danger }]}>{t('chat.sendFailed')}</Text> : null}
+      {!member && !crisis && slashQuery(draft) !== null ? (
+        <SlashSuggest
+          items={suggest(draft, prepared.answers)}
+          hasAnswers={prepared.answers.length > 0}
+          onPick={(a) => setDraft(applyAnswer(draft, a))}
+          onManage={() => router.push('/mentor/answers')}
+        />
+      ) : null}
       <ComposerChromeContext.Provider value={chrome}>
         <ComposerPerchContext.Provider value={member && !allowanceView.note ?
           <CompanionSlot id="composerTop" size={COMPOSER_SEAT.size} inset={space.lg} /> : null}>
@@ -261,12 +337,17 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
         </ComposerPerchContext.Provider>
       </ComposerChromeContext.Provider>
     </KeyboardAvoidingView>}
+    <MessageActions visible={!!held} text={held?.text ?? ''} onClose={() => setHeld(null)}
+      onSave={member && held && !held.mine && !saved.has(held.id) ? () => void save(held) : undefined}
+      onReport={member && held && !held.mine ? () => { setInitialOption('report'); setOptions(true); } : undefined} />
     {member ? <ConversationOptions conversationId={conversationId} visible={options} depth={depth}
       listenerName={name} initial={initialOption} onClose={() => { setOptions(false); setInitialOption(undefined); }}
       onLeft={leave} onSaveToJournal={() => setSaveOpen([...rows].reverse().find(row =>
         row.user.id !== actor && !saved.has(row.id))?.id ?? null)} /> : null}
     {!member && menu !== 'closed' ? <MentorOptionsMenu state={menu} top={96} ending={ending}
       onReport={() => { setMenu('closed'); router.push({ pathname: '/mentor/report', params: { id: conversationId } }); }}
+      onSuggest={mentorCertified ? undefined : () => { void listenerApi.suggestCertified(conversationId).then(() => setSuggested(true)).catch(() => {}); }}
+      suggested={suggested}
       onAskEnd={() => setMenu('confirmEnd')} onConfirmEnd={() => void end()} onClose={() => setMenu('closed')} /> : null}
     {helplines ? <View style={styles.helplines}><HelplinesSheet onClose={() => setHelplines(false)} /></View> : null}
     </CompanionPerches>

@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     env: str = "dev"
+    # Oldest app build the API still serves (dotted numeric, e.g. "1.4.0"). Empty =
+    # check disabled. Only requests that SEND X-App-Version are ever refused, and the
+    # crisis/safety/health/Stream paths are exempt (app/app_version.py).
+    min_app_version: str = ""
     jwt_secret: str = "change-me-long-random"
     jwt_ttl_days: int = 90
     # Listener-console token links are shareable strings — keep their life shorter
@@ -86,6 +90,17 @@ class Settings(BaseSettings):
     push_enabled: bool = True
     push_burst_seconds: int = 60
     push_watch_cache_seconds: int = 5
+    # Direct FCM (HTTP v1) for non-Expo device tokens. Path to a Google service-account
+    # JSON file; empty = direct FCM sends are refused (Expo tokens are unaffected).
+    fcm_service_account_file: str = ""
+    # Own chat (docs/DECISIONS.md §M): new conversations use our own WebSocket chat instead of
+    # Stream. Off = every new match still creates a Stream channel. Existing conversations keep
+    # the backend they were created with.
+    own_chat_new_conversations: bool = False
+    # Comma-separated member ids whose NEW conversations use own chat even while the global
+    # switch above is off: a per-user dogfood allowlist, so a build that only speaks Stream
+    # (the Play test build, shipped OTA builds) is never handed an own-chat room.
+    own_chat_user_ids: str = ""
 
     # Dedicated thread budget for the crisis-scan webhooks — isolated from the
     # shared anyio threadpool so slow sync handlers can't starve the safety scan.
@@ -126,9 +141,12 @@ class Settings(BaseSettings):
     chat_frames_per_window: int = 40
     chat_frames_window_s: int = 10
     chat_idle_deadline_s: float = 75.0
+    # Roads open for a launch (DECISIONS §P.1), comma-separated slugs. Other roads stay in the
+    # app greyed out as "Coming soon" and are refused here. Empty = every road is open.
+    launch_roads: str = "upsc,life"
     allowance_enabled: bool = True
     allowance_enforced: bool = False
-    allowance_in_a_row: int = 3
+    allowance_in_a_row: int = 10
     allowance_per_day: int = 10
     allowance_crisis_exempt_hours: int = 24
     allowance_budget_ms: int = 800
@@ -176,6 +194,9 @@ class Settings(BaseSettings):
     # Sentry error reporting. Empty = Sentry off (dev default); errors-only when
     # set — never performance traces, never request bodies (see app/main.py).
     sentry_dsn: str = ""
+    # Release for Sentry events (the deployed git sha). Supplied by the ops scripts via
+    # GIT_SHA; empty = no release tag, never a guess.
+    git_sha: str = ""
 
     # Journal note-sorting (opt-in AI, app/services/notes_ai.py). Empty key = feature
     # DARK: the endpoint returns 503 and the app shows "coming soon". Only the user's

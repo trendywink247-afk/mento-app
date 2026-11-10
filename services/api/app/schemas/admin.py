@@ -71,6 +71,8 @@ class AdminListenerItem(BaseModel):
     # panel lists these first while the side is still approved; suspend handles it.
     step_back_requested_at: str | None = None
     step_back_reason: str | None = None
+    # Certified for exam mentoring (DECISIONS section O); the panel shows and toggles it.
+    certified: bool = False
 
 
 class AdminListenerCreateIn(BaseModel):
@@ -178,6 +180,22 @@ class AdminApplicationItem(BaseModel):
     mentor_interest: bool
     status: str
     created_at: str
+    # Exam mentoring (DECISIONS section O). `wants_exam` = the applicant chose an exam road;
+    # `exam_credential` is their own words, unverified. `certified` once approved with it.
+    wants_exam: bool = False
+    exam_credential: str | None = None
+    certified: bool = False
+
+
+class AdminApplicationApproveIn(BaseModel):
+    """Optional body on approve: certify the mentor for exam roads at the same time. Omitted =
+    approve as a general listener, exactly as before."""
+
+    certify: bool = False
+
+
+class AdminCertifyIn(BaseModel):
+    certified: bool
 
 
 class AdminApplicationDeclineIn(BaseModel):

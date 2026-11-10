@@ -27,8 +27,13 @@ for (const variant of ['production', 'preview', 'development']) {
   assert.equal(config.updates.requestHeaders['expo-channel-name'], eas.build[variant].channel);
   const properties = config.plugins.find(p => Array.isArray(p) && p[0] === 'expo-build-properties')[1];
   assert.equal(properties.android.usesCleartextTraffic, variant !== 'production');
-  assert.equal(config.ios.bundleIdentifier, 'com.mento.app');
-  assert.equal(config.android.package, base.android.package);
+  // The store build keeps the store ids; every other variant installs beside it as "Mento QA".
+  const qa = variant !== 'production';
+  assert.equal(config.ios.bundleIdentifier, qa ? 'chat.mento.app.qa' : 'chat.mento.app');
+  assert.equal(config.android.package, qa ? `${base.android.package}.qa` : base.android.package);
+  assert.equal(config.name, qa ? 'Mento QA' : 'Mento');
+  // google-services.json lists both packages, so every variant gets the push file.
+  assert.equal(config.android.googleServicesFile, './google-services.json');
   assert.deepEqual(config.runtimeVersion, base.runtimeVersion);
   assert.equal(config.updates.url, base.updates.url);
   assert.equal(config.updates.enabled, base.updates.enabled);
@@ -81,3 +86,17 @@ for (const extra of [
 ]) assert.throws(() => resolveConfig('development', undefined, { ...local, ...extra }), error => error.status === 1);
 console.log('PASS: explicit profile environments/channels, safe variant resolution, stable runtime and native identities');
 console.log('PASS: separate local acceptance install rejects provider, OTA, store and nonlocal API settings');
+
+// Play release prep: a store version code, no debug-grade permissions, and the unsigned
+// release plugin only on the production variant.
+{
+  const production = resolveConfig('production', 'production');
+  assert.ok(Number.isInteger(production.android.versionCode) && production.android.versionCode >= 10);
+  for (const permission of ['SYSTEM_ALERT_WINDOW', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE']) {
+    assert.ok(production.android.blockedPermissions.includes(`android.permission.${permission}`));
+  }
+  const signing = (config) => config.plugins.some(p => p === './plugins/withReleaseSigning');
+  assert.ok(signing(production));
+  assert.ok(!signing(resolveConfig('preview', 'preview')));
+  assert.ok(!signing(resolveConfig('development', 'development')));
+}

@@ -14,7 +14,7 @@ import { ConfirmModal, FlowScreen, LockFootnote, PinPad } from './bits';
  * shows the sad panda. (Biometric + email reset are deferred — simplified per DoD.) */
 export function LockFlow({
   conversationId,
-  locked,
+  locked: lockedNow,
   onBack,
   onChanged,
 }: {
@@ -25,6 +25,9 @@ export function LockFlow({
 }) {
   const { colors } = useTheme();
   const { t } = useI18n();
+  // The mode this flow OPENED in. `onChanged` flips the parent's `locked` the moment the
+  // call succeeds; reading the live prop made a fresh lock end on the "unlocked" screen.
+  const [locked] = useState(lockedNow);
   const [pin, setPin] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

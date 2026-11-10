@@ -20,3 +20,11 @@ creation_rules:
     age: >-
       age19wwdklnyc0r37czhr6e8fg73ww43xenx8ge96gsyezhk8lq7zv6qedacrv,
       age1qylx0yw47x9vsvlkrfqfpufvnrqcwe9sj38zekm0uxs4pajcpgeqjpm33l
+
+  # QA (129.121.171.140): dotenv files in deploy/staging/secrets, named *.enc.env.
+  # Exactly two recipients: the QA server's key (/etc/mento/age/qa.key, root only on
+  # the box) and the QA recovery key (held in the team password manager). No others.
+  - path_regex: deploy[\\/]staging[\\/]secrets[\\/][^\\/]+\.enc\.env$
+    age: >-
+      age1ldqs8347spf5jmqefrmwy5xlj7hlsm773qdj9d6n29v4dxzehd4sk00evk,
+      age1ex54pfy45hw007za70xzzfn0nfh433fn0qvvc9cqmtwv2dp5m44qu0pk5k

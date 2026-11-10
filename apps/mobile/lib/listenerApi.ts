@@ -19,6 +19,24 @@ export type ListenerMe = {
   /** The mentor's own face — the SAME animal + wash members see (server mentor_face). */
   companion_animal?: string;
   companion_colour?: string;
+  /** Certified for exam mentoring (DECISIONS §O); shown to people as "Mento Verified". */
+  certified?: boolean;
+  /** Usual time to accept a request over 30 days, once there is enough to say (DECISIONS §P.6). */
+  reply_within?: 'day' | 'two_days' | null;
+  languages?: string[];
+  /** Notifications show the words of a message (off by default). */
+  push_preview?: boolean;
+};
+
+export type DocumentKind = 'id_card' | 'posting_letter' | 'result' | 'other';
+export type VerificationDoc = {
+  id: string;
+  kind: DocumentKind;
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  created_at: string;
+  decided_at: string | null;
+  /** Why, when it was not approved (written by the team). */
+  note: string | null;
 };
 
 /** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
@@ -57,6 +75,10 @@ export type ListenerConversation = {
   in_touch?: boolean;
   /** Snooze 24 h (board A10): when the snooze ends, while it is open; else null. */
   snoozed_until?: string | null;
+  /** Own chats only: when the member began waiting on this mentor's reply (ISO), and how many
+   * of their messages are unread. Absent for Stream chats (mirrored live) or an older server. */
+  waiting_since?: string | null;
+  unread?: number;
   /** The member's companion in their colour (board A10 rows). Never its name. */
   user_companion_animal?: string | null;
   user_companion_colour?: string | null;
@@ -84,6 +106,15 @@ export type ListenerRequest = {
   requester_companion_animal?: string | null;
   requester_companion_colour?: string | null;
   issue_category_label?: string | null;
+  /** Offered to every certified mentor; the first to accept takes it (DECISIONS §P.4). */
+  broadcast?: boolean;
+  /** What the member chose to share: their road and stage, as words. */
+  community_label?: string | null;
+  stage_label?: string | null;
+  /** "18–24": the member's age as a band, never a date of birth. */
+  age_band?: string | null;
+  /** Who it was offered to: any approved mentor, Mento Verified only, or peers. */
+  audience?: 'any' | 'in_service' | 'peer';
 };
 
 /** Dev-only picker row (the /listener/dev/* endpoints 404 in production). */
@@ -163,8 +194,13 @@ export const listenerApi = {
   brief: (convoId: string) => req<MemberBrief>(`/listener/me/conversations/${convoId}/brief`),
 
   /** PATCH-like semantics on a PUT: an omitted field is left unchanged server-side. */
-  updateProfile: (body: { public_line?: string | null; availability_note?: string | null }) =>
+  updateProfile: (body: { public_line?: string | null; availability_note?: string | null; languages?: string[]; push_preview?: boolean }) =>
     req<ListenerMe>('/listener/me/profile', { method: 'PUT', body: JSON.stringify(body) }),
+
+  /** Mento Verified by document (services/api/app/services/verification.py). Never returns the file. */
+  documents: () => req<VerificationDoc[]>('/listener/me/verification'),
+  sendDocument: (body: { kind: DocumentKind; content_base64: string }) =>
+    req<VerificationDoc>('/listener/me/verification', { method: 'POST', body: JSON.stringify(body) }),
 
   accept: (id: string) =>
     req<{ id: string; status: string; conversation_id: string | null }>(
@@ -204,6 +240,11 @@ export const listenerApi = {
       `/listener/me/conversations/${conversationId}/snooze`,
       { method: 'POST' },
     ),
+
+  /** "This is about an exam" (DECISIONS §O): suggest the member move to a certified exam mentor. A
+   * time on the server, never text; idempotent. 409 `already_certified` for a certified mentor. */
+  suggestCertified: (conversationId: string) =>
+    req<{ status: string }>(`/listener/me/conversations/${conversationId}/suggest-certified`, { method: 'POST' }),
 
   wake: (conversationId: string) =>
     req<{ id: string; snoozed_until: string | null }>(

@@ -19,7 +19,7 @@
  * the transcript.
  */
 import { memo, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -63,6 +63,8 @@ type Props = {
   onToggleSave: (id: string) => void;
   onSave: (m: ThreadMsg) => void;
   onArrived: (id: string) => void;
+  /** Holding a message opens its action sheet (copy, save, report). */
+  onLongPress?: (m: ThreadMsg) => void;
 };
 
 export const ThreadRow = memo(function ThreadRow({
@@ -78,6 +80,7 @@ export const ThreadRow = memo(function ThreadRow({
   onToggleSave,
   onSave,
   onArrived,
+  onLongPress,
 }: Props) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -133,7 +136,10 @@ export const ThreadRow = memo(function ThreadRow({
 
       {item.mine ? (
         <View style={styles.mineWrap}>
-          <Bubble mine text={item.text} containerStyle={styles.mineBubbleWrap} testID={`mine-${item.id}`} />
+          <Pressable onLongPress={onLongPress ? () => onLongPress(item) : undefined} delayLongPress={380}
+            accessibilityHint={onLongPress ? t('chat.msgActionsA11y') : undefined} testID={`mine-hold-${item.id}`}>
+            <Bubble mine text={item.text} containerStyle={styles.mineBubbleWrap} testID={`mine-${item.id}`} />
+          </Pressable>
           {statusText ? (
             <Text style={[styles.status, { color: colors.inkMuted }]} testID="chat-delivery">
               {statusText}
@@ -151,6 +157,7 @@ export const ThreadRow = memo(function ThreadRow({
             ) : null}
             <PressKey
               onPress={() => onToggleSave(item.id)}
+              onLongPress={onLongPress ? () => onLongPress(item) : undefined}
               edge={colors.edgeSurface}
               travel={3}
               radius={radius.lg}

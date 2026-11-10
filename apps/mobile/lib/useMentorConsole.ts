@@ -60,7 +60,8 @@ export type MentorConsole = {
   note: string | null;
   refresh: () => Promise<void>;
   toggleStatus: () => Promise<void>;
-  act: (requestId: string, action: 'accept' | 'decline') => Promise<void>;
+  /** Accept returns the new conversation's id (so the page can open the chat); decline returns null. */
+  act: (requestId: string, action: 'accept' | 'decline') => Promise<string | null>;
   /** Board A10: snooze (true) or undo (false) one conversation; false on failure. */
   setSnooze: (conversationId: string, on: boolean) => Promise<boolean>;
   busy: string | null;
@@ -68,7 +69,7 @@ export type MentorConsole = {
 
 const EMPTY_LIVE: ChannelLive = { unread: 0, preview: null, typing: false, waitingSince: null };
 
-export function useMentorConsole(atCapacityText: string): MentorConsole {
+export function useMentorConsole(atCapacityText: string, takenText = ''): MentorConsole {
   const [me, setMe] = useState<ListenerMe | null>(null);
   const [requests, setRequests] = useState<ListenerRequest[]>([]);
   const [conversations, setConversations] = useState<ListenerConversation[]>([]);
@@ -218,20 +219,32 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
   useFocusEffect(
     useCallback(() => {
       void refresh();
-      // Pin the poll to the generation refresh() just started — if a blur (or a
-      // later refresh) bumps seq, this poll's writes become no-ops.
-      const g = seq.current;
+      // The poll lives exactly as long as this focus. It must NOT be pinned to refresh()'s
+      // generation: accept / decline / going online / saving the line all call refresh(),
+      // which bumps `seq`, and a poll pinned to the first generation silently stopped
+      // updating after the first action — a new request then waited for a relaunch.
+      let focused = true;
       const id = setInterval(() => {
         void listenerApi
           .requests()
           .then((r) => {
-            if (seq.current === g) setRequests(r);
+            if (focused) setRequests(r);
           })
           .catch(() => {
             /* the 30s poll is a freshness nicety, not a source of truth — swallow */
           });
+        // Own chats have no Stream mirror: who is waiting and what is unread arrives with the rows.
+        void listenerApi
+          .conversations()
+          .then((rows) => {
+            if (focused) setConversations(rows);
+          })
+          .catch(() => {
+            /* same: the next poll or focus catches up */
+          });
       }, REQUEST_POLL_MS);
       return () => {
+        focused = false;
         // Invalidate any in-flight refresh() first so it bails out of its own
         // setStates/subscribes and unsubscribes only the subs IT created.
         seq.current += 1;
@@ -256,21 +269,29 @@ export function useMentorConsole(atCapacityText: string): MentorConsole {
   }, [me, busy]);
 
   const act = useCallback(
-    async (requestId: string, action: 'accept' | 'decline') => {
-      if (busy) return;
+    async (requestId: string, action: 'accept' | 'decline'): Promise<string | null> => {
+      if (busy) return null;
       setBusy(requestId);
       setNote(null);
       try {
-        if (action === 'accept') await listenerApi.accept(requestId);
+        let opened: string | null = null;
+        if (action === 'accept') opened = (await listenerApi.accept(requestId)).conversation_id ?? null;
         else await listenerApi.decline(requestId);
         await refresh();
+        return opened;
       } catch (e) {
         if (e instanceof ApiError && e.status === 409) setNote(atCapacityText);
+        else if (e instanceof ApiError && e.status === 404 && action === 'accept') {
+          // Another mentor took an open request first (DECISIONS §P.4): it leaves the list.
+          if (takenText) setNote(takenText);
+          await refresh();
+        }
+        return null;
       } finally {
         setBusy(null);
       }
     },
-    [busy, refresh, atCapacityText],
+    [busy, refresh, atCapacityText, takenText],
   );
 
   const setSnooze = useCallback(

@@ -2,6 +2,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
+import { withAppVersion } from './appVersion';
 import { getInstallId } from './installId';
 import { screenCache } from './screenCache';
 import {
@@ -34,6 +35,8 @@ export type Me = Persona & {
   member_setup_complete?: boolean;
   /** The member's own name for the companion — only ever shown back to them. */
   companion_name?: string | null;
+  /** Notifications show the words of a message (off by default). */
+  push_preview?: boolean;
   /** Standing (WS3 T3.7). While not 'active' every other member call answers 403
    * `member_suspended` / `member_banned`. Optional: an older server omits it. */
   status?: 'active' | 'suspended' | 'banned';
@@ -107,6 +110,12 @@ export type Listener = {
    * colour every screen draws for this mentor. Stable across name rotation. */
   companion_animal?: string;
   companion_colour?: string;
+  /** An admin certified this mentor for exam mentoring (DECISIONS §O): the gold badge. */
+  certified?: boolean;
+  /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
+  reply_within?: 'day' | 'two_days' | null;
+  /** Language codes this mentor talks in; empty when they have not said. */
+  languages?: string[];
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -133,7 +142,14 @@ export type ListenerProfile = {
   companion_colour?: string;
   /** The server's member-facing words for `categories`, same order (never a raw slug). */
   category_labels?: string[];
+  certified?: boolean;
+  /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
+  reply_within?: 'day' | 'two_days' | null;
+  languages?: string[];
 };
+
+/** Who may take a question: any approved mentor (the default), Mento Verified only, or peers. */
+export type Audience = 'any' | 'in_service' | 'peer';
 
 export type PersonalRequest = {
   id: string;
@@ -147,6 +163,12 @@ export type PersonalRequest = {
   seen_at?: string | null;
   /** The mentor said yes and the chat is open — the letter's "Replying". */
   replying?: boolean;
+  /** Offered to every verified mentor, the first to accept takes it (DECISIONS §P.4). */
+  broadcast?: boolean;
+  /** Who it was offered to. */
+  audience?: Audience;
+  /** No reply after 24 hours: the letter asks what to do next (DECISIONS §P.5). */
+  nudged?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
   listener_companion_animal?: string | null;
   listener_companion_colour?: string | null;
@@ -227,7 +249,13 @@ export type ConversationListItem = {
   reply_within_a_day?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
   listener_companion_animal?: string | null;
-  listener_companion_colour?: string | null;
+  listener_companion_colour?: string | null;  /** The last line of an OWN chat (server-cut to one short line). Absent for a Stream chat (previewed
+   * client-side), a PIN-locked or wiped chat, or an older server. */
+  last_message?: string | null;
+  last_message_at?: string | null;
+  last_message_mine?: boolean;
+  /** The member muted this chat (Quiet Pause). */
+  is_paused?: boolean;
 };
 
 export type ConversationState = {
@@ -238,6 +266,8 @@ export type ConversationState = {
   is_locked: boolean;
   is_paused: boolean;
   status_mask: string | null;
+  /** The mentor suggested a certified exam mentor for this conversation (DECISIONS §O). */
+  exam_redirect?: boolean;
 };
 
 export type JournalEntry = {
@@ -325,10 +355,13 @@ async function apiFetch(
   init: RequestInit,
   getToken?: () => Promise<string | null>,
 ): Promise<Response> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(init.headers as Record<string, string>),
-  };
+  const headers: Record<string, string> = withAppVersion(
+    {
+      'Content-Type': 'application/json',
+      ...(init.headers as Record<string, string>),
+    },
+    Constants.expoConfig?.version,
+  );
   if (getToken) {
     const token = await getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -384,6 +417,9 @@ export type Allowance = {
   /** The conversation is inside its crisis-exempt window: nothing is held or counted, and
    * the client never shows the three-in-a-row note. Optional — an older server omits it. */
   exempt?: boolean;
+  /** False when this conversation is not with a certified exam mentor (DECISIONS §O): no cap and
+   * no meter. Optional — an older server omits it, and the cap then shows as before. */
+  applies?: boolean;
 };
 
 // --- Product feedback (board A11) ---
@@ -402,11 +438,14 @@ export type PathOption = {
   next?: string;
   community?: string;
   stage?: string;
+  /** Open for this launch; false = greyed out as "Coming soon" (DECISIONS §P.1). Absent on old servers. */
+  enabled?: boolean;
 };
 export type PathNode = { question: string; options: PathOption[] };
+export type PathCommunity = { slug: string; name: string; tagline: string; accept_first: boolean; enabled?: boolean };
 export type PathTree = { root: string; nodes: Record<string, PathNode> };
 export type PathState = {
-  community: { slug: string; name: string; tagline: string } | null;
+  community: { slug: string; name: string; tagline: string; accept_first?: boolean } | null;
   stage: { id: string; title: string; blurb: string } | null;
   prompts: string[];
   seasonal: { title: string; body: string } | null;
@@ -439,6 +478,10 @@ export type ListenerApplicationIn = {
   available_times?: Array<'mornings' | 'afternoons' | 'evenings' | 'late_nights' | 'weekends'>;
   email: string | null;
   mentor_interest: boolean;
+  /** Exam mentoring (DECISIONS §O): what the applicant says they hold; an admin reads it. */
+  exam_credential?: string | null;
+  /** Up to five language codes the mentor talks in (lib/languages.ts). */
+  languages?: string[];
   pledge_accepted: boolean;
 };
 
@@ -633,6 +676,8 @@ export const api = {
 
   // --- The member's own record (companion saved on the account, not just the device) ---
   me: () => request<Me>('/me', {}, true),
+  setNotificationStyle: (pushPreview: boolean) =>
+    request<Me>('/me/notification-style', { method: 'PUT', body: JSON.stringify({ push_preview: pushPreview }) }, true),
   /** A fresh recovery code (WS3 T3.5), returned ONCE; a new one replaces the old. */
   makeRecoveryCode: () => request<{ phrase: string }>('/me/recovery', { method: 'POST' }, true),
   /** Sign this device in with a recovery code: 401 for a wrong code, 429 after too many
@@ -650,14 +695,24 @@ export const api = {
   match: (body: { kind?: 'general' | 'personal'; issue_category?: string | null }) =>
     request<MatchResult>('/match', { method: 'POST', body: JSON.stringify(body) }, true),
 
+  /** Exam niche: the best online mentor gets the question and the chat opens only when they
+   * accept (DECISIONS §N.2). 503 when nobody is online. */
+  ask: (body: { issue_category?: string | null; intro_message?: string | null; audience?: Audience }) =>
+    request<PersonalRequest>('/match/ask', { method: 'POST', body: JSON.stringify(body) }, true),
+
   scan: (body: { text: string; conversation_id?: string | null }) =>
     request<ScanResult>('/safety/scan', { method: 'POST', body: JSON.stringify(body) }, true),
 
   listConversations: () => request<ConversationListItem[]>('/conversations', {}, true),
+  /** An own chat's history over REST, for a chat the socket will no longer open (it ended). */
+  ownChatMessages: (id: string) =>
+    request<{ messages: { id: string; seq: number; sender: string; text: string; ts: string }[]; last_seq: number }>(
+      `/chat/${encodeURIComponent(id)}/messages`, {}, true),
   conversationState: (id: string) => request<ConversationState>(`/conversations/${encodeURIComponent(id)}/state`, {}, true),
 
   // --- Paths (Communities) ---
   pathTree: () => request<PathTree>('/paths/tree'),
+  pathCommunities: () => request<PathCommunity[]>('/paths/communities'),
   myPath: () => request<PathState>('/paths/me', {}, true),
   choosePath: (community: string, stage: string) =>
     request<PathState>('/paths/me', { method: 'PUT', body: JSON.stringify({ community, stage }) }, true),
@@ -665,7 +720,9 @@ export const api = {
 
   // --- Mentor discovery + personal requests ---
   // Paged server-side (API T2.3); Browse still shows one list, walked here up to 200.
-  listListeners: () => collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}`)),
+  /** `language`: a preference, not a filter. Mentors who talk it come first; nobody is hidden. */
+  listListeners: (language?: string) =>
+    collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}${language ? `&language=${encodeURIComponent(language)}` : ''}`)),
 
   requestListener: (id: string, intro_message: string, issue_category?: string | null) =>
     request<PersonalRequest>(`/listeners/${id}/request`, { method: 'POST', body: JSON.stringify({ intro_message, issue_category }) }, true),
@@ -746,6 +803,9 @@ export const api = {
 
   listMentorNotes: () => request<JournalEntry[]>('/journals/mentor-notes', {}, true),
 
+  deleteJournalEntry: (id: string) =>
+    request<void>(`/journals/entries/${encodeURIComponent(id)}`, { method: 'DELETE' }, true),
+
   journalSummary: () => request<Record<string, number>>('/journals/summary', {}, true),
 
   createJournalEntry: (body: { channel: string; body: string; meta?: Record<string, unknown> }) =>
@@ -761,6 +821,14 @@ export const api = {
   // --- Become a listener (spec 2026-07-24) ---
   submitListenerApplication: (payload: ListenerApplicationIn) =>
     request<ListenerApplication>('/listener-applications', { method: 'POST', body: JSON.stringify(payload) }, true),
+
+  /** Claim a gold mentor invitation (DECISIONS §P.3): the account becomes a certified mentor. 404 = the code did not work. */
+  claimMentorInvite: (code: string, pledge_accepted: boolean) =>
+    request<ListenerApplication>(
+      '/listener-applications/invite',
+      { method: 'POST', body: JSON.stringify({ code, pledge_accepted }) },
+      true,
+    ),
 
   getListenerApplication: () => request<ListenerApplication | null>('/listener-applications/me', {}, true),
 

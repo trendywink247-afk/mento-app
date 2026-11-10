@@ -6,6 +6,7 @@ from datetime import date, datetime
 
 from sqlalchemy import JSON, Boolean, Date, DateTime, Integer, String, event
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import expression
 
 from app.db import Base
 from app.models.enums import Gender, ListenerStatus, VettingStatus
@@ -27,6 +28,23 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
 
     status: Mapped[ListenerStatus] = mapped_column(default=ListenerStatus.offline, index=True)
     vetting_status: Mapped[VettingStatus] = mapped_column(default=VettingStatus.pending, index=True)
+    # Exam mentoring (DECISIONS section O): set by an admin after reading the application's
+    # credential. Every mentor is admin-approved regardless; this is the extra mark for exam
+    # roads. The 10-a-day / 3-in-a-row allowance applies only to conversations with a certified
+    # mentor.
+    certified_exam: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=expression.false()
+    )
+    certified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Languages this mentor talks in (services/languages.py). Empty = not said; a preference for
+    # matching members, never a filter.
+    languages: Mapped[list[str]] = mapped_column(JSON, default=list, server_default="[]")
+
+    # Notifications show the text of a message (off by default; the mentor turns it on).
+    push_preview: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default=expression.false()
+    )
 
     # Non-cash reputation (PRD §9). Higher rank → higher match priority.
     rank: Mapped[int] = mapped_column(Integer, default=0)

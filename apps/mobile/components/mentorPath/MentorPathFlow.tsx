@@ -1,6 +1,8 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import { KeyboardAvoidingView } from '@/components/KeyboardAvoidingView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ApplicationForm } from '@/components/ApplicationForm';
@@ -11,6 +13,7 @@ import type { CompanionAnimal } from '@/components/art/Companions';
 import { ApplicationStatusCard } from '@/components/mentor/ApplicationStatusCard';
 import { MentorPageHeader } from '@/components/mentor/MentorPageHeader';
 import { AgeGateStep } from '@/components/mentorPath/AgeGateStep';
+import { InviteStep } from '@/components/mentorPath/InviteStep';
 import { StoryStep } from '@/components/mentorPath/StoryStep';
 import { AmbientBackground } from '@/components/motion/AmbientBackground';
 import { Entrance } from '@/components/motion/Entrance';
@@ -88,6 +91,7 @@ export function MentorPathFlow({ surface }: { surface: 'public' | 'member' }) {
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   const [persona, setPersona] = useState<string | null>(null);
   const [leaving, setLeaving] = useState(false);
+  const [inviting, setInviting] = useState(false);
   const bare = surface === 'public';
 
   useEffect(() => {
@@ -251,6 +255,7 @@ export function MentorPathFlow({ surface }: { surface: 'public' | 'member' }) {
             onBack={surface === 'member' ? () => void toMemberSide() : undefined}
             // Someone with an application on file never re-applies from the story.
             onApply={() => setStep(status !== 'none' ? 'status' : nextStep('story', hasSession === true))}
+            onInvite={surface === 'member' && hasSession === true && status === 'none' ? () => setInviting(true) : undefined}
           />
         );
       case 'age':
@@ -276,19 +281,21 @@ export function MentorPathFlow({ surface }: { surface: 'public' | 'member' }) {
         );
       case 'form':
         return (
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={styles.content}
-          >
-            {/* Not approved yet: the eyebrow says only what is true — it will be reviewed. */}
-            <MentorPageHeader
-              eyebrow={t('mentorApplyCopy.eyebrowReview')}
-              title={t('mentorApply.title')}
-              onBack={() => goBack('form')}
-            />
-            <ApplicationForm onSuccess={onSubmitted} />
-          </ScrollView>
+          <KeyboardAvoidingView style={styles.fill}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.content}
+            >
+              {/* Not approved yet: the eyebrow says only what is true — it will be reviewed. */}
+              <MentorPageHeader
+                eyebrow={t('mentorApplyCopy.eyebrowReview')}
+                title={t('mentorApply.title')}
+                onBack={() => goBack('form')}
+              />
+              <ApplicationForm onSuccess={onSubmitted} />
+            </ScrollView>
+          </KeyboardAvoidingView>
         );
       case 'status':
         return (
@@ -331,7 +338,18 @@ export function MentorPathFlow({ surface }: { surface: 'public' | 'member' }) {
           </View>
         ) : (
           <View style={styles.fill}>
-            <StepTransition activeKey={step ?? 'story'} render={renderStep} direction={direction.current} />
+            {inviting ? (
+              <InviteStep
+                onBack={() => setInviting(false)}
+                onClaimed={(result) => {
+                  path.setApplication(result);
+                  setInviting(false);
+                  setStep('status');
+                }}
+              />
+            ) : (
+              <StepTransition activeKey={step ?? 'story'} render={renderStep} direction={direction.current} />
+            )}
           </View>
         )}
       </SafeAreaView>

@@ -25,7 +25,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   interpolate,
@@ -44,14 +44,17 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { FeedbackPill } from '@/components/FeedbackPill';
 import { GroundFade } from '@/components/GroundFade';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { HELPLINES, telHref } from '@/lib/helplines';
+import { openNewChat } from '@/lib/askLoop';
 import { Companion } from '@/components/art/Companion';
 import { MentorFace } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { useHeroBreath } from '@/components/motion/useHeroBreath';
+import { askIntro, openAsked } from '@/lib/startChat';
 import { api, type PersonalRequest } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, type TKey } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { requestLetter, type LetterMentor } from '@/lib/requestLetter';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
@@ -63,6 +66,8 @@ import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
 
 /** How often the focused letter re-reads its question (ms). Quiet: no spinner, no motion. */
 const REFRESH_MS = 15000;
+/** How long a question may wait before the letter offers another mentor (the member decides). */
+const SLOW_AFTER_MS = 120_000;
 /** The scene's geometry (board A04): the arc starts right of the companion and ends left of
  * the mentor's avatar; the note's top edge sits `NOTE_TOP` below the scene's top. */
 const NOTE_TOP = 84;
@@ -92,6 +97,8 @@ export default function RequestSentScreen() {
   // ask another once they reply or you close it"). Still, never red.
   const [closedByMe, setClosedByMe] = useState(false);
   const [closing, setClosing] = useState(false);
+  // "Keep waiting" on the 24-hour card: this screen stops asking until it is opened again.
+  const [keepWaiting, setKeepWaiting] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -146,10 +153,23 @@ export default function RequestSentScreen() {
   const phase: Phase =
     request?.status === 'matched' ? 'accepted' : request && request.status !== 'pending' ? 'closed' : 'pending';
   phaseRef.current = phase;
+  // A calm clock: it only decides whether to OFFER another mentor, never counts down at anyone.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (phase !== 'pending') return;
+    const timer = setInterval(() => setNow(Date.now()), 10_000);
+    return () => clearInterval(timer);
+  }, [phase]);
+  const slow = phase === 'pending' && request ? now - new Date(request.created_at).getTime() >= SLOW_AFTER_MS : false;
   // A closed or failed question is a still state (T&S #11).
   const still = reduced || phase !== 'pending' || loadError || missing;
 
-  const name = mentor?.name ?? '';
+  // A broadcast has no one mentor until somebody accepts: the screen says "verified mentors".
+  const toAll = Boolean(request?.broadcast) && !mentor;
+  // Who a question to everyone went to follows what the member chose: any mentor, Mento Verified, or peers.
+  const audience = request?.audience ?? 'in_service';
+  const allKey = audience === 'peer' ? 'Peer' : audience === 'any' ? 'Any' : '';
+  const name = mentor?.name ?? (toAll ? t(`requestSent.allMentors${allKey}` as TKey) : '');
   const question = request?.intro_message ?? '';
 
   const openChat = () => {
@@ -173,6 +193,31 @@ export default function RequestSentScreen() {
       .finally(() => setClosing(false));
   };
 
+  // "Ask another mentor": close this question (one open question at a time), then the same sheet.
+  const tryAnother = () => {
+    if (!id || closing) return;
+    setClosing(true);
+    void api
+      .withdrawRequest(id)
+      .then(() => openNewChat(router))
+      .catch(() => setLoadError(true))
+      .finally(() => setClosing(false));
+  };
+
+  // 24 hours without a reply (DECISIONS §P.5): the member chooses what happens next. Nothing
+  // moves to another mentor, and their words reach nobody new, unless they say so here.
+  const nudge = phase === 'pending' && Boolean(request?.nudged) && !keepWaiting;
+  const sendToAll = () => {
+    if (!id || closing) return;
+    setClosing(true);
+    void api
+      .withdrawRequest(id)
+      .then(() => api.ask({ issue_category: null, intro_message: askIntro(request?.intro_message) }))
+      .then((r) => openAsked(router, r))
+      .catch(() => setLoadError(true))
+      .finally(() => setClosing(false));
+  };
+
   const line =
     phase === 'accepted'
       ? t('requestSent.accepted', { name })
@@ -180,7 +225,9 @@ export default function RequestSentScreen() {
         ? closedByMe
           ? t('askFlow.closedByYou')
           : t('requestSent.closed', { name })
-        : t('requestSent.oneAtATime', { name });
+        : toAll
+          ? t(`requestSent.toAll${allKey}` as TKey)
+          : t('requestSent.oneAtATime', { name });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']} testID="request-sent">
@@ -232,6 +279,36 @@ export default function RequestSentScreen() {
                   <Text style={[type.note, { color: colors.inkMuted }]} testID="request-sent-line">
                     {name ? line : ' '}
                   </Text>
+                  {nudge ? (
+                    <View style={styles.slow} testID="request-sent-nudge">
+                      <Text style={[type.note, { color: colors.ink }]}>{t('requestSent.nudge')}</Text>
+                      <QuietKey label={t('requestSent.nudgeAll')} onPress={sendToAll} disabled={closing} testID="request-sent-nudge-all" />
+                      <QuietKey label={t('requestSent.chooseMentor')} onPress={tryAnother} disabled={closing} testID="request-sent-nudge-choose" />
+                      <QuietKey label={t('requestSent.nudgeWait')} onPress={() => setKeepWaiting(true)} testID="request-sent-nudge-wait" />
+                    </View>
+                  ) : null}
+                  {slow && !nudge ? (
+                    <View style={styles.slow} testID="request-sent-slow">
+                      <Text style={[type.note, { color: colors.ink }]}>{toAll ? t('requestSent.slowAll') : t('requestSent.slowLine')}</Text>
+                      <QuietKey
+                        label={toAll ? t('requestSent.chooseMentor') : t('requestSent.tryAnother')}
+                        onPress={tryAnother}
+                        disabled={closing}
+                        testID="request-sent-try-another"
+                      />
+                    </View>
+                  ) : null}
+                  {phase === 'pending' ? (
+                    <Text
+                      style={[type.caption, { color: colors.inkMuted }]}
+                      onPress={() => void Linking.openURL(telHref(HELPLINES[0].tel)).catch(() => {})}
+                      accessibilityRole="link"
+                      accessibilityLabel={t('requestSent.helplineA11y', { number: HELPLINES[0].display })}
+                      testID="request-sent-helpline"
+                    >
+                      {t('requestSent.helpline', { number: HELPLINES[0].display })}
+                    </Text>
+                  ) : null}
                   {loadError ? (
                     <Text style={[type.caption, { color: colors.inkMuted }]} testID="request-sent-error">
                       {t('requestSent.loadError')}
@@ -618,6 +695,7 @@ function MeanwhileKey({
 }
 
 const styles = StyleSheet.create({
+  slow: { gap: 2 },
   safe: { flex: 1 },
   body: { flex: 1 },
   scroll: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.md, gap: 12 },

@@ -40,6 +40,9 @@ import { ApiError, api, type PathState } from '@/lib/api';
 import { openNewChat } from '@/lib/askLoop';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
+import { AudiencePicker } from '@/components/AudiencePicker';
+import type { Audience } from '@/lib/api';
+import { matchOrAsk, openAsked } from '@/lib/startChat';
 import {
   EMPTY_CHOICE,
   QUESTION_MAX_CHARS,
@@ -153,19 +156,22 @@ export default function PathQuestion() {
     else leaveToPath(router);
   }, [pathLoaded, starter, prompts, router]);
 
+  // An exam road waits for a mentor's accept (DECISIONS §N.2): the words go to ONE mentor as the
+  // question, and there is no chat to edit in until they say yes.
+  const acceptFirst = Boolean(path?.community?.accept_first);
   const community = params.community ?? path?.community?.slug ?? null;
   const lens =
     params.lens ?? (path?.community && path.stage ? `${path.community.name} · ${path.stage.title}` : '');
 
-  const offered = useMemo(() => chipsFor(community), [community]);
+  const offered = useMemo(() => chipsFor(community, acceptFirst), [community, acceptFirst]);
   const assembled = useMemo(
     () =>
       assembleQuestion(
         starter,
-        chosenChips(choice, community).map((id) => t(CHIP_CLAUSE[id])),
+        chosenChips(choice, community, acceptFirst).map((id) => t(CHIP_CLAUSE[id])),
         { joinList: t('pathQuestion.joinList'), joinLast: t('pathQuestion.joinLast'), stop: t('pathQuestion.stop') },
       ),
-    [starter, choice, community, t],
+    [starter, choice, community, acceptFirst, t],
   );
 
   const another = () => {
@@ -174,6 +180,7 @@ export default function PathQuestion() {
     setStarter(prompts[(at + 1) % prompts.length]);
   };
 
+  const [audience, setAudience] = useState<Audience>('any');
   const go = async (mode: 'continue' | 'edit') => {
     if (busy || !assembled.text) return;
     setBusy(mode);
@@ -181,7 +188,12 @@ export default function PathQuestion() {
     setBusyExit(false);
     setOpenQ(null);
     try {
-      const match = await api.match({ kind: 'general' });
+      const started = await matchOrAsk({ audience }, assembled.text);
+      if (started.kind === 'ask') {
+        openAsked(router, started.request);
+        return;
+      }
+      const match = started.match;
       // replace: the builder has done its job — back from the chat should not return
       // to a half-used form holding a message that may already be sent.
       router.replace({
@@ -230,7 +242,7 @@ export default function PathQuestion() {
             : { backgroundColor: colors.surface, borderColor: colors.border },
         ]}
       >
-        <Text style={[styles.chipText, { color: on ? colors.accentEdge : colors.ink }]}>{t(CHIP_LABEL[id])}</Text>
+        <Text style={[styles.chipText, { color: on ? colors.accentInk : colors.ink }]}>{t(CHIP_LABEL[id])}</Text>
       </PressKey>
     );
   };
@@ -362,7 +374,7 @@ export default function PathQuestion() {
           <View style={styles.promise}>
             <Ionicons name="lock-closed-outline" size={15} color={colors.inkMuted} style={styles.promiseIcon} />
             <Text style={[type.caption, styles.promiseText, { color: colors.inkMuted }]}>
-              {t('pathQuestion.editable')}
+              {t(acceptFirst ? 'pathQuestion.sentToMentor' : 'pathQuestion.editable')}
             </Text>
           </View>
           {assembled.dropped > 0 ? (
@@ -371,6 +383,21 @@ export default function PathQuestion() {
             </Text>
           ) : null}
         </Entrance>
+        {busyExit ? (
+          // Inside the scrolling content, not the footer: the card is tall, and in the footer it squeezed the
+          // message above it until its last line was cut off.
+          <View style={styles.busyInScroll}>
+            <BusyExits
+              // The one ask loop (lib/askLoop.ts): the New chat sheet over My Chats →
+              // Pick a mentor → Browse → a mentor → the question step, pre-filled with
+              // what they wrote — never sent for them.
+              onSendInstead={() => openNewChat(router, { question: assembled.text, busy: true })}
+              onRetry={() => void go('continue')}
+              retrying={busy !== null}
+              testID="pq-busy"
+            />
+          </View>
+        ) : null}
       </ScrollView>
       </DeepArrival>
 
@@ -386,17 +413,10 @@ export default function PathQuestion() {
               testID="pq-open"
             />
           </View>
-        ) : busyExit ? (
+        ) : null}
+        {acceptFirst ? (
           <View style={styles.footNote}>
-            <BusyExits
-              // The one ask loop (lib/askLoop.ts): the New chat sheet over My Chats →
-              // Pick a mentor → Browse → a mentor → the question step, pre-filled with
-              // what they wrote — never sent for them.
-              onSendInstead={() => openNewChat(router, { question: assembled.text, busy: true })}
-              onRetry={() => void go('continue')}
-              retrying={busy !== null}
-              testID="pq-busy"
-            />
+            <AudiencePicker value={audience} onChange={setAudience} />
           </View>
         ) : null}
         {note ? (
@@ -406,12 +426,13 @@ export default function PathQuestion() {
         ) : null}
         <Entrance index={6}>
           <View style={styles.actions}>
+            {acceptFirst ? null : (
             <PressKey
               onPress={() => void go('edit')}
               edge={colors.edgeSurface}
               intent="navigate"
               radius={radius.md}
-              disabled={busy !== null || !assembled.text}
+              disabled={busy !== null || !assembled.text || !pathLoaded}
               accessibilityLabel={t('pathQuestion.editA11y')}
               testID="pq-edit"
               containerStyle={styles.editBox}
@@ -425,13 +446,14 @@ export default function PathQuestion() {
                 </Text>
               )}
             </PressKey>
+            )}
             <PressKey
               onPress={() => void go('continue')}
               edge={colors.accentEdge}
               intent="commit"
               radius={radius.md}
               disabled={busy !== null || !assembled.text}
-              accessibilityLabel={t('pathQuestion.continueA11y')}
+              accessibilityLabel={t(acceptFirst ? 'pathQuestion.continueAskA11y' : 'pathQuestion.continueA11y')}
               testID="pq-continue"
               containerStyle={styles.continueBox}
               style={[styles.action, styles.actionFilled, { backgroundColor: colors.accent }]}
@@ -502,6 +524,7 @@ const styles = StyleSheet.create({
   caret: { width: 2, height: 18, borderRadius: 2, marginLeft: 3, transform: [{ translateY: 3 }] },
   dropped: { fontFamily: font.sansBold, marginTop: space.xs },
   footer: { paddingHorizontal: GUTTER, paddingTop: space.sm, paddingBottom: space.md },
+  busyInScroll: { marginTop: space.md },
   note: { textAlign: 'center', marginBottom: space.sm },
   footNote: { marginBottom: space.sm },
   actions: { flexDirection: 'row', gap: 12 },

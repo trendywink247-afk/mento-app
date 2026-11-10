@@ -16,6 +16,8 @@ export function MentorOptionsMenu({
   top,
   ending,
   onReport,
+  onSuggest,
+  suggested,
   onAskEnd,
   onConfirmEnd,
   onClose,
@@ -24,6 +26,9 @@ export function MentorOptionsMenu({
   top: number;
   ending: boolean;
   onReport: () => void;
+  /** "This is about an exam" (DECISIONS §O): only for a mentor who is not certified. */
+  onSuggest?: () => void;
+  suggested?: boolean;
   onAskEnd: () => void;
   onConfirmEnd: () => void;
   onClose: () => void;
@@ -59,6 +64,28 @@ export function MentorOptionsMenu({
               </View>
               <Text style={[type.cardTitle, { color: colors.ink }]}>{t('mentorChatPage.report')}</Text>
             </PressKey>
+            {onSuggest ? (
+              <PressKey
+                onPress={onSuggest}
+                disabled={suggested}
+                edge="transparent"
+                travel={2}
+                radius={radius.md}
+                accessibilityRole="menuitem"
+                testID="mentor-menu-suggest"
+                style={styles.item}
+              >
+                <View style={[styles.badge, { backgroundColor: wash.orange }]}>
+                  <Ionicons name="school-outline" size={18} color={COMPANION_COLORS.mustard.accentEdge} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[type.cardTitle, { color: colors.ink }]}>
+                    {suggested ? t('certified.suggestedSent') : t('certified.suggest')}
+                  </Text>
+                  <Text style={[type.caption, { color: colors.inkMuted }]}>{t('certified.suggestHint')}</Text>
+                </View>
+              </PressKey>
+            ) : null}
             <PressKey
               onPress={onAskEnd}
               edge="transparent"

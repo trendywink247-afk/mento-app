@@ -53,9 +53,16 @@ class ConversationListItem(BaseModel):
     # only ever told the kind half of it — "<mentor> will reply within a day" — never
     # that it was snoozed.
     reply_within_a_day: bool = False
+    # The member muted this chat (Quiet Pause): no notifications from it until they resume. Additive.
+    is_paused: bool = False
     # The mentor's face (services/mentor_face.py) — the same animal + wash on every screen.
     listener_companion_animal: str = "Owl"
     listener_companion_colour: str = "sage"
+    # My Chats preview for an OWN chat (Stream rows are previewed client-side). Absent for a
+    # locked or wiped chat, so a PIN-locked conversation never leaks its last line to the list.
+    last_message: str | None = None
+    last_message_at: str | None = None
+    last_message_mine: bool = False
 
 
 class VerifyPinRequest(BaseModel):
@@ -71,6 +78,8 @@ class ConversationState(BaseModel):
     is_locked: bool
     is_paused: bool
     status_mask: str | None = None
+    # The mentor suggested a certified exam mentor for this conversation (DECISIONS section O).
+    exam_redirect: bool = False
 
 
 class ReflectionIn(BaseModel):

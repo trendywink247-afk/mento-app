@@ -1,0 +1,9 @@
+[Unit]
+Description=Weekly QA backup restore drill
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/qa-restore-drill
+Nice=10

@@ -104,6 +104,7 @@ export default function CoffeeScreen() {
                       edge={on ? colors.accentEdge : colors.edgeSurface}
                       radius={radius.md}
                       intent="select"
+                      accessibilityRole="button"
                       accessibilityState={{ selected: on }}
                       testID={c === 'other' ? 'amount-custom' : `amount-${c}`}
                       containerStyle={styles.amountBox}

@@ -82,7 +82,9 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
       footerIndex={6}
       footer={
         <>
-          {/* A limit state is still: plain text, no motion, no haptic (T&S #11). */}
+          {/* A limit state is still: plain text, no motion, no haptic (T&S #11). The slot keeps
+              its height so the wheels do not jump when the line appears. */}
+          <View style={styles.msgSlot}>
           {underAge ? (
             <Text style={[type.caption, styles.block, { color: colors.danger }]}>
               {t('onboarding.age.underAge', { age: MIN_AGE })}
@@ -91,6 +93,7 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
           {future ? (
             <Text style={[type.caption, styles.block, { color: colors.danger }]}>{t('onboarding.age.future')}</Text>
           ) : null}
+          </View>
           <PrimaryButton
             label={t('common.continue')}
             shape="key"
@@ -146,6 +149,7 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
 const styles = StyleSheet.create({
   head: { gap: space.sm },
   grow: { flexGrow: 1, minHeight: space.sm },
+  msgSlot: { minHeight: 40, justifyContent: 'flex-end' },
   trayZone: { paddingTop: PEEK },
   peek: { position: 'absolute', right: space.sm, top: 0, width: PEEK_SIZE, height: PEEK_SIZE },
   originBottom: { transformOrigin: 'bottom' },

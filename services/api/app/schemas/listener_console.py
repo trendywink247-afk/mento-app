@@ -22,6 +22,16 @@ class ListenerMeOut(BaseModel):
     stream_token: str
     public_line: str | None
     availability_note: str | None
+    # Certified for exam mentoring (DECISIONS section O): decides whether the chat menu offers
+    # "This is about an exam".
+    certified: bool = False
+    # The usual time to accept a request over 30 days ("day" / "two_days"), only once there is enough
+    # to say (DECISIONS section P.6). Null otherwise.
+    reply_within: str | None = None
+    # The languages this mentor talks in (services/languages.py).
+    languages: list[str] = []
+    # Notifications show the text of a message (off by default).
+    push_preview: bool = False
     # Rotating names (DECISIONS §L.6): when this name is replaced (next 04:00 IST, as
     # UTC). Null while rotation is switched off.
     name_changes_at: str | None = None
@@ -38,6 +48,8 @@ class ListenerProfileEditIn(BaseModel):
 
     public_line: str | None = Field(default=None, max_length=120)
     availability_note: str | None = Field(default=None, max_length=60)
+    languages: list[str] | None = Field(default=None, max_length=12)
+    push_preview: bool | None = None
 
 
 class DevListenerItem(BaseModel):
@@ -83,6 +95,11 @@ class ListenerConversationItem(BaseModel):
     # Snooze 24 h (board A10): when the snooze ends (ISO UTC) while it is open; null
     # otherwise. Snoozed rows sort after the un-snoozed active ones.
     snoozed_until: str | None = None
+    # Own chats only (Stream rows are mirrored client-side): when the member began waiting for
+    # this mentor's reply (their latest unanswered message), and how many member messages the
+    # mentor has not read. Counts and a time, never text.
+    waiting_since: str | None = None
+    unread: int = 0
     # The MEMBER's growth companion in their colour (board A10 rows) — the same two
     # values the member brief carries. Never the companion's name (private, lane u7).
     user_companion_animal: str | None = None
@@ -132,6 +149,15 @@ class ListenerRequestItem(BaseModel):
     requester_companion_animal: str | None = None
     requester_companion_colour: str | None = None
     issue_category_label: str | None = None
+    # Offered to every certified mentor, first to accept takes it (DECISIONS section P.4). Additive.
+    broadcast: bool = False
+    # What the member chose to share: their road and stage, as words. Never a name or contact.
+    community_label: str | None = None
+    stage_label: str | None = None
+    # The member's age as a band ("18–24"); never a date of birth. Additive.
+    age_band: str | None = None
+    # Who the request was offered to ("any", "in_service" or "peer"). Additive.
+    audience: str = "any"
 
 
 class RequestsSeenIn(BaseModel):

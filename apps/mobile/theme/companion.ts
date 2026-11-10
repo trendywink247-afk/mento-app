@@ -18,6 +18,8 @@ export type CompanionColor =
   | 'teal';
 
 export type AccentSet = {
+  /** Text and icons on a tint or on the ground: the pillow edge on the pastel look, a light tone on dark. */
+  accentInk: string;
   accent: string;
   accentPress: string;
   accentEdge: string;
@@ -27,7 +29,7 @@ export type AccentSet = {
   onAccent: string;
 };
 
-export const COMPANION_COLORS: Record<CompanionColor, AccentSet> = {
+export const COMPANION_COLORS: Record<CompanionColor, Omit<AccentSet, 'accentInk'>> = {
   terracotta: { accent: '#A2533A', accentPress: '#984E33', accentEdge: '#7E3F2B', accentTint: '#F6D9CB', accentTintEdge: '#DABAB0', onAccent: '#FFFFFF' },
   sage: { accent: '#467054', accentPress: '#3F6549', accentEdge: '#33513C', accentTint: '#DCE6DD', accentTintEdge: '#B5C6BB', onAccent: '#FFFFFF' },
   sky: { accent: '#3B6D8F', accentPress: '#356282', accentEdge: '#2A4F69', accentTint: '#DCE8F2', accentTintEdge: '#B1C5D2', onAccent: '#FFFFFF' },
@@ -50,6 +52,28 @@ export const COMPANION_COLOR_LABELS: Record<CompanionColor, string> = {
 };
 
 export function accentFor(color: CompanionColor | string | null | undefined): AccentSet {
-  if (color && color in COMPANION_COLORS) return COMPANION_COLORS[color as CompanionColor];
-  return COMPANION_COLORS[DEFAULT_COMPANION_COLOR];
+  const set = color && color in COMPANION_COLORS ? COMPANION_COLORS[color as CompanionColor] : COMPANION_COLORS[DEFAULT_COMPANION_COLOR];
+  return { ...set, accentInk: set.accentEdge };
+}
+
+function mix(a: string, b: string, t: number): string {
+  const n = (h: string, i: number) => parseInt(h.slice(i, i + 2), 16);
+  const c = (i: number) => Math.round(n(a, i) * (1 - t) + n(b, i) * t).toString(16).padStart(2, '0');
+  return `#${c(1)}${c(3)}${c(5)}`;
+}
+
+/** The companion colour on the dark look: a lighter accent (carries text and keys on the dark ground),
+ * a dark tint, and dark text on the accent. Checked by scripts/contrast_gate.py. */
+export function darkAccentFor(color: CompanionColor | string | null | undefined): AccentSet {
+  const a = accentFor(color).accent;
+  const ground = '#0F1419';
+  return {
+    accentInk: mix(a, '#FFFFFF', 0.74),
+    accent: mix(a, '#FFFFFF', 0.5),
+    accentPress: mix(a, '#FFFFFF', 0.42),
+    accentEdge: mix(a, '#000000', 0.2),
+    accentTint: mix(a, ground, 0.8),
+    accentTintEdge: mix(a, ground, 0.65),
+    onAccent: ground,
+  };
 }

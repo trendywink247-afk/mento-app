@@ -10,7 +10,7 @@
 # Requires: the API + Postgres/Redis stack up, listeners seeded and online
 # (python -m scripts.seed_listeners from services/api — General matching 503s
 # otherwise), Stream credentials configured. See README.md in this directory.
-appId: com.mento.app
+appId: chat.mento.app
 ---
 - launchApp:
     clearState: true
@@ -24,7 +24,7 @@ appId: com.mento.app
 # (~91s both times) — this runner's emulator is CPU-contended enough (confirmed:
 # load average 1.7-4.6 on 2 cores) that even a generous-looking margin isn't
 # generous enough. 150s is the same budget mentor-bot.mjs needed for the same
-# reason (see maestro.yml's --timeout 480 comment).
+# reason (emulator timeouts; the CI workflow was removed).
 - extendedWaitUntil:
     visible:
       id: "start"

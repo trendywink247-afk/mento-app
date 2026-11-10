@@ -43,10 +43,13 @@ const ROWS: { icon: 'chatbubble-outline' | 'time-outline' | 'heart-outline'; ton
 export function StoryStep({
   surface,
   onApply,
+  onInvite,
   onBack,
 }: {
   surface: 'public' | 'member';
   onApply: () => void;
+  /** Inside the app only: "I have an invitation" (DECISIONS §P.3). */
+  onInvite?: () => void;
   onBack?: () => void;
 }) {
   const { colors } = useTheme();
@@ -153,6 +156,9 @@ export function StoryStep({
           <Entrance index={3}>
             <PrimaryButton label={t('publicApply.cta')} shape="key" trailing="arrow" onPress={onApply} testID="apply-start" />
           </Entrance>
+          {onInvite ? (
+            <PrimaryButton label={t('mentorInvite.link')} variant="link" onPress={onInvite} testID="apply-have-invite" />
+          ) : null}
           <Text style={[type.caption, styles.center, { color: colors.inkMuted }]}>
             <Text style={{ color: colors.ink, fontFamily: type.label.fontFamily }}>{t('publicApply.peers')}</Text>
             {/* "No app needed" is the web page's promise; inside the app it would read oddly. */}

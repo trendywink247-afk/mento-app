@@ -18,6 +18,7 @@ import re
 import time
 import traceback
 import uuid
+from urllib.parse import urlsplit, urlunsplit
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
@@ -45,40 +46,144 @@ def configure_logging() -> None:
         logging.getLogger(name).setLevel(logging.WARNING)
 
 
-def scrub_event(event: dict, _hint: dict) -> dict:
-    """Sentry `before_send`: drop everything that could hold content or credentials.
-    URL + method + status + stack are enough to debug."""
+# Sentry environment for each ENV value. Anything not listed (dev, unset, a typo) maps
+# to None = Sentry off, so a misconfigured host can never report as production.
+_SENTRY_ENVIRONMENTS = {
+    "qa": "qa",
+    "staging": "qa",
+    "prod": "production",
+    "production": "production",
+}
+
+# Allowlists: an event is REBUILT from these, so a key the SDK adds later is dropped
+# by default rather than leaked by default.
+_KEEP_TOP = ("event_id", "timestamp", "platform", "level", "sdk", "release", "environment")
+_KEEP_TAGS = ("request_id", "runtime", "handled", "mechanism")
+_KEEP_CONTEXTS = ("runtime", "os")
+_KEEP_FRAME = ("filename", "abs_path", "function", "module", "lineno", "colno", "in_app")
+_KEEP_MECHANISM = ("type", "handled")
+SCRUBBED = "[scrubbed]"
+# A path segment that is an id: all digits, a UUID, or 12+ hex chars (ObjectIds, tokens).
+_ID_SEGMENT = re.compile(
+    r"^(?:\d+|[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}|[0-9a-f]{12,})$", re.IGNORECASE
+)
+
+
+def sentry_environment(env: str) -> str | None:
+    return _SENTRY_ENVIRONMENTS.get((env or "").strip().lower())
+
+
+def _scrub_url(url: str) -> str:
+    """Scheme + host + path with id segments replaced by `{id}`; no userinfo, query or
+    fragment."""
+    parts = urlsplit(url)
+    path = "/".join("{id}" if _ID_SEGMENT.match(seg) else seg for seg in parts.path.split("/"))
+    return urlunsplit((parts.scheme, parts.netloc.rpartition("@")[2], path, "", ""))
+
+
+def _scrub_exception(exc: object) -> dict:
+    out: dict = {"value": SCRUBBED}  # a message can quote what a member wrote
+    if not isinstance(exc, dict):
+        return out
+    for key in ("type", "module"):
+        if isinstance(exc.get(key), str):
+            out[key] = exc[key]
+    mechanism = exc.get("mechanism")
+    if isinstance(mechanism, dict):
+        out["mechanism"] = {k: mechanism[k] for k in _KEEP_MECHANISM if k in mechanism}
+    stacktrace = exc.get("stacktrace")
+    if isinstance(stacktrace, dict):
+        frames = stacktrace.get("frames")
+        if isinstance(frames, list):
+            # No vars, no pre/post/context_line: source text and locals can hold content.
+            out["stacktrace"] = {
+                "frames": [
+                    {k: f[k] for k in _KEEP_FRAME if k in f} for f in frames if isinstance(f, dict)
+                ]
+            }
+    return out
+
+
+def scrub_event(event: dict, _hint: dict) -> dict | None:
+    """Sentry `before_send`: build the event from an allowlist and drop the rest.
+
+    Kept: id, time, level, release, environment, exception TYPE + frames (file, line,
+    function), method + URL with id path segments
+    replaced by `{id}` and no query string, the route-template transaction.
+    Dropped: exception and log MESSAGES, breadcrumbs, request body / query / cookies /
+    headers / env, user and every IP field, extra, `_meta` (it can hold the original of
+    a redacted value). Fails closed: if scrubbing itself raises, the event is dropped.
+    """
+    try:
+        return _scrub(event)
+    except Exception:  # noqa: BLE001 — never let an unscrubbed event through
+        return None
+
+
+def _scrub(event: dict) -> dict:
+    out: dict = {k: event[k] for k in _KEEP_TOP if k in event}
+    if isinstance(event.get("server_name"), str):
+        out["server_name"] = event["server_name"]
+    if isinstance(event.get("transaction"), str):
+        out["transaction"] = _scrub_url(event["transaction"])
+
+    exception = event.get("exception")
+    if isinstance(exception, dict) and isinstance(exception.get("values"), list):
+        out["exception"] = {"values": [_scrub_exception(v) for v in exception["values"]]}
+
+    if event.get("message") or event.get("logentry"):
+        out["logentry"] = {"message": SCRUBBED}
+
     request = event.get("request")
     if isinstance(request, dict):
-        for key in ("data", "body", "query_string", "cookies"):
-            request.pop(key, None)
-        headers = request.get("headers")
-        if isinstance(headers, dict):
-            request["headers"] = {
-                k: v for k, v in headers.items() if k.lower() not in _SENSITIVE_HEADERS
-            }
-    return event
+        scrubbed_request: dict = {}
+        if isinstance(request.get("method"), str):
+            scrubbed_request["method"] = request["method"]
+        if isinstance(request.get("url"), str):
+            scrubbed_request["url"] = _scrub_url(request["url"])
+        out["request"] = scrubbed_request
+
+    tags = event.get("tags")
+    if isinstance(tags, dict):
+        out["tags"] = {k: v for k, v in tags.items() if k in _KEEP_TAGS}
+    contexts = event.get("contexts")
+    if isinstance(contexts, dict):
+        out["contexts"] = {k: v for k, v in contexts.items() if k in _KEEP_CONTEXTS}
+    return out
 
 
-def sentry_options(settings: Settings) -> dict:
-    return {
+def sentry_options(settings: Settings) -> dict | None:
+    """None = Sentry stays off (no DSN, or ENV is not qa/staging/prod/production)."""
+    environment = sentry_environment(settings.env)
+    if not settings.sentry_dsn or environment is None:
+        return None
+    options: dict = {
         "dsn": settings.sentry_dsn,
-        "environment": settings.env,
+        "environment": environment,
         "send_default_pii": False,
-        "traces_sample_rate": 0.0,  # errors only — no performance tracing
+        "traces_sample_rate": 0.0,  # errors only — no performance tracing for now
+        "profiles_sample_rate": 0.0,
         "include_local_variables": False,
+        "include_source_context": False,
         "max_request_body_size": "never",
+        "max_breadcrumbs": 0,
         "before_send": scrub_event,
+        "before_send_transaction": lambda _event, _hint: None,
+        "before_breadcrumb": lambda _crumb, _hint: None,
     }
+    if settings.git_sha:
+        options["release"] = settings.git_sha
+    return options
 
 
 def init_sentry(settings: Settings) -> None:
-    """No-op without a DSN (dev default)."""
-    if not settings.sentry_dsn:
+    """No-op unless there is a DSN and ENV is qa/staging/prod/production."""
+    options = sentry_options(settings)
+    if options is None:
         return
     import sentry_sdk
 
-    sentry_sdk.init(**sentry_options(settings))
+    sentry_sdk.init(**options)
 
 
 # --- Request context: one id per request, on every log line and every response ------

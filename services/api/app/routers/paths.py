@@ -15,7 +15,7 @@ from app.db import get_db
 from app.models.enums import ListenerStatus, VettingStatus
 from app.models.listener import ListenerProfile
 from app.models.user import User
-from app.schemas import PathChoice, PathState, PathTree
+from app.schemas import PathChoice, PathCommunityOut, PathState, PathTree
 from app.security import current_user_id
 from app.services import paths
 
@@ -25,6 +25,13 @@ router = APIRouter(prefix="/paths", tags=["paths"])
 @router.get("/tree", response_model=PathTree)
 def pathfinder_tree() -> PathTree:
     return PathTree(**paths.tree_payload())
+
+
+@router.get("/communities", response_model=list[PathCommunityOut])
+def path_communities() -> list[PathCommunityOut]:
+    """Every road with its plain name and whether it waits for a mentor's accept. Static
+    config, no member data: the app words its filters from this, never from its own list."""
+    return [PathCommunityOut(**paths.community_info(slug)) for slug in paths.COMMUNITIES]
 
 
 def _state(db: Session, user: User) -> PathState:
@@ -66,6 +73,10 @@ def choose_path(
 ) -> PathState:
     if not paths.is_valid(payload.community, payload.stage):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "unknown community or stage")
+    if not paths.is_open(payload.community):
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "this road is not open yet (coming soon)"
+        )
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "user not found")

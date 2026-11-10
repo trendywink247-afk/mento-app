@@ -5,12 +5,14 @@ import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { PushStyleSwitch } from '@/components/PushStyleSwitch';
 import { IconBadge } from '@/components/IconBadge';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
+import { useTabDockHeight } from '@/components/tabDock';
 import { CompanionNameRow } from '@/components/profile/CompanionNameRow';
 import { RecoveryCard } from '@/components/profile/RecoveryCard';
 import { api, type ListenerApplication } from '@/lib/api';
@@ -147,10 +149,21 @@ export default function ProfileTab() {
   const [openNote, setOpenNote] = useState<'mentors' | 'privacy' | null>(null);
   // null until GET /me answers (the recovery card waits for it).
   const [hasRecovery, setHasRecovery] = useState<boolean | null>(null);
+  const [pushPreview, setPushPreview] = useState(false);
+  const [pushBusy, setPushBusy] = useState(false);
+  const changePushStyle = (next: boolean) => {
+    setPushPreview(next);
+    setPushBusy(true);
+    void api
+      .setNotificationStyle(next)
+      .catch(() => setPushPreview(!next))
+      .finally(() => setPushBusy(false));
+  };
   const [swatch, setSwatch] = useState(SWATCH);
   const running = runningUpdate();
   // The hero place only exists once the animal is known — until then there is no home slot.
   // A sheet over the screen (Start fresh) hides the companion.
+  const dock = useTabDockHeight();
   const perch = useCompanionPlacement('profile', animal ? PERCHES : PERCHES.slice(1), { hidden: sheetOpen });
   // A perch that hangs off its card's edge lands UNDER the next card, because the blocks
   // share one zIndex and the later sibling paints last. Lift the block that actually
@@ -181,7 +194,10 @@ export default function ProfileTab() {
     void api
       .me()
       .then((me) => {
-        if (active) setHasRecovery(Boolean(me.has_recovery));
+        if (active) {
+          setHasRecovery(Boolean(me.has_recovery));
+          setPushPreview(Boolean(me.push_preview));
+        }
       })
       .catch(() => {
         if (active) setHasRecovery(false);
@@ -219,7 +235,13 @@ export default function ProfileTab() {
     <SettleBack>
       <SafeAreaView style={styles.safe} edges={['top']}>
         <CompanionPerches placement={perch}>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+          {/* "handled": with the companion-name field focused, the first tap on Save or Cancel
+              reached the button instead of only closing the keyboard. */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scroll, { paddingBottom: space.lg + dock }]}
+            keyboardShouldPersistTaps="handled"
+          >
             <Entrance>
               <Text style={[type.title, styles.title, { color: colors.ink }]} accessibilityRole="header">
                 {t('profile.title')}
@@ -347,6 +369,18 @@ export default function ProfileTab() {
                     })}
                   </View>
                 }
+              />
+
+              <PushStyleSwitch value={pushPreview} onChange={changePushStyle} disabled={pushBusy} testID="profile-push-style" />
+
+              <Row
+                icon="contrast-outline"
+                tone="indigo"
+                title={t('appearance.row')}
+                body={t('appearance.rowSub')}
+                right={chevron}
+                onPress={() => router.push('/appearance')}
+                testID="profile-appearance"
               />
 
               <MentorRow application={application} onPress={openMentor} chevron={chevron} />

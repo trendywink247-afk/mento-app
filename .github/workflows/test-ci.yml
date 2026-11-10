@@ -3,7 +3,7 @@ name: Test CI
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [main, dev]
   workflow_dispatch:
 
 permissions:
@@ -15,6 +15,7 @@ concurrency:
 jobs:
   changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       mobile: ${{ steps.classify.outputs.mobile }}
       tooling: ${{ steps.classify.outputs.tooling }}
@@ -27,7 +28,7 @@ jobs:
           fetch-depth: 0
       - id: classify
         run: python3 scripts/ci/change_policy.py
-  mobile-web:
+  mobile-unit:
     needs: changes
     if: needs.changes.outputs.mobile == 'true'
     runs-on: ubuntu-latest
@@ -45,22 +46,38 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: apps/mobile/package-lock.json
+      # These jobs run Node and browser-web tests only; Skia's native binaries (a GitHub release
+      # download that 504'd on 2026-11-08) are never used.
       - run: npm ci
+        env:
+          SKIP_SKIA_DOWNLOAD: '1'
       - run: npm run typecheck
-      - name: Verify native release configuration separation
-        run: node e2e/release-config.test.cjs
-      - run: node e2e/keyboard-boundary.test.cjs
-      - name: Verify missed web messages after Stream reconnect
-        run: node --test e2e/stream-recovery.test.cjs
-      - name: Verify telemetry runtime privacy and erasure fencing
-        run: node --test e2e/analytics-privacy.test.cjs
-      - name: Verify current helpline resources across API and mobile
-        run: node --test e2e/helplines.test.cjs
-      - name: Verify inactive own-chat protocol client
-        run: node --test e2e/own-chat-client.test.cjs e2e/own-chat-adapter.test.cjs e2e/own-chat-screen-controller.test.cjs
-      - name: Verify gated native ownership, lifecycle and acknowledged drafts
-        run: node --test e2e/native-chat-owner.test.cjs e2e/native-own-chat-lifecycle.test.cjs e2e/acknowledged-draft.test.cjs
+      - name: Unit tests (every e2e/*.test.cjs, same command as ops/ci.sh)
+        run: node --test e2e/*.test.cjs
       - run: npm run test:route && npm run test:question && npm run test:placement && npm run test:bubble
+  mobile-browser:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/mobile
+    env:
+      EXPO_PUBLIC_API_URL: http://127.0.0.1:18000/api/v1
+      EXPO_NO_DOTENV: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      # These jobs run Node and browser-web tests only; Skia's native binaries (a GitHub release
+      # download that 504'd on 2026-11-08) are never used.
+      - run: npm ci
+        env:
+          SKIP_SKIA_DOWNLOAD: '1'
       - run: npx expo export --platform web
       - name: Install isolated browser test tools
         run: |
@@ -196,7 +213,7 @@ jobs:
         run: docker run --rm --network none --mount "type=bind,source=$PWD,target=/work,readonly" mento-installer-test /work/deploy/test-production-installer.sh
   test-gate:
     if: always()
-    needs: [changes, mobile-web, release-tooling, receiver-isolation, recovery-receipts]
+    needs: [changes, mobile-unit, mobile-browser, release-tooling, receiver-isolation, recovery-receipts]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -212,13 +229,13 @@ jobs:
           results = json.loads(os.environ['RESULTS'])
           assert results.pop('changes')['result'] == 'success'
           flags = json.loads(os.environ['SELECTED'])
-          names = {'mobile-web': 'mobile', 'release-tooling': 'tooling', 'receiver-isolation': 'receiver', 'recovery-receipts': 'recovery'}
+          names = {'mobile-unit': 'mobile', 'mobile-browser': 'mobile', 'release-tooling': 'tooling', 'receiver-isolation': 'receiver', 'recovery-receipts': 'recovery'}
           assert all(flags.get(flag) in ('true', 'false') for flag in names.values())
           validate_results({job: flags[flag] == 'true' for job, flag in names.items()}, results)
           PY
   full-suite:
     if: always() && needs.changes.outputs.full == 'true'
-    needs: [changes, mobile-web, release-tooling, receiver-isolation, recovery-receipts, test-gate]
+    needs: [changes, mobile-unit, mobile-browser, release-tooling, receiver-isolation, recovery-receipts, test-gate]
     runs-on: ubuntu-latest
     steps:
       - name: Record complete test acceptance for release evidence

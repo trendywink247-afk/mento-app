@@ -41,7 +41,8 @@ export type AllowanceView = {
 };
 
 export function noteFor(allowance: Allowance | null, exempt: boolean): AllowanceNoteReason | null {
-  if (!allowance || exempt) return null;
+  // Not a certified exam mentor: the cap does not exist here (DECISIONS §O).
+  if (!allowance || exempt || allowance.applies === false) return null;
   if (allowance.held_reason) return allowance.held_reason;
   if (allowance.left_today <= 0) return 'daily';
   if (allowance.in_a_row >= allowance.in_a_row_limit) return 'in_a_row';

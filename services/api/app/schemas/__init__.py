@@ -6,9 +6,11 @@ every router and service — add a model to its surface module AND to this list.
 
 from app.schemas.admin import (
     AdminAccountItem,
+    AdminApplicationApproveIn,
     AdminApplicationDeclineIn,
     AdminApplicationItem,
     AdminAuditItem,
+    AdminCertifyIn,
     AdminConsoleLinkOut,
     AdminContributionItem,
     AdminCreatedOut,
@@ -107,6 +109,7 @@ from app.schemas.matching import (
 from app.schemas.onboarding import (
     CompanionUpdateIn,
     MeOut,
+    NotificationStyleIn,
     OnboardingResult,
     OnboardingStart,
     PersonaOut,
@@ -140,7 +143,9 @@ __all__ = [
     "AdminAllowanceDay",
     "AdminAllowanceOut",
     "AdminAllowanceRule",
+    "AdminApplicationApproveIn",
     "AdminApplicationDeclineIn",
+    "AdminCertifyIn",
     "AdminApplicationItem",
     "AdminAuditItem",
     "AdminConsoleLinkOut",
@@ -163,6 +168,7 @@ __all__ = [
     "AllowanceOut",
     "AttentionItem",
     "CompanionUpdateIn",
+    "NotificationStyleIn",
     "ConsoleSessionOut",
     "ConversationListItem",
     "ConversationMentorOut",

@@ -71,6 +71,11 @@ class Conversation(UUIDMixin, TimestampMixin, Base):
     # it alone. A crisis-flagged member message, or the mentor's own reply, ends it
     # (services/snooze.py). Never hides a crisis.
     snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # The mentor suggested this conversation move to a certified exam mentor (DECISIONS section O).
+    # A time, never text; the member is shown a gentle card and chooses.
+    exam_redirect_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

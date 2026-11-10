@@ -117,6 +117,15 @@ def _push_off():
 
 
 @pytest.fixture(autouse=True)
+def all_roads_open(monkeypatch):
+    """Tests use every road; the launch gate (DECISIONS §P.1) has its own tests."""
+    monkeypatch.setenv("LAUNCH_ROADS", "")
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
 def sealed_channels(monkeypatch):
     """Hermetic: a safety end (report / block / suspend) freezes the Stream channel,
     and this machine's .env may carry real Stream creds. Record instead of calling —

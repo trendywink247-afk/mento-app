@@ -23,7 +23,7 @@ from app.models.enums import (
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
-from app.models.request import ConversationRequest
+from app.models.request import ConversationRequest, RequestPass
 from app.models.user import User
 from app.services import stream
 
@@ -78,6 +78,7 @@ def _pick_available_listener(
     category: str | None,
     blocked_ids: set[str],
     community: str | None = None,
+    certified_only: bool = False,
 ) -> ListenerProfile | None:
     """Lowest current load, then highest rank; community + category preferred (in
     Python — portable across JSON/JSONB); blocked listeners excluded. Community is a
@@ -96,6 +97,9 @@ def _pick_available_listener(
             ListenerProfile.vetting_status == VettingStatus.approved,
             ListenerProfile.status == ListenerStatus.online,
             ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
+            # An exam question goes only to a mentor an admin certified for exams (DECISIONS
+            # section O); the instant general match never sets this.
+            *([ListenerProfile.certified_exam.is_(True)] if certified_only else []),
         )
         .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
         .limit(10)
@@ -152,8 +156,13 @@ def open_conversation(
          reserved slot atomically, drop the conversation, run `on_stream_failure`).
     """
     listener.active_conversations += 1
+    settings = get_settings()
+    own_chat = settings.own_chat_new_conversations or user_id in {
+        x.strip() for x in settings.own_chat_user_ids.split(",") if x.strip()
+    }
     convo = Conversation(
         type=ConversationType.anon,
+        chat_backend="own" if own_chat else "stream",
         status=ConversationStatus.active,
         user_id=user_id,
         listener_id=listener.id,
@@ -169,6 +178,12 @@ def open_conversation(
     if before_commit is not None:
         before_commit(convo)
     db.commit()
+
+    if own_chat:
+        # Own chat has no channel to create: the conversation row is the room, so there is
+        # nothing outside the transaction that can fail and no compensation to run.
+        db.refresh(convo)
+        return convo
 
     try:
         channel_id = stream.create_dm_channel(
@@ -257,6 +272,85 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
     return open_conversation(db, user.id, listener, issue_category=category)
 
 
+BROADCAST_LIMIT = 20
+
+
+def audience_allows(audience: str, certified: bool) -> bool:
+    """May a mentor of this kind take a broadcast offered to `audience`? "in_service" = Mento
+    Verified only, "peer" = the other approved mentors, anything else = every approved mentor."""
+    if audience == "in_service":
+        return certified
+    if audience == "peer":
+        return not certified
+    return True
+
+
+def audiences_for(certified: bool) -> list[str]:
+    """The `audience` values a mentor of this kind may take (for an inbox query)."""
+    return ["any", "in_service"] if certified else ["any", "peer"]
+
+
+def broadcast_candidate_ids(
+    db: Session,
+    category: str | None,
+    blocked_ids: set[str],
+    community: str | None = None,
+    limit: int = BROADCAST_LIMIT,
+    audience: str = "any",
+) -> list[str]:
+    """Online approved mentors with a free slot who may be offered a broadcast question (those in
+    `audience`), best match first (same tiers as the instant match), at most `limit`. Nothing is
+    locked or reserved: a broadcast reserves nobody until a mentor accepts it."""
+    where = [
+        ListenerProfile.vetting_status == VettingStatus.approved,
+        ListenerProfile.status == ListenerStatus.online,
+        ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
+    ]
+    if audience == "in_service":
+        where.append(ListenerProfile.certified_exam.is_(True))
+    elif audience == "peer":
+        where.append(ListenerProfile.certified_exam.is_(False))
+    rows = db.execute(
+        select(ListenerProfile.id, ListenerProfile.categories, ListenerProfile.community_slug)
+        .where(*where)
+        .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
+    ).all()
+
+    def _tier(cats: list[str] | None, comm: str | None) -> int:
+        hit_c = bool(community) and comm == community
+        hit_k = bool(category) and category in (cats or [])
+        return 0 if hit_c and hit_k else 1 if hit_c else 2 if hit_k else 3
+
+    ranked = [r for r in rows if r[0] not in blocked_ids]
+    return [lid for lid, _, _ in sorted(ranked, key=lambda r: _tier(r[1], r[2]))][:limit]
+
+
+def can_take_broadcast(
+    db: Session, request: ConversationRequest, listener: ListenerProfile
+) -> bool:
+    """May this mentor see and accept this broadcast? Approved and in its audience, not one the
+    member blocked, not the member's own mentor profile, and has not passed on it."""
+    if not (
+        request.broadcast
+        and request.target_listener_id is None
+        and audience_allows(request.audience, bool(listener.certified_exam))
+        and listener.vetting_status == VettingStatus.approved
+    ):
+        return False
+    if listener.id in blocked_listener_ids(db, request.requester_id) | own_listener_ids(
+        db, request.requester_id
+    ):
+        return False
+    return (
+        db.scalar(
+            select(RequestPass.id).where(
+                RequestPass.request_id == request.id, RequestPass.listener_id == listener.id
+            )
+        )
+        is None
+    )
+
+
 def _pending_request(
     db: Session, request_id: str, acting_listener_id: str | None
 ) -> ConversationRequest:
@@ -275,6 +369,15 @@ def _pending_request(
     ).scalar_one_or_none()
     if req is None or req.status != RequestStatus.pending:
         raise RequestNotPending()
+    # A broadcast has no target yet: the first certified mentor to accept takes it, here,
+    # under the request's row lock, so a second mentor finds it already matched. Nothing is
+    # written when this mentor may not take it; the request stays open for the others.
+    if req.broadcast and req.target_listener_id is None and acting_listener_id is not None:
+        taker = db.get(ListenerProfile, acting_listener_id)
+        if taker is None or not can_take_broadcast(db, req, taker):
+            raise RequestNotPending()
+        req.target_listener_id = acting_listener_id
+        return req
     # A listener may only act on requests addressed to them; the admin path
     # (acting_listener_id=None) may act on any. Not-mine is opaquely "not found".
     if acting_listener_id is not None and req.target_listener_id != acting_listener_id:
@@ -320,6 +423,8 @@ def accept_personal_request(
     def _revert_request() -> None:
         req.status = RequestStatus.pending
         req.conversation_id = None
+        if req.broadcast:
+            req.target_listener_id = None  # still open for every certified mentor
 
     convo = open_conversation(
         db,
@@ -333,7 +438,22 @@ def accept_personal_request(
     # The question the member asked opens the thread, in their own words. Best-effort: the
     # conversation is already open and the mentor already said yes — a Stream hiccup here
     # must not undo that, and the mentor still has the question on the request card.
-    if req.intro_message and convo.stream_channel_id:
+    if req.intro_message and convo.chat_backend == "own":
+        try:
+            # Local import: chat -> jobs.tasks -> matching would otherwise be a cycle.
+            from app.services import chat
+
+            # Through the one write path (scan, allowance, redaction, persist, fan-out).
+            chat.send(
+                db,
+                req.requester_id,
+                convo.id,
+                client_id=f"intro-{req.id}"[:64],
+                body=req.intro_message,
+            )
+        except Exception:
+            logger.warning("could not post the held question into %s", convo.id, exc_info=True)
+    elif req.intro_message and convo.stream_channel_id:
         try:
             stream.post_message(convo.stream_channel_id, req.requester_id, req.intro_message)
         except Exception:
@@ -349,7 +469,13 @@ def decline_personal_request(
     db: Session, request_id: str, *, acting_listener_id: str | None = None
 ) -> None:
     req = _pending_request(db, request_id, acting_listener_id)
-    req.status = RequestStatus.declined
+    if req.broadcast and req.target_listener_id == acting_listener_id:
+        # One mentor passing does not close a broadcast for everyone: it leaves this mentor's
+        # inbox and stays open for the others.
+        req.target_listener_id = None
+        db.add(RequestPass(request_id=req.id, listener_id=acting_listener_id))
+    else:
+        req.status = RequestStatus.declined
     db.commit()
 
 
@@ -417,6 +543,7 @@ def reconcile_listener_capacity(db: Session) -> dict[str, int]:
                 # it; don't let it hold a slot for a day. The grace period keeps a
                 # match that is mid-flight right now (Stream budget: seconds) safe.
                 and_(
+                    Conversation.chat_backend == "stream",
                     Conversation.stream_channel_id.is_(None),
                     Conversation.created_at < now - ORPHAN_GRACE,
                 ),

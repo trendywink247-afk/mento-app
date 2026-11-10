@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
+import { LanguageChips } from '@/components/LanguageChips';
 import { PressKey } from '@/components/motion/PressKey';
 import { api, ApiError, type ListenerApplication } from '@/lib/api';
 import { useI18n, type TKey } from '@/lib/i18n';
@@ -12,8 +13,12 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { colors as base, radius, space, type, wash, washEdge } from '@/theme/tokens';
 
-// Must match services/api/app/services/paths_data.py COMMUNITIES (server validates; drift = submit-time 422).
-const COMMUNITIES = ['upsc', 'neet', 'jee', 'exams', 'life'] as const;
+// The roads a mentor can say they know come from the server (`GET /paths/communities`), so a new
+// exam road needs no app release. These five (with their own translated names) are the fallback
+// when that read fails, and keep their translated labels when it works. The server validates the
+// slugs and accepts at most MAX_COMMUNITIES.
+const KNOWN_COMMUNITIES = ['upsc', 'neet', 'jee', 'exams', 'life'] as const;
+const MAX_COMMUNITIES = 5;
 // Must match ListenerApplicationIn.availability — the single-choice commitment, kept in the
 // contract (DECISIONS §L, founder-delegated 2026-09-19) and drawn as the board's quiet
 // caption "A few hours a week" beside the chips; tapping it steps through the four.
@@ -44,13 +49,14 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
   const [communities, setCommunities] = useState<string[]>([]);
   const [availability, setAvailability] = useState<Availability>('few_hours');
   const [times, setTimes] = useState<Time[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
   const [email, setEmail] = useState('');
   const [pledged, setPledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const whyLeft = Math.max(0, MIN_WHY - motivation.trim().length);
-  const valid = whyLeft === 0 && times.length > 0 && pledged;
+  const valid = whyLeft === 0 && times.length > 0 && languages.length > 0 && pledged;
   // The one line under Submit names the first thing still missing — the pledge first.
   const gate = !pledged
     ? t('mentorApply.gatePledge')
@@ -58,10 +64,34 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
       ? t('mentorApply.gateWhy', { count: whyLeft })
       : times.length === 0
         ? t('mentorApply.gateAvailability')
-        : null;
+        : languages.length === 0
+          ? t('mentorApply.gateLanguages')
+          : null;
 
+  const [roads, setRoads] = useState<{ slug: string; name: string | null; exam: boolean }[]>(
+    KNOWN_COMMUNITIES.map((slug) => ({ slug, name: null, exam: slug !== 'life' })),
+  );
+  useEffect(() => {
+    let live = true;
+    void api
+      .pathCommunities()
+      .then((all) => live && all.length > 0 && setRoads(all.map((c) => ({ slug: c.slug, name: c.name, exam: c.accept_first }))))
+      .catch(() => {
+        /* reason: the five known roads stay; an older server has no such route */
+      });
+    return () => {
+      live = false;
+    };
+  }, []);
+  const atCap = communities.length >= MAX_COMMUNITIES;
+  // Exam mentoring (DECISIONS §O): a mentor who picks an exam road may say what they hold. An admin
+  // reads it and decides on certification; it is their own words, never proof.
+  const [credential, setCredential] = useState('');
+  const wantsExam = roads.some((r) => r.exam && communities.includes(r.slug));
   const toggleCommunity = (slug: string) =>
-    setCommunities((cs) => (cs.includes(slug) ? cs.filter((c) => c !== slug) : [...cs, slug]));
+    setCommunities((cs) =>
+      cs.includes(slug) ? cs.filter((c) => c !== slug) : cs.length >= MAX_COMMUNITIES ? cs : [...cs, slug],
+    );
   const toggleTime = (slot: Time) =>
     setTimes((ts) => (ts.includes(slot) ? ts.filter((x) => x !== slot) : [...ts, slot]));
   const nextCommitment = () =>
@@ -86,6 +116,8 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         // The board has no paid-mentoring opt-in (never hint at a paid tier); the
         // server field stays, always false from this form.
         mentor_interest: false,
+        exam_credential: wantsExam && credential.trim() ? credential.trim() : null,
+        languages,
         pledge_accepted: true,
       });
       onSuccess(result);
@@ -141,13 +173,15 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
       <Entrance index={1} style={styles.group}>
         <View style={styles.labelRow}>
           <Text style={[type.rowTitle, styles.shrink, { color: colors.ink }]}>{t('mentorApply.communitiesLabel')}</Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.communitiesHint')}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>
+            {atCap ? t('mentorApply.communitiesMax', { max: MAX_COMMUNITIES }) : t('mentorApply.communitiesHint')}
+          </Text>
         </View>
         <View style={styles.chips}>
-          {COMMUNITIES.map((slug) =>
+          {roads.map(({ slug, name }) =>
             chip(
               slug,
-              t(`mentorApply.community_${slug}` as TKey),
+              (KNOWN_COMMUNITIES as readonly string[]).includes(slug) ? t(`mentorApply.community_${slug}` as TKey) : (name ?? slug),
               communities.includes(slug),
               () => toggleCommunity(slug),
               `apply-community-${slug}`,
@@ -155,6 +189,25 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
           )}
         </View>
       </Entrance>
+
+      {wantsExam ? (
+        <Entrance index={2} style={styles.group}>
+          <Text style={[type.rowTitle, { color: colors.ink }]}>{t('mentorApply.credentialLabel')}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.credentialHint')}</Text>
+          <EdgeSurface edge={colors.edgeSurface} travel={4} radius={radius.md} style={styles.bare}>
+            <TextInput
+              value={credential}
+              onChangeText={setCredential}
+              maxLength={200}
+              placeholder={t('mentorApply.credentialPlaceholder')}
+              placeholderTextColor={colors.inkMuted}
+              accessibilityLabel={t('mentorApply.credentialLabel')}
+              style={field}
+              testID="apply-credential"
+            />
+          </EdgeSurface>
+        </Entrance>
+      ) : null}
 
       <Entrance index={2} style={styles.group}>
         <View style={styles.labelRow}>
@@ -196,6 +249,14 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
 
       <Entrance index={3} style={styles.group}>
         <View style={styles.labelRow}>
+          <Text style={[type.rowTitle, styles.shrink, { color: colors.ink }]}>{t('mentorApply.languagesLabel')}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.languagesHint')}</Text>
+        </View>
+        <LanguageChips value={languages} onChange={setLanguages} testIDPrefix="apply-lang" />
+      </Entrance>
+
+      <Entrance index={3} style={styles.group}>
+        <View style={styles.labelRow}>
           <Text style={[type.rowTitle, styles.shrink, { color: colors.ink }]}>{t('mentorApply.emailLabel')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.emailHint')}</Text>
         </View>
@@ -206,6 +267,8 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="email-address"
+            autoComplete="off"
+            importantForAutofill="no"
             placeholder={t('mentorApply.emailPlaceholder')}
             placeholderTextColor={colors.inkMuted}
             accessibilityLabel={t('mentorApply.emailLabel')}

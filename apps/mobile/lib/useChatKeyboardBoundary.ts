@@ -10,6 +10,24 @@ function trace(event: string, top?: number, keyboardTop?: number) {
     screenHeight: Dimensions.get('screen').height }));
 }
 
+/** Top edge of `view` in the same screen coordinates as the IME's `screenY`.
+ * Android's `measureInWindow` leaves the status bar out under edge-to-edge (SDK 36:
+ * the container measured 217px while it actually starts at 353px), so a thread
+ * bounded by `screenY - measureInWindow` ran a status-bar height too tall and the
+ * composer sat under the keyboard. `measure`'s pageY is in screen space. */
+export function measureScreenTop(
+  view: { measure: (cb: (x: number, y: number, w: number, h: number, pageX: number, pageY: number) => void) => void;
+    measureInWindow: (cb: (x: number, y: number) => void) => void },
+  done: (top: number) => void,
+) {
+  view.measure((_x, _y, _w, _h, _pageX, pageY) => {
+    if (process.env.EXPO_PUBLIC_NATIVE_LAYOUT_DIAGNOSTICS === '1') {
+      view.measureInWindow((_wx, windowY) => console.log('[ChatKeyboard]', JSON.stringify({ event: 'measure', pageY, windowY })));
+    }
+    done(pageY);
+  });
+}
+
 /** Bound the entire Android thread above the IME in screen coordinates.
  * Stream's nested percentage-height child can remain underneath the keyboard
  * when its internal height avoidance races Android window resizing.

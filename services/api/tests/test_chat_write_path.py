@@ -36,7 +36,7 @@ APP_DIR = Path(__file__).resolve().parents[1] / "app"
 
 def seed_conversation(db_session):
     """(member, conversation) — the plan's helper, over tests/chat_helpers.seed_chat."""
-    seeded = seed_chat(db_session)
+    seeded = seed_chat(db_session, certified=True)
     return db_session.get(User, seeded.member_id), _Conv(seeded)
 
 
@@ -171,6 +171,7 @@ def test_publish_happens_only_after_the_row_is_committed(monkeypatch, db_session
 
 def test_a_crisis_message_is_never_held_or_counted(monkeypatch, db_session):
     monkeypatch.setattr(get_settings(), "allowance_enforced", True)
+    monkeypatch.setattr(get_settings(), "allowance_in_a_row", 3)
     member, conv = seed_conversation(db_session)
     for i in range(3):
         assert (

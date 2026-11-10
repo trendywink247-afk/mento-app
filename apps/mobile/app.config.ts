@@ -7,7 +7,25 @@
  * profile, or `scripts/build-android-release.ps1` — sets APP_VARIANT=production and
  * gets Android's default block-all-cleartext policy: prod is https-only.
  */
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import type { ConfigContext, ExpoConfig } from 'expo/config';
+
+/** True when the Firebase client config lists this Android package, so a QA package is only
+ * given push once someone has registered it in Firebase and refreshed google-services.json. */
+function firebaseKnows(file: string, androidPackage: string): boolean {
+  try {
+    const parsed = JSON.parse(readFileSync(resolve(__dirname, file), 'utf8')) as {
+      client?: { client_info?: { android_client_info?: { package_name?: string } } }[];
+    };
+    return (parsed.client ?? []).some(
+      (c) => c.client_info?.android_client_info?.package_name === androidPackage,
+    );
+  } catch {
+    return false;
+  }
+}
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const variant = process.env.APP_VARIANT ?? 'preview';
@@ -65,5 +83,26 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       updates: { enabled: false, checkAutomatically: 'NEVER' },
     } as ExpoConfig;
   }
-  return { ...config, plugins, updates } as ExpoConfig;
+  // Production only: unsigned release bundle (or upload-key signing from env), never the debug key.
+  const releasePlugins = isProduction ? [...plugins, './plugins/withReleaseSigning'] : plugins;
+  if (isProduction) return { ...config, plugins: releasePlugins, updates } as ExpoConfig;
+  // Development and preview builds install BESIDE the store build instead of replacing it: a
+  // separate package ("Mento QA") means the Play build and the QA build coexist on one phone,
+  // each keeping its own member and its own update channel. Push needs the package registered
+  // in Firebase, so the Firebase file is only attached once it lists the QA package.
+  const storePackage = config.android?.package ?? 'chat.mento.app';
+  const qaPackage = `${storePackage}.qa`;
+  const { googleServicesFile, ...android } = config.android ?? {};
+  return {
+    ...config,
+    name: `${config.name ?? 'Mento'} QA`,
+    plugins: releasePlugins,
+    updates,
+    ios: { ...config.ios, bundleIdentifier: `${config.ios?.bundleIdentifier ?? storePackage}.qa` },
+    android: {
+      ...android,
+      package: qaPackage,
+      ...(googleServicesFile && firebaseKnows(googleServicesFile, qaPackage) ? { googleServicesFile } : {}),
+    },
+  } as ExpoConfig;
 };

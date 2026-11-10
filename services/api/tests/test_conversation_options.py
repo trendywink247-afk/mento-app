@@ -123,6 +123,9 @@ def test_status_mask_and_pause(client, db_session):
         ).json()["is_paused"]
         is True
     )
+    # The chat list says which chats are muted, so My Chats can show it.
+    row = client.get("/api/v1/conversations", headers=_auth(uid)).json()[0]
+    assert row["id"] == cid and row["is_paused"] is True
 
 
 @requires_postgres

@@ -89,13 +89,10 @@ console.
 
 ## CI
 
-`.github/workflows/maestro.yml` runs all three on
-`reactivecircus/android-emulator-runner`, API level 33 (SDK 52's target — do
-not bump this as an unrelated change; `T6.2` owns emulator-version bumps,
-deliberately, one upgrade step at a time). Needs two repo secrets,
-`STREAM_API_KEY` and `STREAM_API_SECRET` — the workflow fails fast with a
-clear message if they're unset rather than silently skipping the flows that
-need them.
+There is no Maestro workflow any more (removed 2026-11-08: the emulator job was disabled on GitHub and
+slow, and acceptance is now a real phone against QA). These flows stay in the repo for manual runs
+against a device or emulator you control; `crisis-card.yaml` is manual by design. Native acceptance
+evidence for a release is the device test log, not a CI job.
 
 ## What's proven and what isn't (as of session 47/48)
 
@@ -147,8 +144,7 @@ need them.
   (`maestro check-syntax`) and `mentor-bot.mjs` is proven end to end against
   live infra (above) — what's unverified is specifically Maestro's own
   driver-connection step on this OS/emulator combination. **The real
-  verification venue is `.github/workflows/maestro.yml` on
-  `reactivecircus/android-emulator-runner`'s Linux runners**, where this
+  verification venue was a Linux emulator runner (workflow removed)**, where this
   native-epoll/SELinux interaction is not expected to reproduce (Linux
   runners don't hit the same driver-APK code path issue) — push this branch
   or open the PR to get a real CI run before trusting "the three flows pass"

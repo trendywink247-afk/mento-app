@@ -325,3 +325,137 @@ def test_approve_survives_a_stream_timeout_and_sign_in_heals_it(client, admin_he
     session = client.post("/api/v1/listener-applications/me/console-session", headers=_auth(uid))
     assert session.status_code == 200, session.text
     assert calls == [calls[0], session.json()["listener_id"]]
+
+
+# --- Certified exam mentors (DECISIONS section O) -------------------------------
+
+
+def _apply(client, communities, credential=None):
+    with TestSession() as s:
+        uid = _user(s)
+    body = {**PAYLOAD, "communities": communities}
+    if credential is not None:
+        body["exam_credential"] = credential
+    r = client.post("/api/v1/listener-applications", json=body, headers=_auth(uid))
+    assert r.status_code == 200, r.text
+    return uid
+
+
+def _pending(client, admin_headers):
+    return client.get("/api/v1/admin/applications?status=pending", headers=admin_headers).json()[0]
+
+
+def test_the_admin_sees_the_exam_claim_and_the_credential(client, admin_headers):
+    _apply(client, ["upsc"], credential="  Cleared UPSC CSE 2022  ")
+    item = _pending(client, admin_headers)
+    assert item["wants_exam"] is True
+    assert item["exam_credential"] == "Cleared UPSC CSE 2022"
+    assert item["certified"] is False
+
+
+def test_a_life_application_is_not_an_exam_claim(client, admin_headers):
+    _apply(client, ["life"])
+    item = _pending(client, admin_headers)
+    assert item["wants_exam"] is False and item["exam_credential"] is None
+
+
+def test_a_plain_approve_never_certifies(client, admin_headers):
+    _apply(client, ["upsc"], credential="Cleared UPSC")
+    app_id = _pending(client, admin_headers)["id"]
+    assert (
+        client.post(
+            f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers
+        ).status_code
+        == 200
+    )
+    with TestSession() as s:
+        li = s.query(ListenerProfile).one()
+        assert li.vetting_status == VettingStatus.approved
+        assert li.certified_exam is False and li.certified_at is None
+
+
+def test_approve_and_certify_in_one_step_is_audited(client, admin_headers):
+    _apply(client, ["upsc"], credential="Cleared UPSC")
+    app_id = _pending(client, admin_headers)["id"]
+    r = client.post(
+        f"/api/v1/admin/applications/{app_id}/approve",
+        json={"certify": True},
+        headers=admin_headers,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["certified"] is True
+    with TestSession() as s:
+        li = s.query(ListenerProfile).one()
+        assert li.certified_exam is True and li.certified_at is not None
+        row = s.query(AdminAuditLog).filter_by(action="listener.application_approved").one()
+        assert row.meta == {"certified_exam": True}
+
+
+def test_a_life_applicant_cannot_be_certified(client, admin_headers):
+    _apply(client, ["life"])
+    app_id = _pending(client, admin_headers)["id"]
+    r = client.post(
+        f"/api/v1/admin/applications/{app_id}/approve",
+        json={"certify": True},
+        headers=admin_headers,
+    )
+    assert r.status_code == 422
+    with TestSession() as s:
+        assert s.query(ListenerProfile).count() == 0  # nothing was minted
+
+
+def test_certify_and_uncertify_an_approved_mentor(client, admin_headers):
+    _apply(client, ["upsc"])
+    app_id = _pending(client, admin_headers)["id"]
+    client.post(f"/api/v1/admin/applications/{app_id}/approve", headers=admin_headers)
+    with TestSession() as s:
+        lid = s.query(ListenerProfile).one().id
+    on = client.post(
+        f"/api/v1/admin/listeners/{lid}/certify", json={"certified": True}, headers=admin_headers
+    )
+    assert on.status_code == 200 and on.json()["certified"] is True
+    roster = client.get("/api/v1/admin/listeners", headers=admin_headers).json()
+    assert next(x for x in roster if x["id"] == lid)["certified"] is True
+    off = client.post(
+        f"/api/v1/admin/listeners/{lid}/certify", json={"certified": False}, headers=admin_headers
+    )
+    assert off.json()["certified"] is False
+    with TestSession() as s:
+        actions = [a.action for a in s.query(AdminAuditLog).all()]
+        assert "listener.certified" in actions and "listener.certification_removed" in actions
+
+
+def test_an_unapproved_mentor_cannot_be_certified(client, admin_headers):
+    with TestSession() as s:
+        li = ListenerProfile(
+            persona_name="Pending One",
+            persona_avatar="x",
+            categories=[],
+            status=ListenerStatus.offline,
+            vetting_status=VettingStatus.pending,
+        )
+        s.add(li)
+        s.commit()
+        lid = li.id
+    r = client.post(
+        f"/api/v1/admin/listeners/{lid}/certify", json={"certified": True}, headers=admin_headers
+    )
+    assert r.status_code == 409
+
+
+def test_the_public_card_carries_the_badge_flag(client, admin_headers):
+    _apply(client, ["upsc"])
+    app_id = _pending(client, admin_headers)["id"]
+    client.post(
+        f"/api/v1/admin/applications/{app_id}/approve",
+        json={"certify": True},
+        headers=admin_headers,
+    )
+    with TestSession() as s:
+        lid = s.query(ListenerProfile).one().id
+        s.query(ListenerProfile).filter_by(id=lid).update({"status": ListenerStatus.online})
+        s.commit()
+    viewer = _apply(client, ["life"])  # any signed-in member
+    cards = client.get("/api/v1/listeners", headers=_auth(viewer)).json()
+    items = cards["items"] if isinstance(cards, dict) else cards
+    assert next(c for c in items if c["id"] == lid)["certified"] is True

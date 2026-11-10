@@ -49,6 +49,11 @@ export function RequestCard({
         />
         <View style={styles.headText}>
           <Text style={[styles.name, { color: colors.ink }]}>{request.requester_persona_name}</Text>
+          {request.broadcast ? (
+            <Text style={[type.caption, { color: colors.inkMuted }]} testID={`mentor-request-open-${request.id}`}>
+              {t('mentor.openToAll')}
+            </Text>
+          ) : null}
           {request.issue_category ? (
             <View style={styles.chips}>
               <View style={[styles.chip, { backgroundColor: wash.orange }]} testID={`mentor-request-topic-${request.id}`}>

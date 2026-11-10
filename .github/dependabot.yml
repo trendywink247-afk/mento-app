@@ -1,37 +1,39 @@
 version: 2
 updates:
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
   - package-ecosystem: npm
     directory: /apps/mobile
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
-    # Expo/native majors must follow the staged compatibility plan.
     ignore:
+      # Expo/native majors must follow the staged compatibility plan.
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
-      # Native runtime upgrades are coordinated with Expo and each other.
-      # For 0.x packages, incompatible upgrades can be semver-minor.
-      - dependency-name: react-native
-        update-types: ['version-update:semver-minor']
-      - dependency-name: react-native-reanimated
-        update-types: ['version-update:semver-minor']
-      - dependency-name: react-native-worklets
-        update-types: ['version-update:semver-minor']
-      - dependency-name: react
-        update-types: ['version-update:semver-minor']
-      - dependency-name: react-dom
-        update-types: ['version-update:semver-minor']
+      # Expo SDK pins these native/runtime packages; upgrade them only with
+      # `npx expo install --fix` or an SDK upgrade, plus native acceptance.
+      - dependency-name: 'expo'
+      - dependency-name: 'expo-*'
+      - dependency-name: '@expo/*'
+      - dependency-name: 'react-native'
+      - dependency-name: 'react-native-*'
+      - dependency-name: '@react-native-community/*'
+      - dependency-name: '@react-native-picker/*'
+      - dependency-name: '@shopify/react-native-skia'
+      - dependency-name: '@sentry/react-native'
+      - dependency-name: 'lottie-react-native'
+      - dependency-name: 'stream-chat-expo'
+      # react and react-dom must move together and match the React Native pin,
+      # including patch releases.
+      - dependency-name: 'react'
+      - dependency-name: 'react-dom'
       - dependency-name: '@types/react'
         update-types: ['version-update:semver-minor']
   - package-ecosystem: pip
     directories:
       - /services/api
       - /services/recovery_receiver
+    target-branch: dev
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
