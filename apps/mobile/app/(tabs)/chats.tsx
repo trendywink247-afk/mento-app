@@ -758,8 +758,8 @@ export default function ChatsTab() {
           {!loading && hasAnything ? (
             <>
               {/* the fade runs to the screen edge, so no card shows beside the rounded pill below it */}
-              <View style={[styles.fadeWrap, { bottom: 0, height: 136 + dock }]} pointerEvents="none">
-                <GroundFade height={136 + dock} />
+              <View style={[styles.fadeWrap, { bottom: 0, height: 176 + dock }]} pointerEvents="none">
+                <GroundFade height={176 + dock} />
               </View>
               <View style={[styles.newChatWrap, { bottom: 36 + dock }]} pointerEvents="box-none">
                 <CompanionSlot id="fabTop" size={52} align="left" inset={space.lg} />
