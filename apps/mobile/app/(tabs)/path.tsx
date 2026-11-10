@@ -14,6 +14,7 @@ import { StageSheen } from '@/components/path/ambient';
 import { api, type PathState } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
+import { pathCopy } from '@/lib/pathCopy';
 import { screenCache } from '@/lib/screenCache';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -54,7 +55,7 @@ const NO_PERCHES: PlacementSlot[] = [];
 export default function PathTab() {
   const router = useRouter();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // Start from what was last on screen and refresh quietly on focus (lib/screenCache.ts);
   // the spinner is for the very first load only. A failed refresh keeps what is showing.
   const cachedPath = screenCache.get('path');
@@ -160,7 +161,7 @@ export default function PathTab() {
 
   // --- Path home ---
   const { community, stage } = state;
-  const lens = `${community.name} · ${stage.title}`;
+  const lens = `${community.name} · ${pathCopy(locale, stage.title)}`;
   const openBuilder = (starter?: string) =>
     // The first-question builder (DECISIONS §L.8): the starter is shaped there and handed to
     // the chat composer — nothing is matched or sent on this tap.
@@ -209,9 +210,9 @@ export default function PathTab() {
                 <View style={[styles.stagePanel, { backgroundColor: colors.accentTint }]}>
                   <StageSheen />
                   <Text style={[styles.stageTitle, { color: colors.ink }]} testID="path-stage">
-                    {stage.title}
+                    {pathCopy(locale, stage.title)}
                   </Text>
-                  <Text style={[type.note, { color: colors.ink }]}>{stage.blurb}</Text>
+                  <Text style={[type.note, { color: colors.ink }]}>{pathCopy(locale, stage.blurb)}</Text>
                 </View>
               </View>
             </EdgeSurface>
@@ -246,13 +247,13 @@ export default function PathTab() {
               {state.prompts.map((p, i) => (
                 <PressKey
                   key={p}
-                  onPress={() => openBuilder(p)}
+                  onPress={() => openBuilder(pathCopy(locale, p))}
                   edge={colors.edgeSurface}
                   radius={radius.md}
                   testID={`path-prompt-${i}`}
                   style={[styles.prompt, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
-                  <Text style={[styles.promptText, { color: colors.ink }]}>{p}</Text>
+                  <Text style={[styles.promptText, { color: colors.ink }]}>{pathCopy(locale, p)}</Text>
                   <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
                 </PressKey>
               ))}
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  title: { lineHeight: 34, flexShrink: 1 },
+  title: { lineHeight: 34, flex: 1 },
   inviteTop: { paddingTop: space.xs, paddingHorizontal: space.md },
   hero: { alignItems: 'center', gap: space.sm },
   inviteCta: { alignSelf: 'stretch' },

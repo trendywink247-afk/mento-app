@@ -66,6 +66,7 @@ export default function MentorHome() {
   const [switching, setSwitching] = useState(false);
   // Board A15: the stay-in-touch decision sheet over a settled-back Mentor Home.
   const [sheet, setSheet] = useState<{ ask: StayInTouchAsk; seats: number } | null>(null);
+  const [actions, setActions] = useState<ChatActionInfo | null>(null);
   const [asksVersion, setAsksVersion] = useState(0);
   // "Your line" — the same sheet pattern, over the same settled-back Mentor Home.
   const [lineMe, setLineMe] = useState<ListenerMe | null>(null);
@@ -173,15 +174,38 @@ export default function MentorHome() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={showConsole ? ['top'] : ['top', 'bottom']}>
       <SettleBack
-        open={!!sheet || !!lineMe}
+        open={!!sheet || !!lineMe || !!actions}
         onDismiss={() => {
           setSheet(null);
           setLineMe(null);
+          setActions(null);
         }}
-        dismissLabel={lineMe ? t('common.cancel') : t('mentorInTouch.later')}
-        sheetLabel={lineMe ? t('mentor.line.title') : t('mentorInTouch.sheetA11y')}
+        dismissLabel={lineMe || actions ? t('common.cancel') : t('mentorInTouch.later')}
+        sheetLabel={lineMe ? t('mentor.line.title') : actions ? actions.name : t('mentorInTouch.sheetA11y')}
         sheet={
-          lineMe ? (
+          actions ? (
+            <ChatActionsSheet
+              inline
+              name={actions.name}
+              pinned={actions.pinned}
+              archived={actions.archived}
+              muted={false}
+              canMute={false}
+              canDelete={false}
+              busy={false}
+              onPin={() => {
+                actions.onPin();
+                setActions(null);
+              }}
+              onArchive={() => {
+                actions.onArchive();
+                setActions(null);
+              }}
+              onMute={() => {}}
+              onDelete={() => {}}
+              onClose={() => setActions(null)}
+            />
+          ) : lineMe ? (
             <LineSheet
               me={lineMe}
               onClose={() => setLineMe(null)}
@@ -249,6 +273,7 @@ export default function MentorHome() {
             switching={switching}
             openAskId={typeof askParam === 'string' ? askParam : undefined}
             onOpenAsk={(ask, seats) => setSheet({ ask, seats })}
+            onActions={setActions}
             onSessionLost={() => {
               // The token's already cleared (listenerApi does that before this
               // fires) — re-mint immediately rather than stranding the mentor on
@@ -312,6 +337,8 @@ export default function MentorHome() {
 /** The console proper — mounted only once a listener token is on device, so the
  * data hook and heartbeat never spin up for a mentor who hasn't reached this state
  * yet. */
+type ChatActionInfo = { name: string; pinned: boolean; archived: boolean; onPin: () => void; onArchive: () => void };
+
 function ConsoleBody({
   animal,
   asksVersion,
@@ -319,6 +346,7 @@ function ConsoleBody({
   onOpenLine,
   openAskId,
   onOpenAsk,
+  onActions,
   onSessionLost,
   tab,
   onTab,
@@ -332,6 +360,7 @@ function ConsoleBody({
   lineVersion: number;
   onOpenLine: (me: ListenerMe) => void;
   openAskId?: string;
+  onActions: (a: ChatActionInfo) => void;
   onOpenAsk: (ask: StayInTouchAsk, seats: number) => void;
   onSessionLost: () => void;
   tab: MentorTab;
@@ -352,7 +381,6 @@ function ConsoleBody({
     if (c.me) setPushPreview(Boolean(c.me.push_preview));
   }, [c.me?.push_preview]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showArchived, setShowArchived] = useState(false);
-  const [actionFor, setActionFor] = useState<string | null>(null);
   const prepared = usePreparedAnswers();
   const [chatTab, setChatTab] = useState<'active' | 'waiting' | 'touch'>('active');
   const [reqIndex, setReqIndex] = useState(0);
@@ -515,31 +543,16 @@ function ConsoleBody({
         onPress={() => openConversation(conversation)}
         onSnooze={(on) => void setSnooze(conversation.id, on)}
         snoozeBusy={c.busy === `snooze:${conversation.id}`}
-        onLongPress={() => setActionFor(actionFor === conversation.id ? null : conversation.id)}
+        onLongPress={() =>
+          onActions({
+            name: conversation.user_persona_name,
+            pinned: chatPrefs.pinned.includes(conversation.id),
+            archived: chatPrefs.archived.includes(conversation.id),
+            onPin: () => togglePinned(conversation.id),
+            onArchive: () => toggleArchived(conversation.id),
+          })
+        }
       />
-      {actionFor === conversation.id ? (
-        <ChatActionsSheet
-          inline
-          name={conversation.user_persona_name}
-          pinned={chatPrefs.pinned.includes(conversation.id)}
-          archived={chatPrefs.archived.includes(conversation.id)}
-          muted={false}
-          canMute={false}
-          canDelete={false}
-          busy={false}
-          onPin={() => {
-            togglePinned(conversation.id);
-            setActionFor(null);
-          }}
-          onArchive={() => {
-            toggleArchived(conversation.id);
-            setActionFor(null);
-          }}
-          onMute={() => {}}
-          onDelete={() => {}}
-          onClose={() => setActionFor(null)}
-        />
-      ) : null}
     </View>
   );
 
@@ -635,9 +648,9 @@ function ConsoleBody({
           <View style={[styles.seg, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} accessibilityRole="tablist">
             {(
               [
-                ['active', t('mentor.tabActive'), activeChats.length],
-                ['waiting', t('mentor.tabWaiting'), waitingChats.length],
-                ['touch', t('mentor.tabTouch'), touchChats.length],
+                ['active', t('mentor.tabActive'), activeChats.filter((x) => !isArchived(x)).length],
+                ['waiting', t('mentor.tabWaiting'), waitingChats.filter((x) => !isArchived(x)).length],
+                ['touch', t('mentor.tabTouch'), touchChats.filter((x) => !isArchived(x)).length],
               ] as const
             ).map(([key, label, count]) => {
               const on = chatTab === key;

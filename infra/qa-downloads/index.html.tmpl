@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mento QA for Android</title>
+<style>
+:root{--bg:#F4EFE6;--ink:#2B2B2B;--muted:#6B675F;--card:#fff;--line:#E6DFD3;--accent:#3B6D8F;--edge:#2A4F69}
+@media(prefers-color-scheme:dark){:root{--bg:#1d1b18;--ink:#f1ece3;--muted:#b5ad9f;--card:#272420;--line:#3a352f;--accent:#7fb0d1;--edge:#4f7f9f}}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.5 system-ui,sans-serif;padding:24px max(16px,env(safe-area-inset-left))}
+main{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:30px;line-height:1.15;margin:8px 0 0}h1 span{color:var(--accent)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px 18px;box-shadow:0 3px 0 var(--line)}
+.key{display:block;text-align:center;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;font-size:18px;border-radius:14px;padding:16px;box-shadow:0 4px 0 var(--edge)}
+ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}small,.muted{color:var(--muted);font-size:14px}code{font-size:12px;word-break:break-all}
+</style></head><body><main>
+<h1>Mento <span>QA</span> for Android</h1>
+<p class="muted">A test build for friends of the team. It is not the store app, and it talks to our test server only.</p>
+<a class="key" href="mento-qa.apk" download>Download Mento QA (@SIZE@ MB)</a>
+<div class="card"><b>Before you install</b>
+<ol>
+<li>On your phone, download the file above and tap it. Android will ask you to allow installs from your browser. Allow it for this once.</li>
+<li>Open <b>Mento QA</b>. The first start downloads the newest version, so give it a minute.</li>
+</ol></div>
+<div class="card"><b>Good to know</b>
+<ol><li>Android 7 or newer, 64-bit phones.</li><li>Everything in it is test data. Please do not share real personal details.</li><li>It sits next to the store app if you have that, and does not replace it.</li></ol></div>
+<p><small>Mento QA @VERSION@ (build @BUILD@, @COMMIT@) · chat.mento.app.qa<br>SHA-256 <code>@SHA256@</code></small></p>
+</main></body></html>

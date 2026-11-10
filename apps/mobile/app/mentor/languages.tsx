@@ -38,7 +38,7 @@ export default function MentorLanguages() {
     setNote(null);
     try {
       await listenerApi.updateProfile({ languages: value });
-      setNote(t('mentor.languagesSaved'));
+      router.back();
     } catch {
       setNote(t('common.somethingWrong'));
     } finally {

@@ -15,7 +15,7 @@ import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type, wash, washInk } from '@/theme/tokens';
 
-const KINDS: DocumentKind[] = ['id_card', 'posting_letter', 'result', 'other'];
+const KINDS: DocumentKind[] = ['id_card', 'result', 'other'];
 
 /** Send one document to become Mento Verified. The team reads it and decides; the file is deleted at once. */
 export default function MentorVerify() {
