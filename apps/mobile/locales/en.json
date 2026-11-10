@@ -169,7 +169,27 @@
       "availability": "When you're usually here",
       "availabilityPlaceholder": "evenings, weekends",
       "save": "Save"
-    }
+    },
+    "reqToAll": "To everyone",
+    "reqToYou": "Asked you",
+    "reqWaiting": "Waiting %{age}",
+    "reqSeeShared": "See what they shared",
+    "reqHideShared": "Hide",
+    "reqFRoad": "Road",
+    "reqFStage": "Stage",
+    "reqFTopic": "Topic",
+    "reqFAge": "Age band",
+    "reqFAsked": "Asked",
+    "reqFAskedAll": "Every mentor",
+    "reqFAskedYou": "You",
+    "reqFWaited": "Waited",
+    "reqNeverShown": "Name, phone and email are never shown to mentors.",
+    "reqUpNext": "Up next",
+    "reqTotWaiting": "waiting",
+    "reqTotOldest": "oldest",
+    "reqTotReply": "you usually reply in",
+    "reqTotDay": "a day",
+    "reqTotTwoDays": "2 days"
   },
   "common": {
     "continue": "Continue",

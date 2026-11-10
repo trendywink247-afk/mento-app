@@ -15,6 +15,7 @@ import { HomeStats } from '@/components/mentor/HomeStats';
 import { MentorTabBar, type MentorTab } from '@/components/mentor/MentorTabBar';
 import { OldestWaiting } from '@/components/mentor/OldestWaiting';
 import { RequestFocus } from '@/components/mentor/RequestFocus';
+import { RequestTotals, UpNext } from '@/components/mentor/RequestQueueExtras';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { CertifiedBadge } from '@/components/CertifiedBadge';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
@@ -554,8 +555,10 @@ function ConsoleBody({
               {c.note}
             </Text>
           ) : null}
+          <RequestTotals requests={c.requests} replyWithin={c.me?.reply_within} />
           {request ? (
             <RequestFocus
+              key={request.id}
               request={request}
               busy={c.busy === request.id}
               onAccept={() => void c.act(request.id, 'accept')}
@@ -570,6 +573,7 @@ function ConsoleBody({
               testID="mentor-requests-empty"
             />
           )}
+          <UpNext requests={c.requests} current={reqIdx} onPick={setReqIndex} />
         </Entrance>
       ) : null}
 

@@ -169,7 +169,27 @@
       "availability": "आप आमतौर पर कब यहाँ होते हैं",
       "availabilityPlaceholder": "शाम, सप्ताहांत",
       "save": "सहेजें"
-    }
+    },
+    "reqToAll": "सभी के लिए",
+    "reqToYou": "आपसे पूछा",
+    "reqWaiting": "%{age} से इंतज़ार में",
+    "reqSeeShared": "देखें उन्होंने क्या बताया",
+    "reqHideShared": "छिपाएँ",
+    "reqFRoad": "राह",
+    "reqFStage": "चरण",
+    "reqFTopic": "विषय",
+    "reqFAge": "आयु वर्ग",
+    "reqFAsked": "किससे पूछा",
+    "reqFAskedAll": "हर मेंटर",
+    "reqFAskedYou": "आप",
+    "reqFWaited": "इंतज़ार",
+    "reqNeverShown": "नाम, फ़ोन और ईमेल मेंटर को कभी नहीं दिखते।",
+    "reqUpNext": "आगे",
+    "reqTotWaiting": "इंतज़ार में",
+    "reqTotOldest": "सबसे पुराना",
+    "reqTotReply": "आप आमतौर पर जवाब देते हैं",
+    "reqTotDay": "एक दिन में",
+    "reqTotTwoDays": "2 दिन में"
   },
   "common": {
     "continue": "आगे बढ़ें",

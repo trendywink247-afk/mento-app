@@ -97,6 +97,10 @@ export type ListenerRequest = {
   /** What the member chose to share: their road and stage, as words. */
   community_label?: string | null;
   stage_label?: string | null;
+  /** "18–24": the member's age as a band, never a date of birth. */
+  age_band?: string | null;
+  /** Who it was offered to: any approved mentor, Mento Verified only, or peers. */
+  audience?: 'any' | 'in_service' | 'peer';
 };
 
 /** Dev-only picker row (the /listener/dev/* endpoints 404 in production). */

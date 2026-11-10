@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { MemberDisc } from '@/components/mentor/MemberDisc';
@@ -34,6 +35,15 @@ export function RequestFocus({
   const { colors } = useTheme();
   const { t } = useI18n();
   const topic = request.issue_category_label ?? request.issue_category ?? null;
+  const [shared, setShared] = useState(false);
+  const facts = [
+    request.community_label ? { label: t('mentor.reqFRoad'), value: request.community_label } : null,
+    request.stage_label ? { label: t('mentor.reqFStage'), value: request.stage_label } : null,
+    topic ? { label: t('mentor.reqFTopic'), value: topic } : null,
+    request.age_band ? { label: t('mentor.reqFAge'), value: request.age_band } : null,
+    { label: t('mentor.reqFAsked'), value: request.broadcast ? t('mentor.reqFAskedAll') : t('mentor.reqFAskedYou') },
+    { label: t('mentor.reqFWaited'), value: ageLabel(request.created_at) },
+  ].filter(Boolean) as { label: string; value: string }[];
   const context = [
     request.community_label ? { text: request.community_label, tone: 'sky' as const } : null,
     request.stage_label ? { text: request.stage_label, tone: 'sky' as const } : null,
@@ -55,8 +65,16 @@ export function RequestFocus({
             <Text style={[styles.name, { color: colors.ink }]} numberOfLines={1}>
               {request.requester_persona_name}
             </Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>
-              {(request.broadcast ? t('mentor.reqOpen') : t('mentor.reqAsked')) + ' · ' + ageLabel(request.created_at)}
+            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.reqWaiting', { age: ageLabel(request.created_at) })}</Text>
+          </View>
+          <View style={[styles.how, { backgroundColor: request.broadcast ? wash.orange : wash.sky }]} testID="mentor-request-how">
+            <Ionicons
+              name={request.broadcast ? 'radio-outline' : 'person-outline'}
+              size={14}
+              color={request.broadcast ? washInk.orange : colors.accentInk}
+            />
+            <Text style={[type.caption, { color: request.broadcast ? washInk.orange : colors.accentInk, fontFamily: type.label.fontFamily }]}>
+              {request.broadcast ? t('mentor.reqToAll') : t('mentor.reqToYou')}
             </Text>
           </View>
         </View>
@@ -65,19 +83,35 @@ export function RequestFocus({
         ) : null}
       </EdgeSurface>
 
-      {context.length ? (
+      <Pressable
+        onPress={() => setShared((v) => !v)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: shared }}
+        style={styles.seeShared}
+        testID="mentor-request-shared-toggle"
+      >
+        <Text style={[type.label, { color: colors.accent }]}>{shared ? t('mentor.reqHideShared') : t('mentor.reqSeeShared')}</Text>
+        <Ionicons name={shared ? 'chevron-up' : 'chevron-forward'} size={16} color={colors.accent} />
+      </Pressable>
+      {!shared && context.length ? (
+        <View style={styles.chips}>
+          {context.map((c) => (
+            <View key={c.text} style={[styles.chip, { backgroundColor: c.tone === 'sky' ? wash.sky : wash.orange }]}>
+              <Text style={[type.caption, { color: c.tone === 'sky' ? colors.accentInk : washInk.orange, fontFamily: type.label.fontFamily }]}>{c.text}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {shared ? (
         <EdgeSurface edge={colors.edgeAlt} radius={radius.lg} style={[styles.card, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
           <Text style={[type.caption, styles.eyebrow, { color: colors.inkMuted }]}>{t('mentor.reqAbout')}</Text>
-          <View style={styles.chips}>
-            {context.map((c) => (
-              <View key={c.text} style={[styles.chip, { backgroundColor: c.tone === 'sky' ? wash.sky : wash.orange }]}>
-                <Text style={[type.caption, { color: c.tone === 'sky' ? COMPANION_COLORS.sky.accentEdge : washInk.orange, fontFamily: type.label.fontFamily }]}>
-                  {c.text}
-                </Text>
-              </View>
-            ))}
-          </View>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.reqAboutNote')}</Text>
+          {facts.map((f) => (
+            <View key={f.label} style={[styles.fact, { borderBottomColor: colors.border }]}>
+              <Text style={[type.label, { color: colors.ink }]}>{f.label}</Text>
+              <Text style={[type.body, styles.factValue, { color: colors.inkMuted }]}>{f.value}</Text>
+            </View>
+          ))}
+          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.reqNeverShown')}</Text>
         </EdgeSurface>
       ) : null}
 
@@ -131,6 +165,10 @@ export function RequestFocus({
 
 const styles = StyleSheet.create({
   wrap: { gap: space.sm },
+  how: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, paddingHorizontal: 10, paddingVertical: 5 },
+  seeShared: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 36 },
+  fact: { flexDirection: 'row', justifyContent: 'space-between', gap: space.md, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth },
+  factValue: { flexShrink: 1, textAlign: 'right' },
   card: { borderWidth: 1, padding: space.md, gap: space.sm },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   headText: { flex: 1, minWidth: 0 },
