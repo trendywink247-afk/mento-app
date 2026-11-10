@@ -35,6 +35,10 @@ echo "qa-apk: building $SHA (log: $LOG)"
   git -C "$BUILD" fetch -q "$REPO" "$FULL"
   git -C "$BUILD" checkout -q -f --detach "$FULL"
   cd "$BUILD/apps/mobile"
+  # The poller (ops/qa-apk-poll.sh) sets the next versionCode so nobody has to bump it by hand.
+  if [ -n "${QA_APK_BUMP_TO:-}" ]; then
+    sed -i "s/\"versionCode\": [0-9]*,/\"versionCode\": $QA_APK_BUMP_TO,/" app.json
+  fi
   export EXPO_NO_DOTENV=1 APP_VARIANT=preview EXPO_PUBLIC_APP_ENV=qa EXPO_PUBLIC_API_URL=https://qa-api.mento.chat/api/v1 \
     EXPO_PUBLIC_PUSH_DIRECT=1 EXPO_PUBLIC_OWN_CHAT_ACCEPTED=1 EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED=1 \
     EXPO_PUBLIC_GIT_SHA=$SHA SENTRY_DISABLE_AUTO_UPLOAD=true CI=1

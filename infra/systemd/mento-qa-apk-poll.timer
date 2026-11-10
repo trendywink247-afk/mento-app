@@ -1,0 +1,10 @@
+[Unit]
+Description=Schedule: Rebuild and publish the QA APK when the native layer changed
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Rebuild and publish the QA APK when the native layer changed
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=agent
+ExecStart=/srv/mento/mento-app/ops/qa-apk-poll.sh
+Nice=10
+TimeoutStartSec=45min
