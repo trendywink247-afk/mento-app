@@ -40,7 +40,13 @@ export async function clearConversationNotifications(conversationId: string): Pr
     const shown = await Notifications.getPresentedNotificationsAsync();
     await Promise.all(
       shown
-        .filter((n) => (n.request.content.data as { conversation_id?: string } | undefined)?.conversation_id === conversationId)
+        // A push the system itself posted (a direct FCM notification) carries the conversation only as its tag,
+        // which is what Android reports as the identifier; one posted by this app carries it in its data.
+        .filter(
+          (n) =>
+            n.request.identifier === conversationId ||
+            (n.request.content.data as { conversation_id?: string } | undefined)?.conversation_id === conversationId,
+        )
         .map((n) => Notifications.dismissNotificationAsync(n.request.identifier)),
     );
   } catch {
