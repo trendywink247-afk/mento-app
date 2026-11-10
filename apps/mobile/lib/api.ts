@@ -112,6 +112,8 @@ export type Listener = {
   certified?: boolean;
   /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
   reply_within?: 'day' | 'two_days' | null;
+  /** Language codes this mentor talks in; empty when they have not said. */
+  languages?: string[];
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -141,6 +143,7 @@ export type ListenerProfile = {
   certified?: boolean;
   /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
   reply_within?: 'day' | 'two_days' | null;
+  languages?: string[];
 };
 
 export type PersonalRequest = {
@@ -470,6 +473,8 @@ export type ListenerApplicationIn = {
   mentor_interest: boolean;
   /** Exam mentoring (DECISIONS §O): what the applicant says they hold; an admin reads it. */
   exam_credential?: string | null;
+  /** Up to five language codes the mentor talks in (lib/languages.ts). */
+  languages?: string[];
   pledge_accepted: boolean;
 };
 
@@ -706,7 +711,9 @@ export const api = {
 
   // --- Mentor discovery + personal requests ---
   // Paged server-side (API T2.3); Browse still shows one list, walked here up to 200.
-  listListeners: () => collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}`)),
+  /** `language`: a preference, not a filter. Mentors who talk it come first; nobody is hidden. */
+  listListeners: (language?: string) =>
+    collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}${language ? `&language=${encodeURIComponent(language)}` : ''}`)),
 
   requestListener: (id: string, intro_message: string, issue_category?: string | null) =>
     request<PersonalRequest>(`/listeners/${id}/request`, { method: 'POST', body: JSON.stringify({ intro_message, issue_category }) }, true),

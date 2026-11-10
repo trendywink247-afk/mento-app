@@ -15,6 +15,7 @@ import { HomeStats } from '@/components/mentor/HomeStats';
 import { MentorTabBar, type MentorTab } from '@/components/mentor/MentorTabBar';
 import { OldestWaiting } from '@/components/mentor/OldestWaiting';
 import { RequestFocus } from '@/components/mentor/RequestFocus';
+import { languageLine } from '@/lib/languages';
 import { RequestTotals, UpNext } from '@/components/mentor/RequestQueueExtras';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { CertifiedBadge } from '@/components/CertifiedBadge';
@@ -661,6 +662,14 @@ function ConsoleBody({
             </EdgeSurface>
           </Pressable>
 
+          <ProfileRow
+            icon="language-outline"
+            tone="sky"
+            title={t('mentor.languages')}
+            sub={c.me.languages?.length ? languageLine(c.me.languages) : t('mentor.languagesNone')}
+            onPress={() => router.push('/mentor/languages')}
+            testID="mentor-profile-languages"
+          />
           <ProfileRow
             icon="document-text-outline"
             tone="orange"

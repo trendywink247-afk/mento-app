@@ -189,7 +189,15 @@
     "reqTotOldest": "सबसे पुराना",
     "reqTotReply": "आप आमतौर पर जवाब देते हैं",
     "reqTotDay": "एक दिन में",
-    "reqTotTwoDays": "2 दिन में"
+    "reqTotTwoDays": "2 दिन में",
+    "languages": "भाषाएँ",
+    "languagesSub": "%{list}",
+    "languagesNone": "बताएँ आप किन भाषाओं में बात करते हैं",
+    "languagesTitle": "जिन भाषाओं में आप बात करते हैं",
+    "languagesBody": "जिन सदस्यों की कोई भाषा पसंद है, उन्हें वही बोलने वाले मेंटर पहले दिखते हैं। पाँच तक चुनें।",
+    "languagesSave": "सहेजें",
+    "languagesSaved": "सहेजा गया",
+    "talksIn": "%{list} में बात करते हैं"
   },
   "common": {
     "continue": "आगे बढ़ें",
@@ -1221,7 +1229,10 @@
     "openHome": "मेंटर होम खोलें",
     "declinedChip": "इस बार नहीं",
     "companionReviewA11y": "आपका साथी, स्थिति कार्ड पर आपके साथ इंतज़ार करता हुआ",
-    "companionApprovedA11y": "आपका साथी, आपका स्वागत करता हुआ"
+    "companionApprovedA11y": "आपका साथी, आपका स्वागत करता हुआ",
+    "languagesLabel": "जिन भाषाओं में आप बात करते हैं",
+    "languagesHint": "पाँच तक चुनें",
+    "gateLanguages": "कम से कम एक भाषा चुनें।"
   },
   "mentorHomePage": {
     "readingEyebrow": "पाठ 1 · आपकी पहली बातचीत से पहले",

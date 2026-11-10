@@ -23,6 +23,7 @@ export type ListenerMe = {
   certified?: boolean;
   /** Usual time to accept a request over 30 days, once there is enough to say (DECISIONS §P.6). */
   reply_within?: 'day' | 'two_days' | null;
+  languages?: string[];
 };
 
 /** Mirrors server `MemberBriefOut` — "Context for care" (mentor-side member brief). */
@@ -180,7 +181,7 @@ export const listenerApi = {
   brief: (convoId: string) => req<MemberBrief>(`/listener/me/conversations/${convoId}/brief`),
 
   /** PATCH-like semantics on a PUT: an omitted field is left unchanged server-side. */
-  updateProfile: (body: { public_line?: string | null; availability_note?: string | null }) =>
+  updateProfile: (body: { public_line?: string | null; availability_note?: string | null; languages?: string[] }) =>
     req<ListenerMe>('/listener/me/profile', { method: 'PUT', body: JSON.stringify(body) }),
 
   accept: (id: string) =>

@@ -189,7 +189,15 @@
     "reqTotOldest": "oldest",
     "reqTotReply": "you usually reply in",
     "reqTotDay": "a day",
-    "reqTotTwoDays": "2 days"
+    "reqTotTwoDays": "2 days",
+    "languages": "Languages",
+    "languagesSub": "%{list}",
+    "languagesNone": "Say which languages you talk in",
+    "languagesTitle": "Languages you talk in",
+    "languagesBody": "Members who prefer a language see mentors who talk it first. Pick up to five.",
+    "languagesSave": "Save",
+    "languagesSaved": "Saved",
+    "talksIn": "Talks in %{list}"
   },
   "common": {
     "continue": "Continue",
@@ -1221,7 +1229,10 @@
     "openHome": "Open Mentor Home",
     "declinedChip": "Not this time",
     "companionReviewA11y": "Your companion, waiting with you on the status card",
-    "companionApprovedA11y": "Your companion, welcoming you"
+    "companionApprovedA11y": "Your companion, welcoming you",
+    "languagesLabel": "Languages you talk in",
+    "languagesHint": "Pick up to five",
+    "gateLanguages": "Choose at least one language."
   },
   "mentorHomePage": {
     "readingEyebrow": "Reading 1 · before your first chat",

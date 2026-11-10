@@ -5,6 +5,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Entrance } from '@/components/motion/Entrance';
+import { LanguageChips } from '@/components/LanguageChips';
 import { PressKey } from '@/components/motion/PressKey';
 import { api, ApiError, type ListenerApplication } from '@/lib/api';
 import { useI18n, type TKey } from '@/lib/i18n';
@@ -48,13 +49,14 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
   const [communities, setCommunities] = useState<string[]>([]);
   const [availability, setAvailability] = useState<Availability>('few_hours');
   const [times, setTimes] = useState<Time[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
   const [email, setEmail] = useState('');
   const [pledged, setPledged] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const whyLeft = Math.max(0, MIN_WHY - motivation.trim().length);
-  const valid = whyLeft === 0 && times.length > 0 && pledged;
+  const valid = whyLeft === 0 && times.length > 0 && languages.length > 0 && pledged;
   // The one line under Submit names the first thing still missing — the pledge first.
   const gate = !pledged
     ? t('mentorApply.gatePledge')
@@ -62,7 +64,9 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
       ? t('mentorApply.gateWhy', { count: whyLeft })
       : times.length === 0
         ? t('mentorApply.gateAvailability')
-        : null;
+        : languages.length === 0
+          ? t('mentorApply.gateLanguages')
+          : null;
 
   const [roads, setRoads] = useState<{ slug: string; name: string | null; exam: boolean }[]>(
     KNOWN_COMMUNITIES.map((slug) => ({ slug, name: null, exam: slug !== 'life' })),
@@ -113,6 +117,7 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         // server field stays, always false from this form.
         mentor_interest: false,
         exam_credential: wantsExam && credential.trim() ? credential.trim() : null,
+        languages,
         pledge_accepted: true,
       });
       onSuccess(result);
@@ -240,6 +245,14 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
             ),
           )}
         </View>
+      </Entrance>
+
+      <Entrance index={3} style={styles.group}>
+        <View style={styles.labelRow}>
+          <Text style={[type.rowTitle, styles.shrink, { color: colors.ink }]}>{t('mentorApply.languagesLabel')}</Text>
+          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.languagesHint')}</Text>
+        </View>
+        <LanguageChips value={languages} onChange={setLanguages} testIDPrefix="apply-lang" />
       </Entrance>
 
       <Entrance index={3} style={styles.group}>
