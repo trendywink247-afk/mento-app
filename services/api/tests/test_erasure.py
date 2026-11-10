@@ -25,6 +25,7 @@ from app.models.enums import (
     JournalChannel,
     LinkStatus,
     ListenerStatus,
+    MemberStatus,
     PushOwnerKind,
     ReporterKind,
     RequestKind,
@@ -57,7 +58,11 @@ pytestmark = requires_postgres
 def _clean_extra_tables(db_session):
     """conftest truncates the matching tables; these two are not on its list."""
     with test_engine.begin() as conn:
-        conn.execute(text("TRUNCATE listener_applications, favourite_listeners, contributions"))
+        conn.execute(
+            text(
+                "TRUNCATE listener_applications, favourite_listeners, contributions, blocked_installs"
+            )
+        )
         conn.execute(text("DELETE FROM admin_audit_log WHERE action = 'member.erased'"))
     yield
 
@@ -636,3 +641,96 @@ def test_receipt_ack_failure_retains_account_for_retry(
     monkeypatch.setattr(recovery_receipts, "acknowledge", seen.append)
     assert client.delete("/api/v1/me", headers=_auth(me)).status_code == 200
     assert seen == [recovery_digest(me)]
+
+
+# --- a blocked member may still erase everything (founder, 2026-11-10) ---------
+
+
+def _block(s, uid, *, status, until=None, install="inst-1"):
+    u = s.get(User, uid)
+    u.status, u.banned_until, u.install_hash = status, until, install
+    s.commit()
+
+
+def test_a_banned_member_can_erase_everything_and_only_the_install_hash_remains(
+    client, db_session, stream_calls
+):
+    from app.models.blocked_install import BlockedInstall
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        _block(s, me, status=MemberStatus.banned, install="inst-banned")
+    r = client.delete("/api/v1/me", headers=_auth(me))
+    assert r.status_code == 200, r.text
+    with TestSession() as s:
+        assert s.get(User, me) is None  # the person is gone
+        kept = s.scalars(select(BlockedInstall)).all()
+        assert [(k.install_hash, k.blocked_until) for k in kept] == [("inst-banned", None)]
+
+
+def test_a_new_account_from_an_erased_blocked_install_is_still_flagged(
+    client, db_session, stream_calls
+):
+    from app.services import member_status
+
+    with TestSession() as s:
+        me = _user(s, "Quiet Cove")
+        _block(s, me, status=MemberStatus.suspended, install="inst-s")
+    assert client.delete("/api/v1/me", headers=_auth(me)).status_code == 200
+    with TestSession() as s:
+        fresh = User(
+            persona_name="New Pine",
+            persona_avatar="y",
+            dob=date(1996, 1, 1),
+            age_at_signup=30,
+            install_hash="inst-s",
+        )
+        s.add(fresh)
+        s.flush()
+        assert member_status.flag_rejoin(s, fresh) is True
+        other = User(
+            persona_name="Other Elm",
+            persona_avatar="z",
+            dob=date(1996, 1, 1),
+            age_at_signup=30,
+            install_hash="inst-other",
+        )
+        s.add(other)
+        s.flush()
+        assert member_status.flag_rejoin(s, other) is False
+
+
+def test_an_active_member_leaves_nothing_behind_and_an_ended_block_flags_nobody(
+    client, db_session, stream_calls
+):
+    from app.models.blocked_install import BlockedInstall
+    from app.services import member_status
+
+    with TestSession() as s:
+        a = _user(s, "Quiet Cove")
+        s.get(User, a).install_hash = "inst-active"
+        s.commit()
+        b = _user(s, "Steady Oak")
+        _block(
+            s,
+            b,
+            status=MemberStatus.suspended,
+            until=datetime(2020, 1, 1, tzinfo=UTC),
+            install="inst-old",
+        )
+    assert client.delete("/api/v1/me", headers=_auth(a)).status_code == 200
+    assert (
+        client.delete("/api/v1/me", headers=_auth(b)).status_code == 200
+    )  # the suspension had already ended
+    with TestSession() as s:
+        assert s.scalars(select(BlockedInstall)).all() == []
+        fresh = User(
+            persona_name="New Pine",
+            persona_avatar="y",
+            dob=date(1996, 1, 1),
+            age_at_signup=30,
+            install_hash="inst-old",
+        )
+        s.add(fresh)
+        s.flush()
+        assert member_status.flag_rejoin(s, fresh) is False

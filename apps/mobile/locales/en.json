@@ -1711,5 +1711,11 @@
     "off": "A notification says only that a message arrived.",
     "on": "A notification shows what the message says, like a chat app.",
     "note": "The words then pass through your phone maker's notification service. Chats you have locked never show their words."
+  },
+  "upgrade": {
+    "title": "Time to update",
+    "body": "This version of Mento is out of date, so it can no longer talk to our servers. Update the app to carry on.",
+    "button": "Update the app",
+    "safe": "Your chats and your account are safe. Nothing is lost."
   }
 }

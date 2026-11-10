@@ -11,6 +11,7 @@ import {
   getSessionToken,
   saveTokenPair,
 } from './session';
+import { isUpgradeRefusal, raiseUpgradeRequired } from './upgradeGate';
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
@@ -167,6 +168,8 @@ export type PersonalRequest = {
   broadcast?: boolean;
   /** Who it was offered to. */
   audience?: Audience;
+  /** Only on the response that created a request whose words tripped the crisis scan: the helpline card. */
+  support?: { message: string; helplines: { name: string; number: string; hours: string }[] } | null;
   /** No reply after 24 hours: the letter asks what to do next (DECISIONS §P.5). */
   nudged?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
@@ -398,6 +401,7 @@ async function apiFetch(
     } catch {
       /* non-JSON error body */
     }
+    if (isUpgradeRefusal(res.status, code)) raiseUpgradeRequired();
     throw new ApiError(res.status, detail, code, body);
   }
   return res;

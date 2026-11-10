@@ -2,6 +2,7 @@
 
 from app.models.admin import AdminAccount, AdminAuditLog
 from app.models.allowance import MessageAllowanceDay
+from app.models.blocked_install import BlockedInstall
 from app.models.chat_message import ChatMessage, ChatReadMarker
 from app.models.console_code import ConsoleCode
 from app.models.contribution import Contribution
@@ -27,6 +28,7 @@ from app.models.user import User
 __all__ = [
     "AdminAccount",
     "AdminAuditLog",
+    "BlockedInstall",
     "ChatMessage",
     "ChatReadMarker",
     "ConsoleCode",

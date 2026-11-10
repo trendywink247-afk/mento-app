@@ -5215,6 +5215,16 @@
             "title": "Status",
             "type": "string"
           },
+          "support": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupportOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "target_listener_id": {
             "anyOf": [
               {
@@ -5600,6 +5610,27 @@
           "requested_at"
         ],
         "title": "StepBackOut",
+        "type": "object"
+      },
+      "SupportOut": {
+        "properties": {
+          "helplines": {
+            "default": [],
+            "items": {
+              "type": "object"
+            },
+            "title": "Helplines",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "SupportOut",
         "type": "object"
       },
       "UnlockRequest": {

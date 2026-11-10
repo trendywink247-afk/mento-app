@@ -362,4 +362,10 @@ Recorded from the founder's answers of 2026-11-10; the founder approved each rec
 
 **7. Notification style.** A switch on both Profiles, **off by default**: when on, a notification shows what the message says (cut at 120 characters), like a chat app. Own chat only; never for a locked chat, a crisis-flagged message or a redacted one. The words then pass through the phone maker's push service, so it is the person's choice and the privacy policy says so. Notifications are one per conversation and clear when the chat opens.
 
-**8. Decided later:** telling a member when a mentor comes online (a suggestion, not built).
+**8. The words of a request are crisis-scanned when it is created.** A mentor can read them in their inbox before any chat exists, so they now get the same scan a chat message gets: a signal-only flag for the safety team, the request is still sent, and the helpline card is returned to the member and shown on the waiting screen. Fail-open like every crisis scan. The stock line the app adds when the member writes nothing is not scanned. _Proposed by the assistant and approved in the founder's words ("yes"); needs the founder's review of the change before it merges (crisis scan)._
+
+**9. A suspended or banned member may erase everything.** Erasure is a right. `DELETE /me` works at any standing. For a member who is blocked at that moment only a one-way hash of their install and the date the block ends are kept (`blocked_installs`), so a new account from that install is still flagged for the team; nothing about the person stays. _Needs the founder's and legal review before it merges (deletion)._
+
+**10. "Time to update" screen.** When the server answers 426 `upgrade_required` the app shows one calm screen with an Update button; chats and the account are untouched.
+
+**11. Decided later:** telling a member when a mentor comes online (a suggestion, not built).

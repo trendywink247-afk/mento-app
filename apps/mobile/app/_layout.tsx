@@ -17,6 +17,7 @@ import { SkyGround } from '@/components/motion/SkyGround';
 import { WebFrame } from '@/components/WebFrame';
 import { installNotificationHandler, useNotificationTaps } from '@/lib/notifications';
 import { useShakeToUpdate } from '@/lib/useShakeToUpdate';
+import { UpgradeRequired } from '@/components/UpgradeRequired';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
 // Foreground banners without sound + tap routing (spec 2026-09-05 push §6). Web
@@ -127,6 +128,7 @@ export default function RootLayout() {
               />
             </Stack>
             </NavigationThemeProvider>
+            <UpgradeRequired />
           </WebFrame>
         </ThemeProvider>
       </AppProviders>
