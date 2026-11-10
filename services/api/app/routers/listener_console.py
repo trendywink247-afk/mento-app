@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, case, false, func, or_, select, true, tuple_, update
+from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
 from app import jobs, pagination, ratelimit
@@ -60,11 +60,13 @@ from app.schemas import (
 from app.schemas.applications import ConsoleExchangeIn, ConsoleExchangeOut
 from app.security import current_listener_id, issue_listener_token
 from app.services import (
+    age_band,
     care_prompts,
     categories,
     console_codes,
     conversations,
     in_touch,
+    languages,
     mentor_face,
     mentor_names,
     paths,
@@ -77,6 +79,7 @@ from app.services.matching import (
     ListenerAtCapacity,
     RequestNotPending,
     accept_personal_request,
+    audiences_for,
     decline_personal_request,
 )
 
@@ -107,6 +110,7 @@ def _me_out(li: ListenerProfile, db: Session) -> ListenerMeOut:
         stream_token=stream.user_token(li.id),
         public_line=li.public_line,
         availability_note=li.availability_note,
+        languages=list(li.languages or []),
         name_changes_at=(
             mentor_names.next_rotation_at(datetime.now(UTC)).isoformat()
             if mentor_names.is_enabled()
@@ -265,6 +269,8 @@ def update_profile(
     if "availability_note" in fields:
         value = payload.availability_note
         listener.availability_note = (" ".join(value.split()) if value else "") or None
+    if "languages" in fields:
+        listener.languages = languages.clean(payload.languages)
     db.commit()
     db.refresh(listener)
     return _me_out(listener, db)
@@ -433,7 +439,7 @@ def my_pending_requests(
                 and_(
                     ConversationRequest.broadcast.is_(True),
                     ConversationRequest.target_listener_id.is_(None),
-                    true() if listener.certified_exam else false(),
+                    ConversationRequest.audience.in_(audiences_for(bool(listener.certified_exam))),
                     ~select(RequestPass.id)
                     .where(
                         RequestPass.request_id == ConversationRequest.id,
@@ -482,6 +488,8 @@ def my_pending_requests(
             broadcast=req.broadcast,
             community_label=paths.community_label(user.community_slug),
             stage_label=paths.stage_label(user.community_slug, user.journey_stage),
+            age_band=age_band.age_band(user.dob),
+            audience=req.audience,
         )
         for req, user in rows
     ]
@@ -512,7 +520,9 @@ def mark_requests_seen(
                     and_(
                         ConversationRequest.broadcast.is_(True),
                         ConversationRequest.target_listener_id.is_(None),
-                        true() if listener.certified_exam else false(),
+                        ConversationRequest.audience.in_(
+                            audiences_for(bool(listener.certified_exam))
+                        ),
                     ),
                 ),
                 ConversationRequest.status == RequestStatus.pending,

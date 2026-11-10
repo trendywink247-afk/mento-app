@@ -13,6 +13,7 @@ from app.models.feedback import ProductFeedback
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentor_document import MentorDocument
 from app.models.mentor_invite import MentorInvite
 from app.models.mentor_link import ListenerNameHistory, MentorLink
 from app.models.moderation import ModerationEvent
@@ -39,6 +40,7 @@ __all__ = [
     "JournalEntry",
     "ListenerApplication",
     "ListenerNameHistory",
+    "MentorDocument",
     "MentorInvite",
     "ListenerProfile",
     "MentorLink",

@@ -472,6 +472,7 @@ def notify_request_broadcast(db: Session, *, request_id: str) -> None:
         req.issue_category,
         blocked,
         community=member.community_slug if member else None,
+        audience=req.audience,
     ):
         tokens = tokens_for(db, PushOwnerKind.listener, listener_id)
         if not tokens:

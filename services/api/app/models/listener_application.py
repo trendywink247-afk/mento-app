@@ -35,6 +35,8 @@ class ListenerApplication(UUIDMixin, TimestampMixin, Base):
     # What the applicant says they hold for exam mentoring (free text, self-declared). The admin
     # reads it and decides whether to certify; nothing here is proof.
     exam_credential: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # Languages the applicant talks in (services/languages.py). NULL for builds that never sent it.
+    languages: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
 
     status: Mapped[ApplicationStatus] = mapped_column(default=ApplicationStatus.pending, index=True)
     decline_reason: Mapped[str | None] = mapped_column(String(255), nullable=True)

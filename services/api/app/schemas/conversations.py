@@ -53,6 +53,8 @@ class ConversationListItem(BaseModel):
     # only ever told the kind half of it — "<mentor> will reply within a day" — never
     # that it was snoozed.
     reply_within_a_day: bool = False
+    # The member muted this chat (Quiet Pause): no notifications from it until they resume. Additive.
+    is_paused: bool = False
     # The mentor's face (services/mentor_face.py) — the same animal + wash on every screen.
     listener_companion_animal: str = "Owl"
     listener_companion_colour: str = "sage"

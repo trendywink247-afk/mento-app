@@ -54,6 +54,7 @@ def card(
         companion_colour=mentor_face.face(li)[1],
         certified=bool(li.certified_exam),
         reply_within=reply_within,
+        languages=list(li.languages or []),
     )
 
 
@@ -90,6 +91,7 @@ def profile(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOu
         category_labels=category_labels(li.categories or []),
         certified=bool(li.certified_exam),
         reply_within=reply_time.reply_within(db, [li.id])[li.id],
+        languages=list(li.languages or []),
     )
 
 

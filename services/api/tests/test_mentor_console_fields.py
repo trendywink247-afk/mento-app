@@ -135,6 +135,9 @@ def test_a_request_shows_the_road_and_stage_the_member_chose(client):
         s.commit()
     row = client.get("/api/v1/listener/me/requests", headers=_h(li)).json()[0]
     assert row["community_label"] == "UPSC" and row["stage_label"]
+    # The member's age reaches the mentor only as a band.
+    assert row["age_band"] in {"25–34", "35–44", "45+", "18–24"} and "dob" not in row
+    assert row["audience"] == "any"
 
 
 def test_a_member_with_no_road_has_no_labels(client):
@@ -152,3 +155,18 @@ def test_a_member_with_no_road_has_no_labels(client):
         s.commit()
     row = client.get("/api/v1/listener/me/requests", headers=_h(li)).json()[0]
     assert row["community_label"] is None and row["stage_label"] is None
+
+
+def test_age_band_is_coarse_and_never_below_eighteen():
+    from datetime import date
+
+    from app.services.age_band import age_band
+
+    today = date(2026, 11, 10)
+    assert age_band(date(2008, 11, 10), today) == "18–24"  # turned 18 today
+    assert age_band(date(2008, 11, 11), today) is None  # still 17
+    assert age_band(date(2002, 1, 1), today) == "18–24"
+    assert age_band(date(1999, 1, 1), today) == "25–34"
+    assert age_band(date(1990, 1, 1), today) == "35–44"
+    assert age_band(date(1970, 1, 1), today) == "45+"
+    assert age_band(None, today) is None

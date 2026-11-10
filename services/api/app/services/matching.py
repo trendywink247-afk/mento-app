@@ -275,24 +275,44 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
 BROADCAST_LIMIT = 20
 
 
+def audience_allows(audience: str, certified: bool) -> bool:
+    """May a mentor of this kind take a broadcast offered to `audience`? "in_service" = Mento
+    Verified only, "peer" = the other approved mentors, anything else = every approved mentor."""
+    if audience == "in_service":
+        return certified
+    if audience == "peer":
+        return not certified
+    return True
+
+
+def audiences_for(certified: bool) -> list[str]:
+    """The `audience` values a mentor of this kind may take (for an inbox query)."""
+    return ["any", "in_service"] if certified else ["any", "peer"]
+
+
 def broadcast_candidate_ids(
     db: Session,
     category: str | None,
     blocked_ids: set[str],
     community: str | None = None,
     limit: int = BROADCAST_LIMIT,
+    audience: str = "any",
 ) -> list[str]:
-    """Online certified mentors with a free slot who may be offered a broadcast question, best
-    match first (same tiers as the instant match), at most `limit`. Nothing is locked or
-    reserved: a broadcast reserves nobody until a mentor accepts it."""
+    """Online approved mentors with a free slot who may be offered a broadcast question (those in
+    `audience`), best match first (same tiers as the instant match), at most `limit`. Nothing is
+    locked or reserved: a broadcast reserves nobody until a mentor accepts it."""
+    where = [
+        ListenerProfile.vetting_status == VettingStatus.approved,
+        ListenerProfile.status == ListenerStatus.online,
+        ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
+    ]
+    if audience == "in_service":
+        where.append(ListenerProfile.certified_exam.is_(True))
+    elif audience == "peer":
+        where.append(ListenerProfile.certified_exam.is_(False))
     rows = db.execute(
         select(ListenerProfile.id, ListenerProfile.categories, ListenerProfile.community_slug)
-        .where(
-            ListenerProfile.vetting_status == VettingStatus.approved,
-            ListenerProfile.status == ListenerStatus.online,
-            ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
-            ListenerProfile.certified_exam.is_(True),
-        )
+        .where(*where)
         .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
     ).all()
 
@@ -308,12 +328,12 @@ def broadcast_candidate_ids(
 def can_take_broadcast(
     db: Session, request: ConversationRequest, listener: ListenerProfile
 ) -> bool:
-    """May this mentor see and accept this broadcast? Certified and approved, not one the member
-    blocked, not the member's own mentor profile, and has not passed on it."""
+    """May this mentor see and accept this broadcast? Approved and in its audience, not one the
+    member blocked, not the member's own mentor profile, and has not passed on it."""
     if not (
         request.broadcast
         and request.target_listener_id is None
-        and listener.certified_exam
+        and audience_allows(request.audience, bool(listener.certified_exam))
         and listener.vetting_status == VettingStatus.approved
     ):
         return False

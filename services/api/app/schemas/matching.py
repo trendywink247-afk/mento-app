@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from app.models.enums import RequestKind
@@ -29,3 +31,6 @@ class MatchAsk(BaseModel):
 
     issue_category: str | None = Field(default=None, max_length=40)
     intro_message: str | None = Field(default=None, max_length=160)
+    # Who may take it: any approved mentor (the default), Mento Verified ("in_service") or the other
+    # approved mentors ("peer"). Additive: older builds send none and get "any".
+    audience: Literal["any", "in_service", "peer"] = "any"

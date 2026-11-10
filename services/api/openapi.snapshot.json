@@ -1100,6 +1100,70 @@
         "title": "AdminReconcileOut",
         "type": "object"
       },
+      "AdminVerificationItem": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "has_file": {
+            "default": true,
+            "title": "Has File",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "listener_id": {
+            "title": "Listener Id",
+            "type": "string"
+          },
+          "persona_name": {
+            "title": "Persona Name",
+            "type": "string"
+          },
+          "size_bytes": {
+            "title": "Size Bytes",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "listener_id",
+          "persona_name",
+          "kind",
+          "content_type",
+          "size_bytes",
+          "status",
+          "created_at"
+        ],
+        "title": "AdminVerificationItem",
+        "type": "object"
+      },
       "AllowanceOut": {
         "description": "The member's allowance right now. `GET /conversations/{id}/allowance` fills\nevery field; `GET /me/allowance` (no conversation yet) reports `in_a_row` as 0.\n\n`held_reason` is what the NEXT send would be held for: null (send away),\n\"in_a_row\" (wait for the mentor) or \"daily\" (wait for `resets_at`). It is always\nnull while holding is switched off (`enforced` false) and in a conversation the\ncrisis scan has recently flagged — urgent words are never held back or counted.",
         "properties": {
@@ -1383,6 +1447,11 @@
             "title": "Is Locked",
             "type": "boolean"
           },
+          "is_paused": {
+            "default": false,
+            "title": "Is Paused",
+            "type": "boolean"
+          },
           "issue_category": {
             "anyOf": [
               {
@@ -1596,6 +1665,14 @@
               }
             ],
             "title": "Issue Category Label"
+          },
+          "languages": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
           },
           "listening_since": {
             "title": "Listening Since",
@@ -3013,6 +3090,21 @@
             ],
             "title": "Exam Credential"
           },
+          "languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages"
+          },
           "mentor_interest": {
             "default": false,
             "title": "Mentor Interest",
@@ -3273,6 +3365,14 @@
             "title": "Id",
             "type": "string"
           },
+          "languages": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
+          },
           "max_concurrent": {
             "title": "Max Concurrent",
             "type": "integer"
@@ -3399,6 +3499,14 @@
             "title": "Is Favourite",
             "type": "boolean"
           },
+          "languages": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
+          },
           "persona_avatar": {
             "title": "Persona Avatar",
             "type": "string"
@@ -3450,6 +3558,21 @@
               }
             ],
             "title": "Availability Note"
+          },
+          "languages": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 12,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Languages"
           },
           "public_line": {
             "anyOf": [
@@ -3558,6 +3681,14 @@
             "title": "Is Favourite",
             "type": "boolean"
           },
+          "languages": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Languages",
+            "type": "array"
+          },
           "listening_since": {
             "title": "Listening Since",
             "type": "string"
@@ -3652,6 +3783,22 @@
       },
       "ListenerRequestItem": {
         "properties": {
+          "age_band": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Band"
+          },
+          "audience": {
+            "default": "any",
+            "title": "Audience",
+            "type": "string"
+          },
           "broadcast": {
             "default": false,
             "title": "Broadcast",
@@ -3791,6 +3938,16 @@
       "MatchAsk": {
         "description": "Ask the best available mentor for an exam niche; they accept before any chat opens.",
         "properties": {
+          "audience": {
+            "default": "any",
+            "enum": [
+              "any",
+              "in_service",
+              "peer"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
           "intro_message": {
             "anyOf": [
               {
@@ -4937,6 +5094,11 @@
       },
       "RequestOut": {
         "properties": {
+          "audience": {
+            "default": "any",
+            "title": "Audience",
+            "type": "string"
+          },
           "broadcast": {
             "default": false,
             "title": "Broadcast",
@@ -5476,6 +5638,100 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "VerificationDecisionIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "VerificationDecisionIn",
+        "type": "object"
+      },
+      "VerificationIn": {
+        "properties": {
+          "content_base64": {
+            "maxLength": 4400000,
+            "minLength": 8,
+            "title": "Content Base64",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "id_card",
+              "posting_letter",
+              "result",
+              "other"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "content_base64"
+        ],
+        "title": "VerificationIn",
+        "type": "object"
+      },
+      "VerificationOut": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "created_at"
+        ],
+        "title": "VerificationOut",
         "type": "object"
       },
       "VerifyPinRequest": {
@@ -6886,6 +7142,234 @@
           }
         ],
         "summary": "Review Flag",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verifications": {
+      "get": {
+        "operationId": "review_queue_api_v1_admin_verifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status_filter",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "title": "Status Filter",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AdminVerificationItem"
+                  },
+                  "title": "Response Review Queue Api V1 Admin Verifications Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Review Queue",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verifications/{doc_id}/approve": {
+      "post": {
+        "description": "Mark the mentor Mento Verified and wipe the file.",
+        "operationId": "approve_api_v1_admin_verifications__doc_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "doc_id",
+            "required": true,
+            "schema": {
+              "title": "Doc Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/VerificationDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminVerificationItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Approve",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verifications/{doc_id}/file": {
+      "get": {
+        "description": "The file itself, for the reviewing admin only. Every read is written to the audit log.",
+        "operationId": "read_file_api_v1_admin_verifications__doc_id__file_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "doc_id",
+            "required": true,
+            "schema": {
+              "title": "Doc Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Read File",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/v1/admin/verifications/{doc_id}/reject": {
+      "post": {
+        "description": "Say no (with a short reason the mentor sees) and wipe the file.",
+        "operationId": "reject_api_v1_admin_verifications__doc_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "doc_id",
+            "required": true,
+            "schema": {
+              "title": "Doc Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/VerificationDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Payload"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminVerificationItem"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Reject",
         "tags": [
           "admin"
         ]
@@ -9904,6 +10388,81 @@
         ]
       }
     },
+    "/api/v1/listener/me/verification": {
+      "get": {
+        "description": "This mentor's documents and where each stands. Never the file.",
+        "operationId": "my_documents_api_v1_listener_me_verification_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VerificationOut"
+                  },
+                  "title": "Response My Documents Api V1 Listener Me Verification Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "My Documents",
+        "tags": [
+          "verification"
+        ]
+      },
+      "post": {
+        "operationId": "send_document_api_v1_listener_me_verification_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerificationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Send Document",
+        "tags": [
+          "verification"
+        ]
+      }
+    },
     "/api/v1/listener/session/exchange": {
       "post": {
         "description": "Trade a one-time console code (T3.10) for a listener session. Unknown, expired\nor already-used codes are 401; a mentor suspended since the code was issued is\n403 — suspension is honoured at the trade, as on every console request.",
@@ -9951,6 +10510,23 @@
         "description": "Approved listeners (minus anyone this user blocked — and minus the user's\nown listener profile, if their application was approved). Ordered IN TOUCH first\n(DECISIONS §L.7 — the consented link that replaces the favourite), then the\ndeprecated favourites, then available, then rank (spec 2026-09-06 §3.4), then id.\n\nPaged (T2.3): `limit` + `cursor`, next cursor in `X-Next-Cursor`. The order is\nbuilt IN SQL so a page is a keyset slice of it. `available` can change between two\npage reads — a mentor going away may then appear twice or not at all across pages,\nthe accepted price of a live directory (a refresh starts over).",
         "operationId": "list_listeners_api_v1_listeners_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "language",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
+            }
+          },
           {
             "in": "query",
             "name": "limit",
