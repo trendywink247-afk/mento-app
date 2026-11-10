@@ -187,7 +187,8 @@ def update_companion(
     },
 )
 def erase_me(
-    user_id: str = Depends(current_user_id),
+    # Any standing: a suspended or banned member may still erase their own data (founder, 2026-11-10).
+    user_id: str = Depends(current_user_id_any_standing),
     db: Session = Depends(get_db),
 ) -> OkResult:
     """Start fresh, for real (audit F24, DECISIONS §L.11): erase this member and

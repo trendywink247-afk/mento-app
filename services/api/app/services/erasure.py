@@ -56,6 +56,7 @@ from app.models.enums import (
     ConversationStatus,
     LinkEndedBy,
     LinkStatus,
+    MemberStatus,
     PushOwnerKind,
     ReporterKind,
     RequestStatus,
@@ -286,6 +287,26 @@ def _phase_c_delete(db: Session, user_id: str) -> dict[str, int]:
     return counts
 
 
+def _remember_blocked_install(db: Session, user: User) -> None:
+    """A member who is suspended or banned right now may still erase everything (founder, 2026-11-10). So the
+    block cannot be dodged by erasing and starting over, keep ONLY a one-way hash of their install and the date the
+    block ends (models/blocked_install.py): nothing about the person. A repeat erase adds nothing twice.
+    """
+    from app.models.blocked_install import (
+        BlockedInstall,  # noqa: PLC0415 — reason: avoid a models import cycle
+    )
+    from app.services.member_status import standing  # noqa: PLC0415
+
+    now = standing(user.status, user.banned_until)
+    if now.status == MemberStatus.active or not user.install_hash:
+        return
+    already = db.execute(
+        select(BlockedInstall.id).where(BlockedInstall.install_hash == user.install_hash)
+    ).first()
+    if already is None:
+        db.add(BlockedInstall(install_hash=user.install_hash, blocked_until=now.until))
+
+
 def erase_member(db: Session, user_id: str) -> Erased | None:
     """Erase one member completely. None = already erased (no-op). Raises MentorActive
     (nothing touched) or EraseIncomplete (chats ended; nothing else claimed)."""
@@ -297,6 +318,7 @@ def erase_member(db: Session, user_id: str) -> Erased | None:
         db.rollback()
         raise MentorActive
 
+    _remember_blocked_install(db, user)
     channels = _phase_a_end_everything_live(db, user_id)
     db.commit()
 
