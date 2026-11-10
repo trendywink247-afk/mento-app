@@ -67,6 +67,13 @@ person seeking support and the listener — appears only as an auto-assigned per
   phone maker's push service (Google). Chats a person has locked, messages the crisis
   scan flagged and messages that were redacted never have their words put in a
   notification. Turning it off stops it at once.
+- **The install of a member who was suspended or banned and then erased their account.**
+  Erasing everything is allowed at any standing. So that a block cannot be dodged by erasing
+  and starting over, a one-way hash of the install label and the date the block ends are kept
+  (no name, no persona, no content). A new account from that install is flagged for the team,
+  never refused. The row is ignored once the block has ended.
+- **The words of a request** are now run through the crisis scan when the request is sent; the
+  words themselves are not stored on the flag, only the signal.
 - **The languages a mentor talks in** (mentors only) — up to five, shown on the mentor's
   card so members can find a mentor who talks their language.
 - **Sign-in sessions** — the app refreshes its sign-in every few minutes; we keep a
