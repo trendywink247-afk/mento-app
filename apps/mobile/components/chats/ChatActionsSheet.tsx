@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { useTabDockHeight } from '@/components/tabDock';
 import { useI18n } from '@/lib/i18n';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
@@ -42,6 +43,7 @@ export function ChatActionsSheet({
 }) {
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
+  const dock = useTabDockHeight();
   const [confirming, setConfirming] = useState(startConfirming);
   const rows: { key: string; icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; danger?: boolean; hide?: boolean }[] = [
     { key: 'pin', icon: pinned ? 'pin-outline' : 'pin', label: pinned ? t('chatActions.unpin') : t('chatActions.pin'), onPress: onPin },
@@ -50,7 +52,7 @@ export function ChatActionsSheet({
     { key: 'delete', icon: 'trash-outline', label: t('chatActions.delete'), onPress: () => setConfirming(true), danger: true },
   ];
   return (
-    <Pressable style={[styles.backdrop, { backgroundColor: colors.scrim }]} onPress={onClose} accessibilityLabel={t('common.cancel')} testID="chat-actions-backdrop">
+    <Pressable style={[styles.backdrop, { backgroundColor: colors.scrim, paddingBottom: space.md + dock }]} onPress={onClose} accessibilityLabel={t('common.cancel')} testID="chat-actions-backdrop">
       <Pressable style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.md]} onPress={() => {}} testID="chat-actions-sheet">
         <Text style={[type.sheetTitle, styles.title, { color: colors.ink }]} numberOfLines={1}>
           {name}
