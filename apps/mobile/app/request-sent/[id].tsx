@@ -91,6 +91,9 @@ export default function RequestSentScreen() {
   const first = id ? requestLetter.get(id) : undefined;
   const [request, setRequest] = useState<PersonalRequest | null>(first?.request ?? null);
   const [mentor, setMentor] = useState<LetterMentor | null>(first?.mentor ?? null);
+  // The helpline card arrives only on the response that created the request; the screen then re-reads the
+  // request from the server (which has none), so keep the card from the first paint.
+  const [support] = useState(first?.request.support ?? null);
   const [missing, setMissing] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [channel, setChannel] = useState<string | null>(null);
@@ -241,9 +244,9 @@ export default function RequestSentScreen() {
 
           {/* The words they wrote tripped the crisis scan when the question was sent: the question still went,
               and the helplines are here at once (never a block). */}
-          {request?.support ? (
+          {support ? (
             <Entrance index={1}>
-              <CrisisCard crisis={{ support: request.support.message, signal: '', helplines: request.support.helplines }} audience="feedback" inset={false} />
+              <CrisisCard crisis={{ support: support.message, signal: '', helplines: support.helplines }} audience="feedback" inset={false} />
             </Entrance>
           ) : null}
 
