@@ -5,7 +5,8 @@
 # `sudo /usr/local/sbin/qa-agent/apk-publish.sh` once infra/qa-agent/apk-publish.sh is installed.
 #
 # Why a whole web release: qa-install-web swaps the entire /opt/mento-staging/web folder, so the new
-# tarball must carry the QA web app too; it is copied from whatever is live right now.
+# tarball carries the QA web app (member app + admin console, exported from the same commit) as well as
+# downloads/. Building both together keeps the web admin from falling behind the API and the APK.
 # Secrets: the build reads one EXPO_PUBLIC_* value (the Stream public key) from $QA_APK_ENV; nothing is
 # echoed. EXPO_PUBLIC_* values ship inside the app by design.
 set -euo pipefail
@@ -16,7 +17,6 @@ SHA=${FULL:0:7}
 BUILD=${QA_APK_BUILD_DIR:-$HOME/aabbuild}
 OUT=${QA_APK_OUT:-$HOME/qa-apk-out}
 ENVF=${QA_APK_ENV:-$HOME/.config/mento/qa-build.env}
-LIVE=${QA_WEB_LIVE:-/opt/mento-staging/web}
 LOG=$OUT/build-$SHA.log
 
 [ -r "$ENVF" ] || { echo "qa-apk: missing $ENVF (one line: EXPO_PUBLIC_STREAM_API_KEY=...)" >&2; exit 2; }
@@ -43,6 +43,9 @@ echo "qa-apk: building $SHA (log: $LOG)"
   [ -n "$EXPO_PUBLIC_STREAM_API_KEY" ] || { echo "no stream key in $ENVF"; exit 8; }
   env -u NODE_ENV npm ci --no-audit --no-fund
   NODE_ENV=production npx expo prebuild --platform android --clean
+  rm -rf dist-qa
+  NODE_ENV=production npx expo export --platform web --output-dir dist-qa
+  [ -f dist-qa/index.html ] || { echo "web export produced no index.html"; exit 7; }
   cd android
   NODE_ENV=production nice -n 10 ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon \
     -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
@@ -55,11 +58,11 @@ CODE=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["expo"]["a
 SUM=$(sha256sum "$APK" | cut -d' ' -f1)
 MB=$(( ($(stat -c%s "$APK") + 1048575) / 1048576 ))
 
-# The release is the live web folder with the APK and the page replaced.
+# The release is the fresh web export plus downloads/ (the APK and its page).
 REL=web-$SHA-qa-apk$CODE
 STAGE=$OUT/$REL
 rm -rf "$STAGE"; mkdir -p "$STAGE"
-cp -rL "$LIVE"/. "$STAGE"/
+cp -r "$BUILD/apps/mobile/dist-qa"/. "$STAGE"/
 mkdir -p "$STAGE/downloads"
 cp "$APK" "$STAGE/downloads/mento-qa.apk"
 sed "s/@SIZE@/$MB/; s/@VERSION@/$VERSION/; s/@BUILD@/$CODE/; s/@SHA256@/$SUM/; s/@COMMIT@/$SHA/" \
