@@ -626,7 +626,8 @@
     "hide": "Hide this note",
     "mentorLead": "The person you are talking with was shown these support lines.",
     "mentorNote": "Stay with them and encourage the call. Mentors are peers, not therapists.",
-    "feedbackNote": "What you wrote was not saved as feedback. Mentors are peers, not therapists."
+    "feedbackNote": "What you wrote was not saved as feedback. Mentors are peers, not therapists.",
+    "requestNote": "Your question was sent. Mentors are peers, not therapists."
   },
   "allowance": {
     "meterA11y": "Message allowance: %{left} of %{limit} left today",
