@@ -663,6 +663,14 @@ function ConsoleBody({
           </Pressable>
 
           <ProfileRow
+            icon={c.me.certified ? 'ribbon' : 'ribbon-outline'}
+            tone="orange"
+            title={t('verify.row')}
+            sub={c.me.certified ? t('verify.rowDone') : t('verify.rowSub')}
+            onPress={() => router.push('/mentor/verify')}
+            testID="mentor-profile-verify"
+          />
+          <ProfileRow
             icon="language-outline"
             tone="sky"
             title={t('mentor.languages')}
