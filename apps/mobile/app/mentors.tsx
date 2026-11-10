@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { DeepHeader } from '@/components/DeepHeader';
@@ -312,7 +312,10 @@ export default function BrowseMentors() {
                 </PressKey>
               </View>
             </Entrance>
-            <Entrance index={2} style={styles.filters}>
+            <Entrance index={2}>
+              {/* A row that scrolls: with every road, Life, In touch and Mento Verified there are too many chips to
+                  share one line, and squeezing them left only "U…" and "N…". */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
               {filters.map((f) => {
                 const on = filter === f.key;
                 return (
@@ -340,6 +343,7 @@ export default function BrowseMentors() {
                   </PressKey>
                 );
               })}
+              </ScrollView>
             </Entrance>
           </DeepArrival>
           <View style={[styles.pinnedEdge, { backgroundColor: colors.edgeSurface }]} pointerEvents="none" />
@@ -406,8 +410,8 @@ const styles = StyleSheet.create({
   nextIcon: { width: 40, height: 40, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   nextTitle: { lineHeight: 22 },
   filters: { flexDirection: 'row', gap: 6 },
-  filterCell: { flexGrow: 1, flexShrink: 1 },
-  filter: { height: 44, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  filterCell: { flexGrow: 0, flexShrink: 0 },
+  filter: { height: 44, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   filterText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { paddingTop: 14, paddingHorizontal: space.md, paddingBottom: 104, gap: 10 },
@@ -423,7 +427,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cardBody: { flex: 1, minWidth: 0, gap: 1 },
-  cardHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // Wraps so a name with both badges is never cut to "Wise …"; the chevron stays on the right of the first line.
+  cardHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 6, rowGap: 2 },
   cardName: { fontFamily: font.sansBold, fontSize: 16, lineHeight: 22, flexShrink: 1 },
   grow: { flexGrow: 1 },
   availability: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 16 },
