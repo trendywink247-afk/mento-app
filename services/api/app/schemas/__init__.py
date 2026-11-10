@@ -101,6 +101,7 @@ from app.schemas.listeners import (
     ListenerProfileOut,
     PersonalRequestIn,
     RequestOut,
+    SupportOut,
 )
 from app.schemas.matching import (
     MatchRequest,
@@ -223,6 +224,7 @@ __all__ = [
     "ReflectionIn",
     "ReportRequest",
     "RequestOut",
+    "SupportOut",
     "ScanRequest",
     "ScanResult",
     "StatusMaskRequest",

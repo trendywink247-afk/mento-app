@@ -9,6 +9,8 @@ safety net don't double-flag the same message.
 
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -16,6 +18,8 @@ from sqlalchemy.orm import Session
 from app.models.safety import FLAG_SOURCES, SafetyFlag
 from app.services import crisis
 from app.services.crisis import CrisisResult
+
+logger = logging.getLogger(__name__)
 
 # Support-and-refer copy shown when a crisis signal is detected. Never retain;
 # point the person to trained help. Shared by every entry point.
@@ -109,3 +113,19 @@ def record_flag(
         # The sync before-send hook and the async message.new net raced on the same
         # message — the unique index makes the dedupe real; losing the race is fine.
         db.rollback()
+
+
+def scan_request_intro(db: Session, *, text: str | None, user_id: str) -> CrisisResult | None:
+    """The crisis scan for the words a member writes with a request, run when the request is created
+    (founder, 2026-11-10). A mentor can read those words in their inbox before any chat exists, so they get the
+    same scan a chat message gets: a signal-only flag for the safety team, and the helpline card back to the member.
+    Never blocks the request, and fail-open like every crisis scan: a fault delivers the request unscanned and logs
+    at ERROR. Returns the result only when it triggered."""
+    if not text or not text.strip():
+        return None
+    try:
+        result = scan_and_flag(db, text=text, user_id=user_id)
+    except Exception as exc:  # noqa: BLE001 — never block a request for help
+        logger.error("crisis scan of a request FAILED (%s) — sending unscanned", type(exc).__name__)
+        return None
+    return result if result.triggered else None

@@ -54,6 +54,7 @@ import { useHeroBreath } from '@/components/motion/useHeroBreath';
 import { askIntro, openAsked } from '@/lib/startChat';
 import { api, type PersonalRequest } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
+import { CrisisCard } from '@/components/chat/CrisisCard';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { requestLetter, type LetterMentor } from '@/lib/requestLetter';
@@ -237,6 +238,14 @@ export default function RequestSentScreen() {
             <BackKey onPress={() => (router.canGoBack() ? router.back() : leaveToChats(router))} />
             <FeedbackPill testID="request-sent-feedback" screen="request-sent/[id]" />
           </View>
+
+          {/* The words they wrote tripped the crisis scan when the question was sent: the question still went,
+              and the helplines are here at once (never a block). */}
+          {request?.support ? (
+            <Entrance index={1}>
+              <CrisisCard crisis={{ support: request.support.message, signal: '', helplines: request.support.helplines }} audience="feedback" inset={false} />
+            </Entrance>
+          ) : null}
 
           <Entrance index={1}>
             <Text style={[type.displayHeadline, styles.title, { color: colors.ink }]} accessibilityRole="header">

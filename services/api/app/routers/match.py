@@ -14,11 +14,11 @@ from app.models.enums import RequestKind, RequestStatus
 from app.models.listener import ListenerProfile
 from app.models.request import ConversationRequest
 from app.models.user import User
-from app.routers.listeners import _request_out
+from app.routers.listeners import _request_out, with_support
 from app.schemas import MatchRequest, MatchResult, RequestOut
 from app.schemas.matching import MatchAsk
 from app.security import current_user_id
-from app.services import locks, mentor_face, mentor_names, open_question, paths, terms
+from app.services import locks, mentor_face, mentor_names, open_question, paths, safety, terms
 from app.services.matching import (
     NoListenerAvailable,
     blocked_listener_ids,
@@ -145,6 +145,9 @@ def ask_best_mentor(
             status.HTTP_503_SERVICE_UNAVAILABLE,
             "No listener is available right now. Please try again in a moment.",
         )
+    # Every mentor in the audience can read these words, so they get the crisis scan first (founder, 2026-11-10);
+    # the request is still sent. Only words the member wrote: the stock line is not scanned.
+    crisis_result = safety.scan_request_intro(db, text=payload.intro_message, user_id=user_id)
     req = ConversationRequest(
         kind=RequestKind.general,
         broadcast=True,
@@ -161,4 +164,4 @@ def ask_best_mentor(
     jobs.enqueue(db, tasks.push_request_broadcast, best_effort=True, request_id=req.id)
     db.commit()
     db.refresh(req)
-    return _request_out(req, db)
+    return with_support(_request_out(req, db), crisis_result)

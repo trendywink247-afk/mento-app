@@ -91,6 +91,11 @@ class PersonalRequestIn(BaseModel):
     issue_category: str | None = Field(default=None, max_length=40)
 
 
+class SupportOut(BaseModel):
+    message: str
+    helplines: list[dict] = []
+
+
 class RequestOut(BaseModel):
     id: str
     status: str
@@ -109,6 +114,9 @@ class RequestOut(BaseModel):
     audience: str = "any"
     # No reply after 24 hours: the app asks the member what to do next (DECISIONS section P.5).
     nudged: bool = False
+    # Set only on the response that CREATES a request whose words tripped the crisis scan: the support copy and
+    # helplines, so the app can show the helpline card. Never stored, never in a list. Additive.
+    support: SupportOut | None = None
     # The mentor this request went to, as every screen draws them (a Personal request's
     # target; null for anything else). Lets the A04 letter paint the right face.
     listener_companion_animal: str | None = None
