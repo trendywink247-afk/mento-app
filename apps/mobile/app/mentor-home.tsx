@@ -9,7 +9,9 @@ import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
+import { ChatActionsSheet } from '@/components/chats/ChatActionsSheet';
 import { ConversationRow, isSnoozed } from '@/components/mentor/ConversationRow';
+import { useChatPrefs } from '@/lib/chatPrefs';
 import { ownLive } from '@/lib/ownLive';
 import { HomeStats } from '@/components/mentor/HomeStats';
 import { MentorTabBar, type MentorTab } from '@/components/mentor/MentorTabBar';
@@ -342,6 +344,10 @@ function ConsoleBody({
   const { t } = useI18n();
   const c = useMentorConsole(t('mentor.atCapacity'), t('mentor.requestTaken'));
   useListenerHeartbeat(c.me?.status === 'online');
+  // Pin and Archive on this phone (long-press a chat); there is no Mute or Delete for a mentor, who ends a chat instead.
+  const { prefs: chatPrefs, pin: togglePinned, archive: toggleArchived } = useChatPrefs();
+  const [showArchived, setShowArchived] = useState(false);
+  const [actionFor, setActionFor] = useState<string | null>(null);
   const prepared = usePreparedAnswers();
   const [chatTab, setChatTab] = useState<'active' | 'waiting' | 'touch'>('active');
   const [reqIndex, setReqIndex] = useState(0);
@@ -471,7 +477,14 @@ function ConsoleBody({
   const waitingChats = openChats.filter(isWaiting);
   const activeChats = [...openChats.filter((conv) => !isWaiting(conv) && !isSnoozed(conv)), ...openChats.filter((conv) => !isWaiting(conv) && isSnoozed(conv))];
   const touchChats = c.conversations.filter((conv) => conv.in_touch);
-  const shownChats = chatTab === 'waiting' ? waitingChats : chatTab === 'touch' ? touchChats : activeChats;
+  const tabChats = chatTab === 'waiting' ? waitingChats : chatTab === 'touch' ? touchChats : activeChats;
+  const isArchived = (conv: (typeof c.conversations)[number]) => chatPrefs.archived.includes(conv.id);
+  const archivedCount = c.conversations.filter(isArchived).length;
+  const pinRank = (conv: (typeof c.conversations)[number]) => chatPrefs.pinned.indexOf(conv.id) + 1 || Number.MAX_SAFE_INTEGER;
+  // Archived chats leave the tabs and wait in one row on top; pinned chats lead their tab.
+  const shownChats = showArchived
+    ? c.conversations.filter(isArchived)
+    : [...tabChats.filter((conv) => !isArchived(conv))].sort((a, b) => pinRank(a) - pinRank(b));
   const weekAgo = Date.now() - 7 * 86_400_000;
   const weekCount = c.conversations.filter((conv) => Date.parse(conv.created_at) >= weekAgo).length;
   const seatsFree = Math.max(0, c.me.max_concurrent - c.me.active_conversations);
@@ -484,14 +497,39 @@ function ConsoleBody({
   };
 
   const chatRow = (conversation: (typeof c.conversations)[number]) => (
-    <ConversationRow
-      key={conversation.id}
-      conversation={conversation}
-      live={liveOf(conversation)}
-      onPress={() => openConversation(conversation)}
-      onSnooze={(on) => void setSnooze(conversation.id, on)}
-      snoozeBusy={c.busy === `snooze:${conversation.id}`}
-    />
+    <View key={conversation.id}>
+      <ConversationRow
+        conversation={conversation}
+        live={liveOf(conversation)}
+        onPress={() => openConversation(conversation)}
+        onSnooze={(on) => void setSnooze(conversation.id, on)}
+        snoozeBusy={c.busy === `snooze:${conversation.id}`}
+        onLongPress={() => setActionFor(actionFor === conversation.id ? null : conversation.id)}
+      />
+      {actionFor === conversation.id ? (
+        <ChatActionsSheet
+          inline
+          name={conversation.user_persona_name}
+          pinned={chatPrefs.pinned.includes(conversation.id)}
+          archived={chatPrefs.archived.includes(conversation.id)}
+          muted={false}
+          canMute={false}
+          canDelete={false}
+          busy={false}
+          onPin={() => {
+            togglePinned(conversation.id);
+            setActionFor(null);
+          }}
+          onArchive={() => {
+            toggleArchived(conversation.id);
+            setActionFor(null);
+          }}
+          onMute={() => {}}
+          onDelete={() => {}}
+          onClose={() => setActionFor(null)}
+        />
+      ) : null}
+    </View>
   );
 
   return (
@@ -631,6 +669,18 @@ function ConsoleBody({
             </View>
           ) : null}
 
+          {showArchived || archivedCount > 0 ? (
+            <Pressable
+              onPress={() => setShowArchived(!showArchived)}
+              accessibilityRole="button"
+              style={styles.archiveRow}
+              testID={showArchived ? 'mentor-archived-back' : 'mentor-archived-row'}
+            >
+              <Ionicons name={showArchived ? 'chevron-back' : 'archive-outline'} size={22} color={colors.accent} />
+              <Text style={[type.label, { color: colors.ink, flex: 1 }]}>{showArchived ? t('chatActions.archivedBack') : t('chatActions.archivedRow')}</Text>
+              {!showArchived ? <Text style={[type.label, { color: colors.accent }]}>{archivedCount}</Text> : null}
+            </Pressable>
+          ) : null}
           {shownChats.length ? (
             <View style={styles.list}>{shownChats.map(chatRow)}</View>
           ) : (
@@ -797,6 +847,7 @@ const styles = StyleSheet.create({
   pad: { paddingHorizontal: space.sm },
   grow: { flexGrow: 1, minHeight: space.md },
   foot: { alignItems: 'center' },
+  archiveRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: space.md },
   centerText: { textAlign: 'center' },
   hero: { alignItems: 'center', gap: space.xs, marginTop: space.lg, marginBottom: space.xl },
   title: { ...type.displayHeadline, textAlign: 'center' },

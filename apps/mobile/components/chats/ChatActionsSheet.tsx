@@ -21,6 +21,8 @@ export function ChatActionsSheet({
   canMute,
   busy,
   startConfirming = false,
+  inline = false,
+  canDelete = true,
   onPin,
   onArchive,
   onMute,
@@ -35,6 +37,9 @@ export function ChatActionsSheet({
   busy: boolean;
   /** Open straight on the "Delete for good?" question (the swipe's Delete). */
   startConfirming?: boolean;
+  /** Drawn in the list under the chat instead of over the screen (the mentor's list scrolls inside a page). */
+  inline?: boolean;
+  canDelete?: boolean;
   onPin: () => void;
   onArchive: () => void;
   onMute: () => void;
@@ -49,11 +54,10 @@ export function ChatActionsSheet({
     { key: 'pin', icon: pinned ? 'pin-outline' : 'pin', label: pinned ? t('chatActions.unpin') : t('chatActions.pin'), onPress: onPin },
     { key: 'archive', icon: archived ? 'arrow-undo-outline' : 'archive-outline', label: archived ? t('chatActions.unarchive') : t('chatActions.archive'), onPress: onArchive },
     { key: 'mute', icon: muted ? 'notifications-outline' : 'notifications-off-outline', label: muted ? t('chatActions.unmute') : t('chatActions.mute'), onPress: onMute, hide: !canMute },
-    { key: 'delete', icon: 'trash-outline', label: t('chatActions.delete'), onPress: () => setConfirming(true), danger: true },
+    { key: 'delete', icon: 'trash-outline', label: t('chatActions.delete'), onPress: () => setConfirming(true), danger: true, hide: !canDelete },
   ];
-  return (
-    <Pressable style={[styles.backdrop, { backgroundColor: colors.scrim, paddingBottom: space.md + dock }]} onPress={onClose} accessibilityLabel={t('common.cancel')} testID="chat-actions-backdrop">
-      <Pressable style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.md]} onPress={() => {}} testID="chat-actions-sheet">
+  const cardView = (
+      <Pressable style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, elevation.md, inline && styles.inlineCard]} onPress={() => {}} testID="chat-actions-sheet">
         <Text style={[type.sheetTitle, styles.title, { color: colors.ink }]} numberOfLines={1}>
           {name}
         </Text>
@@ -82,12 +86,18 @@ export function ChatActionsSheet({
             ))
         )}
       </Pressable>
+  );
+  if (inline) return cardView;
+  return (
+    <Pressable style={{ ...StyleSheet.flatten(styles.backdrop), backgroundColor: colors.scrim, paddingBottom: space.md + dock }} onPress={onClose} accessibilityLabel={t('common.cancel')} testID="chat-actions-backdrop">
+{cardView}
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   backdrop: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'flex-end', padding: space.md, zIndex: 20 },
+  inlineCard: { marginTop: 6 },
   card: { borderRadius: radius.xl, borderWidth: 1, paddingTop: space.md, paddingBottom: space.sm, paddingHorizontal: space.md },
   title: { paddingBottom: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56, borderTopWidth: StyleSheet.hairlineWidth },
