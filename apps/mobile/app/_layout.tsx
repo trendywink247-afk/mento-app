@@ -17,7 +17,7 @@ import { SkyGround } from '@/components/motion/SkyGround';
 import { WebFrame } from '@/components/WebFrame';
 import { installNotificationHandler, useNotificationTaps } from '@/lib/notifications';
 import { useShakeToUpdate } from '@/lib/useShakeToUpdate';
-import { ThemeProvider } from '@/theme/ThemeProvider';
+import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
 // Foreground banners without sound + tap routing (spec 2026-09-05 push §6). Web
 // resolves to lib/notifications.web.ts, a no-op — the web console/app never receives pushes.
@@ -26,6 +26,12 @@ installNotificationHandler();
 // The navigators' own ground is transparent: every card and scene lies on the one sky
 // (components/motion/SkyGround.tsx). Without this react-navigation paints its default grey.
 const SKY_NAV_THEME = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: 'transparent' } };
+
+/** Dark text on the pastel and light looks, light text on dark. */
+function LookStatusBar() {
+  const { look } = useTheme();
+  return <StatusBar style={look === 'dark' ? 'light' : 'dark'} />;
+}
 
 export default function RootLayout() {
   // Device-testing affordance: shake anywhere to check EAS Update. No-op in
@@ -55,7 +61,7 @@ export default function RootLayout() {
       <AppProviders>
         {/* Per-user companion-colour accent theme over the neutral light base. */}
         <ThemeProvider>
-          <StatusBar style="dark" />
+          <LookStatusBar />
           {/* Web: centered app column on wide windows (passthrough on native + phones). */}
           <WebFrame>
             {/* One sky behind every member screen (components/motion/SkyGround.tsx); the

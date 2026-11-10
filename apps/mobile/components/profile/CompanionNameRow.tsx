@@ -118,7 +118,7 @@ export function CompanionNameRow({ animal }: { animal: string | null }) {
           testID="profile-companion-name-edit"
           style={[styles.editKey, { backgroundColor: colors.surface, borderColor: colors.border }]}
         >
-          <Text style={[type.label, { color: colors.accentEdge }]}>
+          <Text style={[type.label, { color: colors.accentInk }]}>
             {name ? t('profilePage.companionNameEdit') : t('profilePage.companionNameAdd')}
           </Text>
         </PressKey>

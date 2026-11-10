@@ -35,11 +35,11 @@ export function OldestWaiting({
     >
       <View style={styles.head}>
         <View style={[styles.chip, { backgroundColor: colors.surface }]}>
-          <Text style={[type.caption, { color: colors.accentEdge, fontFamily: type.label.fontFamily }]}>
+          <Text style={[type.caption, { color: colors.accentInk, fontFamily: type.label.fontFamily }]}>
             {t('mentor.oldestWaiting', { age: ageLabel(request.created_at) })}
           </Text>
         </View>
-        <Text style={[type.caption, { color: colors.accentEdge, fontFamily: type.label.fontFamily }]}>
+        <Text style={[type.caption, { color: colors.accentInk, fontFamily: type.label.fontFamily }]}>
           {t('mentor.waitingCount', { count: total })}
         </Text>
       </View>
@@ -53,7 +53,7 @@ export function OldestWaiting({
         />
         <View style={styles.whoText}>
           <Text style={[type.label, { color: colors.ink }]}>{request.requester_persona_name}</Text>
-          <Text style={[type.caption, { color: colors.accentEdge }]}>
+          <Text style={[type.caption, { color: colors.accentInk }]}>
             {request.broadcast ? t('mentor.reqOpen') : t('mentor.reqAsked')}
           </Text>
         </View>

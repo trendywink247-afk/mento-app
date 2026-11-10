@@ -10,9 +10,17 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 
 import AuroraCanvas, { AURORA_FADE_MS } from '@/components/motion/AuroraCanvas';
 import { StaticAmbient } from '@/components/motion/StaticAmbient';
+import { useTheme } from '@/theme/ThemeProvider';
+
+/** Light and Dark are a plain ground: no aurora, no motes. Pastel keeps the sky. */
+export function AmbientBackground({ paused = false }: { paused?: boolean }) {
+  const { look, colors } = useTheme();
+  if (look !== 'pastel') return <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} pointerEvents="none" />;
+  return <PastelAmbient paused={paused} />;
+}
 
 /** `paused`: see AuroraCanvas — the root sky holds still under an opaque screen. */
-export function AmbientBackground({ paused = false }: { paused?: boolean }) {
+function PastelAmbient({ paused = false }: { paused?: boolean }) {
   const [mountCanvas, setMountCanvas] = useState(false);
   const opacity = useSharedValue(0);
 

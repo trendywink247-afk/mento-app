@@ -194,7 +194,7 @@ export default function JournalWriteScreen() {
                         ]}
                       >
                         <Text
-                          style={[styles.moodText, { color: on ? colors.accentEdge : colors.ink }]}
+                          style={[styles.moodText, { color: on ? colors.accentInk : colors.ink }]}
                           numberOfLines={1}
                           adjustsFontSizeToFit
                         >

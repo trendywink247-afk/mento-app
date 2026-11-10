@@ -38,6 +38,8 @@ export type WaitingQuestion = {
   colour?: string | null;
   intro: string | null;
   createdAt: string;
+  /** Asked to every mentor (no single one chosen), not to one. */
+  broadcast?: boolean;
 };
 
 type Shape = {

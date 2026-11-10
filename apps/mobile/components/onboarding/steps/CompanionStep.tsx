@@ -272,7 +272,7 @@ export function CompanionStep({
                   <Companion animal={a} size={artH} awake />
                 </Breathe>
                 {/* accentEdge, not accent: a 14px label on the tint face needs 4.5:1 (contrast gate). */}
-                <Text style={[type.label, { color: selected ? colors.accentEdge : colors.ink }]} numberOfLines={1}>
+                <Text style={[type.label, { color: selected ? colors.accentInk : colors.ink }]} numberOfLines={1}>
                   {a}
                 </Text>
               </PressKey>

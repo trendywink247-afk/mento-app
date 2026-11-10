@@ -17,6 +17,7 @@ import { ApiError, api, type Listener, type ListenerProfile } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
+import { browseLanguage, languageLine } from '@/lib/languages';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
@@ -50,7 +51,7 @@ export default function BrowseMentors() {
   useSessionGuard();
   const router = useRouter();
   const { colors } = useTheme();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // `question`: a draft carried from the first-question builder when nobody was free — it
   // travels on to the mentor page's question step, never sent by itself.
   const { topic, question, filter: startFilter } = useLocalSearchParams<{
@@ -96,7 +97,8 @@ export default function BrowseMentors() {
     useCallback(() => {
       let active = true;
       void api
-        .listListeners()
+        // The member's own app language is a preference: mentors who talk it come first, nobody is hidden.
+        .listListeners(browseLanguage(locale))
         .then((l) => {
           screenCache.set('mentors', l);
           if (!active) return;
@@ -126,7 +128,7 @@ export default function BrowseMentors() {
       return () => {
         active = false;
       };
-    }, []),
+    }, [locale]),
   );
 
   const nextAvailable = async () => {
@@ -248,6 +250,11 @@ export default function BrowseMentors() {
           {l.reply_within ? (
             <Text style={[type.micro, { color: colors.inkMuted }]} numberOfLines={1} testID={`mentor-reply-${l.id}`}>
               {l.reply_within === 'day' ? t('browse.replyDay') : t('browse.replyTwoDays')}
+            </Text>
+          ) : null}
+          {l.languages?.length ? (
+            <Text style={[type.micro, { color: colors.inkMuted }]} numberOfLines={1} testID={`mentor-langs-${l.id}`}>
+              {t('mentor.talksIn', { list: languageLine(l.languages) })}
             </Text>
           ) : null}
           {d?.public_line ? (

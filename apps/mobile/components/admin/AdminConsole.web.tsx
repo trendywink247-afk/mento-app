@@ -15,6 +15,7 @@ import ContributionsPanel from './panels/ContributionsPanel.web';
 import FeedbackPanel from './panels/FeedbackPanel.web';
 import HealthPanel from './panels/HealthPanel.web';
 import ListenersPanel from './panels/ListenersPanel.web';
+import VerificationsPanel from './panels/VerificationsPanel.web';
 import ModerationPanel from './panels/ModerationPanel.web';
 import OverviewPanel from './panels/OverviewPanel.web';
 import SafetyPanel from './panels/SafetyPanel.web';
@@ -31,6 +32,7 @@ const TABS = [
   'Safety',
   'Moderation',
   'Listeners',
+  'Documents',
   'Contributions',
   'Health',
   'Allowance',
@@ -174,6 +176,8 @@ export default function AdminConsoleWeb() {
           <ModerationPanel onResolved={loadOverview} />
         ) : tab === 'Listeners' ? (
           <ListenersPanel />
+        ) : tab === 'Documents' ? (
+          <VerificationsPanel />
         ) : tab === 'Contributions' ? (
           <ContributionsPanel />
         ) : tab === 'Health' ? (

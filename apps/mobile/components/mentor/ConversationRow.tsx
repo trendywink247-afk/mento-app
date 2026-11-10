@@ -55,6 +55,7 @@ export function ConversationRow({
   onPress,
   onSnooze,
   snoozeBusy = false,
+  onLongPress,
 }: {
   conversation: ListenerConversation;
   live: ChannelLive | undefined;
@@ -62,6 +63,8 @@ export function ConversationRow({
   /** Snooze (true) or undo (false). Omitted = no snooze key. */
   onSnooze?: (on: boolean) => void;
   snoozeBusy?: boolean;
+  /** Long-press opens Pin and Archive (kept on this phone). */
+  onLongPress?: () => void;
 }) {
   const { colors } = useTheme();
   const { t, locale } = useI18n();
@@ -90,6 +93,7 @@ export function ConversationRow({
             it), so the travel + haptic are the cue that it opens the chat. */}
         <PressKey
           onPress={onPress}
+          onLongPress={onLongPress}
           edge={colors.surfaceAlt}
           travel={4}
           radius={radius.md}
@@ -158,6 +162,7 @@ export function ConversationRow({
   return (
     <PressKey
       onPress={onPress}
+      onLongPress={onLongPress}
       edge={active ? colors.edgeSurface : colors.edgeAlt}
       travel={4}
       radius={radius.md}

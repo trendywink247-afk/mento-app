@@ -361,7 +361,7 @@ export default function Pathfinder() {
                             <Text
                               style={[
                                 styles.segText,
-                                { color: on ? colors.accentEdge : colors.inkMuted },
+                                { color: on ? colors.accentInk : colors.inkMuted },
                                 closed && styles.segClosed,
                               ]}
                               numberOfLines={closed ? 2 : 3}
@@ -403,7 +403,7 @@ export default function Pathfinder() {
                                   : { backgroundColor: colors.surface, borderColor: colors.border },
                               ]}
                             >
-                              <Text style={[styles.momentText, { color: on ? colors.accentEdge : colors.ink }]}>
+                              <Text style={[styles.momentText, { color: on ? colors.accentInk : colors.ink }]}>
                                 {m.label}
                               </Text>
                             </PressKey>
