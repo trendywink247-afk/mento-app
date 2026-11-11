@@ -105,12 +105,15 @@ bash deploy/test-worker-rollback.sh
 
 ## Secrets
 
+- Keys the founder shares go in `/srv/mento/mento-app/.secrets/` (git-ignored, mode 700/600). Write them straight there, never echo them back, reply with the file and variable name only. Production-critical keys (`MESSAGE_KEY`, DB passwords, age private keys) do not go there. Full rules: `docs/SECRETS.md`.
 - Never print, log, echo, commit or paste secret values: `.env` files, tokens, keys, the decrypted SOPS env, SSH keys. Refer to secrets by name only.
 - `EXPO_PUBLIC_*` values ship inside the client, so they can never hold secrets.
 - Production secrets are SOPS + age encrypted (`deploy/secrets/`). Don't decrypt them.
 
 ## Docs
 
+- Map: `docs/README.md`. Architecture `docs/ARCHITECTURE.md`; build/CI/CD/release/rollback `docs/OPERATIONS.md`; secrets `docs/SECRETS.md`; hosts and users `docs/environments.md`.
+- Pipelines are scripts in `ops/`, `infra/`, `.github/workflows/`; never rely on remembered steps. If you do something by hand twice, script it and document it in `docs/OPERATIONS.md`.
 - `docs/archive/` is stale. Never read it and never cite it as current.
 - After each task, update `docs/STATUS.md`: current state, next 3 tasks, open questions. Keep it at 20 lines or fewer.
 - When you add, move or retire a doc, update `docs/README.md`.

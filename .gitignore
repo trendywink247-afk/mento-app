@@ -76,5 +76,14 @@ deploy/staging/secrets/*
 # ---- Local Balanced stack: the web build Caddy serves (deploy/compose.local.yml) ----
 deploy/web-root/
 
+# ---- Android signing and build output (never commit) ----
+*.keystore
+*.jks
+*.p12
+*.apk
+*.aab
+apps/mobile/dist-qa/
+apps/mobile/.tmp-*/
+
 # OTA code-signing: public certificates are committed; private keys never are
 !apps/mobile/certs/*.pem
