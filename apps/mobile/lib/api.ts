@@ -620,6 +620,13 @@ export async function currentMemberToken(): Promise<string | null> {
   return token;
 }
 
+/** Force one rotation after the server refused the current access token (the live events
+ * socket's 4401). Returns the token to use next, or null when the session is dead or offline. */
+export async function refreshMemberToken(): Promise<string | null> {
+  const outcome = await refreshSession(await getSessionToken());
+  return outcome === 'refreshed' ? getSessionToken() : null;
+}
+
 async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
   if (!auth) return apiRequest<T>(path, init);
   void upgradeLegacySession();
