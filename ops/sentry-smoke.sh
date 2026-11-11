@@ -69,7 +69,9 @@ try:
     with urllib.request.urlopen(req, timeout=15) as r:
         print(f"sentry-smoke: {env}/{target}: sent, HTTP {r.status}, event {event_id}, host {dsn.hostname} project {project}")
 except Exception as exc:  # the DSN is never in this message
-    print(f"sentry-smoke: {env}/{target}: FAILED ({type(exc).__name__})")
+    code = getattr(exc, "code", "")
+    why = exc.headers.get("X-Sentry-Error", "") if hasattr(exc, "headers") and exc.headers else ""
+    print(f"sentry-smoke: {env}/{target}: FAILED ({type(exc).__name__} {code} {why})".rstrip())
     sys.exit(1)
 ' || rc=1
 done
