@@ -1,26 +1,26 @@
 # Operations: build, test, release, rollback
 
-Everything below is a script or workflow in the repo. Nothing depends on anyone remembering the steps. Steps a human must do are marked **ROOT** or **FOUNDER**.
+Everything below is a script in the repo, run on our own machines; there is no GitHub automation. Nothing depends on anyone remembering the steps. Steps a human must do are marked **ROOT** or **FOUNDER**.
 
 ## Pipeline at a glance
 
 | Stage | What runs | Trigger | Human step |
 |---|---|---|---|
-| Checks on a push/PR | `api-ci.yml` (ruff, black, alembic, pytest), `test-ci.yml` (typecheck, node tests, web export, release tooling drills), `security.yml` once merged | Automatic | None |
+| Checks | `ops/ci.sh <sha>` (API, mobile, receiver, shell lint, drills; `--quick` for lint+unit), `ops/security-scan.sh` weekly, `ops/deps-check.sh` weekly, `ops/sonar-scan.sh` ([CI.md](CI.md)) | Local, timers | None |
 | QA gate on this box | `ops/ci.sh <sha>` posts `ops/ci`; log in `/srv/mento/logs/ci/<sha>.log` | `ops/ci-poll.sh` timer for `dev`, `main`, `feat/*` | None |
 | QA API deploy | `ops/build-api.sh <sha>` then `qa-deploy-api <tag>` (needs a passing ci log; dumps DB; auto-rollback if `/health/ready` fails) | By hand | **ROOT**: `sudo qa-release <sha>` |
 | QA web + admin | `ops/qa-apk.sh` stages a tarball; `qa-install-web` verifies and swaps the symlink | APK poller or by hand | **ROOT**: `sudo qa-install-web <tarball>` (APK poller uses a root helper, no prompt) |
 | QA JS update to phones | `ops/ota-publish.sh qa` (signed, self-hosted; refuses if the native layer changed) | By hand | None |
 | QA APK | `ops/qa-apk-poll.sh` every 15 min: rebuilds only when the native fingerprint of `origin/dev` changed; publishes to `/downloads/` | systemd timer | **ROOT** one-time install |
-| Staging / Production release | `staging-release.yml`, `production-release.yml` | Manual (Actions) only | **FOUNDER** starts it |
+| Production release | From `main` only; release script designed with the production setup (Phase 5) | By hand | **FOUNDER** approves the `dev` -> `main` merge and the deploy |
 | Play upload | `docs/PLAY_RELEASE.md` | Manual | **FOUNDER** |
 
 ## Rules for an agent
 
-- Never start the staging or production release workflows unless asked for that specific run.
+- Commit to `dev`. QA may be deployed from `dev` or from uncommitted work; commit after QA passes.
+- `dev` -> `main` only with the founder's explicit approval. Production deploys only from `main`, on request.
 - Run `ops/ci.sh <sha>` on the exact commit before asking root to deploy it.
-- Never push to `main`/`master`; branch `feat/<topic>` from `dev`; ask before opening a PR.
-- `gh pr merge` is the founder's.
+- No GitHub Actions or Dependabot: everything runs from `ops/`.
 
 ## Common tasks
 
@@ -43,7 +43,7 @@ Nightly encrypted dump, off-box copy when `QA_BACKUP_REMOTE` is set, weekly rest
 
 ## Known gaps
 
-- Production Release and the Rollback Rehearsal workflows have never been run.
+- The production release path has never been run; rollback drills: `ops/release-drills.sh`.
 - `native-gate` is a required check on `main` that nothing produces; the founder must remove it.
 - Two QA steps still need a root keystroke (`qa-release`, `qa-install-web`); that is deliberate.
 
