@@ -12,7 +12,7 @@ Everything below is a script in the repo, run on our own machines; there is no G
 | QA web + admin | `ops/qa-apk.sh` stages a tarball; `qa-install-web` verifies and swaps the symlink | APK poller or by hand | **ROOT**: `sudo qa-install-web <tarball>` (APK poller uses a root helper, no prompt) |
 | QA JS update to phones | `ops/ota-publish.sh qa` (signed, self-hosted; refuses if the native layer changed) | By hand | None |
 | QA APK | `ops/qa-apk-poll.sh` every 15 min: rebuilds only when the native fingerprint of `origin/dev` changed; publishes to `/downloads/` | systemd timer | **ROOT** one-time install |
-| Production release | From `main` only; release script designed with the production setup (Phase 5) | By hand | **FOUNDER** approves the `dev` -> `main` merge and the deploy |
+| Production release | `sudo ops/prod-release.sh <main sha> --yes-production` (refuses non-main commits and commits without a CI pass; `--dry-run`, `--status`, `--rollback`). Prod OTA: `ops/ota-publish.sh prod` then `sudo ops/ota-publish.sh --install-prod <tarball> --yes-production` ([PRODUCTION.md](PRODUCTION.md)) | By hand | **FOUNDER** approves the `dev` -> `main` merge and each deploy |
 | Play upload | `docs/PLAY_RELEASE.md` | Manual | **FOUNDER** |
 
 ## Rules for an agent

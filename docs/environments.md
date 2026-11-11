@@ -84,17 +84,24 @@ SOPS_AGE_KEY_FILE=/etc/mento/age/qa.key sops deploy/staging/secrets/api.enc.env
 
 ## Production
 
-Off limits to agents. Nothing below was verified against a live host.
+Founder decision 2026-11-11: production runs on the QA box (129.121.171.140) beside QA until
+launch, then moves to its own host. Full runbook: [PRODUCTION.md](PRODUCTION.md). Deploys only
+commits on `origin/main`, only when the founder asks.
 
 | | |
 |---|---|
-| Host(s) | TBD (audit Mon). `deploy/domains.env` lists `VPS_SSH=mento-ops@129.121.122.28`; unverified. `docs/DEPLOYMENT_VPS.md` describes an older box (`87.232.72.79`), treat as stale |
-| URLs | TBD (audit Mon). `deploy/domains.env` defines `api.` / `app.` / `admin.` under `ROOT_DOMAIN=mento.chat` |
-| Linux users | TBD (audit Mon). Repo assumes `mento-ops` and `mento-ci-production` (`deploy/install-ci-production.sh`) |
-| Containers and ports | TBD (audit Mon). Repo designs: legacy stack `deploy/docker-compose.prod.yml` behind host Nginx, or Balanced stack (`compose.base.yml` + `compose.prod.yml`, Caddy, `api_blue`/`api_green`) |
-| Config | TBD (audit Mon). Repo: `deploy/secrets/prod.env.sops.yaml` (SOPS + age), decrypted to tmpfs by `deploy/decrypt-env.sh`, or `services/api/.env`; stack choice in `MENTO_STACK` or `~/.config/mento/stack` |
-| Deploy | Per `deploy/deploy.sh`, run on the server from `/opt/mento`: build `mento-api:<sha>`, one-off `alembic upgrade head`, then swap (blue/green on Balanced; recreate with auto put-back on legacy). Invoked by the Production Release workflow. Which stack runs today: TBD (audit Mon) |
-| Rollback | Per `deploy/deploy.sh --rollback`: previous image, no migrations. Not rehearsed on a live host as far as the repo shows (`rollback-rehearsal` workflow exists). TBD (audit Mon) |
+| Host | `129.121.171.140` (same box as QA). Not live yet: DNS for `app`/`api`/`admin.mento.chat` still points at the old server `129.121.122.28` (test data only; to be retired) |
+| URLs | `api.mento.chat` (API + `/ota`), `app.mento.chat` (web app), `admin.mento.chat` (staff console, operator IPs + Tailscale only) |
+| Edge | Caddy: `infra/caddy/prod.caddy` -> `/etc/caddy/mento-prod.caddy`, imported at the end of `/etc/caddy/Caddyfile` |
+| Compose project | `mento-prod`, `/opt/mento-prod/compose.yml` (from `deploy/prod-local/compose.yml`): `postgres`, `valkey`, `api` (127.0.0.1:18110), `worker`, `migrate` (tools). Own network and volume |
+| Config | `/opt/mento-prod/secrets/{api,db}.env` and `secrets/files/fcm.json`, root-only. Non-secret settings are in the compose file. The image tag lives in `/opt/mento-prod/release.env`, written only by the release script |
+| OTA | `mento-ota-prod.service` on 127.0.0.1:18120, data `/opt/mento-prod/ota-data`, key `/etc/mento/ota/prod-private-key.pem` |
+| Deploy | `sudo ops/prod-release.sh <main sha> --yes-production`: main-only and CI-pass guards, encrypted pre-deploy dump, migrate, recreate, health check with automatic rollback, then the web release |
+| Rollback | `sudo ops/prod-release.sh --rollback --yes-production` (image + web; migrations stay) |
+| Backups | Nightly `mento-prod-backup.timer` (age-encrypted, off-box with `PROD_BACKUP_REMOTE`), weekly restore drill |
+
+The older designs (`deploy/deploy.sh`, `bluegreen.sh`, `compose.prod.yml`, `deploy/secrets/prod.env.sops.yaml`)
+remain for the separate production host after launch; they are not used on this box.
 
 ## Error reporting (Sentry)
 
