@@ -1,0 +1,63 @@
+# Self-hosted SonarQube Community Build for Mento code-quality scans.
+# Separate stack: own network, own Postgres, own volumes. It never touches the app databases.
+# Bound to 127.0.0.1 only; reach it over an SSH tunnel or Tailscale, never a public Caddy site.
+# Hard memory caps because this box also runs QA (and production until launch).
+name: mento-sonarqube
+
+services:
+  sonarqube:
+    image: sonarqube:26.9.0.129388-community
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SONAR_JDBC_URL: jdbc:postgresql://db:5432/sonar
+      SONAR_JDBC_USERNAME: sonar
+      SONAR_JDBC_PASSWORD: ${SONAR_DB_PASSWORD:?set in /etc/mento/sonarqube.env}
+      # Keep the three JVMs (web, compute engine, search) inside the 2g container cap.
+      SONAR_WEB_JAVAOPTS: "-Xmx512m -Xms128m"
+      SONAR_CE_JAVAOPTS: "-Xmx512m -Xms128m"
+      SONAR_SEARCH_JAVAADDITIONALOPTS: "-Xmx512m -Xms512m"
+      SONAR_TELEMETRY_ENABLE: "false"
+    ports:
+      - "127.0.0.1:9000:9000"
+    volumes:
+      - sonar_data:/opt/sonarqube/data
+      - sonar_extensions:/opt/sonarqube/extensions
+      - sonar_logs:/opt/sonarqube/logs
+    mem_limit: 2g
+    cpus: 2
+    ulimits:
+      nofile: { soft: 131072, hard: 131072 }
+      nproc: 8192
+    networks: [sonar]
+    logging: { driver: json-file, options: { max-size: 10m, max-file: "3" } }
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: ${SONAR_DB_PASSWORD:?set in /etc/mento/sonarqube.env}
+      POSTGRES_DB: sonar
+    volumes:
+      - sonar_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sonar -d sonar"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+    cpus: 1
+    networks: [sonar]
+    logging: { driver: json-file, options: { max-size: 10m, max-file: "3" } }
+
+networks:
+  sonar: {}
+
+volumes:
+  sonar_data: {}
+  sonar_extensions: {}
+  sonar_logs: {}
+  sonar_db: {}
