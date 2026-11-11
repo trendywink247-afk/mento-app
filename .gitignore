@@ -75,3 +75,14 @@ deploy/staging/secrets/*
 
 # ---- Local Balanced stack: the web build Caddy serves (deploy/compose.local.yml) ----
 deploy/web-root/
+
+# ---- Android/EAS signing and build output (never commit) ----
+*.keystore
+*.jks
+*.p12
+*.apk
+*.aab
+.eas/
+apps/mobile/dist-qa/
+apps/mobile/.tmp-*/
+__pycache__/
