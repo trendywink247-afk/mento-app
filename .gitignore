@@ -75,3 +75,6 @@ deploy/staging/secrets/*
 
 # ---- Local Balanced stack: the web build Caddy serves (deploy/compose.local.yml) ----
 deploy/web-root/
+
+# OTA code-signing: public certificates are committed; private keys never are
+!apps/mobile/certs/*.pem

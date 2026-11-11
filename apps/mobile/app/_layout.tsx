@@ -35,7 +35,7 @@ function LookStatusBar() {
 }
 
 export default function RootLayout() {
-  // Device-testing affordance: shake anywhere to check EAS Update. No-op in
+  // Device-testing affordance: shake anywhere to check for an OTA update. No-op in
   // Expo Go/dev server (see lib/useShakeToUpdate.ts).
   useShakeToUpdate();
   useNotificationTaps();

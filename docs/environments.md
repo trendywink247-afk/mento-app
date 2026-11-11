@@ -126,4 +126,4 @@ the persona name and the kind of event, never message text.
 | Variable | Where | Purpose |
 |---|---|---|
 | `FCM_SERVICE_ACCOUNT_FILE` | API | Path, inside the container, to a Google service-account JSON for the Firebase project. Empty = direct FCM sends fail and are retried (Expo tokens are unaffected). The file is a secret: mount it read-only, never commit or log it. On QA it lives in `/opt/mento-staging/secrets/` and is mounted by the base `compose.yml`, not `ci.override.yml` (the deploy script rewrites that file). |
-| `EXPO_PUBLIC_PUSH_DIRECT` | mobile | `1` = the Android app registers its raw FCM device token instead of an Expo token. Public flag, not a secret. Unset = Expo path. |
+| `EXPO_PUBLIC_PUSH_DIRECT` | mobile | Retired: every build now registers its raw FCM token. Ignored if set. |
