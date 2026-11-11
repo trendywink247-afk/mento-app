@@ -47,3 +47,4 @@ Policy and programs, App content. Answers to give:
 - Run the Rollback Rehearsal (Actions, "Isolated Rollback Rehearsal", branch `main`, stack `all`) before relying on the release path.
 - Remove `native-gate` from the required checks on `main`.
 - Revoke the "Founder QA" admin once testing is over.
+- With the production age key open (same sitting as `MESSAGE_KEY`): `sops unset deploy/secrets/prod.env.sops.yaml '["GLITCHTIP_SECRET_KEY"]'` (unused since GlitchTip was removed 2026-11-11; harmless until then).

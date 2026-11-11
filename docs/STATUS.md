@@ -1,17 +1,16 @@
 # Status
 
-Updated 2026-11-10. v1 scope only (CLAUDE.md); Module B, the UPSC self-assessment suite and Community stay deferred.
+Updated 2026-11-11. v1 scope only (CLAUDE.md). One working branch: `dev`; `main` only with founder approval; prod only from `main`.
 
-**State:** DECISIONS §Q is merged to dev and running on QA (API at 03396ee; app fixes by OTA on channel `preview`): Appearance (Pastel, Light, Dark, System), one shared bottom bar, who answers a question, mentor languages, Mento Verified by document, chat-list actions, the Requests page, no screenshots inside a chat, one notification per conversation, "Show message text", the helpline card on a sent question, erasure for suspended members, the 426 "update the app" screen.
-Full QA pass 2026-11-10 (phone, both profiles, four looks, Hindi, font 1.3 and 1.0; API 1039 tests, mobile 151): fixed the My Chats fade/bar overlap and the Hindi Path title. Branch `chore/qa-apk-publish` (not a PR yet) holds those fixes and `ops/qa-apk.sh`, which builds the QA APK (versionCode 11) plus a fresh web export and stages them for `qa-install-web`.
-The QA web app and admin console were still the 2026-10-23 build (no Documents or invitations panels) until that release is installed.
+**State:** EAS removed: local builds (`ops/build-android.sh`, `ops/build-ios.sh` over SSH to a Mac), self-hosted signed OTA (`services/ota`, live at qa-api.mento.chat/ota, verified on the phone), FCM-only push. The APK auto-builder published build 14 by itself. GitHub automation removed; CI/CD runs locally. Sentry live for QA app and API. SonarQube on 127.0.0.1:9000. cryptography 50.0.2 (13 advisories cleared). GlitchTip removed. IDOR matrix: 55 id routes, no findings.
+In progress: live events (one socket per app replaces all six polls; app side done, server side in test); local CI/CD scripts, security and dependency timers.
 
 **Next 3 tasks:**
-1. Root: `sudo qa-install-web /home/agent/qa-apk-out/web-d2b38e6-qa-apk11.tar.gz` (APK page, web app, admin Documents). Then test document approval in the admin UI.
-2. Raise the PR from `chore/qa-apk-publish` once approved; optionally install `infra/qa-agent/apk-publish.sh` so APK builds publish themselves.
-3. Hindi for path stages and starters (server sends English only); mentor-side chat-list actions.
+1. Merge live events, deploy API to QA, publish OTA, measure idle API calls on the phone before/after, k6 socket load test.
+2. Merge local CI/CD; SonarQube to 3 GB and rescan; ZAP against QA; triage.
+3. Production on this box (Phase 5): separate stack under Caddy, own DB/Valkey/secrets/backups, release from `main` only.
 
 **Open questions:**
-- Production URL/host, FCM key mount, Play Console declarations, trademark check, privacy policy sign-off (document upload, "Show message text", blocked-install hash).
-- `native-gate` is a required check on `main` that nothing produces (admin must remove it); run the Rollback Rehearsal.
-- `ALLOWANCE_IN_A_ROW` in production secrets; 29 old QA safety flags are unreviewed.
+- Production domain, `MESSAGE_KEY`, FCM key, Play upload key, prod Sentry DSNs (founder).
+- Privacy policy sign-off and public page; Play Console declarations; trademark check; `ALLOWANCE_IN_A_ROW` in prod secrets.
+- iOS: Mac SSH access, Apple Developer account, APNs key, Firebase iOS SDK.

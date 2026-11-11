@@ -28,6 +28,8 @@ Current documents only. `archive/` is stale history: don't read it or use it as 
 | [environments.md](environments.md) | QA and production hosts, users, containers, config paths, QA SOPS secrets |
 | [DEPLOYMENT_VPS.md](DEPLOYMENT_VPS.md) | Self-managed VPS runbook (older; check against environments.md) |
 | [BACKUP_CONTENT_POLICY.md](BACKUP_CONTENT_POLICY.md) | What encrypted backups hold |
+| [SENTRY.md](SENTRY.md) | Error reporting: the four DSNs, where each goes, how to verify |
+| [PERFORMANCE_AND_DB.md](PERFORMANCE_AND_DB.md) | Valkey, Postgres, indexes, pools, load tests: findings and numbers |
 | [specs/qa-deploy-path.md](specs/qa-deploy-path.md) | Why QA deploys through `ops/` scripts |
 | [specs/2026-09-20-mento-balanced-architecture-design.md](specs/2026-09-20-mento-balanced-architecture-design.md) | Balanced architecture design |
 | [diagrams/](diagrams/) | Architecture images |
@@ -37,7 +39,10 @@ Current documents only. `archive/` is stale history: don't read it or use it as 
 
 | Doc | Read it for |
 |---|---|
-| [ANDROID_BUILD.md](ANDROID_BUILD.md) | Local APK build and OTA |
+| [BUILDS.md](BUILDS.md) | Android (QA/prod) and iOS (remote Mac) builds, all local, no EAS |
+| [OTA.md](OTA.md) | Self-hosted signed over-the-air updates: publish, roll back, install |
+| [ANDROID_BUILD.md](ANDROID_BUILD.md) | Native caveats and Android build troubleshooting |
+| [MOBILE_DEPENDENCIES.md](MOBILE_DEPENDENCIES.md) | Mobile package audit: findings, risk, what was fixed |
 | [PLAY_RELEASE.md](PLAY_RELEASE.md) | Play signing and release |
 | [PRODUCTION_AND_PLAY_STEPS.md](PRODUCTION_AND_PLAY_STEPS.md) | Founder-only steps for production and Play Console |
-| [DEPENDENCY_AUDIT_2026-10-05.md](DEPENDENCY_AUDIT_2026-10-05.md) | Older npm advisory notes |
+| [DEPENDENCY_AUDIT_2026-10-05.md](DEPENDENCY_AUDIT_2026-10-05.md) | Older npm advisory notes (superseded by MOBILE_DEPENDENCIES.md) |
