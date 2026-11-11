@@ -40,9 +40,9 @@ Only `mento:last_webhook_at` has no TTL. It is a single small key, so it cannot 
 | Fail-open | the general limiter allows the request and logs a warning | PIN guard, mentor-code exchange, `me.py` and the age gate use `fail_closed=True` (503) |
 | Health | `/health/ready` reports `redis` but never fails on it | an outage is visible only in that field and in logs; **Proposal:** alert on it in the external monitor |
 
-### GlitchTip shares the cache
+### GlitchTip shares the cache (resolved 2026-11-11)
 
-`deploy/compose.prod.yml` points GlitchTip at `redis://valkey:6379/1`, the same instance. Its queue keys have no TTL, so `volatile-lru` can never evict them. Once the 128 MB fills with them, Valkey refuses writes for everyone, including the rate limiter. **Proposal:** give GlitchTip its own small Valkey service (`valkey-ops`, 64 MB, `noeviction`) or drop GlitchTip in favour of hosted Sentry. GlitchTip was not touched; the owner has not decided.
+GlitchTip pointed at `redis://valkey:6379/1` with queue keys that never expire, so it could fill the 128 MB and block rate-limit writes. Resolved by removing GlitchTip from `deploy/compose.prod.yml` (errors go to Sentry). Valkey now holds only API keys, all with a TTL.
 
 ## 2. Database
 

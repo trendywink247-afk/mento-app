@@ -208,11 +208,9 @@ def validate_candidate(config, expected, live, *, headroom, other_connections):
         "caddy",
         "postgres",
         "valkey",
-        "glitchtip",
-        "glitchtip-init-db",
     }:
         raise ValueError("Unbudgeted candidate services")
-    for name in ("postgres", "valkey", "glitchtip", "glitchtip-init-db"):
+    for name in ("postgres", "valkey"):
         if name in services and services[name].get("profiles") != [
             "transition-unmanaged"
         ]:

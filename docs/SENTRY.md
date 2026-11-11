@@ -63,5 +63,5 @@ A real app error check: on a QA build with a DSN, trigger a handled test error a
 
 ## Still open
 
-- Remove the self-hosted GlitchTip from `deploy/compose.prod.yml` if Sentry replaces it (your call).
+- Done 2026-11-11: the self-hosted GlitchTip is removed from `deploy/compose.prod.yml`; Sentry replaces it.
 - Nothing reports until the four DSNs are set.

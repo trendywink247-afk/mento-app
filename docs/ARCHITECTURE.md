@@ -16,7 +16,7 @@ Android app / web (Expo, expo-router)        Admin console (web, same codebase)
         |   \--> worker (Procrastinate jobs, same image, queue lives in Postgres)
         |
         +--> Stream Chat (legacy chat; signed hooks enforce the crisis scan)
-        +--> FCM push, Sentry/GlitchTip (errors only, scrubbed)
+        +--> FCM push, Sentry (errors only, scrubbed)
 ```
 
 ## Parts
