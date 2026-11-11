@@ -266,8 +266,7 @@ Old hosts keep redirecting for as long as their DNS records and certs live.
 
 1. Do the work locally against Test, verify per `mento-verify` (pytest, `alembic
    check`, `tsc --noEmit`, e2e for touched flows).
-2. Ship: `bash scripts/lanes/ship.sh "what changed"` (gate → push → box checkout to
-   that exact commit → `deploy.sh --backup <sha>` → web → OTA). By hand:
+2. Ship: `scripts/lanes/ship.sh` was removed 2026-11-11; production ships from `main` only (docs/OPERATIONS.md). By hand:
    `ssh mento-ops@<vps-ip> 'cd /opt/mento && git fetch -q origin && git reset -q --hard <sha> && ./deploy/deploy.sh --backup <sha>'`
 
 What `deploy.sh` does (WS1 T1.9; proof: `bash deploy/test-deploy.sh`):
@@ -337,8 +336,8 @@ GitHub → Settings → Secrets and variables → Actions: secrets `API_DEPLOY_S
 variable `API_AUTO_DEPLOY=true` to deploy after every green API CI on main. Manual
 runs (Actions → API Deploy → Run workflow) work without the variable. Optional:
 Settings → Environments → `production` → required reviewers, to approve each deploy.
-CI deploys do not ship the web build or the OTA — `ship.sh` still does.
-**Turn CI on only after one `ship.sh` run** has put this version of `deploy.sh` on the
+CI deploys do not ship the web build or the OTA — `ship.sh` (removed) still does.
+**Turn CI on only after one `ship.sh` (removed) run** has put this version of `deploy.sh` on the
 box: the forced command runs the `deploy.sh` already on disk, and the one before
 WS1 T1.9 knows nothing about `--from-ssh`.
 

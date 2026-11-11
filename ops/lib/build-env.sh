@@ -52,7 +52,7 @@ mento_build_env() {
       ;;
   esac
   export EXPO_NO_DOTENV=1 CI=1
-  export EXPO_PUBLIC_PUSH_DIRECT=1 EXPO_PUBLIC_OWN_CHAT_ACCEPTED=1 EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED=1
+  export EXPO_PUBLIC_OWN_CHAT_ACCEPTED=1 EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED=1
   export EXPO_PUBLIC_GIT_SHA=$sha
   # The Sentry Gradle/Xcode hooks never upload on their own; the build scripts upload with
   # sentry-cli afterwards, and only when a token is present.

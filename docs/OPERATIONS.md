@@ -10,7 +10,7 @@ Everything below is a script or workflow in the repo. Nothing depends on anyone 
 | QA gate on this box | `ops/ci.sh <sha>` posts `ops/ci`; log in `/srv/mento/logs/ci/<sha>.log` | `ops/ci-poll.sh` timer for `dev`, `main`, `feat/*` | None |
 | QA API deploy | `ops/build-api.sh <sha>` then `qa-deploy-api <tag>` (needs a passing ci log; dumps DB; auto-rollback if `/health/ready` fails) | By hand | **ROOT**: `sudo qa-release <sha>` |
 | QA web + admin | `ops/qa-apk.sh` stages a tarball; `qa-install-web` verifies and swaps the symlink | APK poller or by hand | **ROOT**: `sudo qa-install-web <tarball>` (APK poller uses a root helper, no prompt) |
-| QA JS update to phones | `eas update` on channel `preview` | By hand | None |
+| QA JS update to phones | `ops/ota-publish.sh qa` (signed, self-hosted; refuses if the native layer changed) | By hand | None |
 | QA APK | `ops/qa-apk-poll.sh` every 15 min: rebuilds only when the native fingerprint of `origin/dev` changed; publishes to `/downloads/` | systemd timer | **ROOT** one-time install |
 | Staging / Production release | `staging-release.yml`, `production-release.yml` | Manual (Actions) only | **FOUNDER** starts it |
 | Play upload | `docs/PLAY_RELEASE.md` | Manual | **FOUNDER** |
@@ -27,7 +27,7 @@ Everything below is a script or workflow in the repo. Nothing depends on anyone 
 | I want to | Do |
 |---|---|
 | Test an API change on QA | PR merged to `dev` -> `ops/ci.sh <sha>` -> founder runs `sudo qa-release <sha>` |
-| Ship a JS-only app fix to QA phones | `scratchpad/ota.sh`-style `eas update --channel preview`; relaunch the app twice |
+| Ship a JS-only app fix to QA phones | `ops/ota-publish.sh qa -m "what changed"`; relaunch the app twice. Roll back: `ops/ota-publish.sh --rollback preview <runtime>` |
 | Ship a native change | Merge to `dev`; the APK poller builds it (or `ops/qa-apk-poll.sh --force`); check `--status` |
 | Roll back web | `sudo qa-install-web --rollback` |
 | Roll back API | `sudo qa-deploy-api --rollback` (image only; migrations stay, so they must be expand-only) |

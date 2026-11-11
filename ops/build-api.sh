@@ -6,7 +6,7 @@
 #   ops/build-api.sh <sha>
 #
 # Recipe:
-#   Dockerfile : services/api/Dockerfile   (build context: services/api, no build args)
+#   Dockerfile : services/api/Dockerfile   (build context: services/api; one build arg, GIT_SHA, for Sentry's release tag)
 #   Source     : `git archive <sha>` of services/api only, so the image holds exactly
 #                the committed tree: no untracked files, no local .env, no .venv.
 #                git runs as user `agent` (owner of the repo); only tar and docker run
@@ -61,6 +61,7 @@ docker build \\
     --file "\$SRC/services/api/Dockerfile" \\
     --tag "\$IMAGE" \\
     --label "org.opencontainers.image.revision=\$SHA" \\
+    --build-arg "GIT_SHA=\$SHA" \\
     "\$SRC/services/api"
 
 # Record what was actually built (paste this into the release notes / deploy ticket):

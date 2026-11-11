@@ -116,11 +116,13 @@ export function sentryEnvironment(appEnv: string | undefined): 'qa' | 'productio
 }
 
 /** Options for `Sentry.init`, or null = leave Sentry off (no DSN, or APP_ENV is not
- * qa/staging/prod/production). `release` is the git sha, omitted when not supplied. */
+ * qa/staging/prod/production). `release` is the commit sha and `dist` the Android versionCode
+ * (so a sourcemap upload matches exactly one build); each is omitted when not supplied. */
 export function sentryInitOptions(input: {
   dsn?: string;
   appEnv?: string;
   gitSha?: string;
+  dist?: string | number;
 }): ReactNativeOptions | null {
   const environment = sentryEnvironment(input.appEnv);
   if (!input.dsn || !environment) return null;
@@ -128,6 +130,7 @@ export function sentryInitOptions(input: {
     dsn: input.dsn,
     environment,
     ...(input.gitSha ? { release: input.gitSha } : {}),
+    ...(input.gitSha && input.dist ? { dist: String(input.dist) } : {}),
     sendDefaultPii: false,
     attachScreenshot: false,
     attachViewHierarchy: false,

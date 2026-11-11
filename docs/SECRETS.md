@@ -13,7 +13,7 @@ Where keys live, who may read them, and how an agent handles one the founder sha
 | File (suggested name) | Holds | Used by |
 |---|---|---|
 | `qa.env` | `EXPO_PUBLIC_SENTRY_DSN`, `SENTRY_DSN` for QA, `APP_ENV=qa` | `ops/qa-apk.sh`, QA web export, QA API deploy |
-| `prod.public.env` | Prod app/API Sentry DSNs (low sensitivity; they ship inside the client) | EAS production profile, prod release |
+| `prod.public.env` | Prod app/API Sentry DSNs (low sensitivity; they ship inside the client) | Prod builds (`ops/lib/build-env.sh`) |
 | `sentry.env` | `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` | Sourcemap/release upload |
 | `fcm-service-account.json` | Firebase service account for push | Mounted on the server, never committed |
 | `play-upload.jks` + `play-upload.env` | Google Play upload key and its passwords | `docs/PLAY_RELEASE.md` |

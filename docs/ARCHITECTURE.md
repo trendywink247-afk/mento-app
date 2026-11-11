@@ -36,7 +36,7 @@ Android app / web (Expo, expo-router)        Admin console (web, same codebase)
 - **Valkey is a cache, not a store.** Everything in it must expire. Rate limiting fails open (logged) when it is down.
 - **API is additive only.** Shipped app builds keep calling old shapes. Migrations are expand/contract and forward-only.
 - **Errors only to Sentry.** Allowlist scrubbing on both sides; no message text, IPs or device names leave.
-- **Two ways to update a phone.** JS-only changes go over the air (EAS Update, channel `preview`); native changes need a new APK. `runtimeVersion` follows `appVersion`, so OTA reaches every APK of that version.
+- **Two ways to update a phone.** JS-only changes go over the air from our own signed update server (`services/ota`, [OTA.md](OTA.md)); native changes need a new APK. `runtimeVersion` follows `appVersion`, so OTA reaches every APK of that version.
 
 ## Environments
 

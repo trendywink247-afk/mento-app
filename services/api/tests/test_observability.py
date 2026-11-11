@@ -91,6 +91,16 @@ def test_sentry_release_is_the_git_sha_or_absent():
     assert "release" not in observability.sentry_options(_settings(env="qa", git_sha=""))
 
 
+def test_api_image_can_carry_the_commit_as_git_sha():
+    """Sentry's release comes from GIT_SHA; the image bakes it in through a build arg
+    (ops/build-api.sh and the staging release pass it). Without it there is no release tag."""
+    from pathlib import Path
+
+    dockerfile = (Path(__file__).resolve().parents[1] / "Dockerfile").read_text()
+    assert "ARG GIT_SHA=" in dockerfile
+    assert "ENV GIT_SHA=$GIT_SHA" in dockerfile
+
+
 MEMBER_TEXT = "i have been feeling hopeless since monday"
 
 
