@@ -9,6 +9,10 @@
 # downloads/. Building both together keeps the web admin from falling behind the API and the APK.
 # Secrets: the build reads one EXPO_PUBLIC_* value (the Stream public key) from $QA_APK_ENV; nothing is
 # echoed. EXPO_PUBLIC_* values ship inside the app by design.
+# Sentry (optional): $MENTO_SECRETS_DIR/qa.env (default /srv/mento/mento-app/.secrets/qa.env, kept out of the
+# repo) may hold EXPO_PUBLIC_SENTRY_DSN (the app's QA DSN) and, for sourcemap upload, SENTRY_AUTH_TOKEN,
+# SENTRY_ORG, SENTRY_PROJECT. File or keys missing = Sentry off / no upload; the build never fails for it.
+# See docs/SENTRY.md.
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
@@ -17,6 +21,7 @@ SHA=${FULL:0:7}
 BUILD=${QA_APK_BUILD_DIR:-$HOME/aabbuild}
 OUT=${QA_APK_OUT:-$HOME/qa-apk-out}
 ENVF=${QA_APK_ENV:-$HOME/.config/mento/qa-build.env}
+SECRETS_QA=${MENTO_SECRETS_DIR:-/srv/mento/mento-app/.secrets}/qa.env
 LOG=$OUT/build-$SHA.log
 
 [ -r "$ENVF" ] || { echo "qa-apk: missing $ENVF (one line: EXPO_PUBLIC_STREAM_API_KEY=...)" >&2; exit 2; }
@@ -41,6 +46,16 @@ echo "qa-apk: building $SHA (log: $LOG)"
   EXPO_PUBLIC_STREAM_API_KEY=$(grep '^EXPO_PUBLIC_STREAM_API_KEY=' "$ENVF" | cut -d= -f2- | tr -d '"')
   export EXPO_PUBLIC_STREAM_API_KEY
   [ -n "$EXPO_PUBLIC_STREAM_API_KEY" ] || { echo "no stream key in $ENVF"; exit 8; }
+  # Sentry for the QA app (all optional, read by name; values are never echoed).
+  sv() { { [ -r "$SECRETS_QA" ] && grep -m1 "^$1=" "$SECRETS_QA" | cut -d= -f2- | tr -d '"'; } || true; }
+  DSN=$(sv EXPO_PUBLIC_SENTRY_DSN)
+  if [ -n "$DSN" ]; then export EXPO_PUBLIC_SENTRY_DSN=$DSN; else echo "qa-apk: no QA Sentry DSN, Sentry stays off in this build"; fi
+  TOKEN=$(sv SENTRY_AUTH_TOKEN)
+  if [ -n "$TOKEN" ]; then
+    export SENTRY_AUTH_TOKEN=$TOKEN SENTRY_ORG=$(sv SENTRY_ORG) SENTRY_PROJECT=$(sv SENTRY_PROJECT) SENTRY_ALLOW_FAILURE=true
+    unset SENTRY_DISABLE_AUTO_UPLOAD
+    echo "qa-apk: Sentry sourcemap upload enabled"
+  fi
   env -u NODE_ENV npm ci --no-audit --no-fund
   NODE_ENV=production npx expo prebuild --platform android --clean
   rm -rf dist-qa

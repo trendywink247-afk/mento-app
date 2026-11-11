@@ -12,6 +12,7 @@
       },
       "env": {
         "APP_VARIANT": "development",
+        "EXPO_PUBLIC_APP_ENV": "dev",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       },
       "channel": "development"
@@ -25,7 +26,8 @@
       },
       "env": {
         "APP_VARIANT": "preview",
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "EXPO_PUBLIC_APP_ENV": "qa",
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     },
     "staging": {
@@ -34,7 +36,9 @@
       "environment": "preview",
       "channel": "preview",
       "env": {
-        "APP_VARIANT": "preview"
+        "APP_VARIANT": "preview",
+        "EXPO_PUBLIC_APP_ENV": "qa",
+        "SENTRY_ALLOW_FAILURE": "true"
       },
       "android": {
         "buildType": "app-bundle"
@@ -48,8 +52,9 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true",
-        "APP_VARIANT": "production"
+        "APP_VARIANT": "production",
+        "EXPO_PUBLIC_APP_ENV": "production",
+        "SENTRY_ALLOW_FAILURE": "true"
       }
     }
   },

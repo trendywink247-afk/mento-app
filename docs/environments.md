@@ -98,6 +98,8 @@ Off limits to agents. Nothing below was verified against a live host.
 
 ## Error reporting (Sentry)
 
+The four keys (API and app, QA and prod), where each goes and how to verify: `docs/SENTRY.md`.
+
 Errors only: no tracing, no session replay, no screenshots, no breadcrumbs. Events pass a
 `before_send` / `beforeSend` scrubber that drops message text, exception messages, request
 bodies and headers, user data and IPs (`services/api/app/observability.py`,

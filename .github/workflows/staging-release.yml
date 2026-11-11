@@ -53,7 +53,7 @@ jobs:
       - name: Build API once for both environments
         if: inputs.reuse_build_run_id == ''
         run: |
-          docker build --label "org.opencontainers.image.revision=$SHA" -t "mento-api:${SHA:0:12}" services/api
+          docker build --label "org.opencontainers.image.revision=$SHA" --build-arg "GIT_SHA=$SHA" -t "mento-api:${SHA:0:12}" services/api
           docker save "mento-api:${SHA:0:12}" | gzip > candidate/api-image.tar.gz
           docker image inspect "mento-api:${SHA:0:12}" --format '{{.Id}}' > candidate/image-id.txt
       - name: Build both web configurations from the same source

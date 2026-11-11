@@ -191,3 +191,37 @@ test('journal channel and date segments are replaced in request.url and transact
   })));
   assert.ok(!blob.includes('health') && !blob.includes('2026-10-23'));
 });
+
+test('dist (the Android versionCode) rides with the release and never stands alone', () => {
+  assert.equal(sentryInitOptions({ dsn: DSN, appEnv: 'qa', gitSha: 'abc123', dist: 13 }).dist, '13');
+  assert.equal(sentryInitOptions({ dsn: DSN, appEnv: 'qa', gitSha: 'abc123', dist: '14' }).dist, '14');
+  assert.equal('dist' in sentryInitOptions({ dsn: DSN, appEnv: 'qa', gitSha: 'abc123' }), false);
+  assert.equal('dist' in sentryInitOptions({ dsn: DSN, appEnv: 'qa', dist: 13 }), false); // no release, no dist
+});
+
+test('EAS profiles: each reports as its own environment, and development stays off', () => {
+  const eas = require('../eas.json').build;
+  const sentryEnv = profile => sentryInitOptions({ dsn: DSN, appEnv: eas[profile].env.EXPO_PUBLIC_APP_ENV });
+  assert.equal(sentryEnv('preview').environment, 'qa');
+  assert.equal(sentryEnv('staging').environment, 'qa');
+  assert.equal(sentryEnv('production').environment, 'production');
+  assert.equal(sentryEnv('development'), null); // a dev client can never report as qa or production
+  for (const profile of ['preview', 'staging', 'production']) {
+    // The DSN is NOT in eas.json: it comes from the EAS environment of that name (EXPO_PUBLIC_SENTRY_DSN),
+    // and the upload token is an EAS secret. Nothing secret or environment-specific is committed here.
+    assert.equal('EXPO_PUBLIC_SENTRY_DSN' in eas[profile].env, false, profile);
+    assert.equal('SENTRY_AUTH_TOKEN' in eas[profile].env, false, profile);
+    assert.equal(eas[profile].env.SENTRY_ALLOW_FAILURE, 'true', profile); // upload only with a token, never fails a build
+    assert.equal('SENTRY_DISABLE_AUTO_UPLOAD' in eas[profile].env, false, profile);
+  }
+  assert.equal(eas.development.env.SENTRY_DISABLE_AUTO_UPLOAD, 'true');
+});
+
+test('the QA build script and the smoke script read Sentry keys by name and never print a DSN', () => {
+  const read = f => fs.readFileSync(path.join(__dirname, '../../../ops', f), 'utf8');
+  const apk = read('qa-apk.sh');
+  assert.ok(apk.includes('EXPO_PUBLIC_SENTRY_DSN') && apk.includes('qa.env') && apk.includes('SENTRY_AUTH_TOKEN'));
+  assert.ok(!/echo[^\n]*\$DSN|echo[^\n]*\$TOKEN/.test(apk));
+  const smoke = read('sentry-smoke.sh');
+  assert.ok(!/print\([^)]*SMOKE_DSN/.test(smoke) && !/echo[^\n]*\$DSN/.test(smoke));
+});

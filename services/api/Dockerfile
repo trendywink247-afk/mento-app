@@ -32,6 +32,11 @@ ENV UVICORN_WORKERS=2 \
     PORT=8000 \
     PYTHONUNBUFFERED=1
 
+# The commit this image was built from: Sentry's `release`. Empty (the default) = no
+# release tag, never a guess. An env_file value still wins at run time.
+ARG GIT_SHA=
+ENV GIT_SHA=$GIT_SHA
+
 EXPOSE 8000
 
 # Readiness, not liveness: /api/v1/health/ready is 503 while Postgres is unreachable

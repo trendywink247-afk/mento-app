@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import type { ReactNode } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OverlayProvider } from 'stream-chat-expo';
@@ -12,6 +13,8 @@ const SENTRY_OPTIONS = sentryInitOptions({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
   appEnv: process.env.EXPO_PUBLIC_APP_ENV,
   gitSha: process.env.EXPO_PUBLIC_GIT_SHA,
+  // This build's Android versionCode: with `release` it picks the matching sourcemap.
+  dist: Constants.expoConfig?.android?.versionCode,
 });
 if (SENTRY_OPTIONS) {
   // reason: guarded require keeps the SDK out of the module-eval path when dark.
