@@ -16,5 +16,7 @@ WORKERS="${UVICORN_WORKERS:-2}"
 PORT="${PORT:-8000}"
 echo "[entrypoint] starting uvicorn with ${WORKERS} worker(s) on :${PORT}"
 # --ws-max-size: own-chat frames are capped at 16 KB (WS5 T5.3); the app checks it too.
+# --ws-ping-*: the live events socket (docs/LIVE_EVENTS.md) is kept open by protocol pings
+# (a few bytes, no app code); a peer that does not answer within 20 s is closed.
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT}" --workers "${WORKERS}" --proxy-headers \
-  --ws-max-size 16384
+  --ws-max-size 16384 --ws-ping-interval 25 --ws-ping-timeout 20

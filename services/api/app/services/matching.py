@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
 
+from app import live_events
 from app.config import get_settings
 from app.models.conversation import Conversation
 from app.models.enums import (
@@ -183,6 +184,7 @@ def open_conversation(
         # Own chat has no channel to create: the conversation row is the room, so there is
         # nothing outside the transaction that can fail and no compensation to run.
         db.refresh(convo)
+        live_events.conversation_changed(None, convo)  # committed: both sides look again
         return convo
 
     try:
@@ -206,6 +208,7 @@ def open_conversation(
     convo.stream_channel_id = channel_id
     db.commit()
     db.refresh(convo)
+    live_events.conversation_changed(None, convo)
     return convo
 
 
@@ -236,16 +239,20 @@ def sweep_stale_presence(db: Session, *, now: datetime | None = None) -> int:
     last_seen_at IS NULL are untracked (seeds, the web console) and are left alone.
     The CALLER commits. Returns the number of listeners flipped."""
     cutoff = (now or datetime.now(UTC)) - PRESENCE_STALE_AFTER
-    result = db.execute(
-        update(ListenerProfile)
-        .where(
-            ListenerProfile.status == ListenerStatus.online,
-            ListenerProfile.last_seen_at.is_not(None),
-            ListenerProfile.last_seen_at < cutoff,
+    flipped = list(
+        db.scalars(
+            update(ListenerProfile)
+            .where(
+                ListenerProfile.status == ListenerStatus.online,
+                ListenerProfile.last_seen_at.is_not(None),
+                ListenerProfile.last_seen_at < cutoff,
+            )
+            .values(status=ListenerStatus.away)
+            .returning(ListenerProfile.id)
         )
-        .values(status=ListenerStatus.away)
     )
-    return result.rowcount
+    live_events.mentor_presence_changed(db, flipped)  # their members' chat headers, on commit
+    return len(flipped)
 
 
 def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
@@ -352,7 +359,7 @@ def can_take_broadcast(
 
 
 def _pending_request(
-    db: Session, request_id: str, acting_listener_id: str | None
+    db: Session, request_id: str, acting_listener_id: str | None, *, taking: bool = False
 ) -> ConversationRequest:
     """Load the request UNDER A ROW LOCK and re-check it is still pending.
 
@@ -376,6 +383,10 @@ def _pending_request(
         taker = db.get(ListenerProfile, acting_listener_id)
         if taker is None or not can_take_broadcast(db, req, taker):
             raise RequestNotPending()
+        # Taking it empties every other inbox. Resolved before the target is set, while those
+        # inboxes still match the rule; sent when this transaction commits.
+        if taking:
+            live_events.request_gone(db, req)
         req.target_listener_id = acting_listener_id
         return req
     # A listener may only act on requests addressed to them; the admin path
@@ -391,11 +402,13 @@ def accept_personal_request(
     """Accept a Personal request under row locks so neither the request nor the
     listener's capacity can be double-spent. Shared by the admin stand-in and the
     listener console."""
-    req = _pending_request(db, request_id, acting_listener_id)
+    req = _pending_request(db, request_id, acting_listener_id, taking=True)
 
     # The member blocked this mentor after asking (T&S #9): the mentor must not come
     # back into their chats through the old request. Close it; opaque to the caller.
     if req.target_listener_id in blocked_listener_ids(db, req.requester_id):
+        live_events.request_gone(db, req, also=[req.target_listener_id])
+        live_events.request_changed(db, req, RequestStatus.declined.value)
         req.status = RequestStatus.declined
         db.commit()
         raise RequestNotPending()
@@ -462,6 +475,16 @@ def accept_personal_request(
             )
 
     db.refresh(req)
+    # Committed by open_conversation: the member's question is answered, and a personal one
+    # leaves its mentor's inbox (a broadcast's `gone` went out with that commit).
+    live_events.publish(
+        members=[req.requester_id],
+        ev={"t": "request.changed", "id": req.id, "status": req.status.value},
+    )
+    if not req.broadcast:
+        live_events.publish(
+            listeners=[req.target_listener_id], ev={"t": "request.gone", "id": req.id}
+        )
     return req
 
 
@@ -474,7 +497,10 @@ def decline_personal_request(
         # inbox and stays open for the others.
         req.target_listener_id = None
         db.add(RequestPass(request_id=req.id, listener_id=acting_listener_id))
+        live_events.emit(db, listeners=[acting_listener_id], ev={"t": "request.gone", "id": req.id})
     else:
+        live_events.request_gone(db, req, also=[req.target_listener_id])
+        live_events.request_changed(db, req, RequestStatus.declined.value)
         req.status = RequestStatus.declined
     db.commit()
 

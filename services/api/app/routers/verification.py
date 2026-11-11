@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import ratelimit
+from app import live_events, ratelimit
 from app.db import get_db
 from app.models.admin import AdminAccount
 from app.models.listener import ListenerProfile
@@ -137,6 +137,7 @@ def _decide(
     verification.decide(
         db, doc, approve=approve, admin_id=admin.id, note=payload.note if payload else None
     )
+    live_events.review_decided(db, listener_id=doc.listener_id)  # sent on commit
     audit.record(
         db,
         admin,

@@ -211,7 +211,11 @@ async def chat_ws(ws: WebSocket, conversation_id: str) -> None:
             kind = frame.get("t")
             if kind == "ping":
                 await hub.touch(conversation_id)
-                hub.send_to(peer, {"t": "pong"})
+                # The newest seq lets the client fetch history only when it missed something,
+                # instead of after every pong.
+                hub.send_to(
+                    peer, {"t": "pong", "last_seq": await _db(chat.last_seq, conversation_id)}
+                )
                 continue
             if not await _within_rate(me):
                 hub.send_to(

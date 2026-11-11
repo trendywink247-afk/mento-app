@@ -15,7 +15,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import jobs, pagination, ratelimit
+from app import jobs, live_events, pagination, ratelimit
 from app.db import get_db
 from app.jobs import tasks
 from app.models.admin import AdminAccount
@@ -317,6 +317,7 @@ def create_personal_request(
     )
     db.add(req)
     db.flush()
+    live_events.request_new(db, req)  # the mentor's open console hears it on commit
     # Same transaction as the request row: the mentor is paged only if it commits.
     jobs.enqueue(db, tasks.push_request_created, best_effort=True, request_id=req.id)
     db.commit()
@@ -360,6 +361,8 @@ def withdraw_my_request(
     if req is None or req.requester_id != user_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "request not found")
     if req.status == RequestStatus.pending:
+        live_events.request_gone(db, req)
+        live_events.request_changed(db, req, RequestStatus.expired.value)
         req.status = RequestStatus.expired
         db.commit()
         db.refresh(req)

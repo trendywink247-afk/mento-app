@@ -39,7 +39,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import jobs
+from app import jobs, live_events
 from app.config import get_settings
 from app.jobs import tasks
 from app.models.chat_message import ChatMessage, ChatReadMarker
@@ -187,8 +187,9 @@ def send(db: Session, sender_id: str, conversation_id: str, *, client_id: str, b
     if isinstance(stored, Duplicate):  # lost a same-client_id race to a twin
         return Sent(message=stored.message, held=None, duplicate=True)
 
-    # 6. publish
+    # 6. publish — the room, then both people's lists (unread / waiting changed)
     publish(conversation_id, {"t": "message", "message": stored})
+    live_events.conversation_changed(None, convo)
 
     # 7. enqueue jobs
     enqueue_after_send(db, conversation_id, kind=kind, sender_id=sender_id, flagged=flagged)
@@ -487,6 +488,10 @@ def mark_read(db: Session, conversation_id: str, reader_id: str, seq: int) -> in
         db.add(row)
     if seq > row.last_read_seq:
         row.last_read_seq = seq
+        convo = db.get(Conversation, conversation_id)
+        if convo is not None:  # the reader's other devices and list drop the unread count
+            mentor = convo.listener_id == reader_id
+            live_events.conversation_changed(db, convo, member=not mentor, listener=mentor)
     db.commit()
     return row.last_read_seq
 
