@@ -1,4 +1,4 @@
-/** Shake anywhere in the app to check EAS Update — a device-testing affordance
+/** Shake anywhere in the app to check for an OTA update (services/ota) — a device-testing affordance
  * (v1 test pass, not a discoverable product feature — no onboarding hint, no
  * UI beyond a single haptic tick). Inert in Expo Go/dev server (no update
  * channel there, see lib/updates.ts) so the accelerometer subscription is

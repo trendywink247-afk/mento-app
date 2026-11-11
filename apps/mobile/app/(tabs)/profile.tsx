@@ -220,7 +220,7 @@ export default function ProfileTab() {
     };
   }, []);
 
-  // Manual EAS Update check — native-only, `Updates.isEnabled` is false on
+  // Manual OTA check — native-only, `Updates.isEnabled` is false on
   // web/dev-client (checkAndApplyUpdate resolves 'upToDate' immediately there).
   const handleCheckUpdates = useCallback(async () => {
     await checkAndApplyUpdate(setUpdateStatus);

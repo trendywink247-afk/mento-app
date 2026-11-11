@@ -5,7 +5,7 @@
  * tries") on this machine, and separately hard-fails past Windows' 260-char
  * MAX_PATH on object files nested under a deep worktree checkout path. CMake
  * 3.31.6's bundled ninja does neither (install it first: `sdkmanager
- * "cmake;3.31.6"`). EAS/CI builds and non-Windows machines are unaffected.
+ * "cmake;3.31.6"`). CI builds and non-Windows machines are unaffected.
  */
 const { withAppBuildGradle } = require('@expo/config-plugins');
 

@@ -26,7 +26,7 @@ real signing key, and a lost upload key can be reset through Play support.
 
    ```bash
    APP_VARIANT=production EXPO_PUBLIC_APP_ENV=<qa|production> EXPO_PUBLIC_API_URL=<api>/api/v1 \
-   EXPO_PUBLIC_PUSH_DIRECT=1 EXPO_PUBLIC_STREAM_API_KEY=<public key> EXPO_PUBLIC_GIT_SHA=<sha> \
+   EXPO_PUBLIC_STREAM_API_KEY=<public key> EXPO_PUBLIC_GIT_SHA=<sha> \
    SENTRY_DISABLE_AUTO_UPLOAD=true npx expo prebuild --platform android --clean
    cd android && ./gradlew bundleRelease
    ```
