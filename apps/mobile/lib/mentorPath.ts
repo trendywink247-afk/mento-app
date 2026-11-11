@@ -26,10 +26,10 @@
  */
 import type { Router } from 'expo-router';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { AppState } from 'react-native';
+import { useCallback, useState } from 'react';
 
 import { api, type ListenerApplication } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/liveEvents';
 import { setDraft } from '@/lib/onboardingDraft';
 import { screenCache } from '@/lib/screenCache';
 import { getCompanionAnimal, saveCompanionAnimal, saveRole } from '@/lib/session';
@@ -39,8 +39,6 @@ export type MentorPathState = 'none' | 'review' | 'declined' | 'approved';
 /** The loop's screens, in order. `age` exists only for a visitor with no session. */
 export type MentorPathStep = 'story' | 'age' | 'primer' | 'form' | 'status';
 
-/** How often an application in review is re-read while its screen is open. */
-export const REVIEW_POLL_MS = 20_000;
 
 export function stateOf(application: ListenerApplication | null): MentorPathState {
   if (!application) return 'none';
@@ -134,20 +132,11 @@ export function useMentorPath(enabled = true) {
     }, [refresh, enabled]),
   );
   // While the application is in review the screen promises "the answer will appear right here":
-  // keep that promise. A quiet read every REVIEW_POLL_MS, and one when the app comes back to the
-  // front — focus alone only fires on navigation. Stops the moment it is decided.
+  // keep that promise without a poll. The decision is pushed (`review.decided` on the live events
+  // socket, lib/liveEvents.ts), and every (re)connect — including coming back to the front, which
+  // reopens the socket — does one catch-up read. Stops the moment it is decided.
   const inReview = enabled && application !== undefined && stateOf(application) === 'review';
-  useEffect(() => {
-    if (!inReview) return;
-    const timer = setInterval(() => void refresh(), REVIEW_POLL_MS);
-    const sub = AppState.addEventListener('change', (st) => {
-      if (st === 'active') void refresh();
-    });
-    return () => {
-      clearInterval(timer);
-      sub.remove();
-    };
-  }, [inReview, refresh]);
+  useLiveRefresh('member', ['review.decided'], refresh, { enabled: inReview, onFocus: false });
   return {
     application,
     setApplication: (a: ListenerApplication | null) => {

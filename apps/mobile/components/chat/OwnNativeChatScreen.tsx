@@ -44,6 +44,7 @@ import { CRISIS_EXEMPT_MS, useAllowance, type HeldAllowance } from '@/lib/useAll
 import { useChatHeader } from '@/lib/useChatHeader';
 import { useKeyboardPad } from '@/lib/useKeyboardPad';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
+import { useLiveRefresh } from '@/lib/liveEvents';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type } from '@/theme/tokens';
@@ -61,12 +62,12 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const { colors } = useTheme();
   const { t } = useI18n();
   const params = useLocalSearchParams<{ listener?: string; member?: string; starter?: string; masked?: string }>();
-  const header = useChatHeader(member ? conversationId : undefined);
+  const [snapshot, setSnapshot] = useState<OwnChatSnapshot | null>(null);
+  const header = useChatHeader(member ? conversationId : undefined, member ? snapshot?.peerOnline : undefined);
   const [brief, setBrief] = useState<MemberBrief | null>(null);
   const name = member ? header.profile?.persona_name ?? params.listener ?? t('chat.yourListener') :
     brief?.persona_name ?? params.member ?? t('mentorChatPage.member');
   const [rows, setRows] = useState<OwnScreenMessage[]>([]);
-  const [snapshot, setSnapshot] = useState<OwnChatSnapshot | null>(null);
   const [actor, setActor] = useState('');
   const [draft, setDraft] = useState(member ? params.starter ?? '' : '');
   // The mentor's prepared answers (device only). "/" in the box lists them; choosing one only fills the box.
@@ -91,6 +92,10 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [saveOpen, setSaveOpen] = useState<string | null>(null);
   const [savedNow, setSavedNow] = useState<Set<string>>(new Set());
   const [mentorOnline, setMentorOnline] = useState(false);
+  const pushedRedirect = snapshot?.examRedirect;
+  useEffect(() => {
+    if (member && typeof pushedRedirect === 'boolean') setRedirect(pushedRedirect);
+  }, [member, pushedRedirect]);
   const [isFocused, setIsFocused] = useState(false);
   const [isForeground, setIsForeground] = useState(AppState.currentState === 'active');
   useListenerHeartbeat(!member && mentorOnline && isFocused && isForeground);
@@ -188,17 +193,22 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
       .catch(() => { /* reason: the generic error and Retry stay; nothing is lost */ });
     return () => { live = false; };
   }, [member, snapshot?.reason, conversationId]);
-  // The mentor's suggestion reaches the member by a quiet read: on open and every 30 s.
+  // The mentor's suggestion reaches the member by one read on open, then by the chat socket's
+  // pushed `state` frame (snapshot.examRedirect) — no poll.
   useEffect(() => {
     if (!member) return;
     let live = true;
-    const read = () => void api.conversationState(conversationId)
+    void api.conversationState(conversationId)
       .then(state => { if (live) setRedirect(state.exam_redirect === true); })
       .catch(() => { /* reason: the card is a convenience; the chat is unaffected */ });
-    read();
-    const timer = setInterval(read, 30_000);
-    return () => { live = false; clearInterval(timer); };
+    return () => { live = false; };
   }, [member, conversationId]);
+  // Belt and braces: the member's events socket also says when THIS conversation changed.
+  useLiveRefresh('member', ['conversation.changed'], () => api.conversationState(conversationId)
+    .then(state => {
+      setRedirect(state.exam_redirect === true);
+      if (state.status === 'ended') setEndedByState(true);
+    }), { enabled: member, match: event => event.id === conversationId, onFocus: false });
   // An ended chat is still the member's to read: the socket refuses it, the REST history does not.
   const [archive, setArchive] = useState<ThreadMsg[] | null>(null);
   const archiveList = useRef<FlatList<ThreadMsg>>(null);

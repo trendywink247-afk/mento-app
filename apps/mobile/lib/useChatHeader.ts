@@ -4,10 +4,11 @@
  * Everything here is data the member side already has — nothing is invented:
  *   - presence + community come from `GET /conversations/{id}/mentor` (the same
  *     online/away the mentor profile shows — the mentor's own availability, kept honest
- *     server-side by the console heartbeat and the auto-away sweep). It is a snapshot,
- *     so it is re-read on focus and once a minute while the chat stays open; until the
- *     first answer arrives (or if it never does) presence is `null` — unknown, never
- *     assumed.
+ *     server-side by the mentor's live connection and the auto-away sweep). It is a
+ *     snapshot, re-read on focus, once on every live (re)connect, when the member's events
+ *     socket says this conversation changed, and when the chat socket's own presence for
+ *     the mentor flips (`peerOnline`) — never on a timer. Until the first answer arrives
+ *     (or if it never does) presence is `null` — unknown, never assumed.
  *   - the saved count is the member's own mentor notes whose `meta.conversation_id`
  *     is this conversation.
  *
@@ -19,11 +20,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { api, type ConversationMentor, type PathTree } from '@/lib/api';
 import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
+import { useLiveRefresh } from '@/lib/liveEvents';
 import { mentorFaces, type Face } from '@/lib/mentorFaces';
-
-/** How often an open chat re-reads the mentor's presence. A polling interval, not a
- * motion duration — the mentor console's own heartbeat is 5 minutes. */
-const PRESENCE_POLL_MS = 60_000;
 
 export type ChatHeaderData = {
   /** `null` until the mentor profile has loaded (or when it could not be). */
@@ -45,7 +43,11 @@ export type ChatHeaderData = {
   face: Face | null;
 };
 
-export function useChatHeader(conversationId: string | undefined): ChatHeaderData {
+export function useChatHeader(
+  conversationId: string | undefined,
+  /** The chat socket's presence for the mentor, when the screen has one: a flip re-reads the profile. */
+  peerOnline?: boolean,
+): ChatHeaderData {
   const [profile, setProfile] = useState<ConversationMentor | null>(null);
   // undefined = still loading (no label yet, so it never flickers from a title-cased
   // slug to the real name); null = the tree could not be read (slug fallback).
@@ -101,10 +103,20 @@ export function useChatHeader(conversationId: string | undefined): ChatHeaderDat
     useCallback(() => {
       refreshProfile();
       refreshSaved();
-      const poll = setInterval(refreshProfile, PRESENCE_POLL_MS);
-      return () => clearInterval(poll);
     }, [refreshProfile, refreshSaved]),
   );
+  useLiveRefresh('member', ['conversation.changed'], refreshProfile, {
+    enabled: !!conversationId,
+    match: (event) => event.id === conversationId,
+    onFocus: false,
+  });
+  // The mentor's app came or went in this chat: their availability may have changed with it.
+  const firstPresence = useRef(true);
+  useEffect(() => {
+    if (peerOnline === undefined) return;
+    if (firstPresence.current) { firstPresence.current = false; return; }
+    refreshProfile();
+  }, [peerOnline, refreshProfile]);
 
   // The community label is polish, never a blocker — only fetched when there is a
   // community to name, and simply ignored on failure (title-cased slug instead).

@@ -57,6 +57,7 @@ import { relativeTime } from '@/lib/format';
 import { CrisisCard } from '@/components/chat/CrisisCard';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
+import { useLiveRefresh } from '@/lib/liveEvents';
 import { requestLetter, type LetterMentor } from '@/lib/requestLetter';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -65,8 +66,6 @@ import { letter as motionLetter } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
 
-/** How often the focused letter re-reads its question (ms). Quiet: no spinner, no motion. */
-const REFRESH_MS = 15000;
 /** How long a question may wait before the letter offers another mentor (the member decides). */
 const SLOW_AFTER_MS = 120_000;
 /** The scene's geometry (board A04): the arc starts right of the companion and ends left of
@@ -142,15 +141,16 @@ export default function RequestSentScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Read on focus, then quietly every REFRESH_MS while focused and still pending.
+  // Read on focus, once on every live (re)connect, and whenever the server pushes a change to
+  // THIS question (`request.changed`, lib/liveEvents.ts). No poll: a waiting member costs nothing.
+  // Once the question is no longer pending, only focus reads it again.
   const phaseRef = useRef<Phase>('pending');
+  useLiveRefresh('member', ['request.changed'], () => {
+    if (phaseRef.current === 'pending') return load();
+  }, { match: (event) => event.id === id, onFocus: false });
   useFocusEffect(
     useCallback(() => {
       void load();
-      const timer = setInterval(() => {
-        if (phaseRef.current === 'pending') void load();
-      }, REFRESH_MS);
-      return () => clearInterval(timer);
     }, [load]),
   );
 
@@ -158,12 +158,16 @@ export default function RequestSentScreen() {
     request?.status === 'matched' ? 'accepted' : request && request.status !== 'pending' ? 'closed' : 'pending';
   phaseRef.current = phase;
   // A calm clock: it only decides whether to OFFER another mentor, never counts down at anyone.
+  // One timer to the moment the offer is due, not a tick every few seconds.
   const [now, setNow] = useState(() => Date.now());
+  const sentAt = request ? new Date(request.created_at).getTime() : null;
   useEffect(() => {
-    if (phase !== 'pending') return;
-    const timer = setInterval(() => setNow(Date.now()), 10_000);
-    return () => clearInterval(timer);
-  }, [phase]);
+    if (phase !== 'pending' || sentAt === null) return;
+    const due = sentAt + SLOW_AFTER_MS - Date.now();
+    if (due <= 0) { setNow(Date.now()); return; }
+    const timer = setTimeout(() => setNow(Date.now()), due + 50);
+    return () => clearTimeout(timer);
+  }, [phase, sentAt]);
   const slow = phase === 'pending' && request ? now - new Date(request.created_at).getTime() >= SLOW_AFTER_MS : false;
   // A closed or failed question is a still state (T&S #11).
   const still = reduced || phase !== 'pending' || loadError || missing;

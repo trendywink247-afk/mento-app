@@ -1,8 +1,10 @@
 /** Mentor console data hook — the native reimplementation of the data flow in
  * components/listener/ListenerConsole.web.tsx: identity + requests + conversations
- * on focus, a 30s request poll so a Personal request never waits a full refresh to
- * appear, and a live per-channel unread/preview/typing mirror driven off Stream
- * channel events (message.new/message.read/typing.start/typing.stop). */
+ * on focus, pushed updates instead of a poll (lib/liveEvents.ts: `request.new` /
+ * `request.gone` refetch the requests, `conversation.changed` the conversations, and
+ * every (re)connect does one full catch-up), and a live per-channel
+ * unread/preview/typing mirror driven off Stream channel events
+ * (message.new/message.read/typing.start/typing.stop). */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Event } from 'stream-chat';
@@ -17,8 +19,7 @@ import {
 } from '@/lib/listenerApi';
 import { mentorFaces } from '@/lib/mentorFaces';
 import { ensureListenerConnected } from '@/lib/listenerStreamClient';
-
-const REQUEST_POLL_MS = 30_000;
+import { FALLBACK_REFRESH_MS, useLiveEvent, useLiveStatus } from '@/lib/liveEvents';
 
 export type ChannelLive = {
   unread: number;
@@ -216,43 +217,73 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
     }
   }, [unsubscribeAll]);
 
+  // Pushed updates. Each event refetches only its own list, outside refresh()'s generation on
+  // purpose: accept / decline / going online / saving the line all call refresh(), which bumps
+  // `seq`, and an update pinned to an older generation would silently stop after the first action.
+  // `focused` keeps a late answer from landing on a screen that has gone.
+  const focused = useRef(false);
+  const fetchRequests = useCallback(() => {
+    void listenerApi
+      .requests()
+      .then((r) => {
+        if (focused.current) setRequests(r);
+      })
+      .catch(() => {
+        /* the next event, focus or reconnect catches up */
+      });
+  }, []);
+  // Own chats have no Stream mirror: who is waiting and what is unread arrives with the rows.
+  const fetchConversations = useCallback(() => {
+    void listenerApi
+      .conversations()
+      .then((rows) => {
+        if (focused.current) setConversations(rows);
+      })
+      .catch(() => {
+        /* same */
+      });
+  }, []);
+  // A hello right after the focus refresh would only repeat it: skip a resync within 3 s of focus.
+  const focusedAt = useRef(0);
+  useLiveEvent('listener', ['resync', 'request.new', 'request.gone', 'conversation.changed'], (event) => {
+    if (!focused.current) return;
+    if (event.t === 'resync') {
+      if (Date.now() - focusedAt.current < 3_000) return;
+      void refresh();
+    } else if (event.t === 'conversation.changed') fetchConversations();
+    else fetchRequests();
+  });
+  const status = useLiveStatus('listener');
+
   useFocusEffect(
     useCallback(() => {
+      focused.current = true;
+      focusedAt.current = Date.now();
       void refresh();
-      // The poll lives exactly as long as this focus. It must NOT be pinned to refresh()'s
-      // generation: accept / decline / going online / saving the line all call refresh(),
-      // which bumps `seq`, and a poll pinned to the first generation silently stopped
-      // updating after the first action — a new request then waited for a relaunch.
-      let focused = true;
-      const id = setInterval(() => {
-        void listenerApi
-          .requests()
-          .then((r) => {
-            if (focused) setRequests(r);
-          })
-          .catch(() => {
-            /* the 30s poll is a freshness nicety, not a source of truth — swallow */
-          });
-        // Own chats have no Stream mirror: who is waiting and what is unread arrives with the rows.
-        void listenerApi
-          .conversations()
-          .then((rows) => {
-            if (focused) setConversations(rows);
-          })
-          .catch(() => {
-            /* same: the next poll or focus catches up */
-          });
-      }, REQUEST_POLL_MS);
       return () => {
-        focused = false;
+        focused.current = false;
         // Invalidate any in-flight refresh() first so it bails out of its own
         // setStates/subscribes and unsubscribes only the subs IT created.
         seq.current += 1;
         unsubscribeAll();
-        clearInterval(id);
       };
     }, [refresh, unsubscribeAll]),
   );
+
+  // Only an older server that cannot push gets a safety net: one quiet read of both lists per
+  // FALLBACK_REFRESH_MS while focused. Never faster, and never while the socket is live.
+  useEffect(() => {
+    if (status !== 'unavailable') return;
+    let handle: ReturnType<typeof setTimeout> | null = null;
+    const tick = () => {
+      handle = setTimeout(() => {
+        if (focused.current) { fetchRequests(); fetchConversations(); }
+        tick();
+      }, FALLBACK_REFRESH_MS);
+    };
+    tick();
+    return () => { if (handle) clearTimeout(handle); };
+  }, [status, fetchRequests, fetchConversations]);
 
   useEffect(() => onListenerSessionLost(() => setError('session')), []);
 

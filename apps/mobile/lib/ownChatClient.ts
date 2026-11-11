@@ -43,6 +43,9 @@ export type OwnChatSnapshot = {
   peerOnline: boolean;
   peerTyping: boolean;
   read: Record<string, number>;
+  /** Pushed conversation state (`{"t":"state"}` frame): the mentor's exam suggestion. Null until
+   * the server says, so a screen keeps its own first read until then. */
+  examRedirect: boolean | null;
 };
 
 export interface OwnChatSocket {
@@ -105,14 +108,19 @@ export function createOwnChatClient(scopeInput: OwnChatScope, dependencies: OwnC
   let peerOnline = false;
   let peerTyping = false;
   let read: Record<string, number> = {};
+  let examRedirect: boolean | null = null;
+  // The sorted message copy is rebuilt only when messages change: presence, typing and read
+  // frames re-notify without re-sorting or re-copying the whole transcript, and an unchanged
+  // list keeps its identity (cheap for React to skip).
+  let sorted: OwnChatMessage[] | null = null;
   let pongDeadline: unknown;
   let typingDeadline: unknown;
   let typingCooling = false;
 
   function snapshot(): OwnChatSnapshot {
     return {
-      scopeKey, status, reason, after, peerOnline, peerTyping, read: { ...read },
-      messages: [...messages.values()].sort((a, b) => a.seq - b.seq).map((m) => ({ ...m })),
+      scopeKey, status, reason, after, peerOnline, peerTyping, read: { ...read }, examRedirect,
+      messages: sorted ??= [...messages.values()].sort((a, b) => a.seq - b.seq).map((m) => ({ ...m })),
       pending: [...pending.values()].map((p) => ({ ...p })),
     };
   }
@@ -164,7 +172,7 @@ export function createOwnChatClient(scopeInput: OwnChatScope, dependencies: OwnC
     cleanConnection();
     status = 'terminal';
     reason = code;
-    if (wipe) { messages.clear(); pending.clear(); after = target = 0; read = {}; }
+    if (wipe) { messages.clear(); sorted = null; pending.clear(); after = target = 0; read = {}; }
     else for (const item of pending.values()) {
       item.status = 'failed'; item.code = code;
     }
@@ -191,6 +199,7 @@ export function createOwnChatClient(scopeInput: OwnChatScope, dependencies: OwnC
     const existing = messages.get(message.seq);
     if (existing && existing.id !== message.id) throw new Error('sequence_conflict');
     messages.set(message.seq, { ...message });
+    sorted = null;
     if (message.sender === scope.actorId && message.sender_kind === scope.role) {
       pending.delete(message.client_id);
     }
@@ -286,9 +295,18 @@ export function createOwnChatClient(scopeInput: OwnChatScope, dependencies: OwnC
         notify();
       } else if (frame.t === 'pong') {
         cancel(pongDeadline);
-        // Pub/sub may lose the final event even on a healthy socket. A bounded
-        // authoritative tail check also repairs that case without waiting for a gap.
-        void catchUp(current, true);
+        // Pub/sub may lose the final event even on a healthy socket. A server that reports its
+        // last_seq on the pong lets us fetch history ONLY when something was actually missed
+        // (no REST call per keepalive); an older server gets the bounded authoritative tail check.
+        if (isSeq(frame.last_seq)) {
+          target = Math.max(target, frame.last_seq);
+          if (after < target) void catchUp(current);
+        } else void catchUp(current, true);
+      }
+      else if (frame.t === 'state') {
+        if (typeof frame.exam_redirect === 'boolean') examRedirect = frame.exam_redirect;
+        if (frame.status === 'ended') finish('ended', true);
+        else notify();
       }
       else if (frame.t === 'wiped') finish('wiped', true);
       // Wiped and ended are separate lossy events. An ended event alone cannot
