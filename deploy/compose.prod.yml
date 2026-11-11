@@ -65,6 +65,8 @@ services:
     # No persistence (Valkey here is cache + rate-limit state, not a store of
     # record): --save "" --appendonly no. Bounded and self-evicting under pressure.
     command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
+    # maxmemory is data only; the container needs headroom for buffers and fork-free overhead.
+    mem_limit: 192m
 
   api_blue:
     <<: *api-common
