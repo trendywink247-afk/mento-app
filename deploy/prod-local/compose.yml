@@ -1,0 +1,117 @@
+# Production stack on the QA box (129.121.171.140) until launch; a separate host after.
+# Runbook: docs/PRODUCTION.md. Installed to /opt/mento-prod/compose.yml by
+# infra/prod-root-setup.sh; deployed only by ops/prod-release.sh (commits on main only).
+#
+# Isolation from QA (project mento-staging): own compose project, network, volumes,
+# Postgres, Valkey and env files; nothing shared but the Docker daemon and the kernel.
+# Only the API is published, on loopback; Caddy (infra/caddy/prod.caddy) fronts it.
+#
+# Memory budget (docs/PRODUCTION.md, "Budget"): this stack is capped at ~2.1 GB so that
+# QA (~0.85 GB) + SonarQube (~3.5 GB) + both OTA servers + Caddy fit in the box's 15 GB
+# with room left for APK builds and the page cache.
+#
+# Connection budget: max_connections 40 = API 2 workers x (pool 4 + overflow 2) = 12,
+# worker process 6 + its Procrastinate connector (~4), migrate 2, plus headroom for
+# backups, psql and the release script's `alembic current`.
+#
+# The image tag comes from /opt/mento-prod/release.env (MENTO_API_TAG), written only by
+# ops/prod-release.sh. Run compose with:
+#   docker compose -p mento-prod -f /opt/mento-prod/compose.yml --env-file /opt/mento-prod/release.env ...
+name: mento-prod
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+x-app: &app
+  <<: *logging
+  # "unset" until the first release: an accidental `up` without release.env fails on a
+  # missing image instead of running something unexpected.
+  image: mento-api:${MENTO_API_TAG:-unset}
+  env_file: /opt/mento-prod/secrets/api.env
+  # Not secrets, and must not drift from this file, so they live here (they win over api.env).
+  environment:
+    ENV: prod
+    REDIS_URL: redis://valkey:6379/0
+    UVICORN_WORKERS: "2"
+    DB_POOL_SIZE: "4"
+    DB_MAX_OVERFLOW: "2"
+    TRUSTED_PROXY_HOPS: "1"
+    APP_BASE_URL: https://app.mento.chat
+    ADMIN_BASE_URL: https://admin.mento.chat
+    FCM_SERVICE_ACCOUNT_FILE: /run/mento-secrets/fcm.json
+    GIT_SHA: ${MENTO_GIT_SHA:-}
+  volumes:
+    # Files only (FCM service account). Root-only on the host; read-only here.
+    - /opt/mento-prod/secrets/files:/run/mento-secrets:ro
+  restart: unless-stopped
+  ulimits:
+    nofile: 65535
+  depends_on:
+    postgres: {condition: service_healthy}
+    valkey: {condition: service_healthy}
+  networks: [prod]
+
+services:
+  postgres:
+    <<: *logging
+    image: postgres:16-alpine
+    env_file: /opt/mento-prod/secrets/db.env
+    command: [postgres, -c, max_connections=40, -c, shared_buffers=128MB, -c, effective_cache_size=384MB,
+              -c, work_mem=4MB, -c, maintenance_work_mem=64MB, -c, idle_in_transaction_session_timeout=60s]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    mem_limit: 768m
+    cpus: 1.5
+    shm_size: 128m
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U mento -d mento"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [prod]
+
+  valkey:
+    <<: *logging
+    image: valkey/valkey:8-alpine
+    # Cache + rate-limit + pub/sub only, never a store of record: no persistence, bounded,
+    # evicts only keys that carry a TTL (every key the API writes has one).
+    command: [valkey-server, --maxmemory, 128mb, --maxmemory-policy, volatile-lru, --save, "", --appendonly, "no"]
+    mem_limit: 192m
+    cpus: 0.5
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, valkey-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks: [prod]
+
+  api:
+    <<: *app
+    ports: ["127.0.0.1:18110:8000"]
+    mem_limit: 768m
+    cpus: 2
+
+  worker:
+    <<: *app
+    command: [python, -m, app.jobs.worker]
+    healthcheck: {disable: true}
+    mem_limit: 384m
+    cpus: 1
+
+  migrate:
+    <<: *app
+    profiles: [tools]
+    restart: "no"
+    command: [alembic, upgrade, head]
+    healthcheck: {disable: true}
+    mem_limit: 384m
+    cpus: 1
+
+networks:
+  prod: {}
+
+volumes:
+  pgdata: {}

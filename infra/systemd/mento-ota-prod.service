@@ -1,0 +1,59 @@
+# Mento self-hosted OTA server for PRODUCTION (api.mento.chat/ota). Same code and venv as the
+# QA server (/opt/mento-ota, installed by infra/qa-root-ota.sh); its own data dir, port and
+# signing key. Installed by infra/prod-root-setup.sh; runbook docs/PRODUCTION.md.
+# Runs as a throwaway system user with read-only access to the published updates. systemd
+# itself reads the signing key (LoadCredential), so the key file stays 0600 root and the
+# service sees a private copy at $CREDENTIALS_DIRECTORY/signing-key.
+[Unit]
+Description=Mento PRODUCTION OTA update server (Expo Updates protocol)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/mento/ota/prod-private-key.pem
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/mento-ota/src
+Environment=OTA_DATA_DIR=/opt/mento-prod/ota-data
+Environment=OTA_PUBLIC_URL=https://api.mento.chat/ota
+Environment=OTA_HOST=127.0.0.1
+Environment=OTA_PORT=18120
+LoadCredential=signing-key:/etc/mento/ota/prod-private-key.pem
+Environment=OTA_PRIVATE_KEY=%d/signing-key
+ExecStart=/opt/mento-ota/venv/bin/python -m app.main
+Restart=on-failure
+RestartSec=3
+
+# Hardening (identical to mento-ota.service)
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+ReadOnlyPaths=/opt/mento-prod/ota-data /opt/mento-ota
+InaccessiblePaths=-/srv/mento/mento-app -/srv/mento/ota-keys -/opt/mento-prod/secrets -/etc/mento/age
+MemoryMax=256M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

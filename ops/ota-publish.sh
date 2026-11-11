@@ -3,16 +3,24 @@
 #
 #   ops/ota-publish.sh qa   [-m "message"] [--commit <ref>]   # export <ref> (default origin/dev) into
 #                                                              # $OTA_DATA_DIR/preview/<runtime>/<new dir>
-#   ops/ota-publish.sh prod [-m "message"] [--commit <ref>]   # build the same as a tarball for the prod
-#                                                              # host; never deploys (founder/root step)
-#   ops/ota-publish.sh --rollback <channel> <runtime>          # mark the newest live update ROLLED_BACK
+#   ops/ota-publish.sh prod [-m "message"] [--commit <ref>]   # build the same as a tarball (ref must be on
+#                                                              # origin/main; default origin/main); never installs
+#   sudo ops/ota-publish.sh --install-prod <tarball> --yes-production
+#                                                              # verify + install that tarball into the prod
+#                                                              # OTA data dir (/opt/mento-prod/ota-data)
+#   ops/ota-publish.sh --rollback <channel> <runtime> [--yes-production]
+#                                                              # mark the newest live update ROLLED_BACK
+#                                                              # (channel production: root + --yes-production)
 #   ops/ota-publish.sh --list <channel> <runtime>              # show published updates, newest first
 #
 # JS-only guard: an update must run on the native code already in phones. The script hashes the native
 # layer of <ref> exactly as ops/qa-apk-poll.sh does (versionCode neutralised) and refuses when that
 # differs from the APK on /downloads/ (~/qa-apk-out/state/published_fp). The fix is a new APK:
 # merge to dev and let the poller build it (or ops/qa-apk-poll.sh --force), then publish.
-# For prod the expected fingerprint (recorded when the store build was made) is OTA_EXPECT_FP.
+# For prod the expected fingerprint is the store build's: OTA_EXPECT_FP, else the file
+# /opt/mento-prod/state/store_fp (written when the store build is published; docs/PRODUCTION.md).
+# Production updates are built only from commits on origin/main (ops/lib/prod-guards.sh) and
+# installed only by root with --yes-production, which re-checks that the commit is on main.
 #
 # Builds in the shared build checkout ($QA_APK_BUILD_DIR, default ~/aabbuild) under the same lock as
 # the APK build, so the two never collide. Secrets: only EXPO_PUBLIC_* values are read (they ship in
@@ -26,6 +34,9 @@ DATA=${OTA_DATA_DIR:-/srv/mento/ota-data}
 PROD_OUT=${OTA_PROD_OUT:-$HOME/ota-out}
 QA_ENV=${QA_APK_ENV:-$HOME/.config/mento/qa-build.env}
 PROD_ENV=${OTA_PROD_ENV:-$HOME/.config/mento/prod-build.env}
+[ -r "$PROD_ENV" ] || PROD_ENV=$REPO/.secrets/prod.env
+PROD_DATA=${OTA_PROD_DATA_DIR:-/opt/mento-prod/ota-data}
+PROD_FP_FILE=${OTA_PROD_FP_FILE:-/opt/mento-prod/state/store_fp}
 SECRETS_QA=${OTA_SECRETS_QA:-$REPO/.secrets/qa.env}
 TOKEN='^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$'
 
@@ -38,10 +49,46 @@ newest_live() { # $1 dir; prints the newest update dir name without ROLLED_BACK
   return 1
 }
 
+# shellcheck source=lib/prod-guards.sh
+. "$REPO/ops/lib/prod-guards.sh"
+
 case "${1:-}" in
+  --install-prod)
+    { [ $# -eq 3 ] && [ "$3" = --yes-production ]; } || die "usage: sudo $0 --install-prod <tarball> --yes-production" 2
+    [ "$(id -u)" -eq 0 ] || die "--install-prod must run as root" 2
+    TAR=$2
+    { [ -f "$TAR" ] && [ -f "$TAR.sha256" ]; } || die "need $TAR and $TAR.sha256" 2
+    (cd "$(dirname "$TAR")" && sha256sum --quiet -c "$(basename "$TAR").sha256") || die "checksum mismatch"
+    STAGE=$(mktemp -d); trap 'rm -rf "$STAGE"' EXIT
+    tar -xzf "$TAR" -C "$STAGE" --no-same-owner
+    NAME=$(ls -1 "$STAGE")
+    { [ "$(printf '%s\n' "$NAME" | wc -l)" = 1 ] && [[ $NAME =~ $TOKEN ]]; } || die "unexpected tarball layout"
+    COMMIT=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["commit"])' "$STAGE/$NAME/published.json")
+    RUNTIME=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["version"])' "$STAGE/$NAME/expoConfig.json")
+    [[ $RUNTIME =~ $TOKEN ]] || die "odd runtime version $RUNTIME"
+    prod_on_main "$REPO" "$COMMIT" >/dev/null || die "refused: the update's commit is not on origin/main"
+    dest=$PROD_DATA/production/$RUNTIME
+    install -d -m 755 "$dest"
+    [ ! -e "$dest/$NAME" ] || die "$NAME is already installed"
+    chown -R root:root "$STAGE/$NAME"; chmod -R a+rX,go-w "$STAGE/$NAME"
+    mv "$STAGE/$NAME" "$dest/.$NAME.tmp"
+    mv "$dest/.$NAME.tmp" "$dest/$NAME"
+    printf '%s by=%s installed=%s commit=%s runtime=%s\n' "$(date -u +%FT%TZ)" "${SUDO_USER:-root}" \
+      "$NAME" "$COMMIT" "$RUNTIME" >> "$PROD_DATA/install-history.log"
+    echo "ota-publish: PRODUCTION update $NAME live for runtime $RUNTIME (commit ${COMMIT:0:12})"
+    echo "  roll back: sudo $0 --rollback production $RUNTIME --yes-production"
+    exit 0 ;;
   --rollback|--list)
-    [ $# -eq 3 ] || die "usage: $0 $1 <channel> <runtime>" 2
+    { [ $# -eq 3 ] || { [ $# -eq 4 ] && [ "$4" = --yes-production ]; }; } \
+      || die "usage: $0 $1 <channel> <runtime> [--yes-production]" 2
     [[ $2 =~ $TOKEN && $3 =~ $TOKEN ]] || die "bad channel or runtime" 2
+    if [ "$2" = production ]; then
+      DATA=$PROD_DATA
+      if [ "$1" = --rollback ]; then
+        { [ "${4:-}" = --yes-production ] && [ "$(id -u)" -eq 0 ]; } \
+          || die "rolling back PRODUCTION needs root and --yes-production" 2
+      fi
+    fi
     dir=$DATA/$2/$3
     [ -d "$dir" ] || die "nothing published under $dir"
     if [ "$1" = --list ]; then
@@ -77,10 +124,17 @@ done
 
 [ -e "$BUILD/.git" ] || die "$BUILD is not a git checkout" 2
 if [ -z "$REF" ]; then
-  git -C "$REPO" fetch -q origin dev
-  REF=origin/dev
+  if [ "$TARGET" = prod ]; then
+    git -C "$REPO" fetch -q origin main; REF=origin/main
+  else
+    git -C "$REPO" fetch -q origin dev; REF=origin/dev
+  fi
 fi
 FULL=$(git -C "$REPO" rev-parse --verify "$REF^{commit}") || die "unknown ref $REF" 2
+if [ "$TARGET" = prod ]; then
+  PROD_NO_FETCH=1 prod_on_main "$REPO" "$FULL" >/dev/null \
+    || die "production updates are built only from commits on origin/main" 2
+fi
 SHA=${FULL:0:7}
 
 mkdir -p "$OUT"
@@ -91,8 +145,8 @@ if [ "$TARGET" = qa ]; then
   EXPECT_FP=$(cat "$OUT/state/published_fp" 2>/dev/null) || die "no published APK fingerprint in $OUT/state (run ops/qa-apk-poll.sh --seed)" 2
   ENVF=$QA_ENV
 else
-  EXPECT_FP=${OTA_EXPECT_FP:-}
-  [ -n "$EXPECT_FP" ] || die "set OTA_EXPECT_FP to the native fingerprint of the production store build" 2
+  EXPECT_FP=${OTA_EXPECT_FP:-$(cat "$PROD_FP_FILE" 2>/dev/null || true)}
+  [ -n "$EXPECT_FP" ] || die "no store-build fingerprint: set OTA_EXPECT_FP or write $PROD_FP_FILE" 2
   ENVF=$PROD_ENV
 fi
 [ -r "$ENVF" ] || die "missing $ENVF (EXPO_PUBLIC_STREAM_API_KEY=... and other public build values)" 2
@@ -168,10 +222,7 @@ else
   TAR=$PROD_OUT/ota-production-$RUNTIME-$NAME.tar.gz
   tar -czf "$TAR" -C "$STAGE" "$NAME"
   (cd "$PROD_OUT" && sha256sum "$(basename "$TAR")" >"$(basename "$TAR").sha256")
-  echo "ota-publish: built $TAR (not deployed)"
-  echo "  On the production host, as root (founder step):"
-  echo "    sha256sum -c $(basename "$TAR").sha256"
-  echo "    mkdir -p /srv/mento/ota-data/production/$RUNTIME/.incoming"
-  echo "    tar -xzf $(basename "$TAR") -C /srv/mento/ota-data/production/$RUNTIME/.incoming/"
-  echo "    mv /srv/mento/ota-data/production/$RUNTIME/.incoming/$NAME /srv/mento/ota-data/production/$RUNTIME/"
+  echo "ota-publish: built $TAR (not installed)"
+  echo "  install it (root, only when the founder asks):"
+  echo "    sudo $0 --install-prod $TAR --yes-production"
 fi

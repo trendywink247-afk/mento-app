@@ -1,0 +1,10 @@
+[Unit]
+Description=Schedule: Weekly PRODUCTION backup restore drill
+
+[Timer]
+OnCalendar=Sun *-*-* 04:15:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

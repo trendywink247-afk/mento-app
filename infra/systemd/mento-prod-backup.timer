@@ -1,0 +1,10 @@
+[Unit]
+Description=Schedule: Encrypted PRODUCTION Postgres backup (nightly, before QA's 03:30)
+
+[Timer]
+OnCalendar=*-*-* 02:45:00 UTC
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

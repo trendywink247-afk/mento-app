@@ -1,0 +1,140 @@
+# PRODUCTION sites on the QA box (129.121.171.140) until launch. Runbook: docs/PRODUCTION.md.
+# Installed by infra/prod-root-setup.sh --with-caddy as /etc/caddy/mento-prod.caddy and pulled
+# in by one line at the END of /etc/caddy/Caddyfile:   import /etc/caddy/mento-prod.caddy
+# The installer validates the whole config and restores the old file if validation fails.
+# Install it only once app/api/admin.mento.chat resolve to this box, or Caddy will keep
+# failing ACME challenges against the old server.
+#
+# PROD_ADMIN_EXTRA_IP is a placeholder the installer replaces with --admin-ip <ip/cidr> (or
+# removes). Never commit a rendered file with a real IP.
+#
+# Snippet names are prefixed prod_ so they cannot collide with the QA Caddyfile's own
+# (allowlist) and (security_headers). Every site body is a `route { }`, so directives run in
+# the order written (an allowlist's 403 runs before any file is served).
+#
+# No access logs: the global options in /etc/caddy/Caddyfile already keep request logs off
+# (they would hold member IP addresses, CLAUDE.md T&S).
+
+# Staff console: operator IPs only (loopback, Tailscale CGNAT range, optional extra IP/CIDR).
+(prod_admin_allowlist) {
+	@prod_blocked not remote_ip 127.0.0.1 100.64.0.0/10 PROD_ADMIN_EXTRA_IP
+	respond @prod_blocked 403
+}
+
+(prod_headers) {
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+	}
+}
+
+# CSP for the Expo web export (react-native-web). Tested against the exported bundle in a real
+# browser with zero violations (docs/PRODUCTION.md, "CSP"). Why each source is there:
+#   script 'self' + 'wasm-unsafe-eval': the bundle, and the Skia/Lottie WebAssembly
+#   style 'unsafe-inline': react-native-web injects its styles at runtime; index.html has <style>
+#   connect: the API (https + wss own chat), Sentry ingest, Stream chat (legacy chats), PostHog if
+#            enabled, and the two CDNs Skia (canvaskit) and Lottie fetch their .wasm from
+#   font: bundled fonts (self) plus Google Fonts files expo-google-fonts may reference
+#   img https:: Stream avatars/attachments and companion art; media blob: video posters
+(prod_csp) {
+	header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' blob:; worker-src 'self' blob:; connect-src 'self' https://api.mento.chat wss://api.mento.chat https://*.ingest.sentry.io https://*.ingest.us.sentry.io https://*.stream-io-api.com wss://*.stream-io-api.com https://chat-insights.getstream.io https://us.i.posthog.com https://cdn.jsdelivr.net https://unpkg.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests"
+}
+
+# The API (and the production OTA server under /ota). Open to the internet: every route
+# enforces its own auth; Stream's webhooks and the apps reach it from anywhere.
+api.mento.chat {
+	route {
+		import prod_headers
+		header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'"
+		encode zstd gzip
+		request_body {
+			max_size 5MB
+		}
+		# Self-hosted signed OTA (mento-ota-prod.service); the /ota prefix is stripped.
+		handle_path /ota/* {
+			reverse_proxy 127.0.0.1:18120
+		}
+		# WebSockets (own chat, live events) upgrade automatically; the long read timeout
+		# keeps an idle socket open between protocol pings.
+		reverse_proxy 127.0.0.1:18110 {
+			health_uri /api/v1/health/ready
+			health_interval 5s
+			health_timeout 3s
+			transport http {
+				read_timeout 3600s
+			}
+		}
+	}
+}
+
+# The web app: the whole SPA, never the staff dashboard.
+app.mento.chat {
+	route {
+		import prod_headers
+		import prod_csp
+		root * /opt/mento-prod/web
+		encode zstd gzip
+
+		# Hashed bundles never change under the same name: cache them for a year.
+		handle /_expo/* {
+			header Cache-Control "public, max-age=31536000, immutable"
+			file_server
+		}
+		handle /assets/* {
+			header Cache-Control "public, max-age=31536000, immutable"
+			file_server
+		}
+		# The dashboard has its own origin (its token must not share this origin's storage).
+		handle /admin* {
+			respond 404
+		}
+		handle {
+			# The shell must always be fresh, or a new release would keep loading old bundles.
+			header Cache-Control "no-cache"
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+	}
+}
+
+# The staff dashboard: /admin (+ the assets it needs) from the same build, operators only.
+admin.mento.chat {
+	route {
+		import prod_admin_allowlist
+		import prod_headers
+		import prod_csp
+		header X-Robots-Tag "noindex, nofollow"
+		root * /opt/mento-prod/web
+		encode zstd gzip
+
+		redir / /admin 302
+		handle /admin* {
+			header Cache-Control "no-cache"
+			try_files {path} {path}/ /index.html
+			file_server
+		}
+		handle /_expo/* {
+			file_server
+		}
+		handle /assets/* {
+			file_server
+		}
+		handle /favicon.ico {
+			file_server
+		}
+		handle {
+			respond 404
+		}
+	}
+}
+
+# The bare domain is not pointed here yet (founder named app/api only). When it is, uncomment:
+# mento.chat {
+# 	redir /admin* https://admin.mento.chat{uri} 302
+# 	redir https://app.mento.chat{uri} 302
+# }
