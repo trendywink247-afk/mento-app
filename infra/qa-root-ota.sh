@@ -13,7 +13,19 @@ install -d -m 755 /opt/mento-ota
 rm -rf /opt/mento-ota/src.new && cp -r "$SRC/services/ota" /opt/mento-ota/src.new
 rm -rf /opt/mento-ota/src.new/tests /opt/mento-ota/src.new/.venv
 chown -R root:root /opt/mento-ota/src.new && rm -rf /opt/mento-ota/src && mv /opt/mento-ota/src.new /opt/mento-ota/src
-[ -x /opt/mento-ota/venv/bin/python ] || python3.12 -m venv /opt/mento-ota/venv
+# Root's own Python (3.12 if present, else the system python3). The service never uses a
+# Python under /home (ProtectHome=yes). Tests pass on 3.12 and 3.14.
+PY="$(command -v python3.12 || command -v python3)"
+if [ ! -x /opt/mento-ota/venv/bin/python ] || [ ! -x /opt/mento-ota/venv/bin/pip ]; then
+  rm -rf /opt/mento-ota/venv
+  if ! "$PY" -m venv /opt/mento-ota/venv 2>/dev/null; then
+    rm -rf /opt/mento-ota/venv
+    v="$("$PY" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')"
+    echo "installing python$v-venv (needed to create the venv)"
+    apt-get install -y -q "python$v-venv" >/dev/null || apt-get install -y -q python3-venv >/dev/null
+    "$PY" -m venv /opt/mento-ota/venv
+  fi
+fi
 /opt/mento-ota/venv/bin/pip install -q -r /opt/mento-ota/src/requirements.txt
 
 echo "== systemd"
