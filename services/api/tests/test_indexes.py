@@ -85,6 +85,25 @@ def test_planner_uses_the_index_for_the_real_query(name):
             conn.execute(text(f"SET LOCAL {setting} = off"))
         if name in COMPETING:
             conn.execute(text(f"DROP INDEX {COMPETING[name]}"))
+        if name == "ix_conversation_requests_target_status":
+            # The broadcast inbox's partial index (ek01) also yields created_at order, and with
+            # sorts off on an empty table it wins this Personal-request query. Ask the question
+            # this test means: can the target index answer it.
+            conn.execute(text("DROP INDEX ix_conversation_requests_pending_order"))
         plan = "\n".join(conn.execute(text(f"EXPLAIN {QUERIES[name]}")).scalars().all())
         conn.rollback()
     assert name in plan, plan
+
+
+def test_planner_uses_the_pending_order_index_for_the_inbox_page():
+    """The broadcast inbox pages open requests oldest first (listener_console.my_pending_requests)."""
+    query = (
+        "SELECT id FROM conversation_requests WHERE status = 'pending' "
+        "ORDER BY created_at ASC, id ASC LIMIT 21"
+    )
+    with test_engine.connect() as conn:
+        for setting in ("enable_seqscan", "enable_sort", "enable_bitmapscan"):
+            conn.execute(text(f"SET LOCAL {setting} = off"))
+        plan = "\n".join(conn.execute(text(f"EXPLAIN {query}")).scalars().all())
+        conn.rollback()
+    assert "ix_conversation_requests_pending_order" in plan, plan

@@ -1,3 +1,9 @@
+# SUPERSEDED (kept only because deploy/test-deploy.sh still drills it as the legacy path):
+# the Balanced stack (deploy/compose.base.yml + compose.prod.yml) replaces this file.
+# This one runs Redis with `appendonly yes` and no maxmemory/eviction, which contradicts the
+# Valkey rule (cache and rate-limit state only: no persistence, bounded, volatile-lru).
+# Do not copy settings from here. Retire it, with test-deploy.sh's legacy section, once the
+# user confirms the move to the Balanced stack is complete.
 # Mento — production stack for a self-managed VPS (Hostinger or any Ubuntu box).
 # Unlike services/api/docker-compose.yml (local dev infra only), this file also
 # builds and runs the API itself. Postgres/Redis here are self-managed containers
