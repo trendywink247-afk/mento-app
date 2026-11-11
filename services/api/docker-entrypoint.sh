@@ -18,5 +18,8 @@ echo "[entrypoint] starting uvicorn with ${WORKERS} worker(s) on :${PORT}"
 # --ws-max-size: own-chat frames are capped at 16 KB (WS5 T5.3); the app checks it too.
 # --ws-ping-*: the live events socket (docs/LIVE_EVENTS.md) is kept open by protocol pings
 # (a few bytes, no app code); a peer that does not answer within 20 s is closed.
+# --no-access-log: app/observability.py already writes one scrubbed line per request (mento.access,
+# no IPs, no query strings). Uvicorn's own access log duplicated every line and carries client
+# addresses, which the privacy policy says we do not keep.
 exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT}" --workers "${WORKERS}" --proxy-headers \
-  --ws-max-size 16384 --ws-ping-interval 25 --ws-ping-timeout 20
+  --ws-max-size 16384 --ws-ping-interval 25 --ws-ping-timeout 20 --no-access-log
