@@ -39,12 +39,18 @@ ENABLED: bool | None = None  # None = defer to settings.rate_limit_enabled
 
 @lru_cache
 def _redis() -> redis.Redis:
-    return redis.Redis.from_url(
+    # A bounded pool (threads share it; a 31st concurrent caller waits, it does not open a
+    # socket per request) and a health check so a half-dead connection is replaced, not used.
+    pool = redis.BlockingConnectionPool.from_url(
         get_settings().redis_url,
+        max_connections=30,
+        timeout=0.5,
         socket_connect_timeout=0.5,
         socket_timeout=0.5,
+        health_check_interval=30,
         decode_responses=True,
     )
+    return redis.Redis(connection_pool=pool)
 
 
 def _is_enabled() -> bool:

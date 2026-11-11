@@ -70,8 +70,8 @@ def test_the_same_request_accepted_twice_opens_one_conversation(db_session, monk
     barrier = threading.Barrier(2)
     original = matching._pending_request
 
-    def _both_see_pending(db, request_id, acting_listener_id):
-        req = original(db, request_id, acting_listener_id)
+    def _both_see_pending(db, request_id, acting_listener_id, **kwargs):
+        req = original(db, request_id, acting_listener_id, **kwargs)
         try:
             barrier.wait(timeout=1.5)  # line both callers up just after the load
         except threading.BrokenBarrierError:

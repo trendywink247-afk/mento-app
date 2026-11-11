@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app import live_events
 from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
@@ -708,6 +709,7 @@ def approve_application(
     db.flush()
     a.status = ApplicationStatus.approved
     a.listener_id = li.id
+    live_events.review_decided(db, member_id=a.user_id)  # the applicant's path page, on commit
     audit.record(
         db,
         admin,
@@ -834,6 +836,7 @@ def decline_application(
     applicant = db.get(User, a.user_id)
     a.status = ApplicationStatus.declined
     a.decline_reason = payload.reason
+    live_events.review_decided(db, member_id=a.user_id)
     audit.record(
         db, admin, "listener.application_declined", subject_type="application", subject_id=a.id
     )

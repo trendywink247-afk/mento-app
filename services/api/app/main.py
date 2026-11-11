@@ -14,11 +14,13 @@ from app.app_version import MinAppVersionMiddleware
 from app.chat_hub import hub
 from app.config import get_settings
 from app.db import init_db
+from app.events_hub import hub as events_hub
 from app.routers import (
     admin_console,
     auth,
     chat,
     conversation,
+    events,
     feedback,
     health,
     in_touch,
@@ -110,9 +112,11 @@ async def lifespan(app: FastAPI):
     if settings.is_dev:
         init_db()
     await hub.start()
+    await events_hub.start()
     try:
         yield
     finally:
+        await events_hub.stop()
         await hub.stop()
 
 
@@ -162,6 +166,7 @@ app.include_router(paths.router, prefix=API)
 app.include_router(safety.router, prefix=API)
 app.include_router(conversation.router, prefix=API)
 app.include_router(chat.router, prefix=API)
+app.include_router(events.router, prefix=API)
 app.include_router(stream_hooks.router, prefix=API)
 app.include_router(journals.router, prefix=API)
 app.include_router(listener_applications.router, prefix=API)

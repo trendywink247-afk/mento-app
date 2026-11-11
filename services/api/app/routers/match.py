@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import jobs, ratelimit
+from app import jobs, live_events, ratelimit
 from app.db import get_db
 from app.errors import ApiProblem
 from app.jobs import tasks
@@ -160,6 +160,7 @@ def ask_best_mentor(
     )
     db.add(req)
     db.flush()
+    live_events.request_new(db, req)  # every inbox it lands in hears it on commit
     # Same transaction as the request row: the mentors are paged only if it commits.
     jobs.enqueue(db, tasks.push_request_broadcast, best_effort=True, request_id=req.id)
     db.commit()

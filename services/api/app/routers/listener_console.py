@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
-from app import jobs, pagination, ratelimit
+from app import jobs, live_events, pagination, ratelimit
 from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
@@ -35,9 +35,8 @@ from app.models.enums import (
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
-from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
-from app.models.request import ConversationRequest, RequestPass
+from app.models.request import ConversationRequest
 from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.schemas import (
@@ -63,6 +62,7 @@ from app.services import (
     age_band,
     care_prompts,
     categories,
+    chat_events,
     console_codes,
     conversations,
     in_touch,
@@ -72,6 +72,7 @@ from app.services import (
     paths,
     push,
     reply_time,
+    request_visibility,
     snooze,
     stream,
 )
@@ -236,10 +237,13 @@ def set_status(
         600,
         detail="Too many status changes — try again in a few minutes.",
     )
+    was = listener.status
     listener.status = ListenerStatus(payload.status)
     if listener.status == ListenerStatus.online:
         # Tracking (re)starts with the next heartbeat — see matching.sweep_stale_presence.
         listener.last_seen_at = None
+    if listener.status != was:  # the members' chat headers follow, on commit
+        live_events.mentor_presence_changed(db, [listener.id])
     db.commit()
     db.refresh(listener)
     return _me_out(listener, db)
@@ -435,35 +439,8 @@ def my_pending_requests(
         .join(User, User.id == ConversationRequest.requester_id)
         .where(
             ConversationRequest.status == RequestStatus.pending,
-            or_(
-                ConversationRequest.target_listener_id == listener.id,
-                # A broadcast (DECISIONS section P.4) is in every certified mentor's inbox until
-                # one takes it or they pass; never the mentor the member blocked or their own.
-                and_(
-                    ConversationRequest.broadcast.is_(True),
-                    ConversationRequest.target_listener_id.is_(None),
-                    ConversationRequest.audience.in_(audiences_for(bool(listener.certified_exam))),
-                    ~select(RequestPass.id)
-                    .where(
-                        RequestPass.request_id == ConversationRequest.id,
-                        RequestPass.listener_id == listener.id,
-                    )
-                    .exists(),
-                    ~select(ModerationEvent.id)
-                    .where(
-                        ModerationEvent.reporter_id == ConversationRequest.requester_id,
-                        ModerationEvent.subject_id == listener.id,
-                        ModerationEvent.blocked.is_(True),
-                    )
-                    .exists(),
-                    ~select(ListenerApplication.id)
-                    .where(
-                        ListenerApplication.listener_id == listener.id,
-                        ListenerApplication.user_id == ConversationRequest.requester_id,
-                    )
-                    .exists(),
-                ),
-            ),
+            # One rule shared with the live events (services/request_visibility.py).
+            request_visibility.inbox_clause(listener.id, bool(listener.certified_exam)),
         )
     )
     if after is not None:
@@ -723,6 +700,7 @@ def snooze_conversation(
     never extends the window."""
     convo = _snooze_target(db, convo_id, listener)
     until = snooze.snooze(convo)
+    live_events.conversation_changed(db, convo, member=False)
     db.commit()
     return SnoozeOut(id=convo_id, snoozed_until=until.isoformat())
 
@@ -745,6 +723,9 @@ def suggest_certified_mentor(
     convo = _snooze_target(db, convo_id, listener)
     if convo.exam_redirect_at is None:
         convo.exam_redirect_at = datetime.now(UTC)
+        # The member's open chat shows the card at once; their list and the console look again.
+        chat_events.after_commit(db, convo.id, conversations.state_event(convo))
+        live_events.conversation_changed(db, convo)
         db.commit()
     return OkResult(status="ok")
 
@@ -758,6 +739,7 @@ def wake_conversation(
     """Undo a snooze. Idempotent."""
     convo = _snooze_target(db, convo_id, listener)
     snooze.wake(convo)
+    live_events.conversation_changed(db, convo, member=False)
     db.commit()
     return SnoozeOut(id=convo_id, snoozed_until=None)
 

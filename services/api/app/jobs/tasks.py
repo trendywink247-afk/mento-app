@@ -7,11 +7,14 @@ from __future__ import annotations
 import logging
 
 from procrastinate import RetryStrategy
-from sqlalchemy import text
+from sqlalchemy import select, text
 
+from app import live_events
 from app.config import get_settings
 from app.db import SessionLocal
 from app.jobs import enqueue, queue, retention
+from app.models.enums import RequestStatus
+from app.models.request import ConversationRequest
 from app.services import matching, mentor_names, push, request_ageing, snooze, verification
 
 logger = logging.getLogger("mento.jobs")
@@ -123,6 +126,11 @@ def maintenance_capacity(timestamp: int) -> dict[str, int]:
 def maintenance_request_ageing(timestamp: int) -> dict[str, int]:
     with SessionLocal() as db:
         result = request_ageing.run(db)
+        for req in db.scalars(
+            select(ConversationRequest).where(ConversationRequest.id.in_(result["expired"]))
+        ):
+            live_events.request_gone(db, req)
+            live_events.request_changed(db, req, RequestStatus.expired.value)
         for request_id in result["nudged"]:
             enqueue(db, push_request_nudge, best_effort=True, request_id=request_id)
         db.commit()
