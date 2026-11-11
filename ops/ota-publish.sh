@@ -123,7 +123,7 @@ RUNTIME=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["expo"]
 # Public build values only: EXPO_PUBLIC_* lines, never echoed.
 pub() { local key=$1; shift; grep -h "^$key=" "$@" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '"' || true; }
 export EXPO_NO_DOTENV=1 APP_VARIANT=$VARIANT EXPO_PUBLIC_APP_ENV=$APP_ENV EXPO_PUBLIC_API_URL=$API \
-  EXPO_PUBLIC_PUSH_DIRECT=1 EXPO_PUBLIC_OWN_CHAT_ACCEPTED=1 EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED=1 \
+  EXPO_PUBLIC_OWN_CHAT_ACCEPTED=1 EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED=1 \
   EXPO_PUBLIC_GIT_SHA=$SHA CI=1
 EXPO_PUBLIC_STREAM_API_KEY=$(pub EXPO_PUBLIC_STREAM_API_KEY "$ENVF")
 [ -n "$EXPO_PUBLIC_STREAM_API_KEY" ] || die "no EXPO_PUBLIC_STREAM_API_KEY in $ENVF" 2
