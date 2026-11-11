@@ -7,11 +7,18 @@
 # Why a whole web release: qa-install-web swaps the entire /opt/mento-staging/web folder, so the new
 # tarball carries the QA web app (member app + admin console, exported from the same commit) as well as
 # downloads/. Building both together keeps the web admin from falling behind the API and the APK.
-# Secrets: the build reads one EXPO_PUBLIC_* value (the Stream public key) from $QA_APK_ENV; nothing is
-# echoed. EXPO_PUBLIC_* values ship inside the app by design.
+#
+# The build itself is ops/build-android.sh qa (shared with prod and with manual builds); this script
+# adds the web export and turns the result into a QA web release. The poller (ops/qa-apk-poll.sh) sets
+# QA_APK_BUMP_TO so the next versionCode is applied in the build checkout only.
+# Secrets: EXPO_PUBLIC_* values (the Stream public key, the QA Sentry DSN) come from .secrets/qa.env
+# or, for the Stream key, $QA_APK_ENV (ops/lib/build-env.sh); nothing is echoed. EXPO_PUBLIC_* values
+# ship inside the app by design.
 set -euo pipefail
 
 REPO=$(cd "$(dirname "$0")/.." && pwd)
+# shellcheck source=ops/lib/build-env.sh
+. "$REPO/ops/lib/build-env.sh"
 FULL=$(git -C "$REPO" rev-parse "${1:-HEAD}")
 SHA=${FULL:0:7}
 BUILD=${QA_APK_BUILD_DIR:-$HOME/aabbuild}
@@ -19,46 +26,22 @@ OUT=${QA_APK_OUT:-$HOME/qa-apk-out}
 ENVF=${QA_APK_ENV:-$HOME/.config/mento/qa-build.env}
 LOG=$OUT/build-$SHA.log
 
-[ -r "$ENVF" ] || { echo "qa-apk: missing $ENVF (one line: EXPO_PUBLIC_STREAM_API_KEY=...)" >&2; exit 2; }
 [ -e "$BUILD/.git" ] || { echo "qa-apk: $BUILD is not a git checkout" >&2; exit 2; }
 mkdir -p "$OUT"
 exec 9>"$OUT/.lock"
 flock -n 9 || { echo "qa-apk: a build is already running" >&2; exit 4; }
 
-export JAVA_HOME=${JAVA_HOME:-$HOME/toolchain/jdk17} ANDROID_HOME=${ANDROID_HOME:-$HOME/toolchain/android}
-export PATH=$JAVA_HOME/bin:$PATH TMPDIR=$HOME/tmpbuild
-export JAVA_TOOL_OPTIONS="-Djava.io.tmpdir=$TMPDIR"
-mkdir -p "$TMPDIR"
-
 echo "qa-apk: building $SHA (log: $LOG)"
-{
-  git -C "$BUILD" fetch -q "$REPO" "$FULL"
-  git -C "$BUILD" checkout -q -f --detach "$FULL"
-  cd "$BUILD/apps/mobile"
-  # The poller (ops/qa-apk-poll.sh) sets the next versionCode so nobody has to bump it by hand.
-  if [ -n "${QA_APK_BUMP_TO:-}" ]; then
-    sed -i "s/\"versionCode\": [0-9]*,/\"versionCode\": $QA_APK_BUMP_TO,/" app.json
-  fi
-  export EXPO_NO_DOTENV=1 APP_VARIANT=preview EXPO_PUBLIC_APP_ENV=qa EXPO_PUBLIC_API_URL=https://qa-api.mento.chat/api/v1 \
-    EXPO_PUBLIC_PUSH_DIRECT=1 EXPO_PUBLIC_OWN_CHAT_ACCEPTED=1 EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED=1 \
-    EXPO_PUBLIC_GIT_SHA=$SHA SENTRY_DISABLE_AUTO_UPLOAD=true CI=1
-  EXPO_PUBLIC_STREAM_API_KEY=$(grep '^EXPO_PUBLIC_STREAM_API_KEY=' "$ENVF" | cut -d= -f2- | tr -d '"')
-  export EXPO_PUBLIC_STREAM_API_KEY
-  [ -n "$EXPO_PUBLIC_STREAM_API_KEY" ] || { echo "no stream key in $ENVF"; exit 8; }
-  env -u NODE_ENV npm ci --no-audit --no-fund
-  NODE_ENV=production npx expo prebuild --platform android --clean
-  rm -rf dist-qa
-  NODE_ENV=production npx expo export --platform web --output-dir dist-qa
-  [ -f dist-qa/index.html ] || { echo "web export produced no index.html"; exit 7; }
-  cd android
-  NODE_ENV=production nice -n 10 ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon \
-    -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
-} >"$LOG" 2>&1 || { echo "qa-apk: build FAILED, see $LOG" >&2; tail -15 "$LOG" >&2; exit 1; }
+BUMP=()
+[ -z "${QA_APK_BUMP_TO:-}" ] || BUMP=(--version-code "$QA_APK_BUMP_TO")
+QA_APK_ENV=$ENVF "$REPO/ops/build-android.sh" qa --sha "$FULL" --build-dir "$BUILD" --web-export \
+  --log "$LOG" "${BUMP[@]}" >/dev/null \
+  || { echo "qa-apk: build FAILED, see $LOG" >&2; tail -15 "$LOG" >&2; exit 1; }
 
 APK=$BUILD/apps/mobile/android/app/build/outputs/apk/release/app-release.apk
 [ -s "$APK" ] || { echo "qa-apk: no APK at $APK" >&2; exit 1; }
-VERSION=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["expo"]["version"])' "$BUILD/apps/mobile/app.json")
-CODE=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["expo"]["android"]["versionCode"])' "$BUILD/apps/mobile/app.json")
+VERSION=$(mento_app_json "$BUILD/apps/mobile/app.json" expo.version)
+CODE=$(mento_app_json "$BUILD/apps/mobile/app.json" expo.android.versionCode)
 SUM=$(sha256sum "$APK" | cut -d' ' -f1)
 MB=$(( ($(stat -c%s "$APK") + 1048575) / 1048576 ))
 
