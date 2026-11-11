@@ -1,0 +1,9 @@
+[bandit]
+# Triage is in docs/SECURITY_AUDIT.md. Skips are for patterns that cannot be fixed
+# in the code and are reviewed there; anything new still fails the report.
+exclude_dirs = tests,migrations
+# B101 assert_used: asserts here are start-up/invariant checks, not input validation.
+# B110 try_except_pass: deliberate best-effort cleanups (each logs or is idempotent).
+# B105 hardcoded_password_string: false positives (token endpoint URLs, OAuth scope,
+#      the name of a lock), reviewed 2026-11-11.
+skips = B101,B105,B110

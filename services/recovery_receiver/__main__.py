@@ -13,7 +13,8 @@ def main() -> None:
     parser.add_argument("--database", required=True, type=Path)
     parser.add_argument("--output", type=Path)
     parser.add_argument("--port", type=int, default=18090)
-    parser.add_argument("--host", choices=["127.0.0.1", "0.0.0.0"], default="127.0.0.1")
+    # 0.0.0.0 only by explicit flag; the default is loopback
+    parser.add_argument("--host", choices=["127.0.0.1", "0.0.0.0"], default="127.0.0.1")  # nosec B104
     arguments = parser.parse_args()
     if arguments.command == "init":
         initialize(arguments.database)

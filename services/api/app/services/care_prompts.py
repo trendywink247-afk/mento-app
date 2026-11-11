@@ -82,5 +82,5 @@ def pick(issue_category: str | None, seed: str) -> str:
     """A stable prompt for this category (or general), keyed on `seed` (usually
     the conversation id) so the same chat always shows the same prompt."""
     prompts = PROMPTS.get(issue_category or "general", PROMPTS["general"])
-    index = int(hashlib.sha1(seed.encode()).hexdigest(), 16) % len(prompts)
+    index = int(hashlib.sha1(seed.encode(), usedforsecurity=False).hexdigest(), 16) % len(prompts)
     return prompts[index]

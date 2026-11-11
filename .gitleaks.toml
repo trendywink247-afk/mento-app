@@ -1,0 +1,26 @@
+# Gitleaks config: the default ruleset plus a short allowlist. Every entry says why.
+# Findings are matched by file path and rule, never by a secret value.
+title = "Mento gitleaks"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Firebase client config: google-services.json carries client identifiers, not a secret (Google's own guidance). The key must stay restricted to the app's package and SHA-1 in Google Cloud."
+paths = ['''apps/mobile/google-services\.json$''']
+targetRules = ["gcp-api-key", "generic-api-key"]
+
+[[allowlists]]
+description = "deploy/staging/release.json is a release manifest: commit ids, image ids and sha256 digests. They look like keys; none is one."
+paths = ['''deploy/staging/release\.json$''']
+targetRules = ["generic-api-key"]
+
+[[allowlists]]
+description = "The RFC 6455 sample Sec-WebSocket-Key used to probe the WebSocket upgrade in the Caddy test."
+paths = ['''deploy/test-caddy\.sh$''']
+targetRules = ["generic-api-key"]
+
+[[allowlists]]
+description = "Throwaway fixture token inside the browser e2e for session refresh; it signs nothing real."
+paths = ['''apps/mobile/e2e/session-refresh\.e2e\.js$''']
+targetRules = ["generic-api-key"]

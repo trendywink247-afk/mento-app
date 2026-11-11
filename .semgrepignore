@@ -1,0 +1,9 @@
+# Semgrep skips what is not shipped code. Per-rule reasoning: docs/SECURITY_AUDIT.md.
+node_modules/
+.venv/
+dist/
+dist-qa/
+docs/
+**/tests/
+**/e2e/
+**/migrations/
