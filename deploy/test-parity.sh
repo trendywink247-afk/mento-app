@@ -20,10 +20,10 @@ render() {  # render <override> <out.json>
         config --format json > "$2"
 }
 render compose.local.yml "$TMP/local.json"
-MENTO_ENV_FILE="$TMP/api.env" POSTGRES_PASSWORD=parity-check GLITCHTIP_SECRET_KEY=parity-check \
+MENTO_ENV_FILE="$TMP/api.env" POSTGRES_PASSWORD=parity-check \
     render compose.prod.yml "$TMP/prod.json"
 
-# Core topology fixture only: optional GlitchTip is not activated by this test.
+# Core topology fixture.
 # Runtime approval additionally needs an established allowance for every other
 # DB client and the old release's effective pool/process settings during overlap.
 python3 "$HERE/../scripts/ci/effective_database_budget.py" "$TMP/prod.json" \
@@ -41,12 +41,10 @@ import json, sys
 # volumes' container paths, profiles, restart policy) must still match exactly.
 ALLOWED = {"environment", "env_file", "ports", "mem_limit", "mem_reservation",
            "memswap_limit", "logging", "command", "ulimits"}
-# GlitchTip (T1.7): a prod-only ops tool, not part of the app under test, no
-# local equivalent by design — excluded from the comparison entirely, same
-# reasoning as the allowed set above, just at the service/volume level instead
-# of the key level.
-PROD_ONLY_SERVICES = {"glitchtip", "glitchtip-init-db"}
-PROD_ONLY_VOLUMES = {"glitchtip_uploads"}
+# Prod-only services/volumes with no local equivalent, excluded from the comparison.
+# Empty since GlitchTip was removed (2026-11-11, errors go to Sentry).
+PROD_ONLY_SERVICES: set[str] = set()
+PROD_ONLY_VOLUMES: set[str] = set()
 
 def normalise(path):
     cfg = json.load(open(path))
@@ -74,7 +72,6 @@ for name in ("api_blue", "api_green", "worker"):
     assert size > 0 and overflow >= 0, f"{name}: unbounded connection pool"
     application_pools += size + overflow
 # One process per color and one worker: reserve queue/migration/ops slots.
-# Optional GlitchTip still requires a separately measured budget before rollout.
 limit = next(int(arg.split("=", 1)[1]) for arg in rendered["postgres"]["command"]
              if arg.startswith("max_connections="))
 assert application_pools + 4 + 1 + 3 + 5 <= limit, "Balanced core overlap exceeds DB budget"

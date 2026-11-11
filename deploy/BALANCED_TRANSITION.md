@@ -48,7 +48,7 @@ host must be the retained cache container, index 0, preserving existing rate-lim
 state. Credentials must remain outside Git and logs. Compose 2.24.4+ is needed for
 the override/reset tags. Render base + prod + transition override using only
 `green` and `tools` profiles into a protected temporary JSON file; never print the
-rendered file. The unmanaged postgres/valkey/GlitchTip services must be excluded.
+rendered file. The unmanaged postgres/valkey services must be excluded.
 
 Run `python3 deploy/transition-preflight.py --expected <protected-manifest>
 --candidate-config <protected-rendered-json> --headroom 5 --other-connections 0`
