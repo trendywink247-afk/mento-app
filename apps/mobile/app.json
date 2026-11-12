@@ -60,7 +60,8 @@
             "usesCleartextTraffic": true
           }
         }
-      ]
+      ],
+      "./plugins/withIdleRefreshRate"
     ],
     "experiments": {
       "typedRoutes": true
