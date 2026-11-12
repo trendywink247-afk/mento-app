@@ -1,16 +1,15 @@
 # Status
 
-Updated 2026-11-11. v1 scope only (CLAUDE.md). One working branch: `dev`; `main` only with founder approval; prod only from `main`.
+Updated 2026-11-12. v1 scope only (CLAUDE.md). One working branch: `dev`; `main` only with founder approval; prod only from `main`.
 
-**State:** EAS removed: local builds (`ops/build-android.sh`, `ops/build-ios.sh` over SSH to a Mac), self-hosted signed OTA (`services/ota`, live at qa-api.mento.chat/ota, verified on the phone), FCM-only push. The APK auto-builder published build 14 by itself. GitHub automation removed; CI/CD runs locally. Sentry live for QA app and API. SonarQube on 127.0.0.1:9000. cryptography 50.0.2 (13 advisories cleared). GlitchTip removed. IDOR matrix: 55 id routes, no findings.
-In progress: live events (one socket per app replaces all six polls; app side done, server side in test); local CI/CD scripts, security and dependency timers.
+**State:** No EAS (local builds, self-hosted signed OTA at qa-api/ota, FCM-only push); APK auto-builder live (build 15, 36fab4d). No GitHub automation. Live events socket replaces all polling (0 idle API calls, measured). QA runs own chat for all new conversations (`OWN_CHAT_NEW_CONVERSATIONS=true`); own-chat gaps closed (snooze bug, unread/preview, ended transcripts, web tools, crisis-flag reconcile + own-chat crisis health); `scripts/e2e/own_chat_live.py` passes 12/12 on QA. Idle rendering 114 fps -> 0; idle CPU ~90% -> ~12% (rest is RN Fabric's per-vsync dispatcher; build 15 adds an idle 60 Hz vote, to be measured). Production stack authored (`docs/PRODUCTION.md`), not installed. cryptography 50.0.2; GlitchTip removed; Sentry live for QA.
 
 **Next 3 tasks:**
-1. Merge live events, deploy API to QA, publish OTA, measure idle API calls on the phone before/after, k6 socket load test.
-2. Merge local CI/CD; SonarQube to 3 GB and rescan; ZAP against QA; triage.
-3. Production on this box (Phase 5): separate stack under Caddy, own DB/Valkey/secrets/backups, release from `main` only.
+1. Measure build 15 idle CPU on the phone; then the Stream-removal decision (founder) and, if yes, the staged removal (docs/OWN_CHAT_PARITY.md).
+2. Merge local CI/CD (`feat/local-cicd`: ci.sh tiers, security/deps timers, SonarQube 3 GB); ZAP against QA.
+3. Production cutover: founder keys, DNS app/api/admin -> 129.121.171.140, approve dev -> main, first `ops/prod-release.sh`.
 
 **Open questions:**
-- Production domain, `MESSAGE_KEY`, FCM key, Play upload key, prod Sentry DSNs (founder).
-- Privacy policy sign-off and public page; Play Console declarations; trademark check; `ALLOWANCE_IN_A_ROW` in prod secrets.
-- iOS: Mac SSH access, Apple Developer account, APNs key, Firebase iOS SDK.
+- Founder: prod `MESSAGE_KEY`, FCM file, Stream keys (until removal), prod Sentry DSNs, OTA prod key, backup recovery key + remote.
+- Privacy policy sign-off (own-chat storage, export contents), Play Console declarations, trademark; iOS (Mac SSH, Apple account, APNs, Firebase iOS SDK).
+- Four test crisis flags from the E2E runs sit in QA's review queue (dismiss as test data).
