@@ -82,6 +82,9 @@ type Props = {
   onOpenOptions: () => void;
 };
 
+/** Ripples when someone arrives, then still. */
+export const PRESENCE_RIPPLES = 3;
+
 /** One soft ripple leaving the avatar at breathing tempo — "someone is here". */
 function PresenceRing({ color }: { color: string }) {
   const reduced = useReducedMotion();
@@ -93,9 +96,12 @@ function PresenceRing({ color }: { color: string }) {
       ripple.value = 0;
       return;
     }
+    // A few ripples when the person arrives, then still: an endless ripple kept the chat
+    // screen animating (UI-thread frames, never idle) for as long as it stayed open.
+    ripple.value = 0;
     ripple.value = withRepeat(
       withTiming(1, { duration: breathe.period / 2, easing: easing.settle }),
-      -1,
+      PRESENCE_RIPPLES,
       false,
     );
     return () => cancelAnimation(ripple);

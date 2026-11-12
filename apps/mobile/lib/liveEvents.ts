@@ -17,6 +17,7 @@ import {
   createLiveConnection, liveEventsUrl, type LiveConnection, type LiveEvent, type LiveRole,
   type LiveSocket, type LiveStatus,
 } from './liveEventsCore';
+import { createEventFetch, type EventFetch } from './eventFetch';
 import { registerOwnChat } from './ownChatLifecycle';
 
 export type { LiveEvent, LiveRole, LiveStatus } from './liveEventsCore';
@@ -107,11 +108,18 @@ export function useLiveRefresh(
   const running = useRef(false);
   const again = useRef(false);
   const focused = useRef(false);
+  // Pushed events settle for a moment into one fetch, and a fetch that began after the latest
+  // event (focus, an action) already covers it (lib/eventFetch.ts). Focus itself runs at once.
+  const settled = useRef<EventFetch | null>(null);
+  const runRef = useRef<() => void>(() => undefined);
+  if (!settled.current) settled.current = createEventFetch(() => runRef.current());
+  useEffect(() => () => settled.current?.cancel(), []);
 
   const run = useCallback(() => {
     // Coalesce: while one fetch is in flight, any number of events become ONE follow-up fetch.
     if (running.current) { again.current = true; return; }
     running.current = true;
+    settled.current?.started();
     void Promise.resolve()
       .then(() => latest.current())
       .catch(() => undefined)
@@ -120,13 +128,14 @@ export function useLiveRefresh(
         if (again.current) { again.current = false; run(); }
       });
   }, []);
+  runRef.current = run;
 
   useLiveEvent(
     role,
     ['resync', ...types],
     (event) => {
       if (event.t !== 'resync' && matcher.current && !matcher.current(event)) return;
-      run();
+      settled.current?.onEvent();
     },
     enabled,
   );

@@ -1726,5 +1726,16 @@
     "body": "This version of Mento is out of date, so it can no longer talk to our servers. Update the app to carry on.",
     "button": "Update the app",
     "safe": "Your chats and your account are safe. Nothing is lost."
+  },
+  "askIntro": {
+    "title": "What would you like to talk about?",
+    "hint": "This is the first thing a mentor reads. Keep this line, change it, or write your own question.",
+    "defaultLine": "I'd like to talk to someone who has been on this road.",
+    "placeholder": "Write a line or two about what is on your mind",
+    "fieldA11y": "Your question for a mentor",
+    "useDefault": "Use the default line",
+    "leftA11y": "%{n} characters left",
+    "send": "Send",
+    "cancel": "Cancel"
   }
 }

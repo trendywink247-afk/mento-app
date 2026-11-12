@@ -16,6 +16,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { BREATHS_BEFORE_REST, breathHalves } from '@/components/motion/useBreathing';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -31,7 +32,9 @@ function BreathingPip({ color }: { color: string }) {
       dim.value = 0;
       return;
     }
-    dim.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), -1, true);
+    // A few breaths, then the pip rests lit: a forever loop kept the chat screen animating.
+    dim.value = 0;
+    dim.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), breathHalves(BREATHS_BEFORE_REST), true);
     return () => cancelAnimation(dim);
   }, [reduced, dim]);
   const style = useAnimatedStyle(() => ({ opacity: 1 - 0.5 * dim.value }));

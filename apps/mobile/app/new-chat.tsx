@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { AskIntroBox } from '@/components/AskIntroBox';
 import { BusyExits } from '@/components/BusyExits';
 import { OpenQuestionNote, openLetter } from '@/components/OpenQuestionNote';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
@@ -82,12 +83,26 @@ export default function NewChatSheet() {
 
   const leave = () => router.back();
 
+  // On an exam road the server asks for the mentor's accept first; before that ask goes out the
+  // member sees (and can edit) the words the mentor will read. Resolved by the box below.
+  const [askPrompt, setAskPrompt] = useState<((text: string | null) => void) | null>(null);
+  const askForIntro = () => new Promise<string | null>((resolve) => setAskPrompt(() => resolve));
+  const answerAsk = (text: string | null) => {
+    const resolve = askPrompt;
+    setAskPrompt(null);
+    resolve?.(text);
+  };
+
   const nextAvailable = async () => {
     if (matching) return;
     setMatching(true);
     setNote(null);
     try {
-      const started = await matchOrAsk({ issue_category: topic, audience });
+      const started = await matchOrAsk({ issue_category: topic, audience }, null, undefined, askForIntro);
+      if (started.kind === 'cancelled') {
+        setMatching(false);
+        return;
+      }
       // An exam road waits for the mentor's accept: the letter, not a chat (DECISIONS §N.2).
       if (started.kind === 'ask') {
         sheet.current?.close(() => openAsked(router, started.request));
@@ -157,7 +172,11 @@ export default function NewChatSheet() {
           <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{t('chats.newChatBody')}</Text>
         </Entrance>
 
-        <View style={styles.doors}>
+        {askPrompt ? (
+          <AskIntroBox drafted={params.question} onSend={(text) => answerAsk(text)} onCancel={() => answerAsk(null)} testID="new-chat-ask-intro" />
+        ) : null}
+
+        <View style={[styles.doors, askPrompt ? styles.hidden : null]}>
           {acceptFirst ? (
             <Entrance index={3}>
               <AudiencePicker value={audience} onChange={setAudience} />
@@ -302,6 +321,7 @@ export default function NewChatSheet() {
 const styles = StyleSheet.create({
   head: { gap: 4 },
   doors: { gap: 12 },
+  hidden: { display: 'none' },
   door: { minHeight: 92, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1 },
   doorIcon: { width: 48, height: 48, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   doorText: { flex: 1, minWidth: 0, gap: 2 },

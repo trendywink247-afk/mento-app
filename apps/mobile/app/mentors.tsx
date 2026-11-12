@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AskIntroBox } from '@/components/AskIntroBox';
 import { DeepHeader } from '@/components/DeepHeader';
 import { GroundFade } from '@/components/GroundFade';
 import { OpenQuestionNote } from '@/components/OpenQuestionNote';
@@ -131,13 +132,24 @@ export default function BrowseMentors() {
     }, [locale]),
   );
 
+  // On an exam road the ask needs the member's own words before it goes out: the box below
+  // shows them (prefilled with any drafted question, else the plain line) and waits for Send.
+  const [askPrompt, setAskPrompt] = useState<((text: string | null) => void) | null>(null);
+  const askForIntro = () => new Promise<string | null>((resolve) => setAskPrompt(() => resolve));
+  const answerAsk = (text: string | null) => {
+    const resolve = askPrompt;
+    setAskPrompt(null);
+    resolve?.(text);
+  };
+
   const nextAvailable = async () => {
     if (matching) return;
     setMatching(true);
     setNote(null);
     setOpenQ(null);
     try {
-      const started = await matchOrAsk({ issue_category: topic ?? null });
+      const started = await matchOrAsk({ issue_category: topic ?? null }, null, undefined, askForIntro);
+      if (started.kind === 'cancelled') return;
       if (started.kind === 'ask') {
         openAsked(router, started.request);
         return;
@@ -312,6 +324,9 @@ export default function BrowseMentors() {
                 </PressKey>
               </View>
             </Entrance>
+            {askPrompt ? (
+              <AskIntroBox drafted={question} onSend={(text) => answerAsk(text)} onCancel={() => answerAsk(null)} testID="browse-ask-intro" />
+            ) : null}
             <Entrance index={2}>
               {/* A row that scrolls: with every road, Life, In touch and Mento Verified there are too many chips to
                   share one line, and squeezing them left only "U…" and "N…". */}
