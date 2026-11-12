@@ -34,6 +34,8 @@ import { useI18n } from '@/lib/i18n';
 import { clearConversationNotifications } from '@/lib/notifications';
 import { leaveToChats, leaveToMentorHome } from '@/lib/leaveToChats';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
+import { endedBySocket, endedOnServer, loadArchive } from '@/lib/ownChatArchive';
+import { archiveDeps } from '@/lib/ownChatArchiveDeps';
 import { createNativeOwnChatLifecycle } from '@/lib/nativeOwnChatLifecycle';
 import { createAuthenticatedOwnChat } from '@/lib/ownChatApi';
 import { OwnChatSendError } from '@/lib/ownChatAdapter';
@@ -186,13 +188,14 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   // ended conversation says so instead of offering a Retry that can never work.
   const [endedByState, setEndedByState] = useState(false);
   useEffect(() => {
-    if (!member || snapshot?.reason !== 'not_authorized') return;
+    if (endedBySocket(snapshot?.reason)) { setEndedByState(true); return; }
+    if (snapshot?.reason !== 'not_authorized') return;
     let live = true;
-    void api.conversationState(conversationId)
-      .then(state => { if (live && state.status === 'ended') setEndedByState(true); })
+    void endedOnServer(role, conversationId, archiveDeps)
+      .then(ended => { if (live && ended) setEndedByState(true); })
       .catch(() => { /* reason: the generic error and Retry stay; nothing is lost */ });
     return () => { live = false; };
-  }, [member, snapshot?.reason, conversationId]);
+  }, [role, snapshot?.reason, conversationId]);
   // The mentor's suggestion reaches the member by one read on open, then by the chat socket's
   // pushed `state` frame (snapshot.examRedirect) — no poll.
   useEffect(() => {
@@ -209,17 +212,17 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
       setRedirect(state.exam_redirect === true);
       if (state.status === 'ended') setEndedByState(true);
     }), { enabled: member, match: event => event.id === conversationId, onFocus: false });
-  // An ended chat is still the member's to read: the socket refuses it, the REST history does not.
+  // An ended chat is still both sides' to read: the socket refuses it, the REST history does not.
   const [archive, setArchive] = useState<ThreadMsg[] | null>(null);
   const archiveList = useRef<FlatList<ThreadMsg>>(null);
   useEffect(() => {
-    if (!member || !endedByState || !actor) return;
+    if (!endedByState || !actor) return;
     let live = true;
-    void api.ownChatMessages(conversationId)
-      .then(r => { if (live) setArchive(r.messages.map(m => ({ id: m.id, text: m.text, mine: m.sender === actor, at: m.ts }))); })
+    void loadArchive(role, conversationId, actor, archiveDeps)
+      .then(rows => { if (live) setArchive(rows); })
       .catch(() => { /* reason: the ended notice stands without the transcript */ });
     return () => { live = false; };
-  }, [member, endedByState, actor, conversationId]);
+  }, [role, endedByState, actor, conversationId]);
   const closed = snapshot?.status === 'terminal';
   const retryable = !endedByState && (error || snapshot?.reason === 'not_authorized' || snapshot?.reason === 'reconnect_exhausted');
   const connectionFailed = error || closed || snapshot?.reason === 'reconnect_exhausted';

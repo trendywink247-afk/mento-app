@@ -79,6 +79,9 @@ export type ListenerConversation = {
    * of their messages are unread. Absent for Stream chats (mirrored live) or an older server. */
   waiting_since?: string | null;
   unread?: number;
+  /** Own chats only: the newest line, server-cut to one short line. Null when there is none, a
+   * Stream chat (mirrored live) or an older server. */
+  last_message_preview?: string | null;
   /** The member's companion in their colour (board A10 rows). Never its name. */
   user_companion_animal?: string | null;
   user_companion_colour?: string | null;
@@ -192,6 +195,10 @@ export const listenerApi = {
   },
 
   brief: (convoId: string) => req<MemberBrief>(`/listener/me/conversations/${convoId}/brief`),
+  /** An own chat's history over REST, for a chat the socket will no longer open (it ended). */
+  ownChatMessages: (id: string) =>
+    req<{ messages: { id: string; seq: number; sender: string; text: string; ts: string }[]; last_seq: number }>(
+      `/chat/${encodeURIComponent(id)}/messages`),
 
   /** PATCH-like semantics on a PUT: an omitted field is left unchanged server-side. */
   updateProfile: (body: { public_line?: string | null; availability_note?: string | null; languages?: string[]; push_preview?: boolean }) =>

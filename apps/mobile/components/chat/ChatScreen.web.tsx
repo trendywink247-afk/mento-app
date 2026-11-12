@@ -26,6 +26,8 @@ import {
 } from '@/components/chat/ComposerField';
 import { ConversationOptions } from '@/components/chat/ConversationOptions';
 import { CrisisCard, type CrisisPayload } from '@/components/chat/CrisisCard';
+import { ExamRedirectCard } from '@/components/chat/ExamRedirectCard';
+import { MessageActions } from '@/components/chat/MessageActions';
 import { ThreadRow, type ThreadMsg } from '@/components/chat/ThreadRow';
 import { ThreadEmpty } from '@/components/chat/ThreadEmpty';
 import { TypingDots } from '@/components/chat/TypingDots';
@@ -34,7 +36,10 @@ import { COMPOSER_SEAT, companionRoom } from '@/components/chat/companionRoom';
 import { useSheetDepth } from '@/components/motion/useSheetDepth';
 import { captureFirstMessage } from '@/lib/analytics';
 import { api } from '@/lib/api';
+import { useLiveRefresh } from '@/lib/liveEvents';
 import { createAuthenticatedOwnChat } from '@/lib/ownChatApi';
+import { endedBySocket, loadArchive } from '@/lib/ownChatArchive';
+import { archiveDeps } from '@/lib/ownChatArchiveDeps';
 import { OwnChatSendError, selectChatTransport } from '@/lib/ownChatAdapter';
 import { createOwnChatScreenController } from '@/lib/ownChatScreenController';
 import type { PlacementSlot } from '@/lib/companionPlacement';
@@ -238,6 +243,14 @@ export default function ChatScreenWeb() {
   const [crisis, setCrisis] = useState<{ payload: CrisisPayload; messageId: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ownRetryable, setOwnRetryable] = useState(false);
+  // An ended own chat: its transcript, read-only, instead of an error (lib/ownChatArchive.ts).
+  const [ended, setEnded] = useState(false);
+  // The mentor suggested a certified exam mentor (DECISIONS §O): a gentle card, never a block.
+  const [redirect, setRedirect] = useState(false);
+  const [redirectHidden, setRedirectHidden] = useState(false);
+  const [isOwn, setIsOwn] = useState(false);
+  // A held (long-pressed) bubble: copy, save to journal, report — as on native.
+  const [held, setHeld] = useState<Msg | null>(null);
   const [ownAttempt, setOwnAttempt] = useState(0);
   const [sendFailed, setSendFailed] = useState(false);
   // An older mentor bubble the member tapped: its save key is open too (the mentor's
@@ -307,6 +320,7 @@ export default function ChatScreenWeb() {
     setCrisis(null);
     setTyping(null);
     setOwnRetryable(false);
+    setEnded(false);
     channelRef.current = null;
 
     const setup = async () => {
@@ -323,6 +337,21 @@ export default function ChatScreenWeb() {
           throw new Error(t('chat.errOpen'));
         }
         if (transport === 'own') {
+          setIsOwn(true);
+          setRedirect(state.exam_redirect === true);
+          const showArchive = async () => {
+            const rows = await loadArchive('member', conversationId, persona.id, archiveDeps);
+            if (cancelled) return;
+            setMessages(rows);
+            setCrisis(null);
+            setTyping(null);
+            setEnded(true);
+            setReady(true);
+          };
+          if (state.status === 'ended') {
+            await showArchive();
+            return;
+          }
           const scope = { actorId: persona.id, conversationId, role: 'member' as const };
           let lastAfter = -1;
           const own = createOwnChatScreenController(scope,
@@ -338,6 +367,7 @@ export default function ChatScreenWeb() {
               rows.forEach(surfaceCrisis);
               setReady(snapshot.status === 'ready');
               setTyping(snapshot.peerTyping ? listenerName : null);
+              if (typeof snapshot.examRedirect === 'boolean') setRedirect(snapshot.examRedirect);
               setReadTick(value => value + 1);
               if (snapshot.status === 'ready') {
                 loadedAtRef.current ||= Date.now();
@@ -346,6 +376,10 @@ export default function ChatScreenWeb() {
                   lastAfter = snapshot.after;
                   void refreshAllowance();
                 }
+              }
+              if (endedBySocket(snapshot.reason)) {
+                void showArchive().catch(() => { if (!cancelled) setError(t('reflection.ended')); });
+                return;
               }
               if (snapshot.status === 'terminal' || snapshot.status === 'stopped') {
                 setCrisis(null);
@@ -425,6 +459,14 @@ export default function ChatScreenWeb() {
     // reason: `t` is intentionally not a trigger — a locale flip must not re-run channel setup
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, channelId, appendMessage, surfaceCrisis, listenerName, refreshAllowance, toMsg, ownAttempt]);
+
+  // The member's events socket says when THIS own conversation changed: the mentor's exam
+  // suggestion, or an end (the screen then reopens as the read-only transcript). No poll.
+  useLiveRefresh('member', ['conversation.changed'], () => api.conversationState(conversationId ?? '')
+    .then((state) => {
+      setRedirect(state.exam_redirect === true);
+      if (state.status === 'ended' && !ended) setOwnAttempt((attempt) => attempt + 1);
+    }), { enabled: isOwn && !!conversationId, match: (event) => event.id === conversationId, onFocus: false });
 
   const send = useCallback(
     async (body: string) => {
@@ -658,6 +700,7 @@ export default function ChatScreenWeb() {
                   onToggleSave={toggleActions}
                   onSave={saveToNotes}
                   onArrived={markRisen}
+                  onLongPress={setHeld}
                 />
                 {crisis?.messageId === item.id ? (
                   // Its "why" note opens in place: while the card is the newest thing in the
@@ -680,21 +723,47 @@ export default function ChatScreenWeb() {
           {/* Presence only: three dots rising in turn, and who it is. */}
           {typing && !crisis ? <TypingDots testID="typing-indicator" label={t('chat.typing', { name: typing })} /> : null}
 
-          <ComposerPerchContext.Provider value={note ? null : COMPOSER_PERCH}>
-            <ComposerChromeContext.Provider value={chrome}>
-              <Composer
-                onSend={send}
-                onTyping={onTyping}
-                initialDraft={starter}
-                autoFocus={edit === '1'}
-                onSendFailed={setSendFailed}
-              />
-            </ComposerChromeContext.Provider>
-          </ComposerPerchContext.Provider>
+          {ended ? (
+            <Text
+              testID="own-web-ended"
+              style={[type.body, { color: colors.inkMuted, textAlign: 'center', padding: space.md }]}
+            >
+              {t('reflection.ended')}
+            </Text>
+          ) : (
+            <>
+              {redirect && !redirectHidden ? (
+                <ExamRedirectCard
+                  name={headerName}
+                  onChoose={() => router.push({ pathname: '/mentors', params: { filter: 'certified' } })}
+                  onLater={() => setRedirectHidden(true)}
+                />
+              ) : null}
+              <ComposerPerchContext.Provider value={note ? null : COMPOSER_PERCH}>
+                <ComposerChromeContext.Provider value={chrome}>
+                  <Composer
+                    onSend={send}
+                    onTyping={onTyping}
+                    initialDraft={starter}
+                    autoFocus={edit === '1'}
+                    onSendFailed={setSendFailed}
+                  />
+                </ComposerChromeContext.Provider>
+              </ComposerPerchContext.Provider>
+            </>
+          )}
         </View>
       )}
 
       </Animated.View>
+      <MessageActions
+        visible={!!held}
+        text={held?.text ?? ''}
+        onClose={() => setHeld(null)}
+        onSave={held && !held.mine && !ended && !saved.has(held.id) && !savedMessageIds.has(held.id)
+          ? () => saveToNotes(held) : undefined}
+        onReport={held && !held.mine ? () => { setPendingInitial('report'); setOptionsOpen(true); } : undefined}
+      />
       <ConversationOptions
         conversationId={conversationId}
         visible={optionsOpen}

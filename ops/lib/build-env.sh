@@ -65,9 +65,10 @@ mento_build_env() {
   if [ "$env" = qa ] && [ -z "${EXPO_PUBLIC_STREAM_API_KEY:-}" ]; then
     mento_load_secrets "${QA_APK_ENV:-$HOME/.config/mento/qa-build.env}" EXPO_PUBLIC_STREAM_API_KEY
   fi
+  # Stream is optional: own chat needs no key. Without one the build still runs; Stream-backed
+  # conversations (older ones) then cannot open in that build, so say so loudly.
   if [ -z "${EXPO_PUBLIC_STREAM_API_KEY:-}" ]; then
-    echo "build-env: no EXPO_PUBLIC_STREAM_API_KEY for $env (put it in $MENTO_SECRETS/$env.env)" >&2
-    return 8
+    echo "build-env: WARNING no EXPO_PUBLIC_STREAM_API_KEY for $env: building without Stream (own chat only)" >&2
   fi
 }
 

@@ -19,6 +19,7 @@ import {
 } from '@/lib/listenerApi';
 import { mentorFaces } from '@/lib/mentorFaces';
 import { ensureListenerConnected } from '@/lib/listenerStreamClient';
+import { streamRooms } from '@/lib/ownLive';
 import { FALLBACK_REFRESH_MS, useLiveEvent, useLiveStatus } from '@/lib/liveEvents';
 
 export type ChannelLive = {
@@ -113,17 +114,21 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
       setConversations(convos);
       setError(null);
 
+      // Stream is reached only for Stream rooms. A mentor whose open chats are all own chats never
+      // connects to it (and a build without a Stream key keeps working for them).
+      const active = streamRooms(convos);
+      if (active.length === 0) {
+        unsubscribeAll();
+        setLive({});
+        return;
+      }
       const client = await ensureListenerConnected(
         { id: meData.id, name: meData.persona_name },
         meData.stream_token,
       );
       if (!live()) return;
 
-      // Watch every active channel in parallel — no reason to serialize network calls.
-      const active = convos.filter(
-        (c): c is ListenerConversation & { stream_channel_id: string } =>
-          c.status === 'active' && c.stream_channel_id !== null,
-      );
+      // Watch every active Stream channel in parallel — no reason to serialize network calls.
       const watched = await Promise.all(
         active.map(async (c) => {
           const ch = client.channel('messaging', c.stream_channel_id);

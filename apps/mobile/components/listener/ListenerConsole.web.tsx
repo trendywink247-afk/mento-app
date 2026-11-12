@@ -16,6 +16,7 @@ import {
   type ListenerMe,
   type ListenerRequest,
 } from '@/lib/listenerApi';
+import { canOpenConsoleChat } from '@/lib/ownLive';
 import { getListenerToken, saveListenerToken } from '@/lib/listenerSession';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -161,12 +162,12 @@ export default function ListenerConsoleWeb() {
   };
 
   const openChat = (c: ListenerConversation) => {
-    if (c.status === 'wiped' || !c.stream_channel_id) return; // channel is gone
+    if (!canOpenConsoleChat(c)) return; // wiped, or a Stream chat whose channel is gone
     router.push({
       pathname: '/listener/chat/[id]',
       params: {
         id: c.id,
-        channel: c.stream_channel_id,
+        channel: c.stream_channel_id ?? '',
         member: c.user_persona_name,
         masked: c.member_masked ? '1' : '0',
       },

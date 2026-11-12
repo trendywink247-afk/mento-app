@@ -28,6 +28,8 @@ import { requestLetter } from '@/lib/requestLetter';
 import { useI18n } from '@/lib/i18n';
 import { mentorFaces } from '@/lib/mentorFaces';
 import { screenCache, type ChatPreview, type WaitingQuestion } from '@/lib/screenCache';
+import { useLiveRefresh } from '@/lib/liveEvents';
+import { rowUnread } from '@/lib/rowUnread';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected } from '@/lib/streamClient';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -221,6 +223,16 @@ export default function ChatsTab() {
       void load();
     }, [load]),
   );
+
+  // A pushed change (a new line, an end, a wipe) or a reconnect re-reads only the list itself:
+  // own rows carry their unread count and last line from the server; Stream rows keep their
+  // client-side previews. Focus still does the full load above.
+  const refreshRows = useCallback(async () => {
+    const list = await api.listConversations();
+    setRows(list);
+    screenCache.set('chats', { ...(screenCache.get('chats') ?? { previews: {} }), rows: list });
+  }, []);
+  useLiveRefresh('member', ['conversation.changed'], refreshRows, { onFocus: false });
 
   // Clean Wipe happens in a chat stacked over this (still mounted) list: the moment the wipe
   // is asked for, the row becomes its "wiped" marker and its message preview is dropped — the
@@ -478,7 +490,7 @@ export default function ChatsTab() {
           }
           lastLine={s === 'wiped' ? t('chats.wiped') : c.is_locked ? t('chatsList.lockedLine') : p?.text || c.last_message || t('chats.sayHello')}
           time={relativeTime((p?.at ?? new Date(c.created_at)).toISOString(), t)}
-          unread={Boolean(p && p.unread > 0) && s === 'active'}
+          unread={rowUnread(p, c) && s === 'active'}
           unreadLabel={t('chatsList.newMessageA11y')}
           savedLabel={s !== 'wiped' && count > 0 ? t('chatsList.savedCount', { count }) : null}
           lockedLabel={c.is_locked ? t('chatsList.locked') : null}
@@ -720,7 +732,7 @@ export default function ChatsTab() {
                             : p?.text || (item.status === 'online' ? t('inTouch.hereNow') : t('inTouch.away'))
                       }
                       time={relativeTime((p?.at ?? new Date(item.since ?? item.first_met_at)).toISOString(), t)}
-                      unread={Boolean(p && p.unread > 0) && live}
+                      unread={rowUnread(p, c) && live}
                       unreadLabel={t('chatsList.newMessageA11y')}
                       lockedLabel={c?.is_locked ? t('chatsList.locked') : null}
                       accessibilityLabel={t('inTouch.rowA11y', { name: item.persona_name })}

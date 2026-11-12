@@ -259,6 +259,9 @@ export type ConversationListItem = {
   last_message_mine?: boolean;
   /** The member muted this chat (Quiet Pause). */
   is_paused?: boolean;
+  /** Mentor lines the member has not read yet, for an OWN chat. Null for a Stream chat (counted
+   * client-side) and absent on an older server. */
+  unread_count?: number | null;
 };
 
 export type ConversationState = {
