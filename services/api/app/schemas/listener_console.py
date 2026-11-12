@@ -100,6 +100,9 @@ class ListenerConversationItem(BaseModel):
     # mentor has not read. Counts and a time, never text.
     waiting_since: str | None = None
     unread: int = 0
+    # Own chats only: the latest message, cut to 120 characters (Stream rows are previewed
+    # client-side, so null). Null for a wiped chat.
+    last_message_preview: str | None = None
     # The MEMBER's growth companion in their colour (board A10 rows) — the same two
     # values the member brief carries. Never the companion's name (private, lane u7).
     user_companion_animal: str | None = None

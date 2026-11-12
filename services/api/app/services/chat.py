@@ -34,6 +34,7 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -44,8 +45,9 @@ from app.config import get_settings
 from app.jobs import tasks
 from app.models.chat_message import ChatMessage, ChatReadMarker
 from app.models.conversation import Conversation
-from app.models.enums import ConversationStatus, MemberStatus, VettingStatus
+from app.models.enums import ConversationStatus, MemberStatus, SafetySignal, VettingStatus
 from app.models.listener import ListenerProfile
+from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.services import (
     allowance,
@@ -379,6 +381,130 @@ def enqueue_after_send(
     except Exception as exc:  # noqa: BLE001 — best-effort by design
         db.rollback()
         logger.warning("jobs not queued after a message (%s)", type(exc).__name__)
+
+
+# ---- list previews (one query each, never N+1) ---------------------------------------------
+
+PREVIEW_CHARS = 120
+
+
+def preview_line(m: ChatMessage) -> str:
+    """One short line of a stored message, decrypted here and cut — never sent whole."""
+    line = " ".join(message_out(m)["text"].split())
+    return line[: PREVIEW_CHARS - 1] + "…" if len(line) > PREVIEW_CHARS else line
+
+
+def latest_messages(db: Session, conversation_ids: list[str]) -> dict[str, ChatMessage]:
+    """The newest stored message of each conversation, in ONE query (DISTINCT ON)."""
+    if not conversation_ids:
+        return {}
+    rows = db.scalars(
+        select(ChatMessage)
+        .where(ChatMessage.conversation_id.in_(conversation_ids))
+        .distinct(ChatMessage.conversation_id)
+        .order_by(ChatMessage.conversation_id, ChatMessage.seq.desc())
+    ).all()
+    return {m.conversation_id: m for m in rows}
+
+
+def unread_counts(
+    db: Session, reader_id: str, from_kind: str, conversation_ids: list[str]
+) -> dict[str, int]:
+    """Messages sent by `from_kind` after `reader_id`'s read marker, per conversation, in ONE
+    grouped query. Conversations with nothing unread are absent (read them as 0)."""
+    if not conversation_ids:
+        return {}
+    read = (
+        select(ChatReadMarker.last_read_seq)
+        .where(
+            ChatReadMarker.conversation_id == ChatMessage.conversation_id,
+            ChatReadMarker.reader_id == reader_id,
+        )
+        .scalar_subquery()
+    )
+    rows = db.execute(
+        select(ChatMessage.conversation_id, func.count())
+        .where(
+            ChatMessage.conversation_id.in_(conversation_ids),
+            ChatMessage.sender_kind == from_kind,
+            ChatMessage.seq > func.coalesce(read, 0),
+        )
+        .group_by(ChatMessage.conversation_id)
+    ).all()
+    return {cid: int(n) for cid, n in rows}
+
+
+# ---- crisis safety net (own chat) ---------------------------------------------------------
+#
+# `send()` writes the SafetyFlag BEFORE it stores the message, and a flag-write fault is
+# fail-open (the message still goes out with its helpline card, and its row keeps the
+# `crisis_signal`). On Stream, the async message.new webhook re-scans and retries that
+# write; own chat has no webhook, so this sweep is the retry: a stored message that
+# carries a crisis signal but has no SafetyFlag gets one, through the exact function
+# `send()` uses (`_record_crisis`: the flag, then the snooze end). Signal only, never text.
+
+# A message this young may still be mid-send in another worker; leave it to that send.
+RECONCILE_GRACE = timedelta(minutes=2)
+# Older rows are out of scope: the sweep runs every few minutes, so a day of lookback is
+# many retries, and the partitioned table is only scanned within this window.
+RECONCILE_LOOKBACK = timedelta(hours=24)
+RECONCILE_BATCH = 200
+
+
+def unreconciled_crisis_query(*, now: datetime, older_than: timedelta = RECONCILE_GRACE):
+    """Own messages with a crisis signal and no SafetyFlag (the dedupe key is the message id),
+    sent within the lookback window and older than `older_than`."""
+    flagged = select(SafetyFlag.id).where(SafetyFlag.stream_message_id == ChatMessage.id)
+    return select(
+        ChatMessage.id,
+        ChatMessage.conversation_id,
+        ChatMessage.sender_id,
+        ChatMessage.crisis_signal,
+    ).where(
+        ChatMessage.crisis_signal.is_not(None),
+        ChatMessage.created_at >= now - RECONCILE_LOOKBACK,
+        ChatMessage.created_at <= now - older_than,
+        ~flagged.exists(),
+    )
+
+
+def count_unreconciled_crisis(db: Session, *, now: datetime | None = None) -> int:
+    now = now or datetime.now(UTC)
+    q = unreconciled_crisis_query(now=now).subquery()
+    return int(db.execute(select(func.count()).select_from(q)).scalar_one())
+
+
+def reconcile_crisis_flags(
+    db: Session, *, now: datetime | None = None, limit: int = RECONCILE_BATCH
+) -> dict[str, int]:
+    """Write the SafetyFlag a fail-open send could not. Idempotent (the flag is deduped by
+    message id), bounded (`limit` per run, lookback window), and never touches text."""
+    now = now or datetime.now(UTC)
+    rows = db.execute(
+        unreconciled_crisis_query(now=now).order_by(ChatMessage.created_at).limit(limit)
+    ).all()
+    found = len(rows)
+    written = 0
+    for message_id, conversation_id, sender_id, signal in rows:
+        convo = db.get(Conversation, conversation_id)
+        if convo is None:  # wiped since: nothing left to flag against
+            continue
+        try:
+            result = CrisisResult(triggered=True, signal=SafetySignal(signal))
+        except ValueError:
+            logger.error("crisis reconcile: unknown signal on a stored message — skipped")
+            continue
+        _record_crisis(db, convo, result, sender_id=sender_id, message_id=message_id)
+        exists = db.execute(
+            select(SafetyFlag.id).where(SafetyFlag.stream_message_id == message_id)
+        ).first()
+        if exists:
+            written += 1
+    if found:
+        logger.warning(
+            "crisis reconcile: %d unflagged crisis message(s), %d flag(s) written", found, written
+        )
+    return {"found": found, "written": written}
 
 
 # ---- helpers ------------------------------------------------------------------------------

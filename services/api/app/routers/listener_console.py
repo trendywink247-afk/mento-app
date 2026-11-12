@@ -62,6 +62,7 @@ from app.services import (
     age_band,
     care_prompts,
     categories,
+    chat,
     chat_events,
     console_codes,
     conversations,
@@ -393,6 +394,14 @@ def my_conversations(
     ).all()
     linked = in_touch.listener_in_touch_user_ids(db, listener.id, {user.id for _c, user in rows})
     waiting = _own_waiting(db, listener.id, [c for c, _u in rows])
+    latest = chat.latest_messages(
+        db,
+        [
+            c.id
+            for c, _u in rows
+            if c.chat_backend == "own" and c.status != ConversationStatus.wiped
+        ],
+    )
     return [
         ListenerConversationItem(
             id=convo.id,
@@ -408,6 +417,9 @@ def my_conversations(
             snoozed_until=snooze.snoozed_until_iso(convo, now),
             user_companion_animal=user.companion_animal,
             user_companion_colour=user.companion_colour,
+            last_message_preview=(
+                chat.preview_line(latest[convo.id]) if convo.id in latest else None
+            ),
             **waiting.get(convo.id, {}),
         )
         for convo, user in rows

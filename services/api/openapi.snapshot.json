@@ -1538,6 +1538,17 @@
               }
             ],
             "title": "Stream Channel Id"
+          },
+          "unread_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unread Count"
           }
         },
         "required": [
@@ -3230,6 +3241,17 @@
             "default": false,
             "title": "In Touch",
             "type": "boolean"
+          },
+          "last_message_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message Preview"
           },
           "member_masked": {
             "title": "Member Masked",

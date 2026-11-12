@@ -116,6 +116,34 @@ def maintenance_capacity(timestamp: int) -> dict[str, int]:
     return result
 
 
+# --- own-chat crisis safety net ------------------------------------------------------
+
+# Redis stamp of the last completed sweep, read by /health/crisis (best-effort; the health
+# check also counts unflagged crisis messages straight from the database).
+CRISIS_RECONCILE_STAMP = "mento:own_crisis_reconcile_at"
+
+
+# Every 5 minutes: an own-chat message that carries a crisis signal but whose SafetyFlag
+# write failed (send() is fail-open) gets its flag now — the role Stream's message.new
+# webhook plays for Stream rooms. Signal only; never the text.
+@queue.periodic(cron="*/5 * * * *", periodic_id="crisis-reconcile")
+@queue.task(name="maintenance.crisis_reconcile", queue="maintenance", queueing_lock="maint-crisis")
+def maintenance_crisis_reconcile(timestamp: int) -> dict[str, int]:
+    from datetime import UTC, datetime
+
+    from app.services import chat
+
+    with SessionLocal() as db:
+        result = chat.reconcile_crisis_flags(db)
+    try:
+        from app import ratelimit
+
+        ratelimit._redis().set(CRISIS_RECONCILE_STAMP, datetime.now(UTC).isoformat(), ex=86400)
+    except Exception as exc:  # noqa: BLE001 — the stamp is a liveness hint, not the result
+        logger.warning("crisis reconcile: stamp not written (%s)", type(exc).__name__)
+    return result
+
+
 # --- unanswered requests (DECISIONS section P.5) -------------------------------------
 
 
