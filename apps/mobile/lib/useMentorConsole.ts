@@ -20,6 +20,7 @@ import {
 import { mentorFaces } from '@/lib/mentorFaces';
 import { ensureListenerConnected } from '@/lib/listenerStreamClient';
 import { streamRooms } from '@/lib/ownLive';
+import { createEventFetch, type EventFetch } from '@/lib/eventFetch';
 import { FALLBACK_REFRESH_MS, useLiveEvent, useLiveStatus } from '@/lib/liveEvents';
 
 export type ChannelLive = {
@@ -95,6 +96,20 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
   // to touch either. Bumped by refresh() itself and by the focus-effect cleanup.
   const seq = useRef(0);
 
+  // Pushed events for each list settle into one fetch, skipped when a read began after the
+  // event (lib/eventFetch.ts). Created once; the fetch bodies are wired below.
+  const fetchers = useRef<{ requests: EventFetch; conversations: EventFetch } | null>(null);
+  const fetchBodies = useRef<{ requests: () => void; conversations: () => void }>({
+    requests: () => undefined,
+    conversations: () => undefined,
+  });
+  if (!fetchers.current) {
+    fetchers.current = {
+      requests: createEventFetch(() => fetchBodies.current.requests()),
+      conversations: createEventFetch(() => fetchBodies.current.conversations()),
+    };
+  }
+
   const refresh = useCallback(async () => {
     const mySeq = ++seq.current;
     const live = () => seq.current === mySeq;
@@ -103,6 +118,8 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
     try {
       const meData = await listenerApi.me();
       if (!live()) return;
+      fetchers.current?.requests.started();
+      fetchers.current?.conversations.started();
       const [reqs, convos] = await Promise.all([
         listenerApi.requests(),
         listenerApi.conversations(),
@@ -228,6 +245,7 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
   // `focused` keeps a late answer from landing on a screen that has gone.
   const focused = useRef(false);
   const fetchRequests = useCallback(() => {
+    fetchers.current?.requests.started();
     void listenerApi
       .requests()
       .then((r) => {
@@ -239,6 +257,7 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
   }, []);
   // Own chats have no Stream mirror: who is waiting and what is unread arrives with the rows.
   const fetchConversations = useCallback(() => {
+    fetchers.current?.conversations.started();
     void listenerApi
       .conversations()
       .then((rows) => {
@@ -255,9 +274,10 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
     if (event.t === 'resync') {
       if (Date.now() - focusedAt.current < 3_000) return;
       void refresh();
-    } else if (event.t === 'conversation.changed') fetchConversations();
-    else fetchRequests();
+    } else if (event.t === 'conversation.changed') fetchers.current?.conversations.onEvent();
+    else fetchers.current?.requests.onEvent();
   });
+  fetchBodies.current = { requests: fetchRequests, conversations: fetchConversations };
   const status = useLiveStatus('listener');
 
   useFocusEffect(
@@ -267,6 +287,8 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
       void refresh();
       return () => {
         focused.current = false;
+        fetchers.current?.requests.cancel();
+        fetchers.current?.conversations.cancel();
         // Invalidate any in-flight refresh() first so it bails out of its own
         // setStates/subscribes and unsubscribes only the subs IT created.
         seq.current += 1;

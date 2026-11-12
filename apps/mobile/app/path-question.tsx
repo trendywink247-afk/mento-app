@@ -194,6 +194,8 @@ export default function PathQuestion() {
         openAsked(router, started.request);
         return;
       }
+      // The builder already holds the member's own question, so no box: never 'cancelled' here.
+      if (started.kind === 'cancelled') return;
       const match = started.match;
       // replace: the builder has done its job — back from the chat should not return
       // to a half-used form holding a message that may already be sent.

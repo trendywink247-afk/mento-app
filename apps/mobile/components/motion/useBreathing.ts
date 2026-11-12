@@ -1,7 +1,12 @@
 /**
- * useBreathing — a slow ±1.5% scale loop at a calm breathing tempo (theme/motion
- * breathe tokens). Returns an animated style for an Animated.View. The loop is
- * cancelled (and scale settles back to 1) when disabled or under reduced motion.
+ * useBreathing — a slow ±1.5% scale at a calm breathing tempo (theme/motion breathe
+ * tokens). Returns an animated style for an Animated.View.
+ *
+ * It breathes a few times and then rests (scale 1), instead of looping forever. An
+ * endless loop runs a frame callback on the UI thread for as long as the screen is open,
+ * keeps the view tree "busy" (no idle state, so the device never settles), and costs
+ * battery on screens people leave open for an hour, like a chat. `restartKey` breathes
+ * again on a real change (a new pose, a new arrival). Off under reduced motion.
  */
 import { useEffect } from 'react';
 import {
@@ -15,7 +20,13 @@ import {
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
 
-export function useBreathing(enabled = true) {
+/** Breaths before the art rests. Each breath is an inhale and an exhale. */
+export const BREATHS_BEFORE_REST = 3;
+
+/** Number of half-cycles for `n` breaths. Even, so the reversing repeat ends back at rest. */
+export const breathHalves = (n: number): number => Math.max(0, Math.floor(n)) * 2;
+
+export function useBreathing(enabled = true, restartKey: unknown = null) {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
 
@@ -25,13 +36,14 @@ export function useBreathing(enabled = true) {
       scale.value = withTiming(1, { duration: 150 });
       return;
     }
+    scale.value = 1;
     scale.value = withRepeat(
       withTiming(1 + breathe.scale, { duration: breathe.period / 2, easing: easing.breathe }),
-      -1,
+      breathHalves(BREATHS_BEFORE_REST),
       true
     );
     return () => cancelAnimation(scale);
-  }, [enabled, reduced, scale]);
+  }, [enabled, reduced, scale, restartKey]);
 
   return useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 }

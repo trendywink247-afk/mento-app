@@ -7,8 +7,10 @@
  * is which — the app never guesses from the member's road, so an old cached Path cannot send
  * the wrong call, and a build from before this rule still gets a clean answer.
  *
- * The intro is the member's own words when they fit the server's 160 characters; otherwise the
- * server's plain line is used. Nothing is cut mid-sentence on the member's behalf.
+ * The intro is the member's own words when they fit the server's 160 characters. A door with no
+ * words of its own passes `askFor`, which shows the member an editable box (prefilled with the
+ * plain line) before anything is sent; only a caller without it falls back to the server's line.
+ * Nothing is cut mid-sentence on the member's behalf.
  */
 import type { useRouter } from 'expo-router';
 
@@ -19,7 +21,13 @@ export const ASK_INTRO_MAX = 160;
 
 export type Started =
   | { kind: 'chat'; match: MatchResult }
-  | { kind: 'ask'; request: PersonalRequest };
+  | { kind: 'ask'; request: PersonalRequest }
+  /** The member closed the "what would you like to talk about?" box: nothing was sent. */
+  | { kind: 'cancelled' };
+
+/** Asks the member for their own words before an ask goes out (components/AskIntroBox).
+ * Resolves the text to send, or null when they cancel. */
+export type AskForIntro = () => Promise<string | null>;
 
 export const acceptRequired = (e: unknown): boolean =>
   e instanceof ApiError && e.status === 409 && e.code === 'accept_required';
@@ -35,6 +43,7 @@ export async function matchOrAsk(
   body: { issue_category?: string | null; audience?: Audience },
   intro?: string | null,
   client: Client = api,
+  askFor?: AskForIntro,
 ): Promise<Started> {
   // The audience matters only to an ask; the instant match has no such choice.
   const { audience, ...matchBody } = body;
@@ -42,9 +51,17 @@ export async function matchOrAsk(
     return { kind: 'chat', match: await client.match({ kind: 'general', ...matchBody }) };
   } catch (e) {
     if (!acceptRequired(e)) throw e;
+    // An ask is a question in the member's own words: when the door has none yet, the member
+    // writes (or keeps) it now. Life in general never reaches here, so it never sees the box.
+    let words = intro;
+    if (askIntro(words) === null && askFor) {
+      const written = await askFor();
+      if (written === null) return { kind: 'cancelled' };
+      words = written;
+    }
     return {
       kind: 'ask',
-      request: await client.ask({ issue_category: body.issue_category ?? null, intro_message: askIntro(intro), audience: audience ?? 'any' }),
+      request: await client.ask({ issue_category: body.issue_category ?? null, intro_message: askIntro(words), audience: audience ?? 'any' }),
     };
   }
 }

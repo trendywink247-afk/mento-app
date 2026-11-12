@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
 import { withAppVersion } from './appVersion';
+import { createCoalescer } from './getCoalescer';
 import { getInstallId } from './installId';
 import { screenCache } from './screenCache';
 import {
@@ -316,14 +317,35 @@ function timeoutSignal(ms: number): { signal: AbortSignal; cancel: () => void } 
 
 /** Core request with a pluggable token source — the user client below binds it to
  * the user session; lib/listenerApi.ts binds it to the listener-console token. */
+// Same GET for the same session while one is on the wire: one request (lib/getCoalescer.ts).
+const gets = createCoalescer();
+
+/** Forget remembered reads (a write, a sign-in, Start Fresh). Writes through apiRequest do it. */
+export const forgetRemembered = (): void => gets.invalidate();
+
 export async function apiRequest<T>(
   path: string,
   init: RequestInit = {},
   getToken?: () => Promise<string | null>,
 ): Promise<T> {
-  const res = await apiFetch(path, init, getToken);
-  if (res.status === 204) return undefined as T; // bodyless success (e.g. leave path)
-  return (await res.json()) as T;
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (method === 'GET' && init.body == null) {
+    const token = getToken ? await getToken() : null;
+    const once = async () => token;
+    return gets.get<T>(`${token ?? ''} ${path}`, path, async () => {
+      const res = await apiFetch(path, init, getToken ? once : undefined);
+      if (res.status === 204) return undefined as T;
+      return (await res.json()) as T;
+    });
+  }
+  try {
+    const res = await apiFetch(path, init, getToken);
+    if (res.status === 204) return undefined as T; // bodyless success (e.g. leave path)
+    return (await res.json()) as T;
+  } finally {
+    // Any write (even a refused one) may have changed what a remembered read would say.
+    gets.invalidate();
+  }
 }
 
 /** One page of a paged list endpoint (API T2.3): the body is still a plain list, and

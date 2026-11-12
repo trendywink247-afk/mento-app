@@ -230,7 +230,8 @@ function Perched({
     opacity.value = reduced ? 1 : withTiming(1, { duration: duration.fast, easing: easing.enter });
   }, [reduced, opacity]);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  const breathStyle = useBreathing(true); // off under reduced motion, inside the hook
+  // A few breaths on arrival or a new pose, then rest: no endless loop on screens that stay open.
+  const breathStyle = useBreathing(true, `${id}/${poseName}`); // off under reduced motion, inside the hook
 
   const body = (
     <Animated.View style={fadeStyle}>
