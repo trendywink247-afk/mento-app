@@ -118,14 +118,54 @@ def _crisis_status() -> dict:
     public page reports the same signal without duplicating the staleness logic.
 
     The Stream verdict is computed exactly as before; the own-chat verdict is added as
-    `own_chat` and can only turn an otherwise-ok answer into `degraded`."""
+    `own_chat` and can only turn an otherwise-ok answer into `degraded`. One exception: a
+    `stale` Stream verdict is waived when Stream carries nothing (_stream_in_use), and then
+    the own-chat verdict decides (`ok`, `degraded`, or `unknown` if its check failed)."""
     result = _stream_crisis_status()
     own = _own_chat_crisis()
+    if result["status"] == "stale" and not _stream_in_use():
+        # Webhook silence is only a symptom while Stream can still carry a message. With own
+        # chat the default and no active Stream conversation, nothing should arrive, so the
+        # own-chat half decides. Only `stale` is waived: an unreachable or corrupt stamp
+        # (`unknown`, `degraded`) still alerts exactly as before.
+        own_status = own.get("status")
+        result = {
+            "status": own_status if own_status in ("ok", "degraded") else "unknown",
+            "stream": "not_in_use",
+            "stream_detail": result.get("detail"),
+            "last_webhook_at": result.get("last_webhook_at"),
+        }
+        if result["status"] == "unknown":
+            result["detail"] = "own-chat crisis check failed and Stream carries no conversations"
     result["own_chat"] = own
     if result["status"] == "ok" and own.get("status") == "degraded":
         result["status"] = "degraded"
         result["detail"] = "own-chat crisis flags missing for over 15 min (reconcile sweep failing)"
     return result
+
+
+def _stream_in_use() -> bool:
+    """True while Stream can still carry a member's message: own chat is not the default for
+    new conversations, or at least one active conversation still runs on Stream. Any doubt
+    (a failed query) counts as in use, so the old staleness alarm is never silenced by error."""
+    from app.config import get_settings
+
+    if not get_settings().own_chat_new_conversations:
+        return True
+    try:
+        with SessionLocal() as db:
+            active_stream = db.execute(
+                select(Conversation.id)
+                .where(
+                    Conversation.chat_backend == "stream",
+                    Conversation.status == ConversationStatus.active,
+                )
+                .limit(1)
+            ).first()
+        return active_stream is not None
+    except Exception as exc:  # noqa: BLE001 — a probe reports, it never raises
+        logger.warning("crisis-health: stream-in-use check failed (%s)", type(exc).__name__)
+        return True
 
 
 def _stream_crisis_status() -> dict:

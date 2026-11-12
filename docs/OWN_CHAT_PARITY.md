@@ -12,6 +12,7 @@ How the backend is chosen today: `Conversation.chat_backend`, set at match time 
 | Crisis scan on every message, either side | `services/chat.py` stage 2, before storing | Done |
 | Crisis flag retry when the flag write fails (Stream: message.new webhook) | `maintenance.crisis_reconcile`, every 5 min, signal only | **Added 2026-11-12** |
 | Crisis health signal (Stream: webhook freshness) | `/health/crisis` → `own_chat.unflagged_backlog` (yes/no, never a count); `degraded` after 15 min | **Added 2026-11-12** |
+| Stream webhook silence when Stream carries nothing | With own chat the default and no active Stream conversation, a `stale` Stream verdict is waived (`stream: not_in_use`) and the own-chat half decides. Any active Stream conversation, or a failed check, keeps the old alarm; an unreachable or corrupt stamp is never waived | **Added 2026-11-12** |
 | Mentor reply ends their snooze | `snooze.end_on_mentor_reply` matched only Stream ids | **Fixed 2026-11-12** (bug) |
 | Allowance holds, redaction, Clean Wipe, report/block/suspend, push | Write path + `check_standing` | Done |
 | Member list unread count | `unread_count` on `GET /conversations` (null for Stream, locked, wiped) | **Added 2026-11-12** |
