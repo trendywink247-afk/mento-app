@@ -79,9 +79,56 @@ def ready(response: Response) -> dict:
     }
 
 
+# Own chat (no webhook): a crisis message whose SafetyFlag is still missing this long after it
+# was sent means the 5-minute reconcile sweep has failed at least twice. Page on that.
+OWN_BACKLOG_AFTER = timedelta(minutes=15)
+
+
+def _own_chat_crisis() -> dict:
+    """Own-chat half of the crisis probe. Never a count (T&S: crisis data never feeds a
+    dashboard, and this endpoint is unauthenticated): only whether unflagged crisis messages
+    are waiting past OWN_BACKLOG_AFTER, and when the reconcile sweep last finished."""
+    from app.services import chat
+
+    out: dict = {"last_reconcile_at": None}
+    try:
+        from app import ratelimit
+        from app.jobs.tasks import CRISIS_RECONCILE_STAMP
+
+        out["last_reconcile_at"] = ratelimit._redis().get(CRISIS_RECONCILE_STAMP)
+    except Exception as exc:  # noqa: BLE001 — a probe reports, it never raises
+        logger.warning("crisis-health: reconcile stamp unreadable (%s)", type(exc).__name__)
+    try:
+        with SessionLocal() as db:
+            backlog = db.execute(
+                chat.unreconciled_crisis_query(
+                    now=datetime.now(UTC), older_than=OWN_BACKLOG_AFTER
+                ).limit(1)
+            ).first()
+        out["status"] = "degraded" if backlog else "ok"
+        out["unflagged_backlog"] = backlog is not None
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("crisis-health: own-chat check failed (%s)", type(exc).__name__)
+        out["status"] = "unknown"
+    return out
+
+
 def _crisis_status() -> dict:
     """Pure computation behind /health/crisis, reused by /status/public so the
-    public page reports the same signal without duplicating the staleness logic."""
+    public page reports the same signal without duplicating the staleness logic.
+
+    The Stream verdict is computed exactly as before; the own-chat verdict is added as
+    `own_chat` and can only turn an otherwise-ok answer into `degraded`."""
+    result = _stream_crisis_status()
+    own = _own_chat_crisis()
+    result["own_chat"] = own
+    if result["status"] == "ok" and own.get("status") == "degraded":
+        result["status"] = "degraded"
+        result["detail"] = "own-chat crisis flags missing for over 15 min (reconcile sweep failing)"
+    return result
+
+
+def _stream_crisis_status() -> dict:
     if not stream.is_configured():
         return {"status": "ok", "note": "stream not configured (stub mode) — no webhooks expected"}
 

@@ -63,6 +63,9 @@ class ConversationListItem(BaseModel):
     last_message: str | None = None
     last_message_at: str | None = None
     last_message_mine: bool = False
+    # Own chats only: messages from the mentor after the member's read marker (Stream rows are
+    # counted client-side, so null). Null too for a PIN-locked or wiped chat, like the preview.
+    unread_count: int | None = None
 
 
 class VerifyPinRequest(BaseModel):

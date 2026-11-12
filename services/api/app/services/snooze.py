@@ -25,7 +25,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import update
+from sqlalchemy import and_, or_, update
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -89,11 +89,22 @@ def end_on_mentor_reply(db: Session, channel_id: str, sender_id: str) -> bool:
     """The mentor wrote in a snoozed chat, so nothing is waiting on them — drop the
     snooze and the member's "will reply within a day" line with it. Runs as the
     `snooze.end_on_mentor_reply` job (WS4), retried by the queue; commits. Idempotent:
-    a second run finds no snooze. Returns True when a snooze was ended."""
+    a second run finds no snooze. Returns True when a snooze was ended.
+
+    `channel_id` is `chat.channel_key`: the Stream channel id for a Stream room, or the
+    conversation's own id for an own-chat room (whose `stream_channel_id` is NULL) — the
+    same pair `allowance.find_conversation` and `push.notify_message_for_channel` match."""
     result = db.execute(
         update(Conversation)
         .where(
-            Conversation.stream_channel_id == channel_id,
+            or_(
+                Conversation.stream_channel_id == channel_id,
+                and_(
+                    Conversation.chat_backend == "own",
+                    Conversation.stream_channel_id.is_(None),
+                    Conversation.id == channel_id,
+                ),
+            ),
             Conversation.listener_id == sender_id,
             Conversation.snoozed_until.is_not(None),
         )
