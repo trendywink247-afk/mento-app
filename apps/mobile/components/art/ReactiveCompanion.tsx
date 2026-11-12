@@ -16,7 +16,7 @@
  * The panda additionally keeps its bespoke layered rig (blink + waving arm) inside
  * the same wrapper. All loops/states collapse under reduced motion.
  */
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Pressable } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -31,6 +31,7 @@ import Animated, {
 import { haptic } from '@/lib/haptics';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { character, easing } from '@/theme/motion';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 export type CompanionTrigger = {
   kind: 'greet' | 'celebrate' | 'comfort' | 'curious' | 'joy';
@@ -74,8 +75,11 @@ export function ReactiveCompanion({
 
   // Idle micro-sway, phase-offset from the breathing the host applies — two
   // incommensurate periods keep the idle from ever reading as a mechanical loop.
+  // Bounded (lib/motionBudget): a few sways after mount / a trigger / a tap, then still.
+  const [taps, setTaps] = useState(0);
+  const swayBudget = useMotionBudget(`${trigger ? `${trigger.kind}:${trigger.n}` : '-'}:${taps}`);
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !swayBudget.live) {
       cancelAnimation(sway);
       sway.value = withTiming(0, { duration: 150 });
       droop.value = 0;
@@ -92,11 +96,11 @@ export function ReactiveCompanion({
     });
     sway.value = withRepeat(
       withTiming(amplitude, { duration: period / 2, easing: easing.breathe }),
-      -1,
+      budgetRepeats(period / 2, true),
       true
     );
     return () => cancelAnimation(sway);
-  }, [reduced, sway, droop]);
+  }, [reduced, sway, droop, swayBudget.live, swayBudget.run]);
 
   // Triggered states.
   useEffect(() => {
@@ -193,6 +197,7 @@ export function ReactiveCompanion({
 
   const tapReact = () => {
     haptic.tick();
+    setTaps((n) => n + 1); // a touch wakes the idle sway for another bounded run
     if (!reduced) {
       const sx = 1 + (1 - character.tap.squish) * character.squashK;
       scaleY.value = withSequence(

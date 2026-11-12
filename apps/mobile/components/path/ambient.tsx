@@ -24,6 +24,7 @@ import { hexToRgba01, mixRgba } from '@/components/motion/color';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { drift, duration, easing, stage as stageMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 /** The accent taken most of the way to white — the face of a CHOSEN route row (board A26:
  * paler than `accentTint`, which is kept for the chosen moment). Derived, never a raw hex. */
@@ -42,19 +43,20 @@ export function StageSheen() {
   const p = useSharedValue(0);
   // reason: SVG gradient ids are document-global on web.
   const id = `stage-sheen-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(p);
       p.value = 0;
       return;
     }
     p.value = withDelay(
       duration.slow + duration.gentle,
-      withRepeat(withTiming(1, { duration: stageMotion.sheen, easing: Easing.inOut(Easing.quad) }), -1, false),
+      withRepeat(withTiming(1, { duration: stageMotion.sheen, easing: Easing.inOut(Easing.quad) }), budgetRepeats(stageMotion.sheen, false), false),
     );
     return () => cancelAnimation(p);
-  }, [reduced, p]);
+  }, [reduced, p, budget.live, budget.run]);
 
   const style = useAnimatedStyle(() => ({
     opacity: interpolate(p.value, [0, 0.58, 0.68, 0.86, 1], [0, 0, 0.75, 0, 0]),
@@ -89,16 +91,17 @@ export function SkyBlob() {
   const { colors } = useTheme();
   const p = useSharedValue(0);
   const id = `sky-blob-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(p);
       p.value = 0;
       return;
     }
-    p.value = withRepeat(withTiming(1, { duration: drift.period, easing: easing.breathe }), -1, true);
+    p.value = withRepeat(withTiming(1, { duration: drift.period, easing: easing.breathe }), budgetRepeats(drift.period, true), true);
     return () => cancelAnimation(p);
-  }, [reduced, p]);
+  }, [reduced, p, budget.live, budget.run]);
 
   const style = useAnimatedStyle(() => ({
     transform: [{ translateX: -46 * p.value }, { translateY: 30 * p.value }, { scale: 1 + 0.1 * p.value }],

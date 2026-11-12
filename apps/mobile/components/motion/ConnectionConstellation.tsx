@@ -30,6 +30,7 @@ import Animated, {
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 const ORB = 26;
 const TRAVEL = 96; // how far each orb glides from its rest position to the meeting point
@@ -55,11 +56,13 @@ export function ConnectionConstellation({
   const bloom = useSharedValue(0); // found ring: scales up + fades
   const dim = useSharedValue(1);
   const ring = useSharedValue(1); // breathe ring scale
+  // Searching pulses run a bounded run (lib/motionBudget); everything rests off-screen.
+  const budget = useMotionBudget(state);
 
   // --- searching: creep + alternate pulses -------------------------------------
   useEffect(() => {
     if (state !== 'searching') return;
-    if (reduced) {
+    if (reduced || !budget.live) {
       approach.value = 0.5;
       thread.value = 0.6;
       return;
@@ -75,14 +78,14 @@ export function ConnectionConstellation({
         withTiming(1, { duration: breathe.period / 4, easing: easing.breathe }),
         withDelay(breathe.period / 2, withTiming(1, { duration: 0 }))
       ),
-      -1
+      budgetRepeats(breathe.period, false)
     );
     listenerPulse.value = withRepeat(
       withSequence(
         withDelay(breathe.period / 2, withTiming(1.12, { duration: breathe.period / 4, easing: easing.breathe })),
         withTiming(1, { duration: breathe.period / 4, easing: easing.breathe })
       ),
-      -1
+      budgetRepeats(breathe.period, false)
     );
     return () => {
       cancelAnimation(memberPulse);
@@ -90,7 +93,7 @@ export function ConnectionConstellation({
       memberPulse.value = 1;
       listenerPulse.value = 1;
     };
-  }, [state, reduced, approach, thread, memberPulse, listenerPulse]);
+  }, [state, reduced, approach, thread, memberPulse, listenerPulse, budget.live, budget.run]);
 
   // --- found: meet + bloom -------------------------------------------------------
   useEffect(() => {
@@ -127,11 +130,13 @@ export function ConnectionConstellation({
 
   // --- breathe ring ----------------------------------------------------------------
   useEffect(() => {
-    if (!breatheActive || reduced || state !== 'searching') {
+    if (!breatheActive || reduced || state !== 'searching' || !budget.live) {
       cancelAnimation(ring);
       ring.value = withTiming(1, { duration: duration.fast });
       return;
     }
+    // motion-budget-allow: a guided breathing ring the member chose to follow; it runs while
+    // they keep it on (breatheActive) and the screen is in front, never off-screen.
     ring.value = withRepeat(
       withSequence(
         withTiming(1.55, { duration: breathe.period / 2, easing: easing.breathe }),
@@ -140,7 +145,7 @@ export function ConnectionConstellation({
       -1
     );
     return () => cancelAnimation(ring);
-  }, [breatheActive, reduced, state, ring]);
+  }, [breatheActive, reduced, state, ring, budget.live]);
 
   const hostStyle = useAnimatedStyle(() => ({ opacity: dim.value }));
   const memberStyle = useAnimatedStyle(() => ({

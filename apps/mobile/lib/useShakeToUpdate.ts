@@ -7,7 +7,7 @@
 import { Accelerometer } from 'expo-sensors';
 import * as Updates from 'expo-updates';
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { haptic } from './haptics';
 import { checkAndApplyUpdate } from './updates';
@@ -25,7 +25,19 @@ export function useShakeToUpdate(): void {
     let lastFired = 0;
 
     Accelerometer.setUpdateInterval(200);
-    const sub = Accelerometer.addListener(({ x, y, z }) => {
+    let sub: { remove: () => void } | null = null;
+    const listen = () => {
+      if (sub) return;
+      sub = Accelerometer.addListener(onSample);
+    };
+    const stop = () => {
+      sub?.remove();
+      sub = null;
+    };
+    // The sensor runs only while the app is in front: in the background nobody can shake-to-update,
+    // and a 5 Hz sensor stream there is pure battery (lib/motionBudget's rule 2).
+    const appSub = AppState.addEventListener('change', (state) => (state === 'active' ? listen() : stop()));
+    function onSample({ x, y, z }: { x: number; y: number; z: number }) {
       const delta = Math.abs(x - last.x) + Math.abs(y - last.y) + Math.abs(z - last.z);
       last = { x, y, z };
       const now = Date.now();
@@ -37,8 +49,12 @@ export function useShakeToUpdate(): void {
           checking.current = false;
         });
       }
-    });
+    }
+    if (AppState.currentState === 'active') listen();
 
-    return () => sub.remove();
+    return () => {
+      appSub.remove();
+      stop();
+    };
   }, []);
 }

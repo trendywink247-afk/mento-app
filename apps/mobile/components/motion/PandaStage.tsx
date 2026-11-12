@@ -26,6 +26,7 @@ import { useBreathing } from '@/components/motion/useBreathing';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 export type StageStep =
   | 'role'
@@ -162,20 +163,21 @@ export function PandaStage({
     setRigTrigger((t) => ({ kind: 'celebrate', n: (t?.n ?? 0) + 1 }));
   }, [celebrate, reduced]);
 
-  // Gentle "waiting with you" sway on connecting.
+  // Gentle "waiting with you" sway on connecting — a bounded run (lib/motionBudget), then still.
+  const swayBudget = useMotionBudget(step);
   useEffect(() => {
-    if (step !== 'connecting' || reduced) {
+    if (step !== 'connecting' || reduced || !swayBudget.live) {
       cancelAnimation(sway);
       sway.value = withTiming(0, { duration: 200 });
       return;
     }
     sway.value = withRepeat(
       withTiming(3, { duration: breathe.period * 0.75, easing: easing.breathe }),
-      -1,
+      budgetRepeats(breathe.period * 0.75, true),
       true
     );
     return () => cancelAnimation(sway);
-  }, [step, reduced, sway]);
+  }, [step, reduced, sway, swayBudget.live, swayBudget.run]);
 
   const stageStyle = useAnimatedStyle(() => ({
     opacity: opacity.value * swap.value,

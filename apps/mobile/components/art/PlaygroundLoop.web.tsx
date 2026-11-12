@@ -14,6 +14,8 @@ import { Asset } from 'expo-asset';
 import { useFocusEffect } from 'expo-router';
 import { createElement, useCallback, useRef } from 'react';
 
+import { LOOP_CYCLES } from '@/lib/motionBudget';
+
 const URI = Asset.fromModule(require('@/assets/scenes/playground-loop.mp4')).uri;
 
 const STYLE = {
@@ -28,10 +30,12 @@ const STYLE = {
 
 export function PlaygroundLoop({ onPlaying }: { onPlaying: () => void }) {
   const ref = useRef<HTMLVideoElement | null>(null);
+  const plays = useRef(0);
 
   useFocusEffect(
     useCallback(() => {
       // Autoplay can be refused (data saver, a browser policy): the still simply stays.
+      plays.current = 0;
       void ref.current?.play().catch(() => undefined);
       return () => ref.current?.pause();
     }, [])
@@ -41,8 +45,16 @@ export function PlaygroundLoop({ onPlaying }: { onPlaying: () => void }) {
     ref,
     src: URI,
     muted: true,
-    loop: true,
+    // Bounded (lib/motionBudget): a few plays, then it rests on its last frame.
+    loop: false,
     autoPlay: true,
+    onEnded: (e: { currentTarget: HTMLVideoElement }) => {
+      plays.current += 1;
+      if (plays.current < LOOP_CYCLES) {
+        e.currentTarget.currentTime = 0;
+        void e.currentTarget.play().catch(() => undefined);
+      }
+    },
     playsInline: true,
     controls: false,
     disablePictureInPicture: true,

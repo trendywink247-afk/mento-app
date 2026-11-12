@@ -18,23 +18,27 @@ import Animated, {
 
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { dots } from '@/theme/motion';
+import { useMotionBudget } from '@/lib/motionBudget';
 
 function Dot({ index, color, size }: { index: number; color: string; size: number }) {
   const reduced = useReducedMotion();
   const p = useSharedValue(0);
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(p);
       p.value = 0;
       return;
     }
     p.value = withDelay(
       index * dots.typing.stagger,
+      // motion-budget-allow: typing dots are mounted only while the other person is typing
+      // (a live state that ends on its own); off-screen or backgrounded they stop.
       withRepeat(withTiming(1, { duration: dots.typing.period, easing: Easing.linear }), -1, false)
     );
     return () => cancelAnimation(p);
-  }, [reduced, index, p]);
+  }, [reduced, index, p, budget.live]);
 
   // Board keyframes: rest → up at 30% → rest by 60%, then a pause.
   const style = useAnimatedStyle(() => ({

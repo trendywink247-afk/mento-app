@@ -4,7 +4,6 @@ import { Image, Platform, StyleSheet, Text, View } from 'react-native';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import LottieView from 'lottie-react-native';
 
 import { SCENES } from '@/assets/scenes';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -24,6 +23,7 @@ import { getRole, getSessionToken } from '@/lib/session';
 import { useTheme } from '@/theme/ThemeProvider';
 import { duration, easing, forkArrival } from '@/theme/motion';
 import { radius, space, type } from '@/theme/tokens';
+import { BoundedLottie } from '@/components/art/BoundedLottie';
 
 /** Board A01 metrics (390×844). */
 const TOP_PAD = 44;
@@ -224,10 +224,8 @@ export default function Landing() {
               ) : (
                 // Theme-remapped free Lottie (assets/lottie/README.md) — two people in
                 // conversation, alive, in Mento's own palette.
-                <LottieView
+                <BoundedLottie
                   source={require('@/assets/lottie/study-discussion.json')}
-                  autoPlay
-                  loop
                   style={styles.lottieFill}
                   // reason: on web LottieView ignores `style` and sizes from
                   // webStyle (DotLottieReact) — both are needed for one layout.

@@ -38,6 +38,7 @@ import { type CompanionAnimal } from '@/components/art/Companions';
 import { ReactiveCompanion, isSleepyHour, type CompanionTrigger } from '@/components/art/ReactiveCompanion';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { character, duration, easing } from '@/theme/motion';
+import { BoundedLottie } from '@/components/art/BoundedLottie';
 
 export type { CompanionTrigger, CompanionPose };
 
@@ -190,12 +191,11 @@ export function Companion({
   const hasGenerated = Boolean(set.poses.idle);
 
   const art = lottieSource ? (
-    <LottieView
-      source={lottieSource}
-      autoPlay={!reduced}
-      loop={!reduced}
-      style={{ width: size, height: size }}
-    />
+    reduced ? (
+      <LottieView source={lottieSource} autoPlay={false} loop={false} style={{ width: size, height: size }} />
+    ) : (
+      <BoundedLottie source={lottieSource} restartKey={artKey} style={{ width: size, height: size }} />
+    )
   ) : hasGenerated ? (
     <View
       style={{

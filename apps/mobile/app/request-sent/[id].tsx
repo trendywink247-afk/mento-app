@@ -65,6 +65,7 @@ import { useSessionGuard } from '@/lib/useSessionGuard';
 import { letter as motionLetter } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 /** How long a question may wait before the letter offers another mentor (the member decides). */
 const SLOW_AFTER_MS = 120_000;
@@ -487,18 +488,19 @@ function Scene({
 
   // The envelope's crossing (board `fly`): one pass per period, then a rest at the far end.
   const fly = useSharedValue(0);
+  const flyBudget = useMotionBudget();
   useEffect(() => {
-    if (still) {
+    if (still || !flyBudget.live) {
       cancelAnimation(fly);
       fly.value = 0;
       return;
     }
     fly.value = withDelay(
       motionLetter.fly.delay,
-      withRepeat(withTiming(1, { duration: motionLetter.fly.period, easing: Easing.linear }), -1, false),
+      withRepeat(withTiming(1, { duration: motionLetter.fly.period, easing: Easing.linear }), budgetRepeats(motionLetter.fly.period, false), false),
     );
     return () => cancelAnimation(fly);
-  }, [still, fly]);
+  }, [still, fly, flyBudget.live, flyBudget.run]);
 
   const envelopeStyle = useAnimatedStyle(() => {
     if (still) {
@@ -595,18 +597,19 @@ function Scene({
 function Ripple({ still, delay }: { still: boolean; delay: number }) {
   const { colors } = useTheme();
   const v = useSharedValue(0);
+  const budget = useMotionBudget();
   useEffect(() => {
-    if (still) {
+    if (still || !budget.live) {
       cancelAnimation(v);
       v.value = 0;
       return;
     }
     v.value = withDelay(
       delay,
-      withRepeat(withTiming(1, { duration: motionLetter.ripple.period, easing: motionLetter.rippleEase }), -1, false),
+      withRepeat(withTiming(1, { duration: motionLetter.ripple.period, easing: motionLetter.rippleEase }), budgetRepeats(motionLetter.ripple.period, false), false),
     );
     return () => cancelAnimation(v);
-  }, [still, delay, v]);
+  }, [still, delay, v, budget.live, budget.run]);
   const style = useAnimatedStyle(() => {
     if (still) return { opacity: 0, transform: [{ scale: 1 }] };
     const { grow, peak, peakAt } = motionLetter.ripple;

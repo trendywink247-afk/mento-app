@@ -18,23 +18,25 @@ import Svg, { Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 export function GroundGlow({ width, height }: { width: number; height: number }) {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const p = useSharedValue(0.5);
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(p);
       p.value = 0.5;
       return;
     }
     p.value = 0;
-    p.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), -1, true);
+    p.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), budgetRepeats(breathe.period, true), true);
     return () => cancelAnimation(p);
-  }, [reduced, p]);
+  }, [reduced, p, budget.live, budget.run]);
 
   const style = useAnimatedStyle(() => ({
     opacity: interpolate(p.value, [0, 1], [0.35, 0.8]),

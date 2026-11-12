@@ -25,6 +25,7 @@ import {
   type CompanionColor,
 } from '@/theme/companion';
 import { radius, space, type } from '@/theme/tokens';
+import { LOOP_CYCLES } from '@/lib/motionBudget';
 
 const ANIMALS: CompanionAnimal[] = [
   'Panda',
@@ -121,7 +122,16 @@ export function CompanionStep({
       off = setTimeout(() => setHeroPose(undefined), POSE_WAVE_FOR_MS);
     };
     const first = setTimeout(wave, POSE_WAVE_AT_MS);
-    const loop = setInterval(wave, POSE_LOOP_MS);
+    // A few waves, then the hero rests (lib/motionBudget): no endless timer on a screen left open.
+    let waves = 1;
+    const loop = setInterval(() => {
+      if (waves >= LOOP_CYCLES) {
+        clearInterval(loop);
+        return;
+      }
+      waves += 1;
+      wave();
+    }, POSE_LOOP_MS);
     return () => {
       clearTimeout(first);
       clearInterval(loop);

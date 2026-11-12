@@ -19,6 +19,7 @@ import {
 
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
+import { useMotionBudget } from '@/lib/motionBudget';
 
 /** Breaths before the art rests. Each breath is an inhale and an exhale. */
 export const BREATHS_BEFORE_REST = 3;
@@ -29,9 +30,11 @@ export const breathHalves = (n: number): number => Math.max(0, Math.floor(n)) * 
 export function useBreathing(enabled = true, restartKey: unknown = null) {
   const reduced = useReducedMotion();
   const scale = useSharedValue(1);
+  // Focus lost or app in the background: rest; coming back breathes again (lib/motionBudget).
+  const budget = useMotionBudget(restartKey);
 
   useEffect(() => {
-    if (!enabled || reduced) {
+    if (!enabled || reduced || !budget.live) {
       cancelAnimation(scale);
       scale.value = withTiming(1, { duration: 150 });
       return;
@@ -43,7 +46,7 @@ export function useBreathing(enabled = true, restartKey: unknown = null) {
       true
     );
     return () => cancelAnimation(scale);
-  }, [enabled, reduced, scale, restartKey]);
+  }, [enabled, reduced, scale, budget.live, budget.run]);
 
   return useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 }

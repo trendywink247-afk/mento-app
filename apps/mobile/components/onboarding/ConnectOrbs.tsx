@@ -31,6 +31,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing, stagger } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, type, washEdge } from '@/theme/tokens';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 /** Board metrics at a 342-wide column. */
 const ORB_MAX = 120;
@@ -89,17 +90,18 @@ export function ConnectOrbs({ width, animal, memberName, mentorName, mentorFace 
     setJoy({ kind: 'celebrate', n: 1 });
   }, [found, reduced, perch, fill, glow, seek]);
 
-  // The waiting orb breathes (scale + strength) until someone is there.
+  // The waiting orb breathes (scale + strength) for a bounded run (lib/motionBudget), then rests.
+  const pulseBudget = useMotionBudget(found);
   useEffect(() => {
-    if (reduced || still || found) {
+    if (reduced || still || found || !pulseBudget.live) {
       cancelAnimation(pulse);
       pulse.value = withTiming(0.5, { duration: 150 });
       return;
     }
     pulse.value = 0;
-    pulse.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), -1, true);
+    pulse.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), budgetRepeats(breathe.period, true), true);
     return () => cancelAnimation(pulse);
-  }, [reduced, still, found, pulse]);
+  }, [reduced, still, found, pulse, pulseBudget.live, pulseBudget.run]);
 
   const leftStyle = useAnimatedStyle(() => ({ transform: [{ translateX: perch.value * DRIFT * k }] }));
   const rightStyle = useAnimatedStyle(() => ({ transform: [{ translateX: -perch.value * DRIFT * k }] }));

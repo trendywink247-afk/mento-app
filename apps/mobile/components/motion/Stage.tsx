@@ -28,6 +28,7 @@ import { COMPANION_COLORS } from '@/theme/companion';
 import { breathe, easing, stage as stageMotion } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { wash, washEdge } from '@/theme/tokens';
+import { LOOP_MAX_MS, budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 type Props = {
   size: number;
@@ -42,24 +43,34 @@ type Props = {
   children?: ReactNode;
 };
 
-/** One 0→1 loop, linear, forever. Stops (and rests at `rest`) when disabled. */
+/** A 0→1 linear loop for a BOUNDED run (lib/motionBudget), then it rests where it stopped.
+ * A slow spin (period longer than the budget) turns only the budget's share of a turn, from
+ * wherever it last stopped, so a new run never jumps. Disabled or off-screen: rests at `rest`. */
 function useLoop(period: number, on: boolean, rest = 0, offset = 0): SharedValue<number> {
   const v = useSharedValue(rest);
+  const budget = useMotionBudget();
   useEffect(() => {
-    if (!on) {
+    if (!on || !budget.live) {
       cancelAnimation(v);
       v.value = rest;
       return;
     }
+    if (period > LOOP_MAX_MS) {
+      const from = v.value === rest ? offset : v.value % 1;
+      v.value = from;
+      v.value = withTiming(from + LOOP_MAX_MS / period, { duration: LOOP_MAX_MS, easing: Easing.linear });
+      return () => cancelAnimation(v);
+    }
     // A negative CSS animation-delay = start part-way through the first cycle.
     v.value = offset;
+    const reps = budgetRepeats(period, false);
     v.value = withTiming(1, { duration: period * (1 - offset), easing: Easing.linear }, (done) => {
-      if (!done) return;
+      if (!done || reps <= 1) return;
       v.value = 0;
-      v.value = withRepeat(withTiming(1, { duration: period, easing: Easing.linear }), -1, false);
+      v.value = withRepeat(withTiming(1, { duration: period, easing: Easing.linear }), reps - 1, false);
     });
     return () => cancelAnimation(v);
-  }, [on, period, rest, offset, v]);
+  }, [on, period, rest, offset, v, budget.live, budget.run]);
   return v;
 }
 
@@ -99,16 +110,17 @@ export function Stage({ size, rings = 2, ripples = false, sheen = false, motes =
   const spinBack = useLoop(stageMotion.ringSpinBack, on && rings === 2);
   const sheenP = useLoop(stageMotion.sheen, on && sheen);
   const moteP = useSharedValue(0);
+  const moteBudget = useMotionBudget();
   useEffect(() => {
-    if (!on || !motes) {
+    if (!on || !motes || !moteBudget.live) {
       cancelAnimation(moteP);
       moteP.value = 0.5;
       return;
     }
     moteP.value = 0;
-    moteP.value = withRepeat(withTiming(1, { duration: stageMotion.motes, easing: easing.breathe }), -1, true);
+    moteP.value = withRepeat(withTiming(1, { duration: stageMotion.motes, easing: easing.breathe }), budgetRepeats(stageMotion.motes, true), true);
     return () => cancelAnimation(moteP);
-  }, [on, motes, moteP]);
+  }, [on, motes, moteP, moteBudget.live, moteBudget.run]);
 
   const spinStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${spin.value * 360}deg` }] }));
   const spinBackStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${-spinBack.value * 360}deg` }] }));

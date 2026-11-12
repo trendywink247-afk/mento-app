@@ -13,14 +13,14 @@ import { StaticAmbient } from '@/components/motion/StaticAmbient';
 import { useTheme } from '@/theme/ThemeProvider';
 
 /** Light and Dark are a plain ground: no aurora, no motes. Pastel keeps the sky. */
-export function AmbientBackground({ paused = false }: { paused?: boolean }) {
+export function AmbientBackground({ paused = false, motionKey = null }: { paused?: boolean; motionKey?: unknown }) {
   const { look, colors } = useTheme();
   if (look !== 'pastel') return <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} pointerEvents="none" />;
-  return <PastelAmbient paused={paused} />;
+  return <PastelAmbient paused={paused} motionKey={motionKey} />;
 }
 
 /** `paused`: see AuroraCanvas — the root sky holds still under an opaque screen. */
-function PastelAmbient({ paused = false }: { paused?: boolean }) {
+function PastelAmbient({ paused = false, motionKey = null }: { paused?: boolean; motionKey?: unknown }) {
   const [mountCanvas, setMountCanvas] = useState(false);
   const opacity = useSharedValue(0);
 
@@ -41,7 +41,7 @@ function PastelAmbient({ paused = false }: { paused?: boolean }) {
       <StaticAmbient />
       {mountCanvas ? (
         <Animated.View style={[StyleSheet.absoluteFill, fade]}>
-          <AuroraCanvas paused={paused} />
+          <AuroraCanvas paused={paused} motionKey={motionKey} />
         </Animated.View>
       ) : null}
     </View>

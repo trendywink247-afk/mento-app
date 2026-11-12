@@ -46,6 +46,7 @@ import { COMPANION_COLORS } from '@/theme/companion';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, wash } from '@/theme/tokens';
+import { useMotionBudget } from '@/lib/motionBudget';
 
 const AVATAR = 56;
 const RING_GAP = 4; // the ring sits this far outside the avatar
@@ -89,9 +90,10 @@ export const PRESENCE_RIPPLES = 3;
 function PresenceRing({ color }: { color: string }) {
   const reduced = useReducedMotion();
   const ripple = useSharedValue(0);
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(ripple);
       ripple.value = 0;
       return;
@@ -105,7 +107,7 @@ function PresenceRing({ color }: { color: string }) {
       false,
     );
     return () => cancelAnimation(ripple);
-  }, [reduced, ripple]);
+  }, [reduced, ripple, budget.live, budget.run]);
 
   const style = useAnimatedStyle(() => ({
     opacity: RING_REST_OPACITY * (1 - ripple.value),

@@ -20,13 +20,15 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius } from '@/theme/tokens';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 /** Two rings that overlap. `still` draws them at rest (a long list of badges shares the
  * motion budget: only a caller that owns three movers or fewer lets them breathe). */
 export function LinkedRings({ color, size = 12, still = false }: { color: string; size?: number; still?: boolean }) {
   const reduced = useReducedMotion();
   const t = useSharedValue(0.5);
-  const moving = !reduced && !still;
+  const budget = useMotionBudget();
+  const moving = !reduced && !still && budget.live;
 
   useEffect(() => {
     if (!moving) {
@@ -35,9 +37,9 @@ export function LinkedRings({ color, size = 12, still = false }: { color: string
       return;
     }
     t.value = 0;
-    t.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), -1, true);
+    t.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), budgetRepeats(breathe.period, true), true);
     return () => cancelAnimation(t);
-  }, [moving, t]);
+  }, [moving, t, budget.run]);
 
   // Board: ring A drifts -1 → +0.75, ring B +1 → -0.75 (at a 12px-high mark).
   const k = size / 12;

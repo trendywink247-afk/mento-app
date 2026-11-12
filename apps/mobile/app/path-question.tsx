@@ -62,6 +62,7 @@ import { leaveToPath } from '@/lib/leaveToChats';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 const CHIP_LABEL: Record<ChipId, TKey> = {
   first: 'pathQuestion.chips.first',
@@ -92,20 +93,21 @@ const CARET_LIT = 0.9;
 function PreviewCaret({ color }: { color: string }) {
   const reduced = useReducedMotion();
   const glow = useSharedValue(CARET_LIT);
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(glow);
       glow.value = CARET_LIT;
       return;
     }
     glow.value = withRepeat(
       withTiming(CARET_DIM, { duration: breathe.period / 2, easing: easing.breathe }),
-      -1,
+      budgetRepeats(breathe.period / 2, true),
       true,
     );
     return () => cancelAnimation(glow);
-  }, [reduced, glow]);
+  }, [reduced, glow, budget.live, budget.run]);
 
   const style = useAnimatedStyle(() => ({ opacity: glow.value }));
   return <Animated.View style={[styles.caret, { backgroundColor: color }, style]} />;
