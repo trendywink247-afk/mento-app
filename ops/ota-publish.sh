@@ -149,7 +149,8 @@ else
   [ -n "$EXPECT_FP" ] || die "no store-build fingerprint: set OTA_EXPECT_FP or write $PROD_FP_FILE" 2
   ENVF=$PROD_ENV
 fi
-[ -r "$ENVF" ] || die "missing $ENVF (EXPO_PUBLIC_STREAM_API_KEY=... and other public build values)" 2
+# Optional public build values (Stream key while Stream remains); a missing file is fine.
+[ -r "$ENVF" ] || { echo "ota-publish: note: no $ENVF; building without Stream (own chat only)" >&2; ENVF=/dev/null; }
 
 LOG=$OUT/ota-$TARGET-$SHA.log
 echo "ota-publish: $TARGET $SHA (log: $LOG)"
@@ -180,7 +181,7 @@ export EXPO_NO_DOTENV=1 APP_VARIANT=$VARIANT EXPO_PUBLIC_APP_ENV=$APP_ENV EXPO_P
   EXPO_PUBLIC_OWN_CHAT_ACCEPTED=1 EXPO_PUBLIC_OWN_CHAT_NATIVE_ACCEPTED=1 \
   EXPO_PUBLIC_GIT_SHA=$SHA CI=1
 EXPO_PUBLIC_STREAM_API_KEY=$(pub EXPO_PUBLIC_STREAM_API_KEY "$ENVF")
-[ -n "$EXPO_PUBLIC_STREAM_API_KEY" ] || die "no EXPO_PUBLIC_STREAM_API_KEY in $ENVF" 2
+[ -n "$EXPO_PUBLIC_STREAM_API_KEY" ] || echo "ota-publish: warning: no EXPO_PUBLIC_STREAM_API_KEY; Stream rooms will not open in this update" >&2
 export EXPO_PUBLIC_STREAM_API_KEY
 if [ "$TARGET" = qa ] && [ -r "$SECRETS_QA" ]; then
   EXPO_PUBLIC_SENTRY_DSN=$(pub EXPO_PUBLIC_SENTRY_DSN "$SECRETS_QA")
