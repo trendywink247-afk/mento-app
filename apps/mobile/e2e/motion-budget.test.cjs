@@ -90,6 +90,44 @@ test('the Skia sky clock is bounded by the budget, never always-on', () => {
   }
 });
 
+// Per-frame work must be opt-in. Traced 2026-11-12 after the budget shipped: an idle app still
+// gets one Choreographer "animation" callback per vsync (120/s), but that is React Native's own
+// Fabric mount dispatcher (FabricUIManager.DispatchUIFrameCallback re-posts itself every frame
+// while the app is resumed, react-native 0.83 FabricUIManager.java:1505), not app code. Reanimated
+// (NodesManager.kt:179, FrameCallbackRegistryUI.ts:75) only asks for frames while a callback is
+// active. These two guards keep it that way, so the framework's dispatcher stays the only one.
+test('useFrameCallback never autostarts: per-frame callbacks are created inactive', () => {
+  for (const { rel, text } of SOURCES) {
+    let at = text.indexOf('useFrameCallback(');
+    while (at !== -1) {
+      let i = at + 'useFrameCallback('.length;
+      let depth = 1;
+      while (depth > 0 && i < text.length) {
+        if (text[i] === '(') depth += 1;
+        else if (text[i] === ')') depth -= 1;
+        i += 1;
+      }
+      const call = text.slice(at, i);
+      assert.match(call, /,\s*false\s*\)$/, `${rel}: useFrameCallback must pass autostart=false and start it via setActive`);
+      at = text.indexOf('useFrameCallback(', i);
+    }
+  }
+});
+
+test('no self-rescheduling requestAnimationFrame loop in app code', () => {
+  for (const { rel, text } of SOURCES) {
+    // `function tick() { … requestAnimationFrame(tick) }` or `const tick = () => { … requestAnimationFrame(tick) }`
+    const named = [...text.matchAll(/(?:function\s+(\w+)\s*\(|(?:const|let)\s+(\w+)\s*=\s*(?:\([^)]*\)|\w+)\s*=>)/g)]
+      .map((m) => m[1] || m[2]);
+    for (const name of named) {
+      assert.ok(
+        !new RegExp(`requestAnimationFrame\\(\\s*${name}\\s*\\)`).test(text),
+        `${rel}: ${name} reschedules itself with requestAnimationFrame (a frame loop that never ends)`,
+      );
+    }
+  }
+});
+
 function loadBudget() {
   const exports = {};
   const out = ts.transpileModule(fs.readFileSync(path.join(ROOT, 'lib/motionBudget.ts'), 'utf8'), {
