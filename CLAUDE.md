@@ -33,7 +33,8 @@ services/recovery_receiver/  Isolated encrypted-recovery receiver service
 deploy/               Compose stacks, deploy.sh, bluegreen.sh, backups, monitoring, drills (test-*.sh)
 scripts/ci/           Release policy, DB budget and drill tests (python unittest)
 scripts/local/        api.py launcher; workspace.ps1 is Windows-only legacy
-.github/workflows/    api-ci, test-ci, maestro, staging-release, production-release, rollback-rehearsal
+ops/                  Local CI (ci.sh, ci-poll.sh), builds, QA deploy/APK/OTA, prod release and backups
+infra/                Caddy, SonarQube, systemd timers, root helpers for the agent (qa-agent/)
 docs/                 Current docs; index in docs/README.md; state in docs/STATUS.md
 docs/archive/         STALE. Never read it or use it as guidance.
 ```

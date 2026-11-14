@@ -9,6 +9,8 @@ Current documents only. `archive/` is stale history: don't read it or use it as 
 | [STATUS.md](STATUS.md) | State today, next 3 tasks, open questions |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the system fits together, in one page |
 | [OPERATIONS.md](OPERATIONS.md) | Build, test, release, rollback: who runs what |
+| [SECURITY_AUDIT.md](SECURITY_AUDIT.md) | Automated security scans (pinned tools) and the IDOR matrix: results and triage |
+| [SONARQUBE.md](SONARQUBE.md) | Self-hosted SonarQube: install, box-local scan, proposed quality gate |
 | [SECRETS.md](SECRETS.md) | Where keys live and how they are handled |
 
 ## Product
