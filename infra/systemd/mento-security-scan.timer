@@ -1,0 +1,9 @@
+[Unit]
+Description=Schedule: weekly security scan, Mondays 03:17
+
+[Timer]
+OnCalendar=Mon *-*-* 03:17:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

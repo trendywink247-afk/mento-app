@@ -166,14 +166,17 @@ tier_tooling() {
     [ "$TIER" = quick ] && return
     step "scripts/ci unittests" python3 -m unittest discover -s scripts/ci -p 'test_*.py'
     step "verify_safety unittests" python3 -m unittest discover -s scripts -p test_verify_safety.py
+    # Drills that use fakes or only `docker compose config` (no daemon) always run here.
+    local d
+    for d in test-parity test-transition-preflight test-worker-rollback test-backup-failures \
+             test-monitor-alert-retry test-backup-encryption; do
+        step "drill $d" bash "deploy/$d.sh"
+    done
+    # Drills that start real containers live in ops/release-drills.sh (needs the Docker daemon).
     if docker_usable; then
-        local d
-        for d in test-parity test-worker-rollback test-backup-failures test-monitor-alert-retry \
-                 test-backup-encryption test-snapshot-ddl test-erasure-receipt-export; do
-            step "drill $d" bash "deploy/$d.sh"
-        done
+        step "release drills (containers)" bash ops/release-drills.sh --ci
     else
-        skip "deploy drills (7)" "docker not usable by $(id -un); ops/release-drills.sh prints the root command"
+        skip "release drills (containers)" "docker daemon not usable by $(id -un); run ops/release-drills.sh"
     fi
 }
 

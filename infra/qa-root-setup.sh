@@ -79,7 +79,8 @@ run sudo -u "$OWNER" "$REPO/ops/ci-poll.sh" --seed
 if [ "$ENABLE" -eq 1 ]; then
     say "first backup"; run /usr/local/sbin/qa-backup
     say "first restore drill"; run /usr/local/sbin/qa-restore-drill
-    run systemctl enable --now mento-qa-backup.timer mento-qa-restore-drill.timer mento-ci-poll.timer
+    run systemctl enable --now mento-qa-backup.timer mento-qa-restore-drill.timer mento-ci-poll.timer \
+        mento-security-scan.timer mento-deps-check.timer
     say "timers enabled. Next: retire the plaintext dumps in /opt/mento-backups once you are happy."
 else
     say "installed, nothing scheduled. Rerun with --enable to prove a backup + drill and start the timers."

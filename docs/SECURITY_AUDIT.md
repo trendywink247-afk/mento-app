@@ -1,7 +1,7 @@
 # Security audit: automated scans and the IDOR matrix
 
 Run 2026-11-11 on `dev` at 88a4c9a. No secret value appears below; findings are named by file and rule only.
-The scanner versions are pinned and checksum-verified in `ops/lib/ci-tools.sh`. The GitHub workflow that ran them is retired (no GitHub automation); the local runner (`ops/security-scan.sh`) and its weekly timer are **not written yet**, so today the scans run only by hand. The IDOR matrix (`services/api/tests/test_idor_matrix.py`) runs in every `ops/ci.sh` as part of pytest.
+The scanner versions are pinned and checksum-verified in `ops/lib/ci-tools.sh`. The GitHub workflow that ran them is retired (no GitHub automation); `ops/security-scan.sh` runs them all (report only; `--strict` fails on findings) and writes `/srv/mento/logs/security/<date>-<sha>.md`; `infra/systemd/mento-security-scan.timer` runs it Mondays 03:17 once root enables it. The IDOR matrix (`services/api/tests/test_idor_matrix.py`) runs in every `ops/ci.sh` as part of pytest.
 
 | Scan | Tool | Result |
 |---|---|---|

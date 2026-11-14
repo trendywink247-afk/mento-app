@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly local security scan of origin/dev (ops/security-scan.sh)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=agent
+ExecStart=/srv/mento/mento-app/ops/security-scan.sh
+Nice=15
+TimeoutStartSec=1h

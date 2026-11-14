@@ -1,0 +1,9 @@
+[Unit]
+Description=Schedule: weekly dependency report, Mondays 04:00
+
+[Timer]
+OnCalendar=Mon *-*-* 04:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

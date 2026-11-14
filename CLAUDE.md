@@ -55,7 +55,7 @@ One working branch. Keep it lean: no feature branches, no PRs into `dev`.
 - QA: you may deploy to QA from `dev`, or from uncommitted work when something must be tested before it is committed. Commit once QA testing passes.
 - `main`: merge `dev` into `main` only with the user's explicit approval for that merge. Never push anything else to `main`. Never force-push.
 - Production deploys only from `main`, only when the user asks for that specific deploy.
-- No GitHub automation: no Actions, no Dependabot. CI/CD is local (`ops/`, `docs/OPERATIONS.md`, `docs/CI.md`).
+- No GitHub automation: no Actions, no Dependabot. CI/CD is local (`ops/`, `docs/OPERATIONS.md`).
 - Don't delete tags. History lives in `archive/*` tags.
 
 ## Commands

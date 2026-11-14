@@ -6,7 +6,7 @@ Everything below is a script in the repo, run on our own machines; there is no G
 
 | Stage | What runs | Trigger | Human step |
 |---|---|---|---|
-| Checks | `ops/ci.sh <sha>` (API, mobile, receiver, shell lint, drills; `--quick` for lint+unit), `ops/security-scan.sh` weekly, `ops/deps-check.sh` weekly, `ops/sonar-scan.sh` ([CI.md](CI.md)) | Local, timers | None |
+| Checks | `ops/ci.sh <sha>` (API, mobile, receiver, shell lint, drills; `--quick` for lint+unit), `ops/security-scan.sh` weekly (report in `/srv/mento/logs/security/`, [SECURITY_AUDIT.md](SECURITY_AUDIT.md)), `ops/deps-check.sh` weekly (report in `/srv/mento/logs/deps/`; replaces Dependabot, changes nothing), `ops/sonar-scan.sh` ([SONARQUBE.md](SONARQUBE.md)); container drills `ops/release-drills.sh` (needs Docker) | Local, timers | **ROOT** to enable the weekly timers (`infra/qa-root-setup.sh --enable`) |
 | QA gate on this box | `ops/ci.sh <sha>` posts `ops/ci`; log in `/srv/mento/logs/ci/<sha>.log` | `ops/ci-poll.sh` timer for `dev`, `main`, `feat/*` | None |
 | QA API deploy | `ops/build-api.sh <sha>` then `qa-deploy-api <tag>` (needs a passing ci log; dumps DB; auto-rollback if `/health/ready` fails) | By hand | **ROOT**: `sudo qa-release <sha>` |
 | QA web + admin | `ops/qa-apk.sh` stages a tarball; `qa-install-web` verifies and swaps the symlink | APK poller or by hand | **ROOT**: `sudo qa-install-web <tarball>` (APK poller uses a root helper, no prompt) |
