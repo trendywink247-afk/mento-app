@@ -7,5 +7,5 @@
 #   pip install -r requirements-ml.txt
 #   python -m spacy download en_core_web_lg
 #
-presidio-analyzer==2.2.355
+presidio-analyzer==2.2.359
 spacy==3.7.5
