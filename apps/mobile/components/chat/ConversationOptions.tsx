@@ -41,6 +41,8 @@ type Props = {
   onLeft: () => void; // called after wipe/report/block (navigate away)
   /** "Save to Journal": the chat opens the save key on the mentor's latest message. */
   onSaveToJournal: () => void;
+  /** False when there is no mentor message left to keep (the row explains instead). */
+  canSave?: boolean;
   /** Persona name, echoed on the reflection screen. */
   listenerName?: string;
   /** Opens straight onto a sub-flow instead of the choice sheet — the mentor-profile
@@ -59,6 +61,7 @@ export function ConversationOptions({
   onClose,
   onLeft,
   onSaveToJournal,
+  canSave,
   listenerName,
   initial,
 }: Props) {
@@ -171,6 +174,7 @@ export function ConversationOptions({
           busy={busy || !ready}
           error={error}
           onChoose={choose}
+          canSave={canSave}
           onClose={close}
           progress={depth.progress}
           reduced={depth.reduced}

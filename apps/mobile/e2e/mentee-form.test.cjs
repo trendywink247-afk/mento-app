@@ -48,3 +48,10 @@ test('a new attempt follows the newest year', () => {
   assert.equal(f.nextAttempt([{ year: 2023, stage: 'prelims' }], now).year, 2024);
   assert.equal(f.nextAttempt([{ year: 2026, stage: 'prelims' }], now).year, 2026);
 });
+
+test('marks are grouped under Prelims, Mains, Optional and Interview by the stage reached', () => {
+  const g = (stage) => f.markGroups(stage).map((x) => `${x.group}:${x.fields.length}`).join(' ');
+  assert.equal(g('prelims'), 'prelims:2');
+  assert.equal(g('mains'), 'prelims:2 mains:4 optional:2');
+  assert.equal(g('interview'), 'prelims:2 mains:4 optional:2 interview:1');
+});

@@ -109,12 +109,14 @@ type Props = {
   /** A switch or End could not be saved — one still line, nothing shakes. */
   error: string | null;
   onChoose: (c: SheetChoice) => void;
+  /** False when the mentor has written nothing not yet kept: the row says so instead of doing nothing. */
+  canSave?: boolean;
   onClose: () => void;
   progress: SharedValue<number>;
   reduced: boolean;
 };
 
-export function OptionsSheet({ locked, maskOn, paused, busy, error, onChoose, onClose, progress, reduced }: Props) {
+export function OptionsSheet({ locked, maskOn, paused, busy, error, onChoose, canSave = true, onClose, progress, reduced }: Props) {
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -207,8 +209,8 @@ export function OptionsSheet({ locked, maskOn, paused, busy, error, onChoose, on
             icon="bookmark-outline"
             tone="green"
             title={t('chatOptions.save')}
-            body={t('chatOptions.saveBody')}
-            onPress={() => onChoose('save')}
+            body={canSave ? t('chatOptions.saveBody') : t('chatOptions.saveNothing')}
+            onPress={() => (canSave ? onChoose('save') : undefined)}
             testID="opt-save"
             reduced={reduced}
           />

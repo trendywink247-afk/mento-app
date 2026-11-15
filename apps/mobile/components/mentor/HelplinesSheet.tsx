@@ -61,7 +61,7 @@ export function HelplinesSheet({ onClose }: { onClose: () => void }) {
               style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
               testID={`helpline-${key}`}
             >
-              <Text style={[type.cardTitle, { color: colors.ink }]}>{name}</Text>
+              <Text style={[type.cardTitle, styles.name, { color: colors.ink }]}>{name}</Text>
               <Text
                 {...link}
                 accessibilityRole="link"
@@ -102,5 +102,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     borderWidth: 1,
   },
-  number: { fontSize: 20, lineHeight: 44, fontFamily: type.displayHeadline.fontFamily, minHeight: 44, textDecorationLine: 'none' },
+  // The name wraps; the number never shrinks, so a long name cannot push it off the card.
+  name: { flex: 1, minWidth: 0 },
+  number: { flexShrink: 0, fontSize: 20, lineHeight: 44, fontFamily: type.displayHeadline.fontFamily, minHeight: 44, textDecorationLine: 'none' },
 });

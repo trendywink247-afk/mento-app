@@ -43,6 +43,10 @@ export type AdminListener = {
   /** Certified for exam mentoring (DECISIONS §O). */
   certified?: boolean;
   step_back_reason?: string | null;
+  /** DECISIONS R.4 / R.7: tier and admin-checked exam history (server AdminListenerItem). */
+  tier?: 'listener' | 'mentor' | 'verified';
+  exam_history?: { prelims: number; mains: number; interview: number } | null;
+  exam_history_checked?: boolean;
 };
 export type AdminModerationItem = {
   id: string;
@@ -248,6 +252,11 @@ export const adminApi = {
     }),
   revokeMentorInvite: (id: string) =>
     req<AdminMentorInvite>(`/admin/mentor-invites/${id}/revoke`, { method: 'POST' }),
+  /** DECISIONS R.4: Peer listener <-> Mentor, with the exam history the admin checked. */
+  setListenerTier: (
+    id: string,
+    body: { tier: 'listener' | 'mentor'; prelims: number; mains: number; interview: number; exam_history_checked: boolean },
+  ) => req<Record<string, unknown>>(`/admin/listeners/${id}/tier`, { method: 'POST', body: JSON.stringify(body) }),
   certifyListener: (id: string, certified: boolean) =>
     req<{ id: string; certified: boolean }>(`/admin/listeners/${id}/certify`, {
       method: 'POST',

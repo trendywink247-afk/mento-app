@@ -200,8 +200,10 @@
     "talksIn": "Talks in %{list}",
     "reqMentorship": "Asked for mentorship",
     "reqForm": "From their mentorship form",
-    "reqMarksHidden": "They chose not to show their marks.",
-    "reqAttempt": "%{year}: reached %{stage}"
+    "reqMarksHidden": "No marks are shown to you.",
+    "reqAttempt": "%{year}: reached %{stage}",
+    "steppedBackTitle": "Your mentor side is stepped back",
+    "steppedBackBody": "The Mento team has paused it. You can keep talking as a member, or start fresh from Profile."
   },
   "common": {
     "continue": "Continue",
@@ -265,14 +267,14 @@
       "short12": "Dec"
     },
     "email": {
-      "headline": "Optional, but ",
+      "headline": "A way ",
       "sub": "One email so you can always get back in.",
       "placeholder": "you@example.com",
-      "inputA11y": "Email address (optional)",
+      "inputA11y": "Email address",
       "invalid": "That doesn't look like a valid email.",
       "privacy": "No promotions. No sharing. Just account recovery.",
       "skip": "Skip for now",
-      "headlineAccent": "helpful.",
+      "headlineAccent": "back in.",
       "label": "Email address",
       "optional": "(optional)",
       "skipFine": "Not now? Add it later in Settings.",
@@ -393,7 +395,9 @@
       "away": "Mentor · away",
       "inThisChat": "In this chat",
       "saved": "Saved %{count}",
-      "savedA11y": "%{count} saved to your journal from this chat"
+      "savedA11y": "%{count} saved to your journal from this chat",
+      "hereAs": "%{tier} · here now",
+      "awayAs": "%{tier} · away"
     },
     "leaveA11y": "Leave conversation",
     "optionsA11y": "Conversation options",
@@ -447,7 +451,7 @@
       "unlock": "Unlock with your PIN",
       "lockBody": "Ask for a 4-digit PIN before it opens.",
       "status": "Away Mask",
-      "statusBody": "A plain cover over this chat.",
+      "statusBody": "Choose the status your mentor sees in this chat.",
       "pause": "Quiet Pause",
       "pauseBody": "No notifications from this chat.",
       "end": "End",
@@ -601,6 +605,7 @@
     "titleAccent": "options",
     "save": "Save to Journal",
     "saveBody": "Keep a mentor's message in your Journal.",
+    "saveNothing": "Nothing from your mentor to keep yet.",
     "endSection": "End conversation · two ways",
     "endWipe": "End and wipe",
     "endWipeBody": "Deleted from your device and from our servers."
@@ -615,7 +620,7 @@
     "confusing": "This is confusing",
     "idea": "I have an idea",
     "label": "What were you trying to do?",
-    "placeholder": "The Finance journal won't open…",
+    "placeholder": "The Journal page won't open…",
     "attached": "We also note the screen name and app version. Nothing else.",
     "notNow": "Not now",
     "send": "Send",
@@ -893,7 +898,9 @@
     "askAgain": "Ask for %{name} next time",
     "saved": "Saved · you'll see %{name} first",
     "reportBlock": "Report or block",
-    "saveFailed": "Couldn't save — try again"
+    "saveFailed": "Couldn't save — try again",
+    "onlineAs": "%{tier} · online now",
+    "awayAs": "%{tier} · away"
   },
   "mentors": {
     "favourite": "Favourite"
@@ -1140,6 +1147,8 @@
     "path": "Your path",
     "pathRest": "and the name %{name}",
     "pathRestNoName": "and your name here",
+    "form": "Your mentorship form",
+    "formRest": "and any marks you added",
     "truth": "All of it is deleted from this device and from our servers.",
     "warn": "This cannot be undone. Once it is deleted, we cannot bring any of it back.",
     "confirm": "Delete everything and start fresh",
@@ -1470,7 +1479,11 @@
     "allMentorsAny": "the mentors online",
     "allMentorsPeer": "peer mentors",
     "toAllAny": "Your question went to the mentors who are online. The first to reply takes it, and we will notify you.",
-    "toAllPeer": "Your question went to the peer mentors who are online. The first to reply takes it, and we will notify you."
+    "toAllPeer": "Your question went to the peer mentors who are online. The first to reply takes it, and we will notify you.",
+    "allMentorsListeners": "listeners and mentors",
+    "toAllListeners": "Your question went to the listeners and mentors who are online. The first to reply takes it, and we will notify you.",
+    "allMentorsMentorship": "mentors",
+    "toAllMentorship": "Your question went to the mentors who are online. The first to reply takes it, and we will notify you."
   },
   "chatsEmpty": {
     "companionA11y": "Your companion, here with you"
@@ -1769,7 +1782,7 @@
   "twoWays": {
     "peerTitle": "Talk to a peer listener",
     "peerKey": "Connect now",
-    "peerSub": "Someone who listens, right away if they are online.",
+    "peerSub": "Someone who listens. The first one free takes it.",
     "mentorTitle": "Talk to a mentor",
     "mentorKey": "Start mentorship",
     "mentorSub": "A Mentor who has cleared the exam. Tell them about your preparation first, if you like.",
@@ -1855,7 +1868,11 @@
     "saved": "Saved.",
     "badMarks": "Please check the marks: one is above the paper's maximum.",
     "profileRow": "Mentorship form",
-    "profileRowSub": "What a mentor sees when you ask for mentorship"
+    "profileRowSub": "What a mentor sees when you ask for mentorship",
+    "group_prelims": "Prelims",
+    "group_mains": "Mains",
+    "group_optional": "Optional",
+    "group_interview": "Interview"
   },
   "emailConfirm": {
     "title": "Add your email",

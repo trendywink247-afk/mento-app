@@ -39,7 +39,9 @@ import { MentorFace, type MentorLook } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
 import { FlyFrom } from '@/components/motion/FlyFrom';
 import { PressKey } from '@/components/motion/PressKey';
+import type { Tier } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { tierKey } from '@/lib/tierWord';
 import { measureRect, mentorHeroKey, rememberOrigin } from '@/lib/originStore';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { COMPANION_COLORS } from '@/theme/companion';
@@ -80,6 +82,8 @@ type Props = {
   conversationId?: string;
   /** Where this avatar flies in from, when the chat was opened from its row (T05). */
   faceOriginKey?: string;
+  /** The volunteer's tier (DECISIONS R.4, R.9): the status line names it. */
+  tier?: Tier;
   onOpenOptions: () => void;
 };
 
@@ -159,6 +163,7 @@ export function ChatHeaderCard({
   onOpenOptions,
   conversationId,
   faceOriginKey,
+  tier,
 }: Props) {
   const { colors } = useTheme();
   const avatarRef = useRef<View>(null);
@@ -169,10 +174,10 @@ export function ChatHeaderCard({
     replyWithinADay
       ? t('replyWindow.header')
       : status === null
-        ? t('chat.header.mentor')
+        ? t(tierKey(tier))
         : online
-          ? t('chat.header.here')
-          : t('chat.header.away'),
+          ? t('chat.header.hereAs', { tier: t(tierKey(tier)) })
+          : t('chat.header.awayAs', { tier: t(tierKey(tier)) }),
     community,
   ]
     .filter(Boolean)

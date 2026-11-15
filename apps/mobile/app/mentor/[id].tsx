@@ -19,6 +19,7 @@ import { useBreathing } from '@/components/motion/useBreathing';
 import { ApiError, api, type ListenerProfile, type PathTree } from '@/lib/api';
 import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { tierKey } from '@/lib/tierWord';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { requestLetter } from '@/lib/requestLetter';
@@ -375,7 +376,7 @@ export default function MentorBeforeAsk() {
   }
 
   const statusLine = [
-    online ? t('mentorProfile.online') : t('mentorProfile.away'),
+    online ? t('mentorProfile.onlineAs', { tier: t(tierKey(mentor.tier)) }) : t('mentorProfile.awayAs', { tier: t(tierKey(mentor.tier)) }),
     mentor.community_slug ? t('inTouch.community', { name: communityLabel(tree, mentor.community_slug) }) : null,
     !online && mentor.availability_note ? t('mentorProfile.usually', { note: mentor.availability_note }) : null,
   ]

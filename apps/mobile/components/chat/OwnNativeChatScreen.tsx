@@ -281,7 +281,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
     {member ? <MemberSessionGuard /> : null}
     <CompanionPerches placement={perch}>
     {member ? <ChatHeaderCard conversationId={conversationId} name={name} face={header.face ?? undefined}
-      status={endedByState ? null : header.profile?.status ?? null} replyWithinADay={!!header.profile?.reply_within_a_day}
+      status={endedByState ? null : header.profile?.status ?? null} tier={header.profile?.tier} replyWithinADay={!!header.profile?.reply_within_a_day}
       community={header.community} topic={header.topic} savedCount={header.savedCount} onBack={leave}
       onOpenProfile={() => router.push({ pathname: '/mentor-profile/[id]', params: { id: conversationId, name } })}
       onOpenOptions={() => setOptions(true)} /> : <MentorChatHeader memberName={name} brief={brief}
@@ -356,7 +356,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
       onReport={member && held && !held.mine ? () => { setInitialOption('report'); setOptions(true); } : undefined} />
     {member ? <ConversationOptions conversationId={conversationId} visible={options} depth={depth}
       listenerName={name} initial={initialOption} onClose={() => { setOptions(false); setInitialOption(undefined); }}
-      onLeft={leave} onSaveToJournal={() => setSaveOpen([...rows].reverse().find(row =>
+      onLeft={leave} canSave={rows.some(row => row.user.id !== actor && !saved.has(row.id))} onSaveToJournal={() => setSaveOpen([...rows].reverse().find(row =>
         row.user.id !== actor && !saved.has(row.id))?.id ?? null)} /> : null}
     {!member && menu !== 'closed' ? <MentorOptionsMenu state={menu} top={96} ending={ending}
       onReport={() => { setMenu('closed'); router.push({ pathname: '/mentor/report', params: { id: conversationId } }); }}

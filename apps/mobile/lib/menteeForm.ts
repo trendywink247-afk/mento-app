@@ -40,6 +40,21 @@ export function fieldsFor(stage: ExamAttempt['stage']): MarkField[] {
   return [...PRELIMS_FIELDS];
 }
 
+export type MarkGroup = 'prelims' | 'mains' | 'optional' | 'interview';
+
+/** The mark boxes of an attempt under their headings (DECISIONS R.14): Prelims, Mains,
+ * Optional, Interview, each only when the stage reached shows it. */
+export function markGroups(stage: ExamAttempt['stage']): { group: MarkGroup; fields: MarkField[] }[] {
+  const shown = new Set(fieldsFor(stage));
+  const all: { group: MarkGroup; fields: MarkField[] }[] = [
+    { group: 'prelims', fields: PRELIMS_FIELDS },
+    { group: 'mains', fields: ['mains_gs1', 'mains_gs2', 'mains_gs3', 'mains_gs4'] },
+    { group: 'optional', fields: ['optional_1', 'optional_2'] },
+    { group: 'interview', fields: INTERVIEW_FIELDS },
+  ];
+  return all.map((g) => ({ group: g.group, fields: g.fields.filter((f) => shown.has(f)) })).filter((g) => g.fields.length > 0);
+}
+
 /** Text typed into a mark box → a number, null when empty, NaN when not a mark. */
 export function parseMark(text: string): number | null {
   const s = text.trim().replace(',', '.');

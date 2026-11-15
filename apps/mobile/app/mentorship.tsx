@@ -12,7 +12,7 @@ import { ApiError, api, type ExamAttempt, type MarksVisibility, type MenteeProfi
 import { useI18n, type TKey } from '@/lib/i18n';
 import { LANGUAGES } from '@/lib/languages';
 import { leaveToChats } from '@/lib/leaveToChats';
-import { MARK_MAX, attemptsOk, fieldsFor, isEmpty, markOk, nextAttempt, parseMark, toPayload, type MarkField } from '@/lib/menteeForm';
+import { MARK_MAX, attemptsOk, isEmpty, markGroups, markOk, nextAttempt, parseMark, toPayload, type MarkField } from '@/lib/menteeForm';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { askIntro, openAsked } from '@/lib/startChat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
@@ -83,8 +83,10 @@ function Chips<T extends string>({
           <PressKey
             key={o.key}
             onPress={() => !o.disabled && onToggle(o.key)}
-            edge={on ? colors.accentTintEdge : colors.edgeSurface}
+            // A "Coming soon" chip reads as unavailable: flat, dashed, muted ink (DECISIONS R.6).
+            edge={o.disabled ? 'transparent' : on ? colors.accentTintEdge : colors.edgeSurface}
             travel={3}
+            disabled={o.disabled}
             radius={radius.pill}
             intent="select"
             accessibilityRole="checkbox"
@@ -92,10 +94,12 @@ function Chips<T extends string>({
             testID={`${testID}-${o.key}`}
             style={[
               styles.chip,
-              { backgroundColor: on ? colors.accentTint : colors.surface, borderColor: on ? colors.accent : colors.border, opacity: o.disabled ? 0.5 : 1 },
+              o.disabled
+                ? { backgroundColor: colors.surfaceAlt, borderColor: colors.border, borderStyle: 'dashed' as const }
+                : { backgroundColor: on ? colors.accentTint : colors.surface, borderColor: on ? colors.accent : colors.border },
             ]}
           >
-            <Text style={[type.label, { color: on ? colors.accentInk : colors.ink }]}>{o.label}</Text>
+            <Text style={[type.label, { color: o.disabled ? colors.inkMuted : on ? colors.accentInk : colors.ink }]}>{o.label}</Text>
           </PressKey>
         );
       })}
@@ -318,30 +322,37 @@ export default function Mentorship() {
                 </View>
                 <Text style={[type.caption, { color: colors.inkMuted }]}>{t('intake.reached')}</Text>
                 <Chips options={REACHED.map((c) => ({ key: c.key, label: t(c.label) }))} value={[a.stage]} onToggle={(k) => setAttempt(i, { stage: k })} testID={`intake-reached-${i}`} />
-                <View style={styles.marks}>
-                  {fieldsFor(a.stage).map((f) => {
-                    const text = markText[`${i}:${f}`] ?? '';
-                    const ok = markOk(f, parseMark(text));
-                    return (
-                      <View key={f} style={styles.mark}>
-                        <Text style={[type.caption, { color: colors.ink }]} numberOfLines={1}>
-                          {t(`intake.${f}` as TKey)}
-                        </Text>
-                        <TextInput
-                          value={text}
-                          onChangeText={(v) => typeMark(i, f, v)}
-                          keyboardType="decimal-pad"
-                          maxLength={6}
-                          placeholder={t('intake.max', { max: String(MARK_MAX[f]) })}
-                          placeholderTextColor={colors.inkMuted}
-                          style={[inputStyle, !ok ? { borderColor: colors.danger ?? '#B3261E' } : null]}
-                          accessibilityLabel={`${t(`intake.${f}` as TKey)}, ${t('intake.max', { max: String(MARK_MAX[f]) })}`}
-                          testID={`intake-mark-${i}-${f}`}
-                        />
-                      </View>
-                    );
-                  })}
-                </View>
+                {markGroups(a.stage).map((g) => (
+                  <View key={g.group} style={styles.markGroup}>
+                    <Text style={[type.label, { color: colors.inkMuted }]} accessibilityRole="header">
+                      {t(`intake.group_${g.group}` as TKey)}
+                    </Text>
+                    <View style={styles.marks}>
+                      {g.fields.map((f) => {
+                        const text = markText[`${i}:${f}`] ?? '';
+                        const ok = markOk(f, parseMark(text));
+                        return (
+                          <View key={f} style={styles.mark}>
+                            <Text style={[type.caption, { color: colors.ink }]} numberOfLines={1}>
+                              {t(`intake.${f}` as TKey)}
+                            </Text>
+                            <TextInput
+                              value={text}
+                              onChangeText={(v) => typeMark(i, f, v)}
+                              keyboardType="decimal-pad"
+                              maxLength={6}
+                              placeholder={t('intake.max', { max: String(MARK_MAX[f]) })}
+                              placeholderTextColor={colors.inkMuted}
+                              style={[inputStyle, !ok ? { borderColor: colors.danger ?? '#B3261E' } : null]}
+                              accessibilityLabel={`${t(`intake.${f}` as TKey)}, ${t('intake.max', { max: String(MARK_MAX[f]) })}`}
+                              testID={`intake-mark-${i}-${f}`}
+                            />
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
               </View>
             ))}
             {attempts.length < 10 ? (
@@ -413,6 +424,7 @@ const styles = StyleSheet.create({
   attemptHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   year: { width: 76, textAlign: 'center' },
   grow: { flex: 1 },
+  markGroup: { gap: 4 },
   marks: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -4 },
   mark: { width: '50%', paddingHorizontal: 4, paddingBottom: 8, gap: 2 },
   support: { borderWidth: 1, borderRadius: radius.md, padding: 12, gap: 4 },

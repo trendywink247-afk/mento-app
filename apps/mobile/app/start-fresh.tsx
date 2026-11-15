@@ -47,6 +47,8 @@ const LEFT_BEHIND: { icon: keyof typeof Ionicons.glyphMap; lead: TKey; rest: TKe
   { icon: 'chatbubble-outline', lead: 'startFresh.chats', rest: 'startFresh.chatsRest' },
   { icon: 'book-outline', lead: 'startFresh.journal', rest: 'startFresh.journalRest' },
   { icon: 'heart-outline', lead: 'startFresh.companion', rest: 'startFresh.companionRest' },
+  // DECISIONS R.6: Start fresh erases the mentorship form too (services/erasure.py).
+  { icon: 'school-outline', lead: 'startFresh.form', rest: 'startFresh.formRest' },
   { icon: 'compass-outline', lead: 'startFresh.path', rest: null },
 ];
 

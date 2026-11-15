@@ -1,10 +1,12 @@
 /** Typed client for the listener console (/listener/me endpoints). Same transport as
  * lib/api.ts, bound to the listener token instead of the member session. */
-import { ApiError, type ApiPage, type ExamAttempt, apiRequest, apiRequestPage, collectPages } from '@/lib/api';
+import { ApiError, type ApiPage, type ExamAttempt, type Tier, apiRequest, apiRequestPage, collectPages } from '@/lib/api';
 import { clearListenerSession, getListenerToken } from '@/lib/listenerSession';
 
 export type ListenerMe = {
   id: string;
+  /** DECISIONS R.4: this mentor's own tier (older servers omit it). */
+  tier?: Tier;
   persona_name: string;
   persona_avatar: string;
   status: 'online' | 'away' | 'offline';
@@ -59,6 +61,8 @@ export type MemberBrief = {
   care_prompt: string;
   /** The member and this mentor stay in touch (board A36; the mentor can end it). */
   in_touch?: boolean;
+  /** DECISIONS R.6: the member's mentorship form (marks only when their choice allows this tier). */
+  mentee_brief?: MenteeBrief | null;
 };
 
 export type ListenerConversation = {

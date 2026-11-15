@@ -125,6 +125,7 @@ def _me_out(li: ListenerProfile, db: Session) -> ListenerMeOut:
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
         certified=bool(li.certified_exam),
+        tier=tiers.tier_of(li),
         reply_within=reply_time.reply_within(db, [li.id])[li.id],
     )
 
@@ -639,6 +640,9 @@ def member_brief(
         safety_flags_open=safety_flags_open,
         care_prompt=care_prompts.pick(convo.issue_category, convo.id),
         in_touch=bool(in_touch.listener_in_touch_user_ids(db, listener.id, {member.id})),
+        mentee_brief=mentee_profiles.brief(
+            mentee_profiles.load(db, member.id), tiers.tier_of(listener)
+        ),
     )
 
 

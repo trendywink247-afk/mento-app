@@ -96,6 +96,18 @@ export function MentorChatHeader({
           </View>
         </PressKey>
         <PressKey
+          onPress={onHelplines}
+          edge={washEdge.green}
+          travel={3}
+          radius={radius.pill}
+          intent="navigate"
+          testID="mentor-helplines"
+          style={[styles.helplines, { backgroundColor: wash.green, borderColor: washEdge.green }]}
+        >
+          <Ionicons name="call-outline" size={18} color={sage} />
+          <Text style={[type.label, { color: sage }]}>{t('mentorChatPage.helplines')}</Text>
+        </PressKey>
+        <PressKey
           onPress={onOptions}
           edge={colors.edgeAlt}
           travel={3}
@@ -108,38 +120,23 @@ export function MentorChatHeader({
         </PressKey>
       </View>
 
-      <View style={[styles.strip, { backgroundColor: colors.surfaceAlt, borderTopColor: colors.border }]}>
-        {path ? (
-          <>
-            <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>{t('mentorChatPage.path')}</Text>
-            <View style={[styles.pathChip, { backgroundColor: wash.indigo }]}>
-              <Text style={[styles.chipText, { color: plum }]} numberOfLines={1}>
-                {path}
-              </Text>
-            </View>
-          </>
-        ) : null}
-        <View style={styles.grow} />
-        <PressKey
-          onPress={onHelplines}
-          edge={washEdge.green}
-          travel={3}
-          radius={radius.pill}
-          intent="navigate"
-          testID="mentor-helplines"
-          style={[styles.helplines, { backgroundColor: wash.green, borderColor: washEdge.green }]}
-        >
-          <Ionicons name="call-outline" size={18} color={sage} />
-          <Text style={[type.label, { color: sage }]}>{t('mentorChatPage.helplines')}</Text>
-        </PressKey>
-      </View>
+      {path ? (
+        <View style={[styles.strip, { backgroundColor: colors.surfaceAlt, borderTopColor: colors.border }]}>
+          <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>{t('mentorChatPage.path')}</Text>
+          <View style={[styles.pathChip, { backgroundColor: wash.indigo }]}>
+            <Text style={[styles.chipText, { color: plum }]} numberOfLines={1}>
+              {path}
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </EdgeSurface>
   );
 }
 
 const styles = StyleSheet.create({
   card: { borderWidth: 1, overflow: 'hidden', padding: 0 },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: space.sm, paddingLeft: space.xs, paddingRight: space.sm },
+  top: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: space.sm, paddingLeft: space.xs, paddingRight: 12 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   whoWrap: { flex: 1, minWidth: 0 },
   who: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'transparent' },
@@ -162,14 +159,14 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 12, lineHeight: 16, fontFamily: type.label.fontFamily, letterSpacing: 0.5, textTransform: 'uppercase' },
   pathChip: { height: 26, paddingHorizontal: 10, borderRadius: radius.pill, justifyContent: 'center', flexShrink: 1 },
   chipText: { fontSize: 12, lineHeight: 16, fontFamily: type.label.fontFamily },
-  grow: { flexGrow: 1 },
+  // Beside the options key in the top row, same 44 height, even padding (founder, 2026-11-15:
+  // alone in its own strip it read as misaligned).
   helplines: {
     height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingLeft: 10,
-    paddingRight: 14,
+    paddingHorizontal: 12,
     borderWidth: 1,
   },
 });

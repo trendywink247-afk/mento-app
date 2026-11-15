@@ -282,3 +282,57 @@ def test_suspended_listener_is_rejected(client, db_session):
 
     r = client.get(_brief_url(convo_id), headers=_listener_auth(lid))
     assert r.status_code == 403
+
+
+@requires_postgres
+def test_brief_carries_the_mentorship_form_with_marks_by_tier(client, db_session, monkeypatch):
+    """DECISIONS R.6 / R.14: the mentor in the chat sees the member's form; marks only when the
+    member's choice allows this mentor's tier ("mentors" = Mentor and Mento Verified)."""
+    from app.models.mentee_profile import MenteeProfile
+
+    monkeypatch.setattr(stream, "channel_last_message_at", lambda channel_id: None)
+    with TestSession() as s:
+        user = _seed_user(s, name="Soft Forest")
+        lid = _seed_listener(s)
+        s.add(
+            MenteeProfile(
+                user_id=user.id,
+                data={
+                    "exam": "upsc",
+                    "current_stage": "mains_prep",
+                    "attempts": [{"year": 2025, "stage": "prelims", "prelims_gs": 96.5}],
+                },
+                marks_visibility="mentors",
+            )
+        )
+        convo = _seed_convo(s, user_id=user.id, listener_id=lid, stream_channel_id="chan-mb")
+        s.commit()
+        convo_id = convo.id
+
+    body = client.get(_brief_url(convo_id), headers=_listener_auth(lid)).json()
+    brief = body["mentee_brief"]
+    assert brief["exam"] == "upsc" and brief["current_stage"] == "mains_prep"
+    assert brief["attempts"][0]["prelims_gs"] is None  # a Peer listener does not see marks
+    assert brief["marks_shown"] is False
+
+    with TestSession() as s:
+        li = s.get(ListenerProfile, lid)
+        li.tier = "mentor"
+        s.commit()
+    brief = client.get(_brief_url(convo_id), headers=_listener_auth(lid)).json()["mentee_brief"]
+    assert brief["attempts"][0]["prelims_gs"] == 96.5
+    assert brief["marks_shown"] is True
+
+
+@requires_postgres
+def test_brief_has_no_form_when_the_member_shared_none(client, db_session, monkeypatch):
+    monkeypatch.setattr(stream, "channel_last_message_at", lambda channel_id: None)
+    with TestSession() as s:
+        user = _seed_user(s, name="Plain Brook")
+        lid = _seed_listener(s)
+        convo = _seed_convo(s, user_id=user.id, listener_id=lid, stream_channel_id="chan-mb2")
+        s.commit()
+        convo_id = convo.id
+    assert (
+        client.get(_brief_url(convo_id), headers=_listener_auth(lid)).json()["mentee_brief"] is None
+    )

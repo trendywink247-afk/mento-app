@@ -22,13 +22,14 @@ import { languageLine } from '@/lib/languages';
 import { RequestTotals, UpNext } from '@/components/mentor/RequestQueueExtras';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { CertifiedBadge } from '@/components/CertifiedBadge';
+import { TierMark } from '@/components/TierMark';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
 import { LineSheet } from '@/components/mentor/LineSheet';
 import { StayInTouchSheet } from '@/components/mentor/StayInTouchSheet';
 import { SettleBack } from '@/components/motion/SettleBack';
 import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
-import { api, type ListenerApplication } from '@/lib/api';
+import { ApiError, api, type ListenerApplication } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { usePreparedAnswers } from '@/lib/preparedAnswers';
@@ -75,7 +76,7 @@ export default function MentorHome() {
   const { ask: askParam } = useLocalSearchParams<{ ask?: string }>();
   // null = not attempted / minting; true = a listener token is on device and
   // usable; 'unavailable' = we tried and the credential couldn't be minted.
-  const [consoleReady, setConsoleReady] = useState<boolean | 'unavailable' | null>(null);
+  const [consoleReady, setConsoleReady] = useState<boolean | 'unavailable' | 'steppedBack' | null>(null);
   const approvedHapticFired = useRef(false);
   // Tracks an in-flight api.consoleSession() mint — read only during the
   // consoleReady === null render to decide spinner vs. unavailable card, so a
@@ -109,8 +110,10 @@ export default function MentorHome() {
       const cs = await api.consoleSession();
       await saveListenerToken(cs.listener_token);
       setConsoleReady(true);
-    } catch {
-      setConsoleReady('unavailable');
+    } catch (e) {
+      // 403 not_approved: the team stepped this mentor side back (suspended). Say so plainly;
+      // "try again" would never work.
+      setConsoleReady(e instanceof ApiError && e.status === 403 ? 'steppedBack' : 'unavailable');
     } finally {
       minting.current = false;
     }
@@ -282,6 +285,20 @@ export default function MentorHome() {
               void ensureConsole();
             }}
           />
+        ) : consoleReady === 'steppedBack' ? (
+          <Entrance index={1}>
+            <EdgeSurface
+              edge={colors.edgeSurface}
+              style={[styles.card, styles.row, { backgroundColor: colors.surface }]}
+              testID="mentor-stepped-back"
+            >
+              <IconBadge icon="pause-circle-outline" tone="green" size={44} />
+              <View style={{ flex: 1 }}>
+                <Text style={[type.label, { color: colors.ink }]}>{t('mentor.steppedBackTitle')}</Text>
+                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.steppedBackBody')}</Text>
+              </View>
+            </EdgeSurface>
+          </Entrance>
         ) : consoleReady === 'unavailable' || (consoleReady === null && !minting.current) ? (
           <Entrance index={1}>
             <EdgeSurface
@@ -728,7 +745,11 @@ function ConsoleBody({
             {c.me.name_changes_at ? (
               <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
             ) : null}
-            {c.me.certified ? <CertifiedBadge testID="mentor-profile-certified" /> : null}
+            {c.me.certified ? (
+              <CertifiedBadge testID="mentor-profile-certified" />
+            ) : (
+              <TierMark tier={c.me.tier ?? 'listener'} testID="mentor-profile-tier" />
+            )}
           </EdgeSurface>
 
           <Pressable onPress={() => c.me && onOpenLine(c.me)} accessibilityRole="button" testID="mentor-profile-line">

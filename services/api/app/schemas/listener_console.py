@@ -26,6 +26,8 @@ class ListenerMeOut(BaseModel):
     # Certified for exam mentoring (DECISIONS section O): decides whether the chat menu offers
     # "This is about an exam".
     certified: bool = False
+    # DECISIONS R.4: the mentor's own tier, shown on their profile. Additive.
+    tier: str = "listener"
     # The usual time to accept a request over 30 days ("day" / "two_days"), only once there is enough
     # to say (DECISIONS section P.6). Null otherwise.
     reply_within: str | None = None
@@ -140,6 +142,9 @@ class MemberBriefOut(BaseModel):
     safety_flags_open: int
     care_prompt: str
     in_touch: bool = False
+    # DECISIONS R.6: the member's mentorship form, for the mentor in this chat (marks only
+    # when the member allowed this mentor's tier). Additive: older apps ignore it.
+    mentee_brief: MenteeBriefOut | None = None
 
 
 class ListenerRequestItem(BaseModel):

@@ -622,6 +622,7 @@ export default function ChatScreenWeb() {
         name={headerName}
         face={header.face ?? undefined}
         status={header.profile?.status ?? null}
+        tier={header.profile?.tier}
         replyWithinADay={Boolean(header.profile?.reply_within_a_day)}
         community={header.community}
         topic={header.topic}

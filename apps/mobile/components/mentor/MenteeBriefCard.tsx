@@ -10,7 +10,8 @@ import { space, type } from '@/theme/tokens';
 /**
  * What the member shared in the mentorship form (DECISIONS R.6, R.14), on the request the
  * mentor is reading. Never a name or contact. Marks appear only when the member allowed this
- * mentor's tier to see them; otherwise one line says they chose not to.
+ * mentor's tier to see them; otherwise one plain line says none are shown (it may be the
+ * member's choice, this mentor's tier, or no marks entered, so it never guesses which).
  */
 export function MenteeBriefCard({ brief }: { brief: MenteeBrief }) {
   const { colors } = useTheme();

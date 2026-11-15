@@ -177,7 +177,18 @@ export default function RequestSentScreen() {
   const toAll = Boolean(request?.broadcast) && !mentor;
   // Who a question to everyone went to follows what the member chose: any mentor, Mento Verified, or peers.
   const audience = request?.audience ?? 'in_service';
-  const allKey = audience === 'peer' ? 'Peer' : audience === 'any' ? 'Any' : '';
+  // One wording per audience (DECISIONS R.5): Connect now = listeners and Mentors; Start mentorship
+  // = Mentors and Mento Verified; in_service keeps "verified mentors".
+  const allKey =
+    audience === 'peer'
+      ? 'Peer'
+      : audience === 'any'
+        ? 'Any'
+        : audience === 'listeners'
+          ? 'Listeners'
+          : audience === 'mentorship'
+            ? 'Mentorship'
+            : '';
   const name = mentor?.name ?? (toAll ? t(`requestSent.allMentors${allKey}` as TKey) : '');
   const question = request?.intro_message ?? '';
 

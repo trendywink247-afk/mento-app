@@ -23,6 +23,7 @@ import { capture } from '@/lib/analytics';
 import { ApiError, api, type ConversationMentor, type PathTree, type StayInTouch, type StayInTouchBlock } from '@/lib/api';
 import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
 import { useI18n } from '@/lib/i18n';
+import { tierKey } from '@/lib/tierWord';
 import { pendingOption } from '@/lib/pendingOption';
 import { mentorHeroKey } from '@/lib/originStore';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
@@ -151,7 +152,7 @@ export default function MentorProfileScreen() {
   })();
 
   const statusLine = [
-    online ? t('mentorProfile.online') : t('mentorProfile.away'),
+    online ? t('mentorProfile.onlineAs', { tier: t(tierKey(profile?.tier)) }) : t('mentorProfile.awayAs', { tier: t(tierKey(profile?.tier)) }),
     profile?.community_slug ? t('inTouch.community', { name: communityLabel(tree, profile.community_slug) }) : null,
     !online && profile?.availability_note ? t('mentorProfile.usually', { note: profile.availability_note }) : null,
   ]

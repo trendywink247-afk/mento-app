@@ -11,6 +11,7 @@ import {
 
 import { MentorFace } from '@/components/art/MentorFace';
 import { MemberDisc } from '@/components/mentor/MemberDisc';
+import { TierEditor } from '@/components/admin/TierEditor.web';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminApplication, type AdminListener, type AdminMentorInvite } from '@/lib/adminApi';
 import { formatTimestamp, formatTopic } from '@/lib/format';
@@ -515,6 +516,16 @@ export default function ListenersPanel() {
                     </View>
                   ))}
                 </View>
+              ) : null}
+
+              {approved ? (
+                <TierEditor
+                  listener={li}
+                  onSaved={(message) => {
+                    setToast(message);
+                    void load();
+                  }}
+                />
               ) : null}
 
               <View style={styles.actions}>
