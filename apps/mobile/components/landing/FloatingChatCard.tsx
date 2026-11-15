@@ -22,6 +22,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { easing, stage } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font } from '@/theme/tokens';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 type Props = {
   text: string;
@@ -37,20 +38,21 @@ export function FloatingChatCard({ text, side }: Props) {
   const reduced = useReducedMotion();
   const member = side === 'member';
   const p = useSharedValue(0);
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(p);
       p.value = 0;
       return;
     }
     p.value = withRepeat(
       withTiming(1, { duration: member ? stage.floatA : stage.floatB, easing: easing.breathe }),
-      -1,
+      budgetRepeats(member ? stage.floatA : stage.floatB, true),
       true
     );
     return () => cancelAnimation(p);
-  }, [reduced, member, p]);
+  }, [reduced, member, p, budget.live, budget.run]);
 
   // Board: A floats 0→−10px while easing −3°→−1°; B floats −6→+6px, 2.5°→1°.
   const style = useAnimatedStyle(() => ({

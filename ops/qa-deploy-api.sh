@@ -122,8 +122,9 @@ wait_healthy() {
 }
 
 # Refuse an image whose commit has no passing ops/ci run. Reads the summary that
-# ops/ci.sh appends to /srv/mento/logs/ci/<full-sha>.log; only lines after the
-# "---- summary ----" marker count, so test output cannot fake a PASS or FAIL.
+# ops/ci.sh appends to /srv/mento/logs/ci/<full-sha>.log; only lines after the LAST
+# "---- summary [(tier, Ns wall)] ----" marker count, so test output cannot fake a PASS or
+# FAIL. Lines may carry a "[group] " prefix (ops/ci.sh since 61a8916).
 ci_gate() { # <image>
     local image=$1 sha log summary
     if [ -n "$SKIP_CI" ]; then say "WARNING: ops/ci check skipped by request"; return 0; fi
@@ -131,8 +132,8 @@ ci_gate() { # <image>
     [[ $sha =~ ^[0-9a-f]{40}$ ]] || die "$image has no commit label; rebuild with ops/build-api.sh, or pass --skip-ci-check"
     log="$CI_LOG_DIR/$sha.log"
     [ -f "$log" ] || die "no ops/ci log for $sha ($log); run ops/ci.sh $sha first, or pass --skip-ci-check"
-    summary="$(awk '/^ops\/ci: ---- summary ----/ {f=1; next} f' "$log")"
-    if ! grep -q '^PASS' <<<"$summary" || grep -q '^FAIL' <<<"$summary"; then
+    summary="$(awk '/^ops\/ci: ---- summary( \(.*\))? ----$/ {buf=""; f=1; next} f {buf=buf $0 "\n"} END {printf "%s", buf}' "$log")"
+    if ! grep -Eq '^(\[[^]]+\] +)?PASS' <<<"$summary" || grep -Eq '^(\[[^]]+\] +)?FAIL' <<<"$summary"; then
         die "ops/ci did not pass for $sha (see $log); fix it, or pass --skip-ci-check"
     fi
     say "ops/ci passed for $sha"

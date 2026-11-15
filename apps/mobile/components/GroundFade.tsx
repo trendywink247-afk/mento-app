@@ -20,7 +20,7 @@ export function GroundFade({ height, color }: { height: number; color?: string }
         <Defs>
           <LinearGradient id={id} x1="0" y1="0" x2="0" y2="1">
             <Stop offset="0" stopColor={ground} stopOpacity={0} />
-            <Stop offset="0.22" stopColor={ground} stopOpacity={0.95} />
+            <Stop offset="0.22" stopColor={ground} stopOpacity={1} />
             <Stop offset="1" stopColor={ground} stopOpacity={1} />
           </LinearGradient>
         </Defs>

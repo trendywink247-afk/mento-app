@@ -8,22 +8,7 @@ mentors ("listener" is the internal/code word; user-facing copy says
 professional mentoring, payments and broader sectors are out of scope until
 separately agreed.
 
-**Start here:** [Current status](docs/STATUS.md) · [Docs index](docs/README.md) · [Product decisions](docs/DECISIONS.md) · [Project brief](CLAUDE.md)
-
-## Recent progress
-
-- **Repository consolidation.** Stale docs, the old project brief and
-  one-off agent skills moved to `docs/archive/` (never read it as current
-  guidance); `CLAUDE.md` rewritten short; Dependabot retargeted at `dev`.
-- **GitHub's default branch is now `main`**, not `master`.
-- **QA moved from Nginx to Caddy.** `qa-api`/`qa-app`/`qa-admin.mento.chat`
-  are live on the staging box behind Caddy; Nginx and certbot are disabled
-  there (not removed — a documented rollback exists); `staging.mento.chat`
-  is kept serving as an alias for now. Full record, the Caddyfile and the
-  as-run runbook are under `infra/caddy/` once merged from its branch.
-  Web releases there install via `/usr/local/sbin/qa-install-web`
-  (`ops/qa-install-web.sh`, once merged).
-- Current state, the live next-tasks list and open questions: `docs/STATUS.md`.
+**Start here:** [Status](docs/STATUS.md) · [Docs index](docs/README.md) · [Architecture](docs/ARCHITECTURE.md) · [Operations](docs/OPERATIONS.md) · [Decisions](docs/DECISIONS.md) · [Agent brief](CLAUDE.md)
 
 ## Stack
 

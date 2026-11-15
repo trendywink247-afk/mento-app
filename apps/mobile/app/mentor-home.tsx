@@ -22,13 +22,14 @@ import { languageLine } from '@/lib/languages';
 import { RequestTotals, UpNext } from '@/components/mentor/RequestQueueExtras';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { CertifiedBadge } from '@/components/CertifiedBadge';
+import { TierMark } from '@/components/TierMark';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
 import { LineSheet } from '@/components/mentor/LineSheet';
 import { StayInTouchSheet } from '@/components/mentor/StayInTouchSheet';
 import { SettleBack } from '@/components/motion/SettleBack';
 import { Entrance } from '@/components/motion/Entrance';
 import { Tilt3D } from '@/components/motion/Tilt3D';
-import { api, type ListenerApplication } from '@/lib/api';
+import { ApiError, api, type ListenerApplication } from '@/lib/api';
 import { haptic } from '@/lib/haptics';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { usePreparedAnswers } from '@/lib/preparedAnswers';
@@ -66,6 +67,7 @@ export default function MentorHome() {
   const [switching, setSwitching] = useState(false);
   // Board A15: the stay-in-touch decision sheet over a settled-back Mentor Home.
   const [sheet, setSheet] = useState<{ ask: StayInTouchAsk; seats: number } | null>(null);
+  const [actions, setActions] = useState<ChatActionInfo | null>(null);
   const [asksVersion, setAsksVersion] = useState(0);
   // "Your line" — the same sheet pattern, over the same settled-back Mentor Home.
   const [lineMe, setLineMe] = useState<ListenerMe | null>(null);
@@ -74,7 +76,7 @@ export default function MentorHome() {
   const { ask: askParam } = useLocalSearchParams<{ ask?: string }>();
   // null = not attempted / minting; true = a listener token is on device and
   // usable; 'unavailable' = we tried and the credential couldn't be minted.
-  const [consoleReady, setConsoleReady] = useState<boolean | 'unavailable' | null>(null);
+  const [consoleReady, setConsoleReady] = useState<boolean | 'unavailable' | 'steppedBack' | null>(null);
   const approvedHapticFired = useRef(false);
   // Tracks an in-flight api.consoleSession() mint — read only during the
   // consoleReady === null render to decide spinner vs. unavailable card, so a
@@ -108,8 +110,10 @@ export default function MentorHome() {
       const cs = await api.consoleSession();
       await saveListenerToken(cs.listener_token);
       setConsoleReady(true);
-    } catch {
-      setConsoleReady('unavailable');
+    } catch (e) {
+      // 403 not_approved: the team stepped this mentor side back (suspended). Say so plainly;
+      // "try again" would never work.
+      setConsoleReady(e instanceof ApiError && e.status === 403 ? 'steppedBack' : 'unavailable');
     } finally {
       minting.current = false;
     }
@@ -173,15 +177,38 @@ export default function MentorHome() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={showConsole ? ['top'] : ['top', 'bottom']}>
       <SettleBack
-        open={!!sheet || !!lineMe}
+        open={!!sheet || !!lineMe || !!actions}
         onDismiss={() => {
           setSheet(null);
           setLineMe(null);
+          setActions(null);
         }}
-        dismissLabel={lineMe ? t('common.cancel') : t('mentorInTouch.later')}
-        sheetLabel={lineMe ? t('mentor.line.title') : t('mentorInTouch.sheetA11y')}
+        dismissLabel={lineMe || actions ? t('common.cancel') : t('mentorInTouch.later')}
+        sheetLabel={lineMe ? t('mentor.line.title') : actions ? actions.name : t('mentorInTouch.sheetA11y')}
         sheet={
-          lineMe ? (
+          actions ? (
+            <ChatActionsSheet
+              inline
+              name={actions.name}
+              pinned={actions.pinned}
+              archived={actions.archived}
+              muted={false}
+              canMute={false}
+              canDelete={false}
+              busy={false}
+              onPin={() => {
+                actions.onPin();
+                setActions(null);
+              }}
+              onArchive={() => {
+                actions.onArchive();
+                setActions(null);
+              }}
+              onMute={() => {}}
+              onDelete={() => {}}
+              onClose={() => setActions(null)}
+            />
+          ) : lineMe ? (
             <LineSheet
               me={lineMe}
               onClose={() => setLineMe(null)}
@@ -249,6 +276,7 @@ export default function MentorHome() {
             switching={switching}
             openAskId={typeof askParam === 'string' ? askParam : undefined}
             onOpenAsk={(ask, seats) => setSheet({ ask, seats })}
+            onActions={setActions}
             onSessionLost={() => {
               // The token's already cleared (listenerApi does that before this
               // fires) — re-mint immediately rather than stranding the mentor on
@@ -257,6 +285,20 @@ export default function MentorHome() {
               void ensureConsole();
             }}
           />
+        ) : consoleReady === 'steppedBack' ? (
+          <Entrance index={1}>
+            <EdgeSurface
+              edge={colors.edgeSurface}
+              style={[styles.card, styles.row, { backgroundColor: colors.surface }]}
+              testID="mentor-stepped-back"
+            >
+              <IconBadge icon="pause-circle-outline" tone="green" size={44} />
+              <View style={{ flex: 1 }}>
+                <Text style={[type.label, { color: colors.ink }]}>{t('mentor.steppedBackTitle')}</Text>
+                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.steppedBackBody')}</Text>
+              </View>
+            </EdgeSurface>
+          </Entrance>
         ) : consoleReady === 'unavailable' || (consoleReady === null && !minting.current) ? (
           <Entrance index={1}>
             <EdgeSurface
@@ -312,6 +354,8 @@ export default function MentorHome() {
 /** The console proper — mounted only once a listener token is on device, so the
  * data hook and heartbeat never spin up for a mentor who hasn't reached this state
  * yet. */
+type ChatActionInfo = { name: string; pinned: boolean; archived: boolean; onPin: () => void; onArchive: () => void };
+
 function ConsoleBody({
   animal,
   asksVersion,
@@ -319,6 +363,7 @@ function ConsoleBody({
   onOpenLine,
   openAskId,
   onOpenAsk,
+  onActions,
   onSessionLost,
   tab,
   onTab,
@@ -332,6 +377,7 @@ function ConsoleBody({
   lineVersion: number;
   onOpenLine: (me: ListenerMe) => void;
   openAskId?: string;
+  onActions: (a: ChatActionInfo) => void;
   onOpenAsk: (ask: StayInTouchAsk, seats: number) => void;
   onSessionLost: () => void;
   tab: MentorTab;
@@ -352,7 +398,6 @@ function ConsoleBody({
     if (c.me) setPushPreview(Boolean(c.me.push_preview));
   }, [c.me?.push_preview]); // eslint-disable-line react-hooks/exhaustive-deps
   const [showArchived, setShowArchived] = useState(false);
-  const [actionFor, setActionFor] = useState<string | null>(null);
   const prepared = usePreparedAnswers();
   const [chatTab, setChatTab] = useState<'active' | 'waiting' | 'touch'>('active');
   const [reqIndex, setReqIndex] = useState(0);
@@ -515,31 +560,16 @@ function ConsoleBody({
         onPress={() => openConversation(conversation)}
         onSnooze={(on) => void setSnooze(conversation.id, on)}
         snoozeBusy={c.busy === `snooze:${conversation.id}`}
-        onLongPress={() => setActionFor(actionFor === conversation.id ? null : conversation.id)}
+        onLongPress={() =>
+          onActions({
+            name: conversation.user_persona_name,
+            pinned: chatPrefs.pinned.includes(conversation.id),
+            archived: chatPrefs.archived.includes(conversation.id),
+            onPin: () => togglePinned(conversation.id),
+            onArchive: () => toggleArchived(conversation.id),
+          })
+        }
       />
-      {actionFor === conversation.id ? (
-        <ChatActionsSheet
-          inline
-          name={conversation.user_persona_name}
-          pinned={chatPrefs.pinned.includes(conversation.id)}
-          archived={chatPrefs.archived.includes(conversation.id)}
-          muted={false}
-          canMute={false}
-          canDelete={false}
-          busy={false}
-          onPin={() => {
-            togglePinned(conversation.id);
-            setActionFor(null);
-          }}
-          onArchive={() => {
-            toggleArchived(conversation.id);
-            setActionFor(null);
-          }}
-          onMute={() => {}}
-          onDelete={() => {}}
-          onClose={() => setActionFor(null)}
-        />
-      ) : null}
     </View>
   );
 
@@ -635,9 +665,9 @@ function ConsoleBody({
           <View style={[styles.seg, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} accessibilityRole="tablist">
             {(
               [
-                ['active', t('mentor.tabActive'), activeChats.length],
-                ['waiting', t('mentor.tabWaiting'), waitingChats.length],
-                ['touch', t('mentor.tabTouch'), touchChats.length],
+                ['active', t('mentor.tabActive'), activeChats.filter((x) => !isArchived(x)).length],
+                ['waiting', t('mentor.tabWaiting'), waitingChats.filter((x) => !isArchived(x)).length],
+                ['touch', t('mentor.tabTouch'), touchChats.filter((x) => !isArchived(x)).length],
               ] as const
             ).map(([key, label, count]) => {
               const on = chatTab === key;
@@ -712,8 +742,14 @@ function ConsoleBody({
           <EdgeSurface edge={colors.edgeSurface} style={[styles.profile, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-profile">
             <Companion animal={(c.me.companion_animal as CompanionAnimal | undefined) ?? animal} size={84} awake />
             <Text style={[styles.display, { color: colors.ink, fontSize: 26, lineHeight: 34 }]}>{c.me.persona_name}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
-            {c.me.certified ? <CertifiedBadge testID="mentor-profile-certified" /> : null}
+            {c.me.name_changes_at ? (
+              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
+            ) : null}
+            {c.me.certified ? (
+              <CertifiedBadge testID="mentor-profile-certified" />
+            ) : (
+              <TierMark tier={c.me.tier ?? 'listener'} testID="mentor-profile-tier" />
+            )}
           </EdgeSurface>
 
           <Pressable onPress={() => c.me && onOpenLine(c.me)} accessibilityRole="button" testID="mentor-profile-line">

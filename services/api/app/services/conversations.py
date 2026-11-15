@@ -24,6 +24,7 @@ from datetime import UTC, datetime
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
+from app import live_events
 from app.models.chat_message import ChatMessage, ChatReadMarker
 from app.models.conversation import Conversation
 from app.models.enums import ConversationEndedBy, ConversationStatus
@@ -55,8 +56,21 @@ def end(db: Session, convo: Conversation, ended_by: ConversationEndedBy) -> bool
     convo.ended_at = datetime.now(UTC)
     convo.ended_by = ended_by
     release_listener_slot(db, convo)
+    # `state` first: `ended` closes the chat sockets right after it is delivered.
+    chat_events.after_commit(db, convo.id, state_event(convo))
     chat_events.after_commit(db, convo.id, {"t": "ended", "by": ended_by.value})
+    live_events.conversation_changed(db, convo)
     return True
+
+
+def state_event(convo: Conversation) -> dict:
+    """The own-chat `state` frame (additive; older apps ignore unknown types): what the member's
+    screen used to poll GET /conversations/{id} for."""
+    return {
+        "t": "state",
+        "exam_redirect": convo.exam_redirect_at is not None,
+        "status": "active" if convo.status == ConversationStatus.active else "ended",
+    }
 
 
 def wipe_messages(db: Session, convo: Conversation) -> int:

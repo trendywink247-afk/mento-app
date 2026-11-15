@@ -45,7 +45,7 @@ ok()   { echo "ok   $*"; }
 fail() { echo "FAIL $*"; fails=$((fails+1)); }
 note() { echo "---- $*"; }
 
-for c in mento-postgres mento-redis mento-caddy mento-glitchtip mento-postgres-prod mento-redis-prod mento-api-prod mento-worker-prod; do
+for c in mento-postgres mento-redis mento-caddy mento-postgres-prod mento-redis-prod mento-api-prod mento-worker-prod; do
     if docker inspect "$c" >/dev/null 2>&1; then
         echo "container $c already exists — stop that stack first (this test reuses the names)"; exit 2
     fi
@@ -85,7 +85,7 @@ git -C "$ROOT" push -q "$REMOTE" "$SNAP:refs/heads/main"
 git clone -q "$REMOTE" "$BOX"
 git clone -q "$REMOTE" "$DEV"
 git -C "$DEV" config user.email test@deploy.local; git -C "$DEV" config user.name test-deploy
-printf 'ENV=dev\nPOSTGRES_PASSWORD=test-deploy-pw\nJWT_SECRET=test-deploy\nGLITCHTIP_SECRET_KEY=synthetic-rehearsal-only-not-production\nUVICORN_WORKERS=1\n' \
+printf 'ENV=dev\nPOSTGRES_PASSWORD=test-deploy-pw\nJWT_SECRET=test-deploy\nUVICORN_WORKERS=1\n' \
     > "$BOX/services/api/.env"
 mkdir -p "$TMP/web/current"; echo SPA > "$TMP/web/current/index.html"
 cat > "$TMP/test.override.yml" <<EOF

@@ -36,6 +36,7 @@ from redis import asyncio as aioredis
 from redis.exceptions import RedisError
 
 from app.config import get_settings
+from app.events_hub import valkey_kwargs
 
 logger = logging.getLogger("mento.chat.hub")
 
@@ -69,13 +70,16 @@ class Hub:
         # conversation_id -> {websocket: Peer}, insertion-ordered (oldest first)
         self._rooms: dict[str, dict[WebSocket, Peer]] = defaultdict(dict)
         self._redis: aioredis.Redis | None = None
+        self._sub: aioredis.Redis | None = None
         self._sync: redis.Redis | None = None
         self._task: asyncio.Task | None = None
 
     # ---- lifecycle -------------------------------------------------------------
     async def start(self) -> None:
         try:
-            self._redis = aioredis.from_url(get_settings().redis_url, decode_responses=True)
+            self._redis = aioredis.from_url(
+                get_settings().redis_url, decode_responses=True, **valkey_kwargs()
+            )
             await self._redis.ping()
         except Exception as exc:  # noqa: BLE001 — degrade to local fan-out, never crash boot
             logger.warning(
@@ -83,6 +87,10 @@ class Hub:
             )
             self._redis = None
             return
+        # Its own client for the subscription: no read timeout on a socket that waits for hours.
+        self._sub = aioredis.from_url(
+            get_settings().redis_url, decode_responses=True, **valkey_kwargs(subscriber=True)
+        )
         self._task = asyncio.create_task(self._listen())
 
     async def stop(self) -> None:
@@ -91,16 +99,17 @@ class Hub:
             with contextlib.suppress(asyncio.CancelledError, Exception):
                 await self._task
             self._task = None
-        if self._redis:
-            with contextlib.suppress(Exception):
-                await self._redis.aclose()
-            self._redis = None
+        for client in (self._sub, self._redis):
+            if client is not None:
+                with contextlib.suppress(Exception):
+                    await client.aclose()
+        self._redis = self._sub = None
 
     async def _listen(self) -> None:
-        assert self._redis is not None
+        assert self._sub is not None
         while True:
             try:
-                pubsub = self._redis.pubsub()
+                pubsub = self._sub.pubsub()
                 await pubsub.psubscribe(f"{_PREFIX}*")
                 async for item in pubsub.listen():
                     if item.get("type") != "pmessage":
@@ -250,7 +259,7 @@ class Hub:
         where every worker's subscriber picks it up. False if it did not go out."""
         try:
             if self._sync is None:
-                self._sync = redis.Redis.from_url(get_settings().redis_url)
+                self._sync = redis.Redis.from_url(get_settings().redis_url, **valkey_kwargs())
             self._sync.publish(f"{_PREFIX}{conversation_id}", json.dumps(event))
             return True
         except RedisError as exc:

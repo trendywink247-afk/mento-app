@@ -39,9 +39,8 @@ import { PressKey } from '@/components/motion/PressKey';
 import { ApiError, api, type PathState } from '@/lib/api';
 import { openNewChat } from '@/lib/askLoop';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { pathCopy } from '@/lib/pathCopy';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
-import { AudiencePicker } from '@/components/AudiencePicker';
-import type { Audience } from '@/lib/api';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
 import {
   EMPTY_CHOICE,
@@ -61,6 +60,7 @@ import { leaveToPath } from '@/lib/leaveToChats';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 const CHIP_LABEL: Record<ChipId, TKey> = {
   first: 'pathQuestion.chips.first',
@@ -91,20 +91,21 @@ const CARET_LIT = 0.9;
 function PreviewCaret({ color }: { color: string }) {
   const reduced = useReducedMotion();
   const glow = useSharedValue(CARET_LIT);
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(glow);
       glow.value = CARET_LIT;
       return;
     }
     glow.value = withRepeat(
       withTiming(CARET_DIM, { duration: breathe.period / 2, easing: easing.breathe }),
-      -1,
+      budgetRepeats(breathe.period / 2, true),
       true,
     );
     return () => cancelAnimation(glow);
-  }, [reduced, glow]);
+  }, [reduced, glow, budget.live, budget.run]);
 
   const style = useAnimatedStyle(() => ({ opacity: glow.value }));
   return <Animated.View style={[styles.caret, { backgroundColor: color }, style]} />;
@@ -113,8 +114,8 @@ function PreviewCaret({ color }: { color: string }) {
 export default function PathQuestion() {
   useSessionGuard();
   const router = useRouter();
-  const { colors } = useTheme();
-  const { t } = useI18n();
+  const { colors, companionShown } = useTheme();
+  const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const params = useLocalSearchParams<{ starter?: string; community?: string; lens?: string }>();
 
@@ -147,7 +148,7 @@ export default function PathQuestion() {
     };
   }, []);
 
-  const prompts = useMemo(() => path?.prompts ?? [], [path]);
+  const prompts = useMemo(() => (path?.prompts ?? []).map((p) => pathCopy(locale, p)), [path, locale]);
   useEffect(() => {
     if (!pathLoaded || starter) return;
     // Opened without a starter (a stray deep link): take the path's first one, or
@@ -161,7 +162,7 @@ export default function PathQuestion() {
   const acceptFirst = Boolean(path?.community?.accept_first);
   const community = params.community ?? path?.community?.slug ?? null;
   const lens =
-    params.lens ?? (path?.community && path.stage ? `${path.community.name} · ${path.stage.title}` : '');
+    params.lens ?? (path?.community && path.stage ? `${path.community.name} · ${pathCopy(locale, path.stage.title)}` : '');
 
   const offered = useMemo(() => chipsFor(community, acceptFirst), [community, acceptFirst]);
   const assembled = useMemo(
@@ -180,7 +181,6 @@ export default function PathQuestion() {
     setStarter(prompts[(at + 1) % prompts.length]);
   };
 
-  const [audience, setAudience] = useState<Audience>('any');
   const go = async (mode: 'continue' | 'edit') => {
     if (busy || !assembled.text) return;
     setBusy(mode);
@@ -188,11 +188,14 @@ export default function PathQuestion() {
     setBusyExit(false);
     setOpenQ(null);
     try {
-      const started = await matchOrAsk({ audience }, assembled.text);
+      // The Any / Verified / Peers picker is gone (DECISIONS R.5): a path question goes to any mentor.
+      const started = await matchOrAsk({ audience: 'any' }, assembled.text);
       if (started.kind === 'ask') {
         openAsked(router, started.request);
         return;
       }
+      // The builder already holds the member's own question, so no box: never 'cancelled' here.
+      if (started.kind === 'cancelled') return;
       const match = started.match;
       // replace: the builder has done its job — back from the chat should not return
       // to a half-used form holding a message that may already be sent.
@@ -343,9 +346,11 @@ export default function PathQuestion() {
           </View>
           <View>
             {/* The companion peeks over the draft (decor only — flow is untouched). */}
-            <View style={styles.companion} pointerEvents="none">
-              <Companion animal={animal ?? null} size={COMPANION} />
-            </View>
+            {companionShown ? (
+              <View style={styles.companion} pointerEvents="none">
+                <Companion animal={animal ?? null} size={COMPANION} />
+              </View>
+            ) : null}
             <View
               style={[styles.panel, { backgroundColor: colors.bgLavender, borderColor: colors.border }]}
               accessibilityLiveRegion="polite"
@@ -412,11 +417,6 @@ export default function PathQuestion() {
               }}
               testID="pq-open"
             />
-          </View>
-        ) : null}
-        {acceptFirst ? (
-          <View style={styles.footNote}>
-            <AudiencePicker value={audience} onChange={setAudience} />
           </View>
         ) : null}
         {note ? (

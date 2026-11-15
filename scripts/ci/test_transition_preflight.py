@@ -36,7 +36,7 @@ def expected():
 def candidate():
     services = {
         name: dict(profiles=["transition-unmanaged"])
-        for name in ("postgres", "valkey", "glitchtip", "glitchtip-init-db")
+        for name in ("postgres", "valkey")
     }
     for name in ("api_blue", "api_green", "worker", "migrate"):
         services[name] = dict(

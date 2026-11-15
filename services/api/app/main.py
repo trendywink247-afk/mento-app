@@ -14,11 +14,15 @@ from app.app_version import MinAppVersionMiddleware
 from app.chat_hub import hub
 from app.config import get_settings
 from app.db import init_db
+from app.events_hub import hub as events_hub
 from app.routers import (
     admin_console,
+    app_config,
     auth,
     chat,
     conversation,
+    email_confirm,
+    events,
     feedback,
     health,
     in_touch,
@@ -28,6 +32,7 @@ from app.routers import (
     listeners,
     match,
     me,
+    mentee_profile,
     notifications,
     onboarding,
     paths,
@@ -57,11 +62,27 @@ def _enforce_prod_invariants() -> None:
     problems = []
     if settings.jwt_secret == "change-me-long-random":
         problems.append("JWT_SECRET is the published default — set a long random value")
-    if not (settings.stream_api_key and settings.stream_api_secret):
+    if settings.own_chat_new_conversations and not settings.message_key:
         problems.append(
-            "STREAM_API_KEY/SECRET missing — the crisis-scan webhook would reject "
-            "everything and messages would flow unscanned"
+            "MESSAGE_KEY missing — own chat (OWN_CHAT_NEW_CONVERSATIONS) cannot store a "
+            "message without it"
         )
+    if not (settings.stream_api_key and settings.stream_api_secret):
+        # Own chat scans in its own write path; Stream keys are needed only while a Stream
+        # room can still receive messages (its crisis scan is Stream's webhook).
+        live_stream = _active_stream_conversations()
+        if not settings.own_chat_new_conversations or live_stream != 0:
+            why = (
+                "STREAM_API_KEY/SECRET missing — the crisis-scan webhook would reject "
+                "everything and messages would flow unscanned"
+            )
+            if settings.own_chat_new_conversations:
+                why += (
+                    " (own chat is on, but active Stream conversations remain"
+                    if live_stream
+                    else " (own chat is on, but active Stream conversations could not be counted"
+                ) + ")"
+            problems.append(why)
     if not settings.resolved_cors_origins:
         problems.append(
             "CORS origin list is empty — set CORS_ORIGINS (comma-separated) or valid "
@@ -87,6 +108,34 @@ def _enforce_prod_invariants() -> None:
         raise RuntimeError(f"unsafe {settings.env} configuration: " + "; ".join(problems))
 
 
+def _active_stream_conversations() -> int | None:
+    """Active conversations still on Stream; None when the database can't be asked (which
+    the caller treats as "some", so a boot without Stream keys fails closed)."""
+    try:
+        from sqlalchemy import func, select
+
+        from app.db import SessionLocal
+        from app.models.conversation import Conversation
+        from app.models.enums import ConversationStatus
+
+        with SessionLocal() as db:
+            return int(
+                db.execute(
+                    select(func.count())
+                    .select_from(Conversation)
+                    .where(
+                        Conversation.chat_backend == "stream",
+                        Conversation.status == ConversationStatus.active,
+                    )
+                ).scalar_one()
+            )
+    except Exception as exc:  # noqa: BLE001 — unknown counts as "some"
+        logging.getLogger(__name__).warning(
+            "boot: could not count active Stream conversations (%s)", type(exc).__name__
+        )
+        return None
+
+
 def _warn_on_risky_config() -> None:
     """Legal but dangerous settings — boot, and say so loudly."""
     if settings.trusted_proxy_hops <= 0:
@@ -110,9 +159,11 @@ async def lifespan(app: FastAPI):
     if settings.is_dev:
         init_db()
     await hub.start()
+    await events_hub.start()
     try:
         yield
     finally:
+        await events_hub.stop()
         await hub.stop()
 
 
@@ -154,14 +205,18 @@ app.add_middleware(
 
 API = "/api/v1"
 app.include_router(health.router, prefix=API)
+app.include_router(app_config.router, prefix=API)
 app.include_router(onboarding.router, prefix=API)
 app.include_router(auth.router, prefix=API)
 app.include_router(me.router, prefix=API)
+app.include_router(mentee_profile.router, prefix=API)
+app.include_router(email_confirm.router, prefix=API)
 app.include_router(match.router, prefix=API)
 app.include_router(paths.router, prefix=API)
 app.include_router(safety.router, prefix=API)
 app.include_router(conversation.router, prefix=API)
 app.include_router(chat.router, prefix=API)
+app.include_router(events.router, prefix=API)
 app.include_router(stream_hooks.router, prefix=API)
 app.include_router(journals.router, prefix=API)
 app.include_router(listener_applications.router, prefix=API)

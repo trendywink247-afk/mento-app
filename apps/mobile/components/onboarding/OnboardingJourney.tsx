@@ -32,14 +32,17 @@ import { HandoffStep } from '@/components/onboarding/steps/HandoffStep';
 import { PrimerStep } from '@/components/onboarding/steps/PrimerStep';
 import { ReadyStep } from '@/components/onboarding/steps/ReadyStep';
 import { RoleStep } from '@/components/onboarding/steps/RoleStep';
+import { VerifyStep } from '@/components/onboarding/steps/VerifyStep';
 import { haptic } from '@/lib/haptics';
 import { clearDraft, getDraft } from '@/lib/onboardingDraft';
 import { api } from '@/lib/api';
+import { useAppConfig } from '@/lib/appConfig';
 import { enterNewChat } from '@/lib/askLoop';
 import { enterMentorPath } from '@/lib/mentorPath';
 import { saveCompanionAnimal, saveRole, type Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing, forkArrival } from '@/theme/motion';
+import { useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
 /** The hard cap on the "found someone" beat — theatre never spends the <30s promise.
@@ -47,7 +50,7 @@ import { space } from '@/theme/tokens';
  * a clear, unhurried beat (~2.4s total), not a flicker. */
 const FOUND_BEAT_MS = 1000;
 
-type Step = 'role' | 'age' | 'email' | 'companion' | 'ready' | 'connecting' | 'primer' | 'handoff';
+type Step = 'role' | 'age' | 'verify' | 'email' | 'companion' | 'ready' | 'connecting' | 'primer' | 'handoff';
 
 /** Two orders, one machine (DECISIONS §K.7). The role step is shared; the mentee
  * branch is byte-identical to the pre-fork journey. The mentor branch mints the session
@@ -59,12 +62,20 @@ const MENTOR_ORDER: Step[] = ['role', 'age', 'email', 'handoff'];
  * today"): only what the account is missing — the age gate and email were given at mentor
  * sign-up, so the companion pick, then Ready → My Chats (founder ruling D, 2026-09-19). */
 const RESUME_ORDER: Step[] = ['companion', 'ready'];
-const ALL_STEPS: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'connecting', 'primer', 'handoff'];
+const ALL_STEPS: Step[] = ['role', 'age', 'verify', 'email', 'companion', 'ready', 'connecting', 'primer', 'handoff'];
+
+/** Verification at signup (DECISIONS R.11, a stub): only when the server switches it on,
+ * right after the age gate. Off today, so the orders above are unchanged. */
+function withVerify(order: Step[], on: boolean): Step[] {
+  if (!on || !order.includes('age')) return order;
+  const i = order.indexOf('age') + 1;
+  return [...order.slice(0, i), 'verify', ...order.slice(i)];
+}
 
 /** Steps that show the back key. connecting is forward-only; `ready` shows it (board A18)
  * and so does the mentor hand-off (board A34: back to the primer; the session it made is
  * simply reused next time). Hardware back already stepped through both. */
-const BACKABLE: Step[] = ['role', 'age', 'email', 'companion', 'ready', 'handoff'];
+const BACKABLE: Step[] = ['role', 'age', 'verify', 'email', 'companion', 'ready', 'handoff'];
 
 /** The step dots (board A16–A18, A33–A34). A member's four steps start after the fork;
  * the mentor board counts the fork too ("Step 4 of 5" on the primer). The fork itself and
@@ -81,6 +92,7 @@ export function OnboardingJourney() {
   const params = useLocalSearchParams<{ step?: string }>();
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
+  const { companionShown } = useTheme();
   const [celebrate, setCelebrate] = useState(0);
   // The chosen animal — the star from the moment of choice (DECISIONS §I.5).
   const [companionAnimal, setCompanionAnimal] = useState<CompanionAnimal | null>(
@@ -90,7 +102,8 @@ export function OnboardingJourney() {
   const [role, setRole] = useState<Role>(() => getDraft().role ?? 'mentee');
   // Fixed for the journey's life: a resume never turns into a new account's journey.
   const [resume] = useState(() => Boolean(getDraft().sessionBacked));
-  const order = resume ? RESUME_ORDER : role === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
+  const { signup_verification_required: verifyOn } = useAppConfig();
+  const order = withVerify(resume ? RESUME_ORDER : role === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER, verifyOn);
 
   const [step, setStep] = useState<Step>(() => {
     const requested = params.step as Step | undefined;
@@ -258,6 +271,8 @@ export function OnboardingJourney() {
           return <RoleStep onPick={onRolePicked} />;
         case 'age':
           return <AgeStep onNext={goNext} />;
+        case 'verify':
+          return <VerifyStep onNext={goNext} />;
         case 'email':
           return <EmailStep onNext={goNext} />;
         case 'companion':
@@ -312,7 +327,10 @@ export function OnboardingJourney() {
           <StepTransition activeKey={step} render={renderStep} direction={direction.current} />
         </View>
         {/* The guide mascot — mounted once, glides between per-step anchors. */}
-        <PandaStage step={step} celebrate={celebrate} animal={companionAnimal} />
+        {/* A member who skipped the companion sees none once past that step (DECISIONS R.3). */}
+        {companionShown || (step !== 'ready' && step !== 'connecting') ? (
+          <PandaStage step={step} celebrate={celebrate} animal={companionAnimal} />
+        ) : null}
       </SafeAreaView>
     </View>
   );

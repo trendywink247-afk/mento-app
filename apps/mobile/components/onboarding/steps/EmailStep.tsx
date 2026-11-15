@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -34,6 +34,10 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
   const breathing = useBreathing();
   const [email, setEmail] = useState(() => getDraft().email ?? '');
   const valid = email.length === 0 || EMAIL_RE.test(email);
+  // Continue with an empty field asks for an email; only Skip moves on without one
+  // (DECISIONS R.3). Still, plain text — nothing shakes (T&S #11).
+  const [askEmail, setAskEmail] = useState(false);
+  const inputRef = useRef<TextInput>(null);
   const animal = (getDraft().companionAnimal as CompanionAnimal | null) ?? null;
   // "Optional, but helpful" — the companion tilts in, curious about you (once, on arrival).
   const [curious, setCurious] = useState<CompanionTrigger>(null);
@@ -42,6 +46,11 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
   }, [reduced]);
 
   const next = (withEmail: boolean) => {
+    if (withEmail && !email.trim()) {
+      setAskEmail(true);
+      inputRef.current?.focus();
+      return;
+    }
     setDraft({ email: withEmail && email ? email.trim() : null });
     // Whether the step was skipped — never the address itself.
     capture('onboarding_email_step', { skipped: !(withEmail && email) });
@@ -109,8 +118,7 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
 
           <Entrance index={2} style={styles.fieldBlock}>
             <Text style={[type.label, { color: colors.ink }]}>
-              {t('onboarding.email.label')}{' '}
-              <Text style={{ fontFamily: font.sans, color: colors.inkMuted }}>{t('onboarding.email.optional')}</Text>
+              {t('onboarding.email.label')}
             </Text>
             <EdgeSurface
               edge={valid ? colors.edgeSurface : colors.danger}
@@ -132,7 +140,11 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
                 inputMode="email"
                 autoCorrect={false}
                 value={email}
-                onChangeText={setEmail}
+                ref={inputRef}
+                onChangeText={(v) => {
+                  setEmail(v);
+                  if (v) setAskEmail(false);
+                }}
                 accessibilityLabel={t('onboarding.email.inputA11y')}
                 testID="email-input"
               />
@@ -140,6 +152,10 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
             {/* An error state is still: plain text, nothing shakes (T&S #11). */}
             {!valid ? (
               <Text style={[type.caption, { color: colors.danger }]}>{t('onboarding.email.invalid')}</Text>
+            ) : askEmail ? (
+              <Text style={[type.caption, { color: colors.danger }]} accessibilityLiveRegion="polite" testID="email-needed">
+                {t('onboarding.email.needed')}
+              </Text>
             ) : null}
           </Entrance>
 

@@ -1,4 +1,4 @@
-/** EAS Update check-and-apply — shared by the Profile "Check for updates" row
+/** Self-hosted OTA check-and-apply (services/ota) — shared by the Profile "Check for updates" row
  * and the shake gesture (lib/useShakeToUpdate.ts). No auto-check-on-launch: a
  * silent mid-session app restart would be a jarring surprise, not a Calm-
  * register interaction — every check is a deliberate user action.

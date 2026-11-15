@@ -50,6 +50,7 @@ import {
   type PlacementSlot,
 } from '@/lib/companionPlacement';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
 
@@ -88,7 +89,10 @@ export function useCompanionPlacement(
     hidden?: boolean;
   } = {},
 ): CompanionPlacement {
-  const { still = false, hidden = false } = options;
+  const { still = false, hidden: hiddenHere = false } = options;
+  // Companion switched off (Profile, or skipped at signup): never perched (DECISIONS R.3).
+  const { companionShown } = useTheme();
+  const hidden = hiddenHere || !companionShown;
   const stored = useCompanionAnimal(); // undefined while the read is in flight
   const known = stored !== undefined;
   const animal = stored ?? null;
@@ -230,7 +234,8 @@ function Perched({
     opacity.value = reduced ? 1 : withTiming(1, { duration: duration.fast, easing: easing.enter });
   }, [reduced, opacity]);
   const fadeStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  const breathStyle = useBreathing(true); // off under reduced motion, inside the hook
+  // A few breaths on arrival or a new pose, then rest: no endless loop on screens that stay open.
+  const breathStyle = useBreathing(true, `${id}/${poseName}`); // off under reduced motion, inside the hook
 
   const body = (
     <Animated.View style={fadeStyle}>

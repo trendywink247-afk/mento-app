@@ -7,7 +7,7 @@ Date: 2026-09-20 · Status: draft for founder review · Detail lives in the arch
 | # | Decision |
 |---|---|
 | D1 | Build the **Balanced tier**: one 4 GB server in India, Caddy, Valkey, own chat, direct FCM, job queue, off-site backups, blue/green deploys, self-hosted Sentry-compatible error tracker. |
-| D2 | **App updates stay on Expo's free EAS Update** for now. An own update server (xprem) is postponed until monthly users near ~800. |
+| D2 | ~~App updates stay on Expo's free EAS Update~~. Superseded 2026-11-11: EAS removed; updates come from our own signed OTA server (`services/ota`, [OTA.md](../OTA.md)). |
 | D3 | A **refined admin panel** with a safety desk that watches for crisis and for sensitive data. Visibility level and two-person approval are still open (section 7). |
 | D4 | Goal: scalable, nothing to lose, passes every store and legal check. |
 
@@ -34,7 +34,7 @@ API (FastAPI, blue and green, sync SQLAlchemy kept):
 
 Data: Postgres (tuned, explicit foreign keys, monthly partitions for messages, encrypted message bodies), Valkey (no persistence, `maxmemory`), off-site encrypted backups every 6 hours (restic to Backblaze) with message bodies excluded.
 
-Outside: FCM (delivery only), Google Play and App Store, Backblaze, Expo EAS Update (free tier). Removed: Stream, Expo push relay, PostHog cloud, hosted auth.
+Outside: FCM (delivery only), Google Play and App Store, Backblaze, our own OTA server (EAS removed 2026-11-11). Removed: Stream, Expo push relay, PostHog cloud, hosted auth.
 
 Operations: GitHub Actions deploy with a deploy-only SSH key, migrations first, blue/green swap; UptimeRobot on `/health`, `/health/ready`, `/health/crisis`, web and disk; Beszel and CrowdSec on the box; alerts to the founder's phone; SOPS with age for secrets.
 

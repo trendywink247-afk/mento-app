@@ -14,11 +14,13 @@ import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { useTabDockHeight } from '@/components/tabDock';
 import { CompanionNameRow } from '@/components/profile/CompanionNameRow';
+import { CompanionSwitch } from '@/components/profile/CompanionSwitch';
 import { RecoveryCard } from '@/components/profile/RecoveryCard';
 import { api, type ListenerApplication } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
 import { canReapply, openMentorSide, reapplyAt, stateOf } from '@/lib/mentorPath';
+import { setDraft } from '@/lib/onboardingDraft';
 import { screenCache } from '@/lib/screenCache';
 import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
 import { checkAndApplyUpdate, runningUpdate, type UpdateStatus } from '@/lib/updates';
@@ -128,8 +130,18 @@ export default function ProfileTab() {
   // Mentor Home on top of Profile; anything else → the mentor path (story / application /
   // where it stands).
   const openMentor = () => void openMentorSide(router, application);
-  const { colors, companionColor, setCompanionColor } = useTheme();
+  const { colors, companionColor, setCompanionColor, setCompanionShown } = useTheme();
   const { t, locale, setLocale } = useI18n();
+  // "Show my companion" (DECISIONS R.3). Turning it on with none chosen yet (skipped at
+  // signup) opens the companion pick, which ends on My Chats with it shown.
+  const changeCompanionShown = (next: boolean) => {
+    if (next && !animal) {
+      setDraft({ role: 'mentee', sessionBacked: true });
+      router.push({ pathname: '/onboarding', params: { step: 'companion' } });
+      return;
+    }
+    setCompanionShown(next);
+  };
   const sheetOpen = useSheetOpen();
   // The recolour lands on the device at once (the whole app re-accents) and on the account
   // in the background — a failed save shows nothing and never undoes the choice.
@@ -220,7 +232,7 @@ export default function ProfileTab() {
     };
   }, []);
 
-  // Manual EAS Update check — native-only, `Updates.isEnabled` is false on
+  // Manual OTA check — native-only, `Updates.isEnabled` is false on
   // web/dev-client (checkAndApplyUpdate resolves 'upToDate' immediately there).
   const handleCheckUpdates = useCallback(async () => {
     await checkAndApplyUpdate(setUpdateStatus);
@@ -373,6 +385,8 @@ export default function ProfileTab() {
 
               <PushStyleSwitch value={pushPreview} onChange={changePushStyle} disabled={pushBusy} testID="profile-push-style" />
 
+              <CompanionSwitch onChange={changeCompanionShown} testID="profile-companion-shown" />
+
               <Row
                 icon="contrast-outline"
                 tone="indigo"
@@ -381,6 +395,16 @@ export default function ProfileTab() {
                 right={chevron}
                 onPress={() => router.push('/appearance')}
                 testID="profile-appearance"
+              />
+
+              <Row
+                icon="school-outline"
+                tone="orange"
+                title={t('intake.profileRow')}
+                body={t('intake.profileRowSub')}
+                right={chevron}
+                onPress={() => router.push({ pathname: '/mentorship', params: { edit: '1' } })}
+                testID="profile-mentorship-form"
               />
 
               <MentorRow application={application} onPress={openMentor} chevron={chevron} />

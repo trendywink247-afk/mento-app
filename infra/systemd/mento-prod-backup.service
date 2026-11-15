@@ -1,0 +1,11 @@
+[Unit]
+Description=Encrypted PRODUCTION Postgres backup
+After=network-online.target docker.service
+
+[Service]
+EnvironmentFile=-/etc/mento/prod-backup.env
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/prod-backup
+Nice=10
+IOSchedulingClass=idle

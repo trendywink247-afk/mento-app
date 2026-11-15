@@ -1,0 +1,9 @@
+[Unit]
+Description=Weekly PRODUCTION backup restore drill (throwaway container, no network)
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/sbin/prod-restore-drill
+Nice=10

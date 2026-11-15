@@ -39,13 +39,16 @@ import { MentorFace, type MentorLook } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
 import { FlyFrom } from '@/components/motion/FlyFrom';
 import { PressKey } from '@/components/motion/PressKey';
+import type { Tier } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
+import { tierKey } from '@/lib/tierWord';
 import { measureRect, mentorHeroKey, rememberOrigin } from '@/lib/originStore';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, wash } from '@/theme/tokens';
+import { useMotionBudget } from '@/lib/motionBudget';
 
 const AVATAR = 56;
 const RING_GAP = 4; // the ring sits this far outside the avatar
@@ -79,27 +82,36 @@ type Props = {
   conversationId?: string;
   /** Where this avatar flies in from, when the chat was opened from its row (T05). */
   faceOriginKey?: string;
+  /** The volunteer's tier (DECISIONS R.4, R.9): the status line names it. */
+  tier?: Tier;
   onOpenOptions: () => void;
 };
+
+/** Ripples when someone arrives, then still. */
+export const PRESENCE_RIPPLES = 3;
 
 /** One soft ripple leaving the avatar at breathing tempo — "someone is here". */
 function PresenceRing({ color }: { color: string }) {
   const reduced = useReducedMotion();
   const ripple = useSharedValue(0);
+  const budget = useMotionBudget();
 
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(ripple);
       ripple.value = 0;
       return;
     }
+    // A few ripples when the person arrives, then still: an endless ripple kept the chat
+    // screen animating (UI-thread frames, never idle) for as long as it stayed open.
+    ripple.value = 0;
     ripple.value = withRepeat(
       withTiming(1, { duration: breathe.period / 2, easing: easing.settle }),
-      -1,
+      PRESENCE_RIPPLES,
       false,
     );
     return () => cancelAnimation(ripple);
-  }, [reduced, ripple]);
+  }, [reduced, ripple, budget.live, budget.run]);
 
   const style = useAnimatedStyle(() => ({
     opacity: RING_REST_OPACITY * (1 - ripple.value),
@@ -151,6 +163,7 @@ export function ChatHeaderCard({
   onOpenOptions,
   conversationId,
   faceOriginKey,
+  tier,
 }: Props) {
   const { colors } = useTheme();
   const avatarRef = useRef<View>(null);
@@ -161,10 +174,10 @@ export function ChatHeaderCard({
     replyWithinADay
       ? t('replyWindow.header')
       : status === null
-        ? t('chat.header.mentor')
+        ? t(tierKey(tier))
         : online
-          ? t('chat.header.here')
-          : t('chat.header.away'),
+          ? t('chat.header.hereAs', { tier: t(tierKey(tier)) })
+          : t('chat.header.awayAs', { tier: t(tierKey(tier)) }),
     community,
   ]
     .filter(Boolean)

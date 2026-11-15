@@ -74,6 +74,11 @@ qa-api.mento.chat {
 			root * /opt/mento-staging/web
 			file_server
 		}
+		# Self-hosted OTA (services/ota, docs/OTA.md): the app's expo-updates asks
+		# /ota/api/manifest and downloads /ota/assets/...; the prefix is stripped.
+		handle_path /ota/* {
+			reverse_proxy 127.0.0.1:18020
+		}
 		# Caddy upgrades WebSocket connections automatically (own-chat, WS5) —
 		# no special config needed beyond a read_timeout long enough for an
 		# idle chat socket, matching deploy/caddy/Caddyfile's own-chat value.

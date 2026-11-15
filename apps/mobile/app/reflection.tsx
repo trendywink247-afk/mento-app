@@ -60,7 +60,7 @@ const TRACK_MAX = 310;
 export default function ReflectionScreen() {
   const router = useRouter();
   useSessionGuard();
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t } = useI18n();
   const reduced = useReducedMotion();
   const animal = useCompanionAnimal();
@@ -155,12 +155,14 @@ export default function ReflectionScreen() {
             </View>
           </View>
 
-          <View style={styles.stage} accessible accessibilityLabel={t('reflection.companionA11y')}>
-            <View style={[styles.ground, { backgroundColor: colors.borderStrong }]} />
-            <Animated.View style={[styles.feet, breath]}>
-              <Companion animal={animal ?? null} size={160} awake />
-            </Animated.View>
-          </View>
+          {companionShown ? (
+            <View style={styles.stage} accessible accessibilityLabel={t('reflection.companionA11y')}>
+              <View style={[styles.ground, { backgroundColor: colors.borderStrong }]} />
+              <Animated.View style={[styles.feet, breath]}>
+                <Companion animal={animal ?? null} size={160} awake />
+              </Animated.View>
+            </View>
+          ) : null}
 
           <View style={styles.head}>
             <Entrance index={0}>

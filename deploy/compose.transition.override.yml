@@ -6,10 +6,6 @@ services:
     profiles: !override [transition-unmanaged]
   valkey:
     profiles: !override [transition-unmanaged]
-  glitchtip:
-    profiles: !override [transition-unmanaged]
-  glitchtip-init-db:
-    profiles: !override [transition-unmanaged]
   api_blue:
     depends_on: !reset {}
     environment: &authoritative

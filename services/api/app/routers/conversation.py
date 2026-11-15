@@ -15,7 +15,6 @@ from sqlalchemy.orm import Session
 
 from app import ratelimit
 from app.db import get_db
-from app.models.chat_message import ChatMessage
 from app.models.conversation import Conversation
 from app.models.enums import ConversationEndedBy, ConversationStatus, ModerationLevel
 from app.models.listener import ListenerProfile
@@ -101,34 +100,25 @@ def _state(convo: Conversation) -> ConversationState:
     )
 
 
-PREVIEW_CHARS = 120
-
-
 def _own_previews(db: Session, convos: list[Conversation]) -> dict[str, dict]:
     """The last line of each own chat, for the My Chats rows. Only chats that are own,
-    not PIN-locked and not wiped; the text is cut to a short line here, never sent whole."""
-    ids = [
-        c.id
-        for c in convos
-        if c.chat_backend == "own" and not c.is_locked and c.status != ConversationStatus.wiped
-    ]
-    if not ids:
-        return {}
-    rows = db.scalars(
-        select(ChatMessage)
-        .where(ChatMessage.conversation_id.in_(ids))
-        .distinct(ChatMessage.conversation_id)
-        .order_by(ChatMessage.conversation_id, ChatMessage.seq.desc())
-    ).all()
-    out: dict[str, dict] = {}
-    for m in rows:
-        line = " ".join(chat.message_out(m)["text"].split())
-        out[m.conversation_id] = {
-            "last_message": line[: PREVIEW_CHARS - 1] + "…" if len(line) > PREVIEW_CHARS else line,
+    not PIN-locked and not wiped; the text is cut to a short line, never sent whole."""
+    latest = chat.latest_messages(
+        db,
+        [
+            c.id
+            for c in convos
+            if c.chat_backend == "own" and not c.is_locked and c.status != ConversationStatus.wiped
+        ],
+    )
+    return {
+        cid: {
+            "last_message": chat.preview_line(m),
             "last_message_at": m.created_at.isoformat(),
             "last_message_mine": m.sender_kind == "member",
         }
-    return out
+        for cid, m in latest.items()
+    }
 
 
 @router.get("/{convo_id}/state", response_model=ConversationState)
@@ -175,6 +165,12 @@ def list_conversations(
     links = in_touch.in_touch_listener_ids(db, user_id)
     book = mentor_names.NameBook(db, listeners.keys())
     previews = _own_previews(db, convos)
+    countable = [
+        c.id
+        for c in convos
+        if c.chat_backend == "own" and not c.is_locked and c.status != ConversationStatus.wiped
+    ]
+    unread = chat.unread_counts(db, user_id, "mentor", countable)
 
     def shown_name(c: Conversation) -> str:
         li = listeners.get(c.listener_id)
@@ -217,6 +213,7 @@ def list_conversations(
             is_paused=bool(c.is_paused),
             listener_companion_animal=mentor_face.face(listeners.get(c.listener_id))[0],
             listener_companion_colour=mentor_face.face(listeners.get(c.listener_id))[1],
+            unread_count=unread.get(c.id, 0) if c.id in countable else None,
             **previews.get(c.id, {}),
         )
         for c in convos

@@ -20,6 +20,7 @@ pid=$SNAPSHOT_PID
 exec {writer}>&"${SNAPSHOT[1]}"
 exec {reader}<&"${SNAPSHOT[0]}"
 cleanup() {
+  # shellcheck disable=SC2261 # $writer holds an fd number; bash duplicates it at runtime, stderr is not redirected twice
   printf 'ROLLBACK;\n\\q\n' >&"$writer" 2>/dev/null || true
   exec {writer}>&- || true
   exec {reader}<&- || true

@@ -3,6 +3,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { AskIntroBox } from '@/components/AskIntroBox';
 import { BusyExits } from '@/components/BusyExits';
 import { OpenQuestionNote, openLetter } from '@/components/OpenQuestionNote';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
@@ -13,8 +14,6 @@ import { ApiError, api } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { screenCache } from '@/lib/screenCache';
-import { AudiencePicker } from '@/components/AudiencePicker';
-import type { Audience } from '@/lib/api';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
 import { TOPICS } from '@/lib/topics';
 import { useI18n } from '@/lib/i18n';
@@ -60,7 +59,6 @@ export default function NewChatSheet() {
   const params = useLocalSearchParams<{ topic?: string; question?: string; busy?: string }>();
   const [topic, setTopic] = useState<string | null>(params.topic ?? null);
   const [matching, setMatching] = useState(false);
-  const [audience, setAudience] = useState<Audience>('any');
   // An exam road waits for the mentor's accept: the sheet must not promise "right away" there.
   // The server decides what happens; this only words the door truthfully.
   const [acceptFirst, setAcceptFirst] = useState(Boolean(screenCache.get('path')?.community?.accept_first));
@@ -82,12 +80,27 @@ export default function NewChatSheet() {
 
   const leave = () => router.back();
 
+  // On an exam road the server asks for the mentor's accept first; before that ask goes out the
+  // member sees (and can edit) the words the mentor will read. Resolved by the box below.
+  const [askPrompt, setAskPrompt] = useState<((text: string | null) => void) | null>(null);
+  const askForIntro = () => new Promise<string | null>((resolve) => setAskPrompt(() => resolve));
+  const answerAsk = (text: string | null) => {
+    const resolve = askPrompt;
+    setAskPrompt(null);
+    resolve?.(text);
+  };
+
   const nextAvailable = async () => {
     if (matching) return;
     setMatching(true);
     setNote(null);
     try {
-      const started = await matchOrAsk({ issue_category: topic, audience });
+      // "Connect now" (DECISIONS R.5): listeners and Mentors, never Mento Verified.
+      const started = await matchOrAsk({ issue_category: topic, audience: 'listeners' }, null, undefined, askForIntro);
+      if (started.kind === 'cancelled') {
+        setMatching(false);
+        return;
+      }
       // An exam road waits for the mentor's accept: the letter, not a chat (DECISIONS §N.2).
       if (started.kind === 'ask') {
         sheet.current?.close(() => openAsked(router, started.request));
@@ -115,6 +128,22 @@ export default function NewChatSheet() {
       );
       setMatching(false);
     }
+  };
+
+  // "Start mentorship" (DECISIONS R.5, R.6): the intake form first (every step skippable), then
+  // the question goes to Mentors and Mento Verified, never listeners.
+  const startMentorship = () => {
+    if (matching) return;
+    sheet.current?.close(() => {
+      router.back();
+      router.push({
+        pathname: '/mentorship',
+        params: {
+          ...(topic ? { topic } : {}),
+          ...(params.question ? { question: params.question } : {}),
+        },
+      });
+    });
   };
 
   const pickMentor = () => {
@@ -157,30 +186,31 @@ export default function NewChatSheet() {
           <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{t('chats.newChatBody')}</Text>
         </Entrance>
 
-        <View style={styles.doors}>
-          {acceptFirst ? (
-            <Entrance index={3}>
-              <AudiencePicker value={audience} onChange={setAudience} />
-            </Entrance>
-          ) : null}
+        {askPrompt ? (
+          <AskIntroBox drafted={params.question} onSend={(text) => answerAsk(text)} onCancel={() => answerAsk(null)} testID="new-chat-ask-intro" />
+        ) : null}
+
+        <View style={[styles.doors, askPrompt ? styles.hidden : null]}>
+          {/* Two ways in, instant (DECISIONS R.5). */}
           <Entrance index={3}>
             <PressKey
               onPress={() => void nextAvailable()}
               edge={colors.edgeSurface}
               radius={radius.lg}
               intent="commit"
-              accessibilityLabel={t('chats.newChatNow')}
-              accessibilityHint={t(acceptFirst ? 'chats.newChatAskSub' : 'chats.newChatNowSub')}
+              accessibilityLabel={`${t('twoWays.peerTitle')}. ${t('twoWays.peerKey')}`}
+              accessibilityHint={t(acceptFirst ? 'chats.newChatAskSub' : 'twoWays.peerSub')}
               testID="new-chat-now"
               style={[styles.door, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
               <View style={[styles.doorIcon, { backgroundColor: colors.accentTint }]}>
-                <Ionicons name="flash-outline" size={24} color={colors.accent} />
+                <Ionicons name="ear-outline" size={24} color={colors.accent} />
               </View>
               <View style={styles.doorText}>
-                <Text style={[styles.doorTitle, { color: colors.ink }]}>{t('chats.newChatNow')}</Text>
+                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('twoWays.peerTitle')}</Text>
+                <Text style={[styles.doorTitle, { color: colors.ink }]}>{t('twoWays.peerKey')}</Text>
                 <Text style={[type.note, { color: colors.inkMuted }]}>
-                  {t(acceptFirst ? 'chats.newChatAskSub' : 'chats.newChatNowSub')}
+                  {t(acceptFirst ? 'chats.newChatAskSub' : 'twoWays.peerSub')}
                 </Text>
               </View>
               {matching ? (
@@ -192,22 +222,40 @@ export default function NewChatSheet() {
           </Entrance>
           <Entrance index={4}>
             <PressKey
-              onPress={pickMentor}
-              edge={colors.edgeAlt}
+              onPress={startMentorship}
+              edge={colors.edgeSurface}
               radius={radius.lg}
-              accessibilityLabel={t('chats.newChatPick')}
-              accessibilityHint={t('chats.newChatPickSub')}
-              testID="new-chat-pick"
-              style={[styles.door, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+              intent="commit"
+              accessibilityLabel={`${t('twoWays.mentorTitle')}. ${t('twoWays.mentorKey')}`}
+              accessibilityHint={t('twoWays.mentorSub')}
+              testID="new-chat-mentorship"
+              style={[styles.door, { backgroundColor: colors.surface, borderColor: colors.border }]}
             >
-              <View style={[styles.doorIcon, { backgroundColor: wash.green }]}>
-                <Ionicons name="people-outline" size={24} color={washInk.green} />
+              <View style={[styles.doorIcon, { backgroundColor: wash.orange }]}>
+                <Ionicons name="school-outline" size={24} color={washInk.orange} />
               </View>
               <View style={styles.doorText}>
-                <Text style={[styles.doorTitle, { color: colors.ink }]}>{t('chats.newChatPick')}</Text>
-                <Text style={[type.note, { color: colors.inkMuted }]}>{t('chats.newChatPickSub')}</Text>
+                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('twoWays.mentorTitle')}</Text>
+                <Text style={[styles.doorTitle, { color: colors.ink }]}>{t('twoWays.mentorKey')}</Text>
+                <Text style={[type.note, { color: colors.inkMuted }]}>{t('twoWays.mentorSub')}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.inkMuted} />
+            </PressKey>
+          </Entrance>
+          {/* Deliberate: choose someone (DECISIONS R.5). */}
+          <Entrance index={5}>
+            <PressKey
+              onPress={pickMentor}
+              edge="transparent"
+              travel={2}
+              radius={radius.pill}
+              accessibilityLabel={t('twoWays.browseKey')}
+              accessibilityHint={t('twoWays.browseSub')}
+              testID="new-chat-pick"
+              style={styles.browse}
+            >
+              <Ionicons name="people-outline" size={18} color={colors.accent} />
+              <Text style={[styles.notNowText, { color: colors.accent }]}>{t('twoWays.browseKey')}</Text>
             </PressKey>
           </Entrance>
         </View>
@@ -302,6 +350,7 @@ export default function NewChatSheet() {
 const styles = StyleSheet.create({
   head: { gap: 4 },
   doors: { gap: 12 },
+  hidden: { display: 'none' },
   door: { minHeight: 92, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1 },
   doorIcon: { width: 48, height: 48, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   doorText: { flex: 1, minWidth: 0, gap: 2 },
@@ -317,4 +366,5 @@ const styles = StyleSheet.create({
   oneLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   notNow: { height: 44, paddingHorizontal: space.md, alignItems: 'center', justifyContent: 'center' },
   notNowText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20 },
+  browse: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
 });

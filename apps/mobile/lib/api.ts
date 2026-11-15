@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { router } from 'expo-router';
 
 import { withAppVersion } from './appVersion';
+import { createCoalescer } from './getCoalescer';
 import { getInstallId } from './installId';
 import { screenCache } from './screenCache';
 import {
@@ -11,6 +12,7 @@ import {
   getSessionToken,
   saveTokenPair,
 } from './session';
+import { isUpgradeRefusal, raiseUpgradeRequired } from './upgradeGate';
 
 const BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ??
@@ -24,6 +26,12 @@ export type Persona = { id: string; persona_name: string; persona_avatar: string
 
 /** `GET /me` and the answer to `PUT /me/companion`: the persona plus the companion the
  * SERVER holds (canonical spelling; null = none stored). */
+/** GET /app-config — switches the app reads; every field defaults to off. */
+export type AppConfig = {
+  signup_verification_required?: boolean;
+  email_required_from_second_visit?: boolean;
+};
+
 export type Me = Persona & {
   companion_animal: string | null;
   companion_colour: string | null;
@@ -116,6 +124,21 @@ export type Listener = {
   reply_within?: 'day' | 'two_days' | null;
   /** Language codes this mentor talks in; empty when they have not said. */
   languages?: string[];
+  /** DECISIONS R.4: Peer listener, Mentor or Mento Verified (server `services/tiers.py`). */
+  tier?: Tier;
+  /** DECISIONS R.7: admin-checked exam history; null until checked. */
+  exam_badges?: ExamBadges | null;
+};
+
+export type Tier = 'listener' | 'mentor' | 'verified';
+export type ExamBadges = { prelims: number; mains: number; interview: number };
+
+/** Browse filters (DECISIONS R.5). `language` is a preference (first, nobody hidden); the rest filter. */
+export type BrowseFilters = {
+  language?: string;
+  tier?: Tier;
+  gender?: 'female' | 'male' | 'nonbinary';
+  online?: boolean;
 };
 
 /** Mirrors server `ListenerProfileOut` — served both by conversation-scoped
@@ -146,10 +169,49 @@ export type ListenerProfile = {
   /** Usual reply time over 30 days, only once there is enough to say (DECISIONS §P.6). */
   reply_within?: 'day' | 'two_days' | null;
   languages?: string[];
+  tier?: Tier;
+  exam_badges?: ExamBadges | null;
 };
 
-/** Who may take a question: any approved mentor (the default), Mento Verified only, or peers. */
-export type Audience = 'any' | 'in_service' | 'peer';
+/** Who may take a question (server `services/tiers.py`). "listeners" = Connect now (listeners and
+ * Mentors); "mentorship" = Start mentorship (Mentors and Mento Verified), DECISIONS R.5. */
+export type Audience = 'any' | 'in_service' | 'peer' | 'listeners' | 'mentorship';
+
+/** One UPSC attempt and its marks (DECISIONS R.14). The server drops marks the stage never reached. */
+export type ExamAttempt = {
+  year: number;
+  stage: 'prelims' | 'mains' | 'interview';
+  prelims_gs?: number | null;
+  prelims_csat?: number | null;
+  mains_gs1?: number | null;
+  mains_gs2?: number | null;
+  mains_gs3?: number | null;
+  mains_gs4?: number | null;
+  optional_1?: number | null;
+  optional_2?: number | null;
+  interview?: number | null;
+};
+
+export type MarksVisibility = 'nobody' | 'mentors' | 'everyone';
+
+/** The mentorship intake form (DECISIONS R.6, R.14). Every field optional. */
+export type MenteeProfile = {
+  exam?: 'upsc' | null;
+  current_stage?: 'starting' | 'prelims_prep' | 'mains_prep' | 'interview_prep' | 'between_attempts' | null;
+  attempts_count?: number | null;
+  furthest_stage?: 'none' | 'prelims' | 'mains' | 'interview' | null;
+  optional_subject?: string | null;
+  prep_mode?: 'self' | 'coaching' | 'both' | 'working' | null;
+  language?: string | null;
+  help_with?: string[];
+  note?: string | null;
+  attempts?: ExamAttempt[];
+  marks_visibility?: MarksVisibility;
+  updated_at?: string | null;
+  support?: { message: string; helplines: { name: string; number: string; hours: string }[] } | null;
+};
+
+export type EmailStatus = { has_email: boolean; verified: boolean; required: boolean };
 
 export type PersonalRequest = {
   id: string;
@@ -167,6 +229,8 @@ export type PersonalRequest = {
   broadcast?: boolean;
   /** Who it was offered to. */
   audience?: Audience;
+  /** Only on the response that created a request whose words tripped the crisis scan: the helpline card. */
+  support?: { message: string; helplines: { name: string; number: string; hours: string }[] } | null;
   /** No reply after 24 hours: the letter asks what to do next (DECISIONS §P.5). */
   nudged?: boolean;
   /** The mentor's face (server `services/mentor_face.py`) — draw with `MentorFace`. */
@@ -256,6 +320,9 @@ export type ConversationListItem = {
   last_message_mine?: boolean;
   /** The member muted this chat (Quiet Pause). */
   is_paused?: boolean;
+  /** Mentor lines the member has not read yet, for an OWN chat. Null for a Stream chat (counted
+   * client-side) and absent on an older server. */
+  unread_count?: number | null;
 };
 
 export type ConversationState = {
@@ -310,14 +377,35 @@ function timeoutSignal(ms: number): { signal: AbortSignal; cancel: () => void } 
 
 /** Core request with a pluggable token source — the user client below binds it to
  * the user session; lib/listenerApi.ts binds it to the listener-console token. */
+// Same GET for the same session while one is on the wire: one request (lib/getCoalescer.ts).
+const gets = createCoalescer();
+
+/** Forget remembered reads (a write, a sign-in, Start Fresh). Writes through apiRequest do it. */
+export const forgetRemembered = (): void => gets.invalidate();
+
 export async function apiRequest<T>(
   path: string,
   init: RequestInit = {},
   getToken?: () => Promise<string | null>,
 ): Promise<T> {
-  const res = await apiFetch(path, init, getToken);
-  if (res.status === 204) return undefined as T; // bodyless success (e.g. leave path)
-  return (await res.json()) as T;
+  const method = (init.method ?? 'GET').toUpperCase();
+  if (method === 'GET' && init.body == null) {
+    const token = getToken ? await getToken() : null;
+    const once = async () => token;
+    return gets.get<T>(`${token ?? ''} ${path}`, path, async () => {
+      const res = await apiFetch(path, init, getToken ? once : undefined);
+      if (res.status === 204) return undefined as T;
+      return (await res.json()) as T;
+    });
+  }
+  try {
+    const res = await apiFetch(path, init, getToken);
+    if (res.status === 204) return undefined as T; // bodyless success (e.g. leave path)
+    return (await res.json()) as T;
+  } finally {
+    // Any write (even a refused one) may have changed what a remembered read would say.
+    gets.invalidate();
+  }
 }
 
 /** One page of a paged list endpoint (API T2.3): the body is still a plain list, and
@@ -398,6 +486,7 @@ async function apiFetch(
     } catch {
       /* non-JSON error body */
     }
+    if (isUpgradeRefusal(res.status, code)) raiseUpgradeRequired();
     throw new ApiError(res.status, detail, code, body);
   }
   return res;
@@ -616,6 +705,13 @@ export async function currentMemberToken(): Promise<string | null> {
   return token;
 }
 
+/** Force one rotation after the server refused the current access token (the live events
+ * socket's 4401). Returns the token to use next, or null when the session is dead or offline. */
+export async function refreshMemberToken(): Promise<string | null> {
+  const outcome = await refreshSession(await getSessionToken());
+  return outcome === 'refreshed' ? getSessionToken() : null;
+}
+
 async function request<T>(path: string, init: RequestInit = {}, auth = false): Promise<T> {
   if (!auth) return apiRequest<T>(path, init);
   void upgradeLegacySession();
@@ -692,7 +788,8 @@ export const api = {
   saveCompanion: (body: CompanionUpdate) =>
     request<Me>('/me/companion', { method: 'PUT', body: JSON.stringify(body) }, true),
 
-  match: (body: { kind?: 'general' | 'personal'; issue_category?: string | null }) =>
+  /** `audience` "listeners" = Connect now (DECISIONS R.5); older servers ignore it. */
+  match: (body: { kind?: 'general' | 'personal'; issue_category?: string | null; audience?: 'any' | 'listeners' }) =>
     request<MatchResult>('/match', { method: 'POST', body: JSON.stringify(body) }, true),
 
   /** Exam niche: the best online mentor gets the question and the chat opens only when they
@@ -712,6 +809,8 @@ export const api = {
 
   // --- Paths (Communities) ---
   pathTree: () => request<PathTree>('/paths/tree'),
+  /** Optional steps the server has switched on (DECISIONS R.10, R.11). Public. */
+  appConfig: () => request<AppConfig>('/app-config'),
   pathCommunities: () => request<PathCommunity[]>('/paths/communities'),
   myPath: () => request<PathState>('/paths/me', {}, true),
   choosePath: (community: string, stage: string) =>
@@ -720,9 +819,34 @@ export const api = {
 
   // --- Mentor discovery + personal requests ---
   // Paged server-side (API T2.3); Browse still shows one list, walked here up to 200.
-  /** `language`: a preference, not a filter. Mentors who talk it come first; nobody is hidden. */
-  listListeners: (language?: string) =>
-    collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}${language ? `&language=${encodeURIComponent(language)}` : ''}`)),
+  /** `language`: a preference, not a filter. Mentors who talk it come first; nobody is hidden.
+   * Tier, gender and online do filter (DECISIONS R.5). */
+  listListeners: (filters: string | BrowseFilters = {}) => {
+    const f: BrowseFilters = typeof filters === 'string' ? { language: filters } : filters;
+    const extra = [
+      f.language ? `language=${encodeURIComponent(f.language)}` : '',
+      f.tier ? `tier=${f.tier}` : '',
+      f.gender ? `gender=${f.gender}` : '',
+      f.online ? 'online=true' : '',
+    ]
+      .filter(Boolean)
+      .map((x) => `&${x}`)
+      .join('');
+    return collectPages<Listener>((q) => requestPage<Listener>(`/listeners?${q}${extra}`));
+  },
+
+  // --- Mentorship intake form (DECISIONS R.6, R.14) ---
+  menteeProfile: () => request<MenteeProfile>('/me/mentee-profile', {}, true),
+  saveMenteeProfile: (body: MenteeProfile) =>
+    request<MenteeProfile>('/me/mentee-profile', { method: 'PUT', body: JSON.stringify(body) }, true),
+  clearMenteeProfile: () => request<void>('/me/mentee-profile', { method: 'DELETE' }, true),
+
+  // --- Email confirmation (DECISIONS R.10; off until an email service exists) ---
+  emailStatus: () => request<EmailStatus>('/me/email', {}, true),
+  emailStart: (email: string) =>
+    request<{ status: string }>('/me/email/start', { method: 'POST', body: JSON.stringify({ email }) }, true),
+  emailConfirm: (code: string) =>
+    request<{ status: string }>('/me/email/confirm', { method: 'POST', body: JSON.stringify({ code }) }, true),
 
   requestListener: (id: string, intro_message: string, issue_category?: string | null) =>
     request<PersonalRequest>(`/listeners/${id}/request`, { method: 'POST', body: JSON.stringify({ intro_message, issue_category }) }, true),

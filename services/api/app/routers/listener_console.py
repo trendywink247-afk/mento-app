@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
-from app import jobs, pagination, ratelimit
+from app import jobs, live_events, pagination, ratelimit
 from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
@@ -35,9 +35,9 @@ from app.models.enums import (
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
-from app.models.listener_application import ListenerApplication
+from app.models.mentee_profile import MenteeProfile
 from app.models.moderation import ModerationEvent
-from app.models.request import ConversationRequest, RequestPass
+from app.models.request import ConversationRequest
 from app.models.safety import SafetyFlag
 from app.models.user import User
 from app.schemas import (
@@ -63,17 +63,22 @@ from app.services import (
     age_band,
     care_prompts,
     categories,
+    chat,
+    chat_events,
     console_codes,
     conversations,
     in_touch,
     languages,
+    mentee_profiles,
     mentor_face,
     mentor_names,
     paths,
     push,
     reply_time,
+    request_visibility,
     snooze,
     stream,
+    tiers,
 )
 from app.services.matching import (
     ListenerAtCapacity,
@@ -120,6 +125,7 @@ def _me_out(li: ListenerProfile, db: Session) -> ListenerMeOut:
         companion_animal=mentor_face.face(li)[0],
         companion_colour=mentor_face.face(li)[1],
         certified=bool(li.certified_exam),
+        tier=tiers.tier_of(li),
         reply_within=reply_time.reply_within(db, [li.id])[li.id],
     )
 
@@ -236,10 +242,13 @@ def set_status(
         600,
         detail="Too many status changes — try again in a few minutes.",
     )
+    was = listener.status
     listener.status = ListenerStatus(payload.status)
     if listener.status == ListenerStatus.online:
         # Tracking (re)starts with the next heartbeat — see matching.sweep_stale_presence.
         listener.last_seen_at = None
+    if listener.status != was:  # the members' chat headers follow, on commit
+        live_events.mentor_presence_changed(db, [listener.id])
     db.commit()
     db.refresh(listener)
     return _me_out(listener, db)
@@ -389,6 +398,14 @@ def my_conversations(
     ).all()
     linked = in_touch.listener_in_touch_user_ids(db, listener.id, {user.id for _c, user in rows})
     waiting = _own_waiting(db, listener.id, [c for c, _u in rows])
+    latest = chat.latest_messages(
+        db,
+        [
+            c.id
+            for c, _u in rows
+            if c.chat_backend == "own" and c.status != ConversationStatus.wiped
+        ],
+    )
     return [
         ListenerConversationItem(
             id=convo.id,
@@ -404,6 +421,9 @@ def my_conversations(
             snoozed_until=snooze.snoozed_until_iso(convo, now),
             user_companion_animal=user.companion_animal,
             user_companion_colour=user.companion_colour,
+            last_message_preview=(
+                chat.preview_line(latest[convo.id]) if convo.id in latest else None
+            ),
             **waiting.get(convo.id, {}),
         )
         for convo, user in rows
@@ -435,34 +455,9 @@ def my_pending_requests(
         .join(User, User.id == ConversationRequest.requester_id)
         .where(
             ConversationRequest.status == RequestStatus.pending,
-            or_(
-                ConversationRequest.target_listener_id == listener.id,
-                # A broadcast (DECISIONS section P.4) is in every certified mentor's inbox until
-                # one takes it or they pass; never the mentor the member blocked or their own.
-                and_(
-                    ConversationRequest.broadcast.is_(True),
-                    ConversationRequest.target_listener_id.is_(None),
-                    ConversationRequest.audience.in_(audiences_for(bool(listener.certified_exam))),
-                    ~select(RequestPass.id)
-                    .where(
-                        RequestPass.request_id == ConversationRequest.id,
-                        RequestPass.listener_id == listener.id,
-                    )
-                    .exists(),
-                    ~select(ModerationEvent.id)
-                    .where(
-                        ModerationEvent.reporter_id == ConversationRequest.requester_id,
-                        ModerationEvent.subject_id == listener.id,
-                        ModerationEvent.blocked.is_(True),
-                    )
-                    .exists(),
-                    ~select(ListenerApplication.id)
-                    .where(
-                        ListenerApplication.listener_id == listener.id,
-                        ListenerApplication.user_id == ConversationRequest.requester_id,
-                    )
-                    .exists(),
-                ),
+            # One rule shared with the live events (services/request_visibility.py).
+            request_visibility.inbox_clause(
+                listener.id, bool(listener.certified_exam), listener.tier
             ),
         )
     )
@@ -478,6 +473,14 @@ def my_pending_requests(
     rows = pagination.set_next(
         response, list(rows), page, lambda r: [r[0].created_at.isoformat(), r[0].id]
     )
+    # The mentorship intake answers of the members on this page (DECISIONS R.6, R.14).
+    viewer_tier = tiers.tier_of(listener)
+    profiles = {
+        p.user_id: p
+        for p in db.scalars(
+            select(MenteeProfile).where(MenteeProfile.user_id.in_({u.id for _, u in rows}))
+        )
+    }
     return [
         ListenerRequestItem(
             id=req.id,
@@ -493,6 +496,7 @@ def my_pending_requests(
             stage_label=paths.stage_label(user.community_slug, user.journey_stage),
             age_band=age_band.age_band(user.dob),
             audience=req.audience,
+            mentee_brief=mentee_profiles.brief(profiles.get(user.id), viewer_tier),
         )
         for req, user in rows
     ]
@@ -524,7 +528,7 @@ def mark_requests_seen(
                         ConversationRequest.broadcast.is_(True),
                         ConversationRequest.target_listener_id.is_(None),
                         ConversationRequest.audience.in_(
-                            audiences_for(bool(listener.certified_exam))
+                            audiences_for(bool(listener.certified_exam), listener.tier)
                         ),
                     ),
                 ),
@@ -636,6 +640,9 @@ def member_brief(
         safety_flags_open=safety_flags_open,
         care_prompt=care_prompts.pick(convo.issue_category, convo.id),
         in_touch=bool(in_touch.listener_in_touch_user_ids(db, listener.id, {member.id})),
+        mentee_brief=mentee_profiles.brief(
+            mentee_profiles.load(db, member.id), tiers.tier_of(listener)
+        ),
     )
 
 
@@ -723,6 +730,7 @@ def snooze_conversation(
     never extends the window."""
     convo = _snooze_target(db, convo_id, listener)
     until = snooze.snooze(convo)
+    live_events.conversation_changed(db, convo, member=False)
     db.commit()
     return SnoozeOut(id=convo_id, snoozed_until=until.isoformat())
 
@@ -745,6 +753,9 @@ def suggest_certified_mentor(
     convo = _snooze_target(db, convo_id, listener)
     if convo.exam_redirect_at is None:
         convo.exam_redirect_at = datetime.now(UTC)
+        # The member's open chat shows the card at once; their list and the console look again.
+        chat_events.after_commit(db, convo.id, conversations.state_event(convo))
+        live_events.conversation_changed(db, convo)
         db.commit()
     return OkResult(status="ok")
 
@@ -758,6 +769,7 @@ def wake_conversation(
     """Undo a snooze. Idempotent."""
     convo = _snooze_target(db, convo_id, listener)
     snooze.wake(convo)
+    live_events.conversation_changed(db, convo, member=False)
     db.commit()
     return SnoozeOut(id=convo_id, snoozed_until=None)
 

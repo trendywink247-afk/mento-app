@@ -54,8 +54,10 @@ import { useHeroBreath } from '@/components/motion/useHeroBreath';
 import { askIntro, openAsked } from '@/lib/startChat';
 import { api, type PersonalRequest } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
+import { CrisisCard } from '@/components/chat/CrisisCard';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { leaveToChats } from '@/lib/leaveToChats';
+import { useLiveRefresh } from '@/lib/liveEvents';
 import { requestLetter, type LetterMentor } from '@/lib/requestLetter';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useReducedMotion } from '@/lib/useReducedMotion';
@@ -63,9 +65,8 @@ import { useSessionGuard } from '@/lib/useSessionGuard';
 import { letter as motionLetter } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, wash, washInk } from '@/theme/tokens';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
-/** How often the focused letter re-reads its question (ms). Quiet: no spinner, no motion. */
-const REFRESH_MS = 15000;
 /** How long a question may wait before the letter offers another mentor (the member decides). */
 const SLOW_AFTER_MS = 120_000;
 /** The scene's geometry (board A04): the arc starts right of the companion and ends left of
@@ -90,6 +91,9 @@ export default function RequestSentScreen() {
   const first = id ? requestLetter.get(id) : undefined;
   const [request, setRequest] = useState<PersonalRequest | null>(first?.request ?? null);
   const [mentor, setMentor] = useState<LetterMentor | null>(first?.mentor ?? null);
+  // The helpline card arrives only on the response that created the request; the screen then re-reads the
+  // request from the server (which has none), so keep the card from the first paint.
+  const [support] = useState(first?.request.support ?? null);
   const [missing, setMissing] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [channel, setChannel] = useState<string | null>(null);
@@ -138,15 +142,16 @@ export default function RequestSentScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // Read on focus, then quietly every REFRESH_MS while focused and still pending.
+  // Read on focus, once on every live (re)connect, and whenever the server pushes a change to
+  // THIS question (`request.changed`, lib/liveEvents.ts). No poll: a waiting member costs nothing.
+  // Once the question is no longer pending, only focus reads it again.
   const phaseRef = useRef<Phase>('pending');
+  useLiveRefresh('member', ['request.changed'], () => {
+    if (phaseRef.current === 'pending') return load();
+  }, { match: (event) => event.id === id, onFocus: false });
   useFocusEffect(
     useCallback(() => {
       void load();
-      const timer = setInterval(() => {
-        if (phaseRef.current === 'pending') void load();
-      }, REFRESH_MS);
-      return () => clearInterval(timer);
     }, [load]),
   );
 
@@ -154,12 +159,16 @@ export default function RequestSentScreen() {
     request?.status === 'matched' ? 'accepted' : request && request.status !== 'pending' ? 'closed' : 'pending';
   phaseRef.current = phase;
   // A calm clock: it only decides whether to OFFER another mentor, never counts down at anyone.
+  // One timer to the moment the offer is due, not a tick every few seconds.
   const [now, setNow] = useState(() => Date.now());
+  const sentAt = request ? new Date(request.created_at).getTime() : null;
   useEffect(() => {
-    if (phase !== 'pending') return;
-    const timer = setInterval(() => setNow(Date.now()), 10_000);
-    return () => clearInterval(timer);
-  }, [phase]);
+    if (phase !== 'pending' || sentAt === null) return;
+    const due = sentAt + SLOW_AFTER_MS - Date.now();
+    if (due <= 0) { setNow(Date.now()); return; }
+    const timer = setTimeout(() => setNow(Date.now()), due + 50);
+    return () => clearTimeout(timer);
+  }, [phase, sentAt]);
   const slow = phase === 'pending' && request ? now - new Date(request.created_at).getTime() >= SLOW_AFTER_MS : false;
   // A closed or failed question is a still state (T&S #11).
   const still = reduced || phase !== 'pending' || loadError || missing;
@@ -168,7 +177,18 @@ export default function RequestSentScreen() {
   const toAll = Boolean(request?.broadcast) && !mentor;
   // Who a question to everyone went to follows what the member chose: any mentor, Mento Verified, or peers.
   const audience = request?.audience ?? 'in_service';
-  const allKey = audience === 'peer' ? 'Peer' : audience === 'any' ? 'Any' : '';
+  // One wording per audience (DECISIONS R.5): Connect now = listeners and Mentors; Start mentorship
+  // = Mentors and Mento Verified; in_service keeps "verified mentors".
+  const allKey =
+    audience === 'peer'
+      ? 'Peer'
+      : audience === 'any'
+        ? 'Any'
+        : audience === 'listeners'
+          ? 'Listeners'
+          : audience === 'mentorship'
+            ? 'Mentorship'
+            : '';
   const name = mentor?.name ?? (toAll ? t(`requestSent.allMentors${allKey}` as TKey) : '');
   const question = request?.intro_message ?? '';
 
@@ -237,6 +257,14 @@ export default function RequestSentScreen() {
             <BackKey onPress={() => (router.canGoBack() ? router.back() : leaveToChats(router))} />
             <FeedbackPill testID="request-sent-feedback" screen="request-sent/[id]" />
           </View>
+
+          {/* The words they wrote tripped the crisis scan when the question was sent: the question still went,
+              and the helplines are here at once (never a block). */}
+          {support ? (
+            <Entrance index={1}>
+              <CrisisCard crisis={{ support: support.message, signal: '', helplines: support.helplines }} audience="request" inset={false} />
+            </Entrance>
+          ) : null}
 
           <Entrance index={1}>
             <Text style={[type.displayHeadline, styles.title, { color: colors.ink }]} accessibilityRole="header">
@@ -440,7 +468,7 @@ function Scene({
   question: string;
   sentAt: string | null;
 }) {
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t } = useI18n();
   const [width, setWidth] = useState(342);
   const arcW = Math.max(120, width - ARC_LEFT - ARC_RIGHT);
@@ -471,18 +499,19 @@ function Scene({
 
   // The envelope's crossing (board `fly`): one pass per period, then a rest at the far end.
   const fly = useSharedValue(0);
+  const flyBudget = useMotionBudget();
   useEffect(() => {
-    if (still) {
+    if (still || !flyBudget.live) {
       cancelAnimation(fly);
       fly.value = 0;
       return;
     }
     fly.value = withDelay(
       motionLetter.fly.delay,
-      withRepeat(withTiming(1, { duration: motionLetter.fly.period, easing: Easing.linear }), -1, false),
+      withRepeat(withTiming(1, { duration: motionLetter.fly.period, easing: Easing.linear }), budgetRepeats(motionLetter.fly.period, false), false),
     );
     return () => cancelAnimation(fly);
-  }, [still, fly]);
+  }, [still, fly, flyBudget.live, flyBudget.run]);
 
   const envelopeStyle = useAnimatedStyle(() => {
     if (still) {
@@ -524,7 +553,7 @@ function Scene({
 
       <View style={styles.companion} accessible accessibilityLabel={t('requestSent.companionA11y')}>
         <Animated.View style={[styles.feet, breath]}>
-          {animal !== undefined ? <Companion animal={animal} size={84} awake /> : null}
+          {animal !== undefined && companionShown ? <Companion animal={animal} size={84} awake /> : null}
         </Animated.View>
       </View>
 
@@ -579,18 +608,19 @@ function Scene({
 function Ripple({ still, delay }: { still: boolean; delay: number }) {
   const { colors } = useTheme();
   const v = useSharedValue(0);
+  const budget = useMotionBudget();
   useEffect(() => {
-    if (still) {
+    if (still || !budget.live) {
       cancelAnimation(v);
       v.value = 0;
       return;
     }
     v.value = withDelay(
       delay,
-      withRepeat(withTiming(1, { duration: motionLetter.ripple.period, easing: motionLetter.rippleEase }), -1, false),
+      withRepeat(withTiming(1, { duration: motionLetter.ripple.period, easing: motionLetter.rippleEase }), budgetRepeats(motionLetter.ripple.period, false), false),
     );
     return () => cancelAnimation(v);
-  }, [still, delay, v]);
+  }, [still, delay, v, budget.live, budget.run]);
   const style = useAnimatedStyle(() => {
     if (still) return { opacity: 0, transform: [{ scale: 1 }] };
     const { grow, peak, peakAt } = motionLetter.ripple;

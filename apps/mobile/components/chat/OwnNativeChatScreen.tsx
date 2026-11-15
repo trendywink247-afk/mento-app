@@ -34,6 +34,8 @@ import { useI18n } from '@/lib/i18n';
 import { clearConversationNotifications } from '@/lib/notifications';
 import { leaveToChats, leaveToMentorHome } from '@/lib/leaveToChats';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
+import { endedBySocket, endedOnServer, loadArchive } from '@/lib/ownChatArchive';
+import { archiveDeps } from '@/lib/ownChatArchiveDeps';
 import { createNativeOwnChatLifecycle } from '@/lib/nativeOwnChatLifecycle';
 import { createAuthenticatedOwnChat } from '@/lib/ownChatApi';
 import { OwnChatSendError } from '@/lib/ownChatAdapter';
@@ -44,6 +46,7 @@ import { CRISIS_EXEMPT_MS, useAllowance, type HeldAllowance } from '@/lib/useAll
 import { useChatHeader } from '@/lib/useChatHeader';
 import { useKeyboardPad } from '@/lib/useKeyboardPad';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
+import { useLiveRefresh } from '@/lib/liveEvents';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
 import { space, type } from '@/theme/tokens';
@@ -61,12 +64,12 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const { colors } = useTheme();
   const { t } = useI18n();
   const params = useLocalSearchParams<{ listener?: string; member?: string; starter?: string; masked?: string }>();
-  const header = useChatHeader(member ? conversationId : undefined);
+  const [snapshot, setSnapshot] = useState<OwnChatSnapshot | null>(null);
+  const header = useChatHeader(member ? conversationId : undefined, member ? snapshot?.peerOnline : undefined);
   const [brief, setBrief] = useState<MemberBrief | null>(null);
   const name = member ? header.profile?.persona_name ?? params.listener ?? t('chat.yourListener') :
     brief?.persona_name ?? params.member ?? t('mentorChatPage.member');
   const [rows, setRows] = useState<OwnScreenMessage[]>([]);
-  const [snapshot, setSnapshot] = useState<OwnChatSnapshot | null>(null);
   const [actor, setActor] = useState('');
   const [draft, setDraft] = useState(member ? params.starter ?? '' : '');
   // The mentor's prepared answers (device only). "/" in the box lists them; choosing one only fills the box.
@@ -91,6 +94,10 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const [saveOpen, setSaveOpen] = useState<string | null>(null);
   const [savedNow, setSavedNow] = useState<Set<string>>(new Set());
   const [mentorOnline, setMentorOnline] = useState(false);
+  const pushedRedirect = snapshot?.examRedirect;
+  useEffect(() => {
+    if (member && typeof pushedRedirect === 'boolean') setRedirect(pushedRedirect);
+  }, [member, pushedRedirect]);
   const [isFocused, setIsFocused] = useState(false);
   const [isForeground, setIsForeground] = useState(AppState.currentState === 'active');
   useListenerHeartbeat(!member && mentorOnline && isFocused && isForeground);
@@ -181,35 +188,41 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   // ended conversation says so instead of offering a Retry that can never work.
   const [endedByState, setEndedByState] = useState(false);
   useEffect(() => {
-    if (!member || snapshot?.reason !== 'not_authorized') return;
+    if (endedBySocket(snapshot?.reason)) { setEndedByState(true); return; }
+    if (snapshot?.reason !== 'not_authorized') return;
     let live = true;
-    void api.conversationState(conversationId)
-      .then(state => { if (live && state.status === 'ended') setEndedByState(true); })
+    void endedOnServer(role, conversationId, archiveDeps)
+      .then(ended => { if (live && ended) setEndedByState(true); })
       .catch(() => { /* reason: the generic error and Retry stay; nothing is lost */ });
     return () => { live = false; };
-  }, [member, snapshot?.reason, conversationId]);
-  // The mentor's suggestion reaches the member by a quiet read: on open and every 30 s.
+  }, [role, snapshot?.reason, conversationId]);
+  // The mentor's suggestion reaches the member by one read on open, then by the chat socket's
+  // pushed `state` frame (snapshot.examRedirect) — no poll.
   useEffect(() => {
     if (!member) return;
     let live = true;
-    const read = () => void api.conversationState(conversationId)
+    void api.conversationState(conversationId)
       .then(state => { if (live) setRedirect(state.exam_redirect === true); })
       .catch(() => { /* reason: the card is a convenience; the chat is unaffected */ });
-    read();
-    const timer = setInterval(read, 30_000);
-    return () => { live = false; clearInterval(timer); };
+    return () => { live = false; };
   }, [member, conversationId]);
-  // An ended chat is still the member's to read: the socket refuses it, the REST history does not.
+  // Belt and braces: the member's events socket also says when THIS conversation changed.
+  useLiveRefresh('member', ['conversation.changed'], () => api.conversationState(conversationId)
+    .then(state => {
+      setRedirect(state.exam_redirect === true);
+      if (state.status === 'ended') setEndedByState(true);
+    }), { enabled: member, match: event => event.id === conversationId, onFocus: false });
+  // An ended chat is still both sides' to read: the socket refuses it, the REST history does not.
   const [archive, setArchive] = useState<ThreadMsg[] | null>(null);
   const archiveList = useRef<FlatList<ThreadMsg>>(null);
   useEffect(() => {
-    if (!member || !endedByState || !actor) return;
+    if (!endedByState || !actor) return;
     let live = true;
-    void api.ownChatMessages(conversationId)
-      .then(r => { if (live) setArchive(r.messages.map(m => ({ id: m.id, text: m.text, mine: m.sender === actor, at: m.ts }))); })
+    void loadArchive(role, conversationId, actor, archiveDeps)
+      .then(rows => { if (live) setArchive(rows); })
       .catch(() => { /* reason: the ended notice stands without the transcript */ });
     return () => { live = false; };
-  }, [member, endedByState, actor, conversationId]);
+  }, [role, endedByState, actor, conversationId]);
   const closed = snapshot?.status === 'terminal';
   const retryable = !endedByState && (error || snapshot?.reason === 'not_authorized' || snapshot?.reason === 'reconnect_exhausted');
   const connectionFailed = error || closed || snapshot?.reason === 'reconnect_exhausted';
@@ -268,7 +281,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
     {member ? <MemberSessionGuard /> : null}
     <CompanionPerches placement={perch}>
     {member ? <ChatHeaderCard conversationId={conversationId} name={name} face={header.face ?? undefined}
-      status={endedByState ? null : header.profile?.status ?? null} replyWithinADay={!!header.profile?.reply_within_a_day}
+      status={endedByState ? null : header.profile?.status ?? null} tier={header.profile?.tier} replyWithinADay={!!header.profile?.reply_within_a_day}
       community={header.community} topic={header.topic} savedCount={header.savedCount} onBack={leave}
       onOpenProfile={() => router.push({ pathname: '/mentor-profile/[id]', params: { id: conversationId, name } })}
       onOpenOptions={() => setOptions(true)} /> : <MentorChatHeader memberName={name} brief={brief}
@@ -339,10 +352,11 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
     </KeyboardAvoidingView>}
     <MessageActions visible={!!held} text={held?.text ?? ''} onClose={() => setHeld(null)}
       onSave={member && held && !held.mine && !saved.has(held.id) ? () => void save(held) : undefined}
+      onPrepare={!member && held ? () => router.push({ pathname: '/mentor/answers', params: { body: held.text } }) : undefined}
       onReport={member && held && !held.mine ? () => { setInitialOption('report'); setOptions(true); } : undefined} />
     {member ? <ConversationOptions conversationId={conversationId} visible={options} depth={depth}
       listenerName={name} initial={initialOption} onClose={() => { setOptions(false); setInitialOption(undefined); }}
-      onLeft={leave} onSaveToJournal={() => setSaveOpen([...rows].reverse().find(row =>
+      onLeft={leave} canSave={rows.some(row => row.user.id !== actor && !saved.has(row.id))} onSaveToJournal={() => setSaveOpen([...rows].reverse().find(row =>
         row.user.id !== actor && !saved.has(row.id))?.id ?? null)} /> : null}
     {!member && menu !== 'closed' ? <MentorOptionsMenu state={menu} top={96} ending={ending}
       onReport={() => { setMenu('closed'); router.push({ pathname: '/mentor/report', params: { id: conversationId } }); }}

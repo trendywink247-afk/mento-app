@@ -37,7 +37,8 @@ export function SkyGround() {
   const covered = OWN_GROUND.some((prefix) => prefix.every((part, i) => segments[i] === part));
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none" testID="sky-ground">
-      <AmbientBackground paused={covered} />
+      {/* A new route gives the sky one short drift (lib/motionBudget), then it holds still. */}
+      <AmbientBackground paused={covered} motionKey={segments.join('/')} />
     </View>
   );
 }

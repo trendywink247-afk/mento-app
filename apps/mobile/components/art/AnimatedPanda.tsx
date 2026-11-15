@@ -25,6 +25,7 @@ import Svg, { Circle, Ellipse, Path, Text as SvgText } from 'react-native-svg';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
+import { LOOP_CYCLES, budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 const WHITE = '#FFFFFF';
 const BLACK = '#2B2B33';
@@ -47,12 +48,17 @@ export function AnimatedPanda({
   const headTilt = useSharedValue(0);
   const armAngle = useSharedValue(0);
   const blinkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Blinks and the head sway are a bounded run after mount / a wave / focus (lib/motionBudget).
+  const budget = useMotionBudget(waveTrigger);
 
-  // Blink on a randomized cycle — regularity reads robotic.
+  // Blink on a randomized cycle — regularity reads robotic. A few blinks, then the eyes rest open.
   useEffect(() => {
-    if (reduced) return;
+    if (reduced || !budget.live) return;
     let alive = true;
+    let blinks = 0;
     const schedule = () => {
+      if (blinks >= LOOP_CYCLES) return;
+      blinks += 1;
       blinkTimer.current = setTimeout(() => {
         if (!alive) return;
         eyesScaleY.value = withSequence(
@@ -67,22 +73,22 @@ export function AnimatedPanda({
       alive = false;
       if (blinkTimer.current) clearTimeout(blinkTimer.current);
     };
-  }, [reduced, eyesScaleY]);
+  }, [reduced, eyesScaleY, budget.live, budget.run]);
 
   // Head sway, breathing-tempo.
   useEffect(() => {
-    if (reduced) {
+    if (reduced || !budget.live) {
       cancelAnimation(headTilt);
       headTilt.value = withTiming(0, { duration: 150 });
       return;
     }
     headTilt.value = withRepeat(
       withTiming(2, { duration: breathe.period, easing: easing.breathe }),
-      -1,
+      budgetRepeats(breathe.period, true),
       true
     );
     return () => cancelAnimation(headTilt);
-  }, [reduced, headTilt]);
+  }, [reduced, headTilt, budget.live, budget.run]);
 
   // Wave: two gentle rocks of the raised arm, then settle.
   useEffect(() => {

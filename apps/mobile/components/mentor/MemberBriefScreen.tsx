@@ -10,6 +10,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { MemberDisc } from '@/components/mentor/MemberDisc';
+import { MenteeBriefCard } from '@/components/mentor/MenteeBriefCard';
 import { MentorPageHeader } from '@/components/mentor/MentorPageHeader';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
 import { Entrance } from '@/components/motion/Entrance';
@@ -236,6 +237,18 @@ export default function MemberBriefScreen() {
                 </EdgeSurface>
               </Entrance>
 
+              {brief.mentee_brief ? (
+                <Entrance index={3}>
+                  <EdgeSurface
+                    edge={colors.edgeSurface}
+                    style={[styles.formCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                    testID="brief-mentee-form"
+                  >
+                    <MenteeBriefCard brief={brief.mentee_brief} />
+                  </EdgeSurface>
+                </Entrance>
+              ) : null}
+
               {ask ? (
                 <Entrance index={3}>
                   <StayInTouchRow
@@ -284,6 +297,7 @@ export default function MemberBriefScreen() {
 }
 
 const styles = StyleSheet.create({
+  formCard: { borderWidth: 1, borderRadius: radius.lg, padding: space.md },
   safe: { flex: 1 },
   content: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.lg, gap: 12 },
   deep: { flexGrow: 1, gap: 12 },

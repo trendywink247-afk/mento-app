@@ -11,9 +11,8 @@
  * On web this component must only render AFTER LoadSkiaWeb() resolves — it is
  * lazy-imported by AmbientBackground.web.tsx for that reason.
  */
-import { NavigationContext } from '@react-navigation/native';
 import { Canvas, Fill, Shader, Skia } from '@shopify/react-native-skia';
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { useDerivedValue, useFrameCallback, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -23,6 +22,7 @@ import { useFrameSize } from '@/lib/useFrameSize';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
+import { LOOP_MAX_MS, useMotionBudget } from '@/lib/motionBudget';
 
 const SKSL = `
 uniform float uTime;
@@ -86,38 +86,31 @@ const FROZEN_T = 40;
 // resumes from where IT stopped — never a jump in the blobs' positions.
 const SKY_EPOCH = Date.now();
 
-/** Focus of the screen hosting this canvas; `true` outside any navigator (the root sky). */
-function useHostFocused(): boolean {
-  const nav = useContext(NavigationContext);
-  const [focused, setFocused] = useState(() => nav?.isFocused() ?? true);
-  useEffect(() => {
-    if (!nav) return;
-    setFocused(nav.isFocused());
-    const offFocus = nav.addListener('focus', () => setFocused(true));
-    const offBlur = nav.addListener('blur', () => setFocused(false));
-    return () => {
-      offFocus();
-      offBlur();
-    };
-  }, [nav]);
-  return focused;
-}
-
 /**
  * `paused`: the root sky (components/motion/SkyGround) holds still while an opaque screen
  * covers it. Paused, focus-lost or reduced motion = the frame callback is OFF, so the
  * uniforms are constant and Skia draws nothing new — no shader work under a covered sky.
  */
-export function AuroraCanvas({ paused = false }: { paused?: boolean }) {
+export function AuroraCanvas({ paused = false, motionKey = null }: { paused?: boolean; motionKey?: unknown }) {
   const { colors } = useTheme();
   const reduced = useReducedMotion();
   // The frame, not the window: on a wide browser the sky fills the 480 app column.
   const { width, height } = useFrameSize();
 
-  // expo-router keeps the previous screen mounted underneath the next one, so a
-  // screen-hosted sky that lost focus stops its clock too.
-  const focused = useHostFocused();
-  const running = !paused && focused && !reduced;
+  // Bounded drift (lib/motionBudget): the clock runs for one short window after a real
+  // trigger (mount, a new route via `motionKey`, uncovering, focus regained, the app coming
+  // back) and then stops — the blobs' orbits take 45-90 s, so a held sky is indistinguishable
+  // from a drifting one, while an always-on clock redrew a full-screen shader every frame
+  // (~114 frames/s measured on a 120 Hz phone). Unfocused, backgrounded or reduced: off.
+  const budget = useMotionBudget(`${String(motionKey)}|${paused ? 1 : 0}`);
+  const [windowOpen, setWindowOpen] = useState(true);
+  useEffect(() => {
+    if (!budget.live || paused) return;
+    setWindowOpen(true);
+    const t = setTimeout(() => setWindowOpen(false), LOOP_MAX_MS);
+    return () => clearTimeout(t);
+  }, [budget.live, budget.run, paused]);
+  const running = !paused && budget.live && windowOpen;
 
   const skyT = useSharedValue((Date.now() - SKY_EPOCH) / 1000);
   const resumeFrom = useSharedValue(0); // sky seconds when the clock last started

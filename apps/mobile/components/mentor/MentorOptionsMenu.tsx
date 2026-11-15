@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect } from 'react';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EndConfirmSheet } from '@/components/mentor/EndConfirmSheet';
 import { PressKey } from '@/components/motion/PressKey';
@@ -35,6 +36,14 @@ export function MentorOptionsMenu({
 }) {
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
+  // Android Back closes this menu, never the chat under it.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      onClose();
+      return true;
+    });
+    return () => sub.remove();
+  }, [onClose]);
   return (
     <View style={[StyleSheet.absoluteFill, styles.layer]}>
       <Pressable
@@ -118,14 +127,17 @@ const styles = StyleSheet.create({
   card: {
     position: 'absolute',
     right: 12,
-    width: 248,
+    width: 288,
+    maxWidth: '92%',
     padding: space.sm,
     gap: space.xs,
     borderWidth: 1,
     borderRadius: radius.lg,
   },
   item: {
-    height: 52,
+    // Rows grow with their text (the exam row has a second line); a fixed height let them overlap.
+    minHeight: 52,
+    paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,

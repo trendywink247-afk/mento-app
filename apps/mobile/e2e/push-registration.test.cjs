@@ -22,8 +22,8 @@ function fixture(extra, permissions = 'granted', env = {}) {
     'expo-notifications': {
       async getPermissionsAsync() { calls.push('permission-read'); await gates.permissions; return { status: permissions }; },
       async requestPermissionsAsync() { calls.push('prompt'); return { status: 'granted' }; },
-      async getDevicePushTokenAsync() { calls.push('device-token'); return { data: 'raw-fcm-token' }; },
-      async getExpoPushTokenAsync() { calls.push('token'); await gates.token; return { data: 'synthetic-token' }; },
+      async getDevicePushTokenAsync() { calls.push('token'); await gates.token; return { data: 'raw-fcm-token' }; },
+      async getExpoPushTokenAsync() { calls.push('expo-token'); return { data: 'ExponentPushToken[never]' }; },
     },
     'react-native': { Platform: { OS: 'android' } },
     './api': { currentMemberToken: async () => credential.member,
@@ -55,22 +55,29 @@ function fixture(extra, permissions = 'granted', env = {}) {
     } };
 }
 
-test('local acceptance skips permission, token and API calls even with inherited project id', async () => {
-  const h = fixture({ localAcceptance: true, eas: { projectId: 'synthetic-project' } }, 'denied');
+test('local acceptance skips permission, token and API calls', async () => {
+  const h = fixture({ localAcceptance: true }, 'denied');
   await h.registerPush('member'); await h.registerPush('listener'); await h.unregisterPush();
   assert.deepEqual(h.calls, []);
 });
 
-test('absent or malformed provider project skips useless notification prompts', async () => {
-  for (const extra of [undefined, {}, { eas: {} }, { eas: { projectId: '' } }, { eas: { projectId: 7 } }]) {
-    const h = fixture(extra, 'denied');
+test('iOS and web never prompt until FCM is wired for them', async () => {
+  for (const os of ['ios', 'web']) {
+    const h = fixture({}, 'denied');
+    h.modules['react-native'].Platform.OS = os;
     await h.registerPush('member'); await h.unregisterPush();
     assert.deepEqual(h.calls, []);
   }
 });
 
+test('no Expo project is needed: an app config without extra still registers', async () => {
+  const h = fixture(undefined);
+  await h.registerPush('member');
+  assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'token', 'register-member']);
+});
+
 test('configured normal native app retains permission and registration behavior', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } }, 'denied');
+  const h = fixture({}, 'denied');
   await h.registerPush('member');
   assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'prompt', 'token', 'register-member']);
 });
@@ -79,7 +86,7 @@ const deferred = () => { let resolve; const promise = new Promise(done => { reso
 const tick = () => new Promise(setImmediate);
 
 test('same-role account switch registers unchanged device token for the new account', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } });
+  const h = fixture({});
   await h.registerPush('member'); await h.registerPush('member');
   assert.equal(h.requests.length, 1);
   h.replace('member', 'member-b'); await h.registerPush('member');
@@ -89,7 +96,7 @@ test('same-role account switch registers unchanged device token for the new acco
 });
 
 test('same-account access-token rotation retains owner-scoped deduplication', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } });
+  const h = fixture({});
   await h.registerPush('member');
   // Different bearer, same server identity, no identity-generation transition.
   h.modules['./api'].apiRequest = async (route, options = {}, getToken) => {
@@ -103,7 +110,7 @@ test('same-account access-token rotation retains owner-scoped deduplication', as
 
 for (const stage of ['identity', 'permissions', 'token']) {
   test(`account replacement during ${stage} fences the old asynchronous registration`, async () => {
-    const h = fixture({ eas: { projectId: 'synthetic-project' } });
+    const h = fixture({});
     const gate = deferred(); h.gates[stage] = gate.promise;
     const old = h.registerPush('member'); await tick();
     h.replace('member', 'member-b');
@@ -115,7 +122,7 @@ for (const stage of ['identity', 'permissions', 'token']) {
 }
 
 test('late old registration success cannot cache over the replacement and new write follows old', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } });
+  const h = fixture({});
   const gate = deferred(); h.gates.post = gate.promise;
   const old = h.registerPush('member'); await tick();
   assert.deepEqual(h.requests.map(row => row.bearer), ['member-a']);
@@ -129,7 +136,7 @@ test('late old registration success cannot cache over the replacement and new wr
 });
 
 test('concurrent remounts share registration and logout suppresses later work', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } });
+  const h = fixture({});
   await Promise.all([h.registerPush('member'), h.registerPush('member')]);
   assert.equal(h.requests.length, 1);
   h.state.beginPushIdentityChange('member');
@@ -138,7 +145,7 @@ test('concurrent remounts share registration and logout suppresses later work', 
 });
 
 test('Start Fresh waits for prior registration, deletes with pinned roles and stays suppressed', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } });
+  const h = fixture({});
   const gate = deferred(); h.gates.post = gate.promise;
   const old = h.registerPush('member'); await tick();
   const erased = h.unregisterPush(); await tick();
@@ -168,7 +175,7 @@ function loadStorageSession(h, name, store) {
 }
 
 test('real session save/clear fences registrations before storage writes, rotation preserves generation', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } });
+  const h = fixture({});
   const gate = deferred();
   const data = new Map();
   const store = { async setItemAsync(key, value) {
@@ -191,7 +198,7 @@ test('real session save/clear fences registrations before storage writes, rotati
 });
 
 test('real listener session lifecycle resets its role without invalidating member cache', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } });
+  const h = fixture({});
   await h.registerPush('member');
   const memberGeneration = h.state.pushGeneration('member');
   const store = { async setItemAsync() {}, async getItemAsync() { return null; }, async deleteItemAsync() {} };
@@ -205,8 +212,8 @@ test('real listener session lifecycle resets its role without invalidating membe
   assert.equal(h.state.pushScopeActive('listener', h.state.pushGeneration('listener')), false);
 });
 
-test('direct FCM build registers the raw Android device token instead of an Expo token', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } }, 'granted', { EXPO_PUBLIC_PUSH_DIRECT: '1' });
+test('registers the raw FCM device token and never asks Expo for a token', async () => {
+  const h = fixture({});
   let body;
   const api = h.modules['./api'].apiRequest;
   h.modules['./api'].apiRequest = async (route, options = {}, getToken) => {
@@ -214,13 +221,8 @@ test('direct FCM build registers the raw Android device token instead of an Expo
     return api(route, options, getToken);
   };
   await h.registerPush('member');
-  assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'device-token', 'register-member', 'token', 'delete-member']);
+  assert.deepEqual(h.calls, ['identity-member', 'permission-read', 'token', 'register-member']);
   assert.equal(body.expo_push_token, 'raw-fcm-token');
-  assert.deepEqual(h.requests.map(r => r.method), ['POST', 'DELETE']);
-});
-
-test('without the flag the Expo token path is unchanged', async () => {
-  const h = fixture({ eas: { projectId: 'synthetic-project' } }, 'granted', { EXPO_PUBLIC_PUSH_DIRECT: '0' });
-  await h.registerPush('member');
-  assert.ok(h.calls.includes('token') && !h.calls.includes('device-token'));
+  assert.ok(!h.calls.includes('expo-token'));
+  assert.deepEqual(h.requests.map(r => r.method), ['POST']);
 });

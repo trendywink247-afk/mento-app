@@ -355,8 +355,9 @@ const styles = StyleSheet.create({
   page: { flex: 1, paddingTop: space.xs, paddingHorizontal: space.lg, gap: 12 },
   column: { flexGrow: 1, gap: 14, paddingBottom: space.lg },
   intro: { gap: space.sm },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
-  title: { lineHeight: 36 },
+  // The title takes the rest of the row (Hindi under-measure on Android, QA 2026-11-15).
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  title: { lineHeight: 36, flex: 1, minWidth: 0 },
   beta: { height: 24, paddingHorizontal: 10, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
   betaText: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 16 },
   para: { lineHeight: 22 },

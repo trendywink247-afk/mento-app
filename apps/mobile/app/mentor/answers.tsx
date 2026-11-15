@@ -1,5 +1,5 @@
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -37,6 +37,7 @@ const PROBLEM: Record<Exclude<AnswerProblem, null>, TKey> = {
 export default function PreparedAnswers() {
   useSessionGuard();
   const router = useRouter();
+  const { body: fromChat } = useLocalSearchParams<{ body?: string }>();
   const { colors } = useTheme();
   const { t } = useI18n();
   const { answers, save, remove } = usePreparedAnswers();
@@ -50,6 +51,14 @@ export default function PreparedAnswers() {
     setIsNew(!a);
     setEditing(a ?? { id: newAnswerId(), shortcut: '', title: '', body: '' });
   };
+
+  // From a chat message ("Save as prepared answer"): open the new-answer form with that text in it.
+  useEffect(() => {
+    if (!fromChat) return;
+    setProblem(null);
+    setIsNew(true);
+    setEditing({ id: newAnswerId(), shortcut: '', title: '', body: fromChat.slice(0, BODY_MAX) });
+  }, [fromChat]);
 
   const submit = async () => {
     if (!editing) return;

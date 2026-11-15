@@ -9,6 +9,7 @@ import { View } from 'react-native';
 import { COMPANION_GENERATED } from '@/assets/companions/generated';
 import { Companion, type CompanionPose } from '@/components/art/Companion';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
+import { useTheme } from '@/theme/ThemeProvider';
 
 export type PandaPose = 'wave' | 'sleep' | 'excited' | 'coffee' | 'sad' | 'shield';
 
@@ -25,7 +26,10 @@ const LEGACY: Record<PandaPose, { panda: CompanionPose; other: CompanionPose }> 
 
 export function Panda({ pose = 'wave', size = 160 }: { pose?: PandaPose; size?: number }) {
   const animal = useCompanionAnimal();
+  const { companionShown } = useTheme();
 
+  // Companion switched off (Profile, or skipped at signup): nothing drawn (DECISIONS R.3).
+  if (!companionShown) return null;
   if (animal === undefined) {
     // Async companion read still in flight — reserve the layout space rather than
     // flash a default panda that would hard-cut to the chosen animal a beat later.

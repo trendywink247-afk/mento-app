@@ -75,7 +75,7 @@ function Road({ width }: { width: number }) {
 
 export default function NotFound() {
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t } = useI18n();
   const animal = useCompanionAnimal();
   const breath = useHeroBreath();
@@ -130,9 +130,11 @@ export default function NotFound() {
             ]}
           />
           <Road width={width} />
-          <Animated.View style={[styles.feet, breath]}>
-            <Companion animal={animal ?? null} size={200 * k} pose="curious" awake />
-          </Animated.View>
+          {companionShown ? (
+            <Animated.View style={[styles.feet, breath]}>
+              <Companion animal={animal ?? null} size={200 * k} pose="curious" awake />
+            </Animated.View>
+          ) : null}
         </View>
 
         <View style={styles.words}>

@@ -53,6 +53,10 @@ services:
     image: valkey/valkey:8-alpine
     container_name: mento-redis
     restart: unless-stopped
+    # Cache + rate-limit + presence state only, never a store of record: no persistence,
+    # bounded, and only keys that carry a TTL are evicted (every key the API writes has one;
+    # see docs/PERFORMANCE_AND_DB.md). The override files may size it (mem_limit), not change it.
+    command: ["valkey-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "volatile-lru"]
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 5s

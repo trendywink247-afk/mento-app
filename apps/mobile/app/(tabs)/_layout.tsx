@@ -2,6 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Tabs, useRouter } from 'expo-router';
 import { useEffect } from 'react';
+import { loadAppConfig } from '@/lib/appConfig';
+import { countVisit } from '@/lib/session';
 
 import { TabPill } from '@/components/TabPill';
 import { tabSceneInterpolator, tabTransitionSpec } from '@/components/motion/tabTransition';
@@ -86,6 +88,22 @@ export default function TabsLayout() {
         if (live && me.terms_required) router.push('/terms?ask=1');
       })
       .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [router]);
+
+  // Email from the second visit (DECISIONS R.10): only while the server's switch is on AND a
+  // real email service exists (the server says `required`). Off today; best effort.
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const visits = await countVisit();
+      const config = await loadAppConfig();
+      if (!config.email_required_from_second_visit || visits < 2) return;
+      const status = await api.emailStatus();
+      if (live && status.required && !status.verified) router.push('/email-confirm');
+    })().catch(() => {});
     return () => {
       live = false;
     };

@@ -4,7 +4,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, false
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+    false,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -17,6 +27,14 @@ class ConversationRequest(UUIDMixin, TimestampMixin, Base):
     # A mentor's inbox: their pending Personal requests (T2.2).
     __table_args__ = (
         Index("ix_conversation_requests_target_status", "target_listener_id", "status"),
+        # The inbox poll (every 30 s per online mentor) pages the open requests oldest first:
+        # a small partial index over only the pending rows keeps that an index walk.
+        Index(
+            "ix_conversation_requests_pending_order",
+            "created_at",
+            "id",
+            postgresql_where=text("status = 'pending'"),
+        ),
     )
 
     # One question offered to every certified mentor (DECISIONS section P.4): no target until

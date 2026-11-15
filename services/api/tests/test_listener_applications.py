@@ -244,8 +244,10 @@ def test_admin_queue_approve_creates_listener(client, admin_headers):
 
     # Approval must create a REAL listener, ready for the matcher.
     with TestSession() as s:
-        li = s.query(ListenerProfile).filter_by(persona_name="Quiet Cove").one()
+        li = s.query(ListenerProfile).one()
         assert li.vetting_status == VettingStatus.approved
+        # Anonymity (2026-11-15): the mentor side gets its own name, never the member's.
+        assert li.persona_name != "Quiet Cove"
         assert "listener.application_approved" in [a.action for a in s.query(AdminAuditLog).all()]
 
     # The member now sees an approved card. The poll no longer mints a console token
@@ -388,7 +390,7 @@ def test_approve_and_certify_in_one_step_is_audited(client, admin_headers):
         li = s.query(ListenerProfile).one()
         assert li.certified_exam is True and li.certified_at is not None
         row = s.query(AdminAuditLog).filter_by(action="listener.application_approved").one()
-        assert row.meta == {"certified_exam": True}
+        assert row.meta["certified_exam"] is True and row.meta["tier"] == "verified"
 
 
 def test_a_life_applicant_cannot_be_certified(client, admin_headers):

@@ -2,7 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { getAppearance, getCompanionColor, saveAppearance, saveCompanionColor } from '@/lib/session';
+import {
+  getAppearance,
+  getCompanionColor,
+  getCompanionShown,
+  saveAppearance,
+  saveCompanionColor,
+  saveCompanionShown,
+} from '@/lib/session';
 import {
   accentFor,
   COMPANION_COLORS,
@@ -41,6 +48,10 @@ type ThemeValue = {
   appearance: Appearance;
   look: Look;
   setAppearance: (a: Appearance) => void;
+  /** Whether the member's own companion is drawn on their screens (Profile switch; off
+   * after skipping it at signup). Other people's faces are never affected. */
+  companionShown: boolean;
+  setCompanionShown: (shown: boolean) => void;
   wash: { [K in Wash]: string };
   washInk: ReturnType<typeof washInkFor>;
 };
@@ -62,7 +73,9 @@ const ThemeContext = createContext<ThemeValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [companionColor, setColor] = useState<CompanionColor>(DEFAULT_COMPANION_COLOR);
-  const [appearance, setAppearanceState] = useState<Appearance>('pastel');
+  // New installs start on Light (DECISIONS R.3); a saved choice always wins.
+  const [appearance, setAppearanceState] = useState<Appearance>('light');
+  const [companionShown, setShown] = useState(true);
   const [ready, setReady] = useState(false);
   const phone = useColorScheme();
   const look: Look = appearance === 'system' ? (phone === 'dark' ? 'dark' : 'light') : appearance;
@@ -89,12 +102,17 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     void saveAppearance(a);
   }, []);
 
-  // Hydrate the persisted companion colour on launch.
+  // Hydrate the persisted companion colour and the companion switch on launch.
   useEffect(() => {
     let active = true;
     void getCompanionColor().then((c) => {
       if (active && c && c in COMPANION_COLORS) setColor(c as CompanionColor);
     });
+    void getCompanionShown()
+      .then((s) => {
+        if (active) setShown(s);
+      })
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -103,6 +121,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setCompanionColor = useCallback((c: CompanionColor) => {
     setColor(c); // live preview
     void saveCompanionColor(c); // persist
+  }, []);
+
+  const setCompanionShown = useCallback((shown: boolean) => {
+    setShown(shown);
+    void saveCompanionShown(shown);
   }, []);
 
   const value = useMemo<ThemeValue>(
@@ -117,10 +140,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       appearance,
       look,
       setAppearance,
+      companionShown,
+      setCompanionShown,
       wash: washFor(look),
       washInk: washInkFor(look),
     }),
-    [companionColor, setCompanionColor, appearance, look, setAppearance],
+    [companionColor, setCompanionColor, appearance, look, setAppearance, companionShown, setCompanionShown],
   );
 
   // One frame while the saved look is read, so a dark phone never flashes cream.

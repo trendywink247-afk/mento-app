@@ -191,3 +191,30 @@ test('journal channel and date segments are replaced in request.url and transact
   })));
   assert.ok(!blob.includes('health') && !blob.includes('2026-10-23'));
 });
+
+test('dist (the Android versionCode) rides with the release and never stands alone', () => {
+  assert.equal(sentryInitOptions({ dsn: DSN, appEnv: 'qa', gitSha: 'abc123', dist: 13 }).dist, '13');
+  assert.equal(sentryInitOptions({ dsn: DSN, appEnv: 'qa', gitSha: 'abc123', dist: '14' }).dist, '14');
+  assert.equal('dist' in sentryInitOptions({ dsn: DSN, appEnv: 'qa', gitSha: 'abc123' }), false);
+  assert.equal('dist' in sentryInitOptions({ dsn: DSN, appEnv: 'qa', dist: 13 }), false); // no release, no dist
+});
+
+test('build environments: qa and prod each report as their own environment; no DSN in the repo', () => {
+  const env = fs.readFileSync(path.join(__dirname, '../../../ops/lib/build-env.sh'), 'utf8');
+  const appEnv = name => new RegExp(`${name}\\)[\\s\\S]*?EXPO_PUBLIC_APP_ENV=(\\w+)`).exec(env)[1];
+  assert.equal(sentryInitOptions({ dsn: DSN, appEnv: appEnv('qa') }).environment, 'qa');
+  assert.equal(sentryInitOptions({ dsn: DSN, appEnv: appEnv('prod') }).environment, 'production');
+  assert.equal(sentryInitOptions({ dsn: DSN, appEnv: 'dev' }), null); // a dev build never reports
+  // Keys are read by name from .secrets/<env>.env; none is written in the script.
+  assert.ok(env.includes('EXPO_PUBLIC_SENTRY_DSN') && env.includes('SENTRY_AUTH_TOKEN'));
+  assert.ok(!/EXPO_PUBLIC_SENTRY_DSN=https?:/.test(env));
+});
+
+test('the build scripts and the smoke script read Sentry keys by name and never print a DSN', () => {
+  const read = f => fs.readFileSync(path.join(__dirname, '../../../ops', f), 'utf8');
+  for (const f of ['qa-apk.sh', 'build-android.sh', 'lib/build-env.sh']) {
+    assert.ok(!/echo[^\n]*\$(DSN|TOKEN|EXPO_PUBLIC_SENTRY_DSN|SENTRY_AUTH_TOKEN)/.test(read(f)), f);
+  }
+  const smoke = read('sentry-smoke.sh');
+  assert.ok(!/print\([^)]*SMOKE_DSN/.test(smoke) && !/echo[^\n]*\$DSN/.test(smoke));
+});

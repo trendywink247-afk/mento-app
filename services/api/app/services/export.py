@@ -29,6 +29,7 @@ from app.models.favourite import FavouriteListener
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentee_profile import MenteeProfile
 from app.models.mentor_link import MentorLink
 from app.models.moderation import ModerationEvent
 from app.models.push_token import PushToken
@@ -51,7 +52,7 @@ from app.schemas.export import (
     ExportReportFiled,
     ExportRequest,
 )
-from app.services import mentor_names
+from app.services import mentee_profiles, mentor_names
 
 # erasure.MEMBER_TABLES key → the ExportOut section that carries it.
 SECTIONS_BY_ERASURE_KEY = {
@@ -65,6 +66,7 @@ SECTIONS_BY_ERASURE_KEY = {
     "allowance_days": "allowance_days",
     "applications": "applications",
     "contributions": "contributions",
+    "mentee_profile": "mentee_profile",
 }
 
 NOTES = ExportNotes(
@@ -275,4 +277,9 @@ def build(db: Session, user: User) -> ExportOut:
                 .order_by(ModerationEvent.created_at)
             ).all()
         ],
+        mentee_profile=(
+            mentee_profiles.answers(mp).model_dump(mode="json")
+            if (mp := db.get(MenteeProfile, uid)) is not None
+            else None
+        ),
     )

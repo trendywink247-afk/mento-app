@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -24,11 +25,16 @@ import { MentorChatHeader } from '@/components/mentor/MentorChatHeader';
 import { MentorComposerHint } from '@/components/mentor/MentorComposerHint';
 import { MentorPeek, mentorPeekRoom } from '@/components/mentor/MentorPeek';
 import { MentorOptionsMenu } from '@/components/mentor/MentorOptionsMenu';
+import { SlashSuggest } from '@/components/mentor/SlashSuggest';
+import { MessageActions } from '@/components/chat/MessageActions';
 import { SageSky } from '@/components/motion/SageSky';
 import { useI18n } from '@/lib/i18n';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { listenerApi, type MemberBrief } from '@/lib/listenerApi';
 import { createAuthenticatedOwnChat } from '@/lib/ownChatApi';
+import { endedBySocket, endedOnServer, loadArchive } from '@/lib/ownChatArchive';
+import { archiveDeps } from '@/lib/ownChatArchiveDeps';
+import { applyAnswer, slashQuery, suggest, usePreparedAnswers } from '@/lib/preparedAnswers';
 import { selectChatTransport } from '@/lib/ownChatAdapter';
 import { createOwnChatScreenController } from '@/lib/ownChatScreenController';
 import { getListenerStreamClient, ensureListenerConnected } from '@/lib/listenerStreamClient';
@@ -99,6 +105,15 @@ export default function MentorChatScreenWeb() {
   const [menu, setMenu] = useState<MenuState>('closed');
   const [ending, setEnding] = useState(false);
   const [helplines, setHelplines] = useState(false);
+  // An ended own chat: its transcript, read-only (lib/ownChatArchive.ts), instead of an error.
+  const [ended, setEnded] = useState(false);
+  // DECISIONS §O: a mentor not certified for exams may suggest a certified exam mentor.
+  const [certified, setCertified] = useState(true);
+  const [suggested, setSuggested] = useState(false);
+  // Prepared answers: "/" in the composer suggests the mentor's own saved lines (device-local).
+  const prepared = usePreparedAnswers();
+  // A held bubble: copy, or keep it as a prepared answer.
+  const [held, setHeld] = useState<Msg | null>(null);
   // The member as the brief carries them (companion in their colour, path lens) — best-effort.
   const [brief, setBrief] = useState<MemberBrief | null>(null);
   const [here, setHere] = useState(false);
@@ -165,6 +180,7 @@ export default function MentorChatScreenWeb() {
     setMessages([]);
     setCrisis(null);
     setTyping(null);
+    setEnded(false);
     channelRef.current = null;
 
     const setup = async () => {
@@ -174,10 +190,20 @@ export default function MentorChatScreenWeb() {
         if (cancelled) return;
         setBrief(context);
         setOnline(me.status === 'online');
+        setCertified(me.certified === true);
         mentorFaces.setSelf(me.companion_animal, me.companion_colour);
         setMine((me.companion_animal as CompanionAnimal | undefined) ?? 'Owl');
         if (selectChatTransport(context.chat_backend, process.env.EXPO_PUBLIC_OWN_CHAT_ACCEPTED === '1') === 'own') {
           const scope = { actorId: me.id, conversationId: id, role: 'mentor' as const };
+          const showArchive = async () => {
+            const rows = await loadArchive('mentor', id, me.id, archiveDeps);
+            if (cancelled) return;
+            setMessages(rows);
+            setCrisis(null);
+            setTyping(null);
+            setEnded(true);
+            setReady(true);
+          };
           const own = createOwnChatScreenController(scope,
             onChange => createAuthenticatedOwnChat(scope, { transport: 'own', ownAccepted: true }, onChange),
             (snapshot, rows) => {
@@ -191,7 +217,12 @@ export default function MentorChatScreenWeb() {
               if (snapshot.status === 'ready') ownRef.current?.markRead();
               if (snapshot.status === 'terminal') {
                 setCrisis(null);
-                setError(t('mentor.chat.errOpen'));
+                // An ended chat is refused like "not yours"; the server tells the two apart.
+                const endedCheck = endedBySocket(snapshot.reason) ? Promise.resolve(true)
+                  : snapshot.reason === 'not_authorized' ? endedOnServer('mentor', id, archiveDeps) : Promise.resolve(false);
+                void endedCheck
+                  .then((yes) => (yes ? showArchive() : Promise.reject(new Error('not ended'))))
+                  .catch(() => { if (!cancelled) setError(t('mentor.chat.errOpen')); });
               }
             });
           ownRef.current = own;
@@ -400,6 +431,7 @@ export default function MentorChatScreenWeb() {
                     </View>
                   ) : null}
 
+                  <Pressable onLongPress={() => setHeld(item)} delayLongPress={380} testID={`mentor-web-bubble-${item.id}`}>
                   {item.mine ? (
                     <View style={styles.mineWrap}>
                       <EdgeSurface
@@ -430,6 +462,7 @@ export default function MentorChatScreenWeb() {
                       </EdgeSurface>
                     </View>
                   )}
+                  </Pressable>
                 </View>
               );
             }}
@@ -450,7 +483,23 @@ export default function MentorChatScreenWeb() {
 
           {/* Your companion over the message field (board A35), seated on the footer's edge. */}
           {!crisis && !error && !sendError ? <MentorPeek animal={mine} label={t('mentorChatPage.companionA11y')} /> : null}
+          {ended ? (
+            <Text
+              testID="mentor-web-ended"
+              style={[type.body, { color: colors.inkMuted, textAlign: 'center', padding: space.md }]}
+            >
+              {t('reflection.ended')}
+            </Text>
+          ) : (
           <View style={[styles.footer, { backgroundColor: colors.bg, borderTopColor: colors.border }]}>
+            {!crisis && slashQuery(draft) !== null ? (
+              <SlashSuggest
+                items={suggest(draft, prepared.answers)}
+                hasAnswers={prepared.answers.length > 0}
+                onPick={(a) => setDraft(applyAnswer(draft, a))}
+                onManage={() => router.push('/mentor/answers')}
+              />
+            ) : null}
             <MentorComposerHint />
             {sendError ? (
               <Text
@@ -474,9 +523,17 @@ export default function MentorChatScreenWeb() {
               testIDPrefix="listener-composer"
             />
           </View>
+          )}
         </View>
         </View>
       )}
+
+      <MessageActions
+        visible={!!held}
+        text={held?.text ?? ''}
+        onClose={() => setHeld(null)}
+        onPrepare={held ? () => router.push({ pathname: '/mentor/answers', params: { body: held.text } }) : undefined}
+      />
 
       {menu !== 'closed' ? (
         <MentorOptionsMenu
@@ -487,6 +544,10 @@ export default function MentorChatScreenWeb() {
             setMenu('closed');
             router.push({ pathname: '/mentor/report', params: { id } });
           }}
+          onSuggest={certified ? undefined : () => {
+            void listenerApi.suggestCertified(id).then(() => setSuggested(true)).catch(() => {});
+          }}
+          suggested={suggested}
           onAskEnd={() => setMenu('confirmEnd')}
           onConfirmEnd={() => void endNow()}
           onClose={() => setMenu('closed')}

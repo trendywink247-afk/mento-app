@@ -8,6 +8,7 @@
  * Transform and opacity only. Reduced motion: no drift, no pulse — the found state is
  * simply drawn. An error leaves everything still (T&S #11).
  */
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useId, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -31,6 +32,7 @@ import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing, stagger } from '@/theme/motion';
 import { useTheme } from '@/theme/ThemeProvider';
 import { font, radius, type, washEdge } from '@/theme/tokens';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 /** Board metrics at a 342-wide column. */
 const ORB_MAX = 120;
@@ -55,7 +57,7 @@ type Props = {
 };
 
 export function ConnectOrbs({ width, animal, memberName, mentorName, mentorFace = null, still = false }: Props) {
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t } = useI18n();
   const reduced = useReducedMotion();
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -89,17 +91,18 @@ export function ConnectOrbs({ width, animal, memberName, mentorName, mentorFace 
     setJoy({ kind: 'celebrate', n: 1 });
   }, [found, reduced, perch, fill, glow, seek]);
 
-  // The waiting orb breathes (scale + strength) until someone is there.
+  // The waiting orb breathes (scale + strength) for a bounded run (lib/motionBudget), then rests.
+  const pulseBudget = useMotionBudget(found);
   useEffect(() => {
-    if (reduced || still || found) {
+    if (reduced || still || found || !pulseBudget.live) {
       cancelAnimation(pulse);
       pulse.value = withTiming(0.5, { duration: 150 });
       return;
     }
     pulse.value = 0;
-    pulse.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), -1, true);
+    pulse.value = withRepeat(withTiming(1, { duration: breathe.period, easing: easing.breathe }), budgetRepeats(breathe.period, true), true);
     return () => cancelAnimation(pulse);
-  }, [reduced, still, found, pulse]);
+  }, [reduced, still, found, pulse, pulseBudget.live, pulseBudget.run]);
 
   const leftStyle = useAnimatedStyle(() => ({ transform: [{ translateX: perch.value * DRIFT * k }] }));
   const rightStyle = useAnimatedStyle(() => ({ transform: [{ translateX: -perch.value * DRIFT * k }] }));
@@ -187,9 +190,14 @@ export function ConnectOrbs({ width, animal, memberName, mentorName, mentorFace 
         <View style={{ width: orb, height: orb + 4 }}>
           <View style={[edge, { backgroundColor: colors.accentTintEdge }]} />
           <View style={[round, styles.orbFace, styles.companionFace, { backgroundColor: colors.accentTint, borderColor: colors.bg }]}>
-            <Animated.View style={[styles.originBottom, breathing]}>
-              <Companion animal={animal} size={106 * k} trigger={joy} awake />
-            </Animated.View>
+            {companionShown ? (
+              <Animated.View style={[styles.originBottom, breathing]}>
+                <Companion animal={animal} size={106 * k} trigger={joy} awake />
+              </Animated.View>
+            ) : (
+              // No companion (skipped at signup, DECISIONS R.3): a plain figure holds the orb.
+              <Ionicons name="person-outline" size={48 * k} color={colors.accent} />
+            )}
           </View>
         </View>
         <View style={styles.labelBox}>

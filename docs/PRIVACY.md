@@ -6,7 +6,10 @@
 > policy shown in-app or on any public page) before publication. Update this file in the
 > same commit as any change to what data Mento collects or who can see it.
 
-**Latest scoped reconciliation:** 2026-10-04 — deletion, retained safety records,
+**Latest scoped reconciliation:** 2026-11-15 — production runs on Mento's own chat, not
+Stream Chat; chat messages are left out of every production backup; staff reading and
+notification wording brought in line (§2 chat messages, §4, §5; DECISIONS M.6, M.7).
+Before that, 2026-10-04 — deletion, retained safety records,
 backup content and recovery-receipt preparation (§2 journals, §5 and §10).
 Other sections have not been fully re-audited in this update. Source behavior is
 not proof that a change is deployed; the operational distinctions in §5 must be
@@ -20,19 +23,32 @@ Mento is an anonymous emotional-support chat app. You are never asked for your n
 a photo, or a phone number to use the core product. Everyone in a conversation — the
 person seeking support and the listener — appears only as an auto-assigned persona
 (e.g. "Purple Valley"). Real identity is never shown to the other party in a chat.
+If you are both a member and a mentor, your two sides carry different personas, so
+the people you meet on one side cannot recognise you on the other.
 
 ## 2. What we collect
 
 - **Date of birth** — collected once at onboarding, solely to compute your age and
   enforce the 18+ minimum-age gate server-side. We do not retain or display your DOB
   or exact age anywhere else in the product.
-- **Email — optional, and truly skippable.** Used only for account recovery / PIN
-  reset if you choose to provide it. Never required to use Mento.
-- **Chat messages** — stored by our real-time messaging provider (Stream Chat) to
-  deliver the conversation to both participants, show typing/read state, and allow
-  reconnection after a dropped connection. Deleting a conversation ("Clean Wipe")
-  hard-deletes the channel and its messages from Stream's servers, not just your
-  device — see §5.
+- **Email.** Used only for account recovery / PIN reset; never shown to anyone. Today it
+  is optional. A switch (off now, and staying off until we have an email service) can
+  ask a member to add and confirm an email from their second visit: we send a six-digit
+  code, keep only a hash of it for 15 minutes, and record when the address was
+  confirmed. The address is never shown to mentors or other members.
+- **Mentorship form — optional, every field.** If you ask for mentorship you can tell
+  us your exam stage, attempts, optional subject, how you prepare, what you want help
+  with and a short note, and, per attempt, your marks (Prelims GS and CSAT; Mains GS I-IV
+  and Optional Papers I and II if you reached Mains; Interview if you reached it). You
+  choose who sees the marks: nobody, mentors only, or mentors and listeners. The rest
+  of the form is shown to the person who receives your request, never with your
+  identity. The note is checked by the same crisis scan as chat messages. You can edit
+  or clear it at any time; your data export includes it and Start fresh deletes it.
+- **Chat messages** — stored on Mento's own servers, encrypted in our database, to
+  deliver the conversation to both people and to catch up after a dropped connection.
+  No outside chat company stores them. Chat messages are **never included in our
+  backups**. Deleting a conversation ("Clean Wipe") deletes its messages from our
+  database, not just your device — see §5.
 - **Path (community/journey-stage) preference** — which community lens you've chosen
   (e.g. UPSC, NEET, "life") and where you are in that journey. This is deliberately
   **coarse** (a handful of categories, not free text), **optional**, and **clearable**
@@ -42,7 +58,7 @@ person seeking support and the listener — appears only as an auto-assigned per
 - **Your companion's name — optional.** If you name your growth companion (when you
   pick it, or later in Profile), we store that short name so the app can show it back
   to you. Only you ever see it: it is never shown to mentors or other members, never
-  sent to our messaging provider or to analytics, and not shown to safety staff. It
+  sent to analytics, and not shown to safety staff. It
   cannot hold links, email addresses or phone numbers. You can change or remove it
   in Profile, and Start fresh erases it with the rest of your account.
 - **Journals** — mood, finance, gratitude entries, and mentor notes you save are
@@ -58,6 +74,10 @@ person seeking support and the listener — appears only as an auto-assigned per
   when. It is never shown to members or other mentors, and every time an admin opens it
   the audit log records that. Until backups roll off, a copy can exist in a database
   backup (§5, backups). It is deleted with the mentor's profile.
+- **A mentor's exam history** (mentors only). How many times a mentor cleared Prelims,
+  reached Mains and reached the Interview, entered by an admin after reading the proof.
+  Members see it as small P / M / I badges with those counts; never years, marks or the
+  proof. It is deleted with the mentor's profile.
 - **Your look and your pinned and archived chats** — kept on your phone only (Pastel,
   Light, Dark or System; which chats you pinned or archived). Never sent to us. A
   cleared session removes the pins and archives; the look is a device setting.
@@ -67,6 +87,13 @@ person seeking support and the listener — appears only as an auto-assigned per
   phone maker's push service (Google). Chats a person has locked, messages the crisis
   scan flagged and messages that were redacted never have their words put in a
   notification. Turning it off stops it at once.
+- **The install of a member who was suspended or banned and then erased their account.**
+  Erasing everything is allowed at any standing. So that a block cannot be dodged by erasing
+  and starting over, a one-way hash of the install label and the date the block ends are kept
+  (no name, no persona, no content). A new account from that install is flagged for the team,
+  never refused. The row is ignored once the block has ended.
+- **The words of a request** are now run through the crisis scan when the request is sent; the
+  words themselves are not stored on the flag, only the signal.
 - **The languages a mentor talks in** (mentors only) — up to five, shown on the mentor's
   card so members can find a mentor who talks their language.
 - **Sign-in sessions** — the app refreshes its sign-in every few minutes; we keep a
@@ -115,9 +142,12 @@ separate mentor-verification flow and does not apply to people seeking support).
   can **report** a conversation from their console; a report records only the
   conversation, a reason category and an optional short note — no new data about
   you is collected, and the report goes to the same human review as member reports.
-- **Push notifications** show the other person's persona name and the kind of
-  event (a request, an acceptance, a new message) — **never message content**. You can
-  turn them off any time in your phone's system settings; nothing else changes.
+- **Push notifications** show the other person's persona name (for a mentor, with
+  their tier, e.g. "Mentor · Juno") and the kind of
+  event (a request, an acceptance, a new message). By default they **never show message
+  content**; they show the words of a message only if you turn that on yourself (§2,
+  "Whether notifications show the words of a message"). You can turn notifications off
+  any time in your phone's system settings; nothing else changes.
 - **Safety-review staff (admins)** can, through an audited, read-only admin tool,
   view the live content of a conversation **specifically when reviewing a
   crisis-safety flag or a user report/moderation case.** This access is logged in an
@@ -127,11 +157,9 @@ separate mentor-verification flow and does not apply to people seeking support).
   The reader requires an active staff account, an unresolved report or unreviewed
   safety flag on that exact conversation, and a stated reason recorded in the
   audit. It shows at most the latest 100 surviving messages, labelled by persona;
-  it does not copy message bodies into the audit or case record. The locally
-  gated own-chat implementation reads encrypted live application rows under
-  these same limits, excluding wiped rooms; it cannot recover deleted messages
-  from backups or expired partitions. This implementation is not evidence of
-  deployment or provider cutover, and does not set a new retention period.
+  it does not copy message bodies into the audit or case record. It reads only
+  messages still in our live database: a wiped chat cannot be opened, and because
+  backups hold no chat messages, deleted messages cannot be brought back for it.
   The view returns stored delivery text, without reconstructing a pre-redaction
   original. Redaction is best-effort: its existing fail-open behavior can deliver
   and store original text when the filter fails, so this view does not guarantee
@@ -147,15 +175,13 @@ separate mentor-verification flow and does not apply to people seeking support).
   for crisis-risk language as it's sent. If a message matches, the sender is shown
   verified India crisis helpline resources and the conversation is flagged for human
   safety review (see above). This scan cannot be bypassed by either party since it
-  runs server-to-server before the message is delivered.
+  runs on our server before the message is stored or delivered.
 
 ## 5. Deletion — "Clean Wipe"
 
-Clean Wipe ends the conversation and requests deletion of its messages and channel
-from Stream Chat, the messaging provider used by the current client. The server
-also deletes any own-chat message rows for that conversation from the active
-application database. Own chat remains a separate, unfinished replacement; this
-draft does not describe it as the deployed client transport.
+Clean Wipe ends the conversation and deletes its messages from our database. Chat
+messages are never included in our backups, so a wiped chat cannot come back from a
+backup either.
 
 Clean Wipe does not delete a journal note you separately saved from the chat or a
 report narrative kept for safety review. Those records can contain quotations from
@@ -168,8 +194,8 @@ removes that soft-matching signal going forward.
 ### Erasing everything — "Start fresh"
 
 When Start fresh completes, it removes your Mento account and its associated
-records listed below from active application storage, deletes its Stream account
-and conversations, and clears the account from the app. You begin again with a new
+records listed below from active application storage, deletes your conversations and
+their messages, and clears the account from the app. You begin again with a new
 account. It does not promise that every previously made backup has been rewritten
 or that retained safety records have become anonymous.
 
@@ -179,10 +205,10 @@ choice); every journal entry, including
 Mentor Notes you saved from a chat; your saved mentors and any "stay in touch"
 links (the mentor sees the link end); requests you sent to a mentor; your
 notification registration; the daily message counts; your end-of-chat reflections;
+your mentorship form and marks; a pending email confirmation;
 any mentor application that did not become an active mentor role; and every
-conversation — each open one is ended, and its messages and channel are
-hard-deleted from our messaging provider (Stream Chat) exactly as Clean Wipe does,
-together with your account there.
+conversation — each open one is ended, and its messages are deleted from our
+database exactly as Clean Wipe does.
 
 **Retained records:**
 
@@ -201,8 +227,7 @@ together with your account there.
 - **Deletion receipts in the prepared recovery system** are described below.
   Their production activation is not established by this draft.
 
-If our messaging provider cannot confirm a deletion at that moment, the
-app says so and asks you to try again; it never tells you something was deleted when
+If a deletion cannot be completed at that moment, the app says so and asks you to try again; it never tells you something was deleted when
 it was not. Your open chats are ended either way.
 
 **If you are also a mentor on Mento**, Start fresh cannot erase your account from the
@@ -210,14 +235,19 @@ app while your mentor role is active — doing so would leave the people you sup
 mid-conversation. Ask the Mento team to close your mentor side first; after that,
 Start fresh erases everything as above.
 
-### Backups and deletion receipts — activation still pending
+### Backups and deletion receipts
 
-**Engineering deployment note, not a live guarantee:** the latest recorded
-operational evidence describes daily SQL backup copies. The prepared encrypted,
-content-filtered six-hour backup flow has not been activated. The independent
-deletion-receipt receiver has local synthetic test evidence, but is not deployed;
-the required remote-acknowledgement gate remains disabled. Recheck the live state
-before publishing this section as a statement of current practice.
+Production's database is backed up once a night, encrypted, and kept for 30 days. A
+copy is also taken, encrypted, just before each update. **Chat messages are left out
+of every one of these copies**: the backups keep the rest (accounts, journals,
+reports, safety flags), so a lost server can be restored, but conversations come
+back empty. That is the price of Clean Wipe staying true.
+
+**Engineering note, recheck before publishing:** the off-site copy of the nightly
+backup is not configured yet, and the copies taken before an update have no automatic
+expiry yet. The independent deletion-receipt receiver has local synthetic test
+evidence, but is not deployed; the required remote-acknowledgement gate remains
+disabled.
 
 The approved content policy for the new encrypted recovery archives retains
 user-saved journal notes and moderation report narratives, while excluding chat
@@ -287,6 +317,8 @@ updated in the same change as any data-handling change described above.
 ## 10. Open items before this can be published
 
 - Founder + legal (India, DPDP Act 2023) sign-off.
+- Before launch: configure the off-site backup copy and give the pre-update copies an
+  expiry, then restate §5's backup paragraph from what is actually running.
 - Document upload for Mento Verified (§2) needs the same sign-off; confirm how long a database backup keeps a document that was deleted at decision time.
 - Reconfirm the deployed application and backup behavior before turning §5's
   preparation notes into public promises. Verify the backup inventory, retention

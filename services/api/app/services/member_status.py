@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.admin import AdminAccount
+from app.models.blocked_install import BlockedInstall
 from app.models.enums import MemberStatus, ModerationLevel, ReporterKind
 from app.models.mentor_link import MentorLink
 from app.models.moderation import ModerationEvent
@@ -134,7 +135,19 @@ def flag_rejoin(db: Session, new_user: User) -> bool:
             User.status != MemberStatus.active,
         )
     ).all()
-    if not any(standing(s, u).status != MemberStatus.active for s, u in rows):
+    blocked_now = any(standing(s, u).status != MemberStatus.active for s, u in rows)
+    if not blocked_now:
+        # A blocked member may have erased their account: only the install hash and the end date remain.
+        now = datetime.now(UTC)
+        blocked_now = any(
+            until is None or _aware(until) > now
+            for (until,) in db.execute(
+                select(BlockedInstall.blocked_until).where(
+                    BlockedInstall.install_hash == new_user.install_hash
+                )
+            ).all()
+        )
+    if not blocked_now:
         return False
     db.add(
         ModerationEvent(

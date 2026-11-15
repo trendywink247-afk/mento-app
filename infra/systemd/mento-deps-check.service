@@ -1,0 +1,10 @@
+[Unit]
+Description=Weekly dependency report of origin/dev (ops/deps-check.sh)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=agent
+ExecStart=/srv/mento/mento-app/ops/deps-check.sh
+Nice=15
+TimeoutStartSec=30min

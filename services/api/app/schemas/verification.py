@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 
 
 class VerificationIn(BaseModel):
-    kind: Literal["id_card", "posting_letter", "result", "other"]
+    kind: Literal[
+        "id_card", "posting_letter", "mains_admit_card", "interview_letter", "result", "other"
+    ]
     # The file as base64: a JPG or PNG photo, or a PDF, up to 3 MB before encoding.
     content_base64: str = Field(min_length=8, max_length=4_400_000)
 
@@ -39,3 +41,11 @@ class AdminVerificationItem(BaseModel):
 
 class VerificationDecisionIn(BaseModel):
     note: str | None = Field(default=None, max_length=200)
+    # DECISIONS R.4 (founder, 2026-11-15, option b): an in-service document (ID card, posting
+    # letter) makes the mentor Mento Verified; an exam document (Mains admission card,
+    # interview letter, result) makes them a Mentor with the exam history the admin read.
+    # Omitted = Mento Verified, as before (older admin builds).
+    grant: Literal["verified", "mentor"] | None = None
+    prelims: int | None = Field(default=None, ge=0, le=20)
+    mains: int | None = Field(default=None, ge=0, le=20)
+    interview: int | None = Field(default=None, ge=0, le=20)

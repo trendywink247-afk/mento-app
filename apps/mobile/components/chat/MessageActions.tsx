@@ -24,12 +24,14 @@ type Props = {
   text: string;
   /** Show "Save to Journal" and run it. Omit when the message cannot or need not be saved. */
   onSave?: () => void;
+  /** Mentor side: keep this text as a prepared answer. */
+  onPrepare?: () => void;
   /** Show "Report this chat" and run it. Omit on the member's own messages. */
   onReport?: () => void;
   onClose: () => void;
 };
 
-export function MessageActions({ visible, text, onSave, onReport, onClose }: Props) {
+export function MessageActions({ visible, text, onSave, onPrepare, onReport, onClose }: Props) {
   const { t } = useI18n();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -54,6 +56,7 @@ export function MessageActions({ visible, text, onSave, onReport, onClose }: Pro
     { key: 'copy', icon: copied ? 'checkmark' : 'copy-outline', label: copied ? t('chat.msgCopied') : t('chat.msgCopy'), onPress: copy },
   ];
   if (onSave) rows.push({ key: 'save', icon: 'bookmark-outline', label: t('chat.saveToNotes'), onPress: run(onSave) });
+  if (onPrepare) rows.push({ key: 'prepare', icon: 'document-text-outline', label: t('chat.saveAsAnswer'), onPress: run(onPrepare) });
   if (onReport) rows.push({ key: 'report', icon: 'flag-outline', label: t('chat.msgReport'), onPress: run(onReport) });
 
   return (

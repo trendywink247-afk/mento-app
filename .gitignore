@@ -34,7 +34,7 @@ venv/
 # ---- Firebase / FCM (push notifications) ----
 # google-services.json is safe to commit (client identifiers, not a secret —
 # Google's own guidance). The FCM V1 service-account key is the real secret;
-# it's never a local file in this repo (uploaded once via `eas credentials`).
+# it's never a local file in this repo (it lives on the API server only).
 *firebase-adminsdk*.json
 
 # ---- OS / editor ----
@@ -75,3 +75,15 @@ deploy/staging/secrets/*
 
 # ---- Local Balanced stack: the web build Caddy serves (deploy/compose.local.yml) ----
 deploy/web-root/
+
+# ---- Android signing and build output (never commit) ----
+*.keystore
+*.jks
+*.p12
+*.apk
+*.aab
+apps/mobile/dist-qa/
+apps/mobile/.tmp-*/
+
+# OTA code-signing: public certificates are committed; private keys never are
+!apps/mobile/certs/*.pem

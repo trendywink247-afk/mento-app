@@ -23,7 +23,7 @@ class DatabaseBudgetTests(unittest.TestCase):
         self.assertEqual(self.calculate(worker_processes=2)["required"], 97)
 
     def test_other_clients_consume_shared_server_budget(self):
-        # Explicit illustrative allowance, not measured GlitchTip configuration.
+        # Illustrative allowance for other DB clients (backup jobs, an operator psql session).
         self.assertTrue(self.calculate(pool_size=5, max_overflow=5, other_connections=7)["fits"])
         self.assertFalse(self.calculate(pool_size=5, max_overflow=5, other_connections=8)["fits"])
         with self.assertRaises(ValueError):

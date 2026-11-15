@@ -6,13 +6,14 @@
 #   ops/build-api.sh <sha>
 #
 # Recipe:
-#   Dockerfile : services/api/Dockerfile   (build context: services/api, no build args)
+#   Dockerfile : services/api/Dockerfile   (build context: services/api; one build arg, GIT_SHA, for Sentry's release tag)
 #   Source     : `git archive <sha>` of services/api only, so the image holds exactly
 #                the committed tree: no untracked files, no local .env, no .venv.
 #                git runs as user `agent` (owner of the repo); only tar and docker run
 #                as root.
 #   Build dir  : mktemp under /var/lib/mento-build (root:root, 0700), removed on exit.
-#   Tag        : mento-api:<first 12 of sha>-r<N>. An existing tag is never reused or
+#   Tag        : mento-api:<prefix><first 12 of sha>-r<N>. <prefix> is BUILD_TAG_PREFIX (empty for
+#                QA; ops/prod-release.sh sets "prod-", so prod and QA tags never collide). An existing tag is never reused or
 #                overwritten: N starts at 1 and is incremented, at run time, past every
 #                tag already present on the docker host. qa-deploy-api.sh takes the tag
 #                part (<shortsha>-r<N>), which the commands print at the end.
@@ -31,7 +32,9 @@ REPO="$(git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)" || d
 SHA="$(git -C "$REPO" rev-parse --verify --quiet "$1^{commit}")" || die "unknown commit: $1"
 git -C "$REPO" cat-file -e "$SHA:services/api/Dockerfile" 2>/dev/null \
     || die "services/api/Dockerfile does not exist at $SHA"
-SHORT="${SHA:0:12}"
+PREFIX="${BUILD_TAG_PREFIX:-}"
+[[ $PREFIX =~ ^([a-z][a-z0-9]{0,15}-)?$ ]] || die "BUILD_TAG_PREFIX must look like 'prod-'"
+SHORT="${PREFIX}${SHA:0:12}"
 
 cat <<EOF
 # --- build mento-api:$SHORT-r<N> from $SHA. Run as root on a host with docker. ---
@@ -61,11 +64,12 @@ docker build \\
     --file "\$SRC/services/api/Dockerfile" \\
     --tag "\$IMAGE" \\
     --label "org.opencontainers.image.revision=\$SHA" \\
+    --build-arg "GIT_SHA=\$SHA" \\
     "\$SRC/services/api"
 
 # Record what was actually built (paste this into the release notes / deploy ticket):
 docker image inspect --format 'image={{index .RepoTags 0}} id={{.Id}} created={{.Created}}' "\$IMAGE"
 docker image inspect --format 'base-digest={{index .RepoDigests 0}}' python:3.12-slim || true
 
-echo "built \$IMAGE; deploy to QA (root):  qa-deploy-api \$TAG"
+echo "built \$IMAGE; deploy (root):  $( [ -n "$PREFIX" ] && echo "ops/prod-release.sh (uses this tag)" || echo "qa-deploy-api \$TAG" )"
 EOF

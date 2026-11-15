@@ -24,6 +24,7 @@ import Animated, {
 
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, duration, easing } from '@/theme/motion';
+import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 /** Max parallax travel at depth=1 (px). Depth scales it: closer planes move more. */
 const SHIFT_MAX = 16;
@@ -52,6 +53,8 @@ export function Tilt3D({
   const ry = useSharedValue(0); // rotateY degrees
   const tx = useSharedValue(0); // parallax shift px
   const ty = useSharedValue(0);
+  // The idle drift is a bounded run (lib/motionBudget); the web cursor tilt is event-driven.
+  const budget = useMotionBudget();
 
   useEffect(() => {
     if (reduced) {
@@ -87,7 +90,7 @@ export function Tilt3D({
       };
     }
 
-    if (drift) {
+    if (drift && budget.live) {
       // Two desynced periods (×1.7 and ×2.3 of the breath) — the composite drift
       // never visibly repeats, same trick as the companion's idle sway.
       rx.value = withRepeat(
@@ -95,7 +98,7 @@ export function Tilt3D({
           withTiming(maxTilt * 0.6, { duration: breathe.period * 1.7, easing: easing.breathe }),
           withTiming(-maxTilt * 0.6, { duration: breathe.period * 1.7, easing: easing.breathe })
         ),
-        -1,
+        budgetRepeats(breathe.period * 3.4, true),
         true
       );
       ry.value = withRepeat(
@@ -103,7 +106,7 @@ export function Tilt3D({
           withTiming(-maxTilt, { duration: breathe.period * 2.3, easing: easing.breathe }),
           withTiming(maxTilt, { duration: breathe.period * 2.3, easing: easing.breathe })
         ),
-        -1,
+        budgetRepeats(breathe.period * 4.6, true),
         true
       );
       // The drift breathes a hint of parallax too, tied to the same sines.
@@ -112,7 +115,7 @@ export function Tilt3D({
           duration: breathe.period * 2.3,
           easing: easing.breathe,
         }),
-        -1,
+        budgetRepeats(breathe.period * 2.3, true),
         true
       );
       return () => {
@@ -124,7 +127,7 @@ export function Tilt3D({
         tx.value = 0;
       };
     }
-  }, [reduced, drift, maxTilt, depth, rx, ry, tx, ty]);
+  }, [reduced, drift, maxTilt, depth, rx, ry, tx, ty, budget.live, budget.run]);
 
   const anim = useAnimatedStyle(() => ({
     transform: [

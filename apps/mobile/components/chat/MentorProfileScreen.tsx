@@ -7,7 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackKey } from '@/components/DeepHeader';
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { CertifiedBadge } from '@/components/CertifiedBadge';
+import { ExamEmblems } from '@/components/ExamEmblem';
 import { InTouchBadge, LinkedRings } from '@/components/InTouchBadge';
+import { TierMark } from '@/components/TierMark';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
 import { MentorFace, MentorFaceFigure } from '@/components/art/MentorFace';
@@ -20,6 +23,7 @@ import { capture } from '@/lib/analytics';
 import { ApiError, api, type ConversationMentor, type PathTree, type StayInTouch, type StayInTouchBlock } from '@/lib/api';
 import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
 import { useI18n } from '@/lib/i18n';
+import { tierKey } from '@/lib/tierWord';
 import { pendingOption } from '@/lib/pendingOption';
 import { mentorHeroKey } from '@/lib/originStore';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
@@ -51,7 +55,7 @@ function blockFromCode(code: string | null): Block | null {
 export default function MentorProfileScreen() {
   useSessionGuard();
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const mentorBreath = useBreathing(true);
@@ -148,7 +152,7 @@ export default function MentorProfileScreen() {
   })();
 
   const statusLine = [
-    online ? t('mentorProfile.online') : t('mentorProfile.away'),
+    online ? t('mentorProfile.onlineAs', { tier: t(tierKey(profile?.tier)) }) : t('mentorProfile.awayAs', { tier: t(tierKey(profile?.tier)) }),
     profile?.community_slug ? t('inTouch.community', { name: communityLabel(tree, profile.community_slug) }) : null,
     !online && profile?.availability_note ? t('mentorProfile.usually', { note: profile.availability_note }) : null,
   ]
@@ -183,7 +187,7 @@ export default function MentorProfileScreen() {
                   </Animated.View>
                 </FlyFrom>
               ) : null}
-              {animal ? (
+              {animal && companionShown ? (
                 <View style={styles.memberFigure}>
                   <Companion animal={animal} size={84} awake />
                 </View>
@@ -199,6 +203,17 @@ export default function MentorProfileScreen() {
                 <Text style={[styles.name, { color: colors.ink }]} accessibilityRole="header" testID="mentor-profile-name">
                   {displayName}
                 </Text>
+                {profile ? (
+                  <View style={styles.marksRow}>
+                    {profile.certified || profile.tier === 'verified' ? (
+                      <CertifiedBadge testID="mentor-profile-certified" />
+                    ) : (
+                      <TierMark tier={profile.tier ?? 'listener'} testID="mentor-profile-tier" />
+                    )}
+                    {/* The full emblems (DECISIONS R.15): subtle, only once an admin checked them. */}
+                    <ExamEmblems badges={profile.exam_badges} size={46} testID="mentor-profile-emblems" />
+                  </View>
+                ) : null}
                 <View style={styles.statusRow}>
                   {profile ? (
                     <View style={[styles.statusDot, { backgroundColor: online ? colors.success : colors.dotIdle }]} />
@@ -220,7 +235,7 @@ export default function MentorProfileScreen() {
           <Entrance index={2}>
             <View style={[styles.explain, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
               <View style={[styles.explainIcon, { backgroundColor: wash.indigo }]}>
-                <Ionicons name="refresh-outline" size={20} color={COMPANION_COLORS.plum.accentEdge} />
+                <Ionicons name="people-outline" size={20} color={COMPANION_COLORS.plum.accentEdge} />
               </View>
               <View style={styles.explainText}>
                 <Text style={[type.keyDense, styles.explainTitle, { color: colors.ink }]}>{t('inTouch.namesTitle')}</Text>
@@ -396,6 +411,7 @@ function ReportLink({ onPress, label }: { onPress: () => void; label: string }) 
 }
 
 const styles = StyleSheet.create({
+  marksRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingVertical: 4 },
   safe: { flex: 1 },
   page: { flexGrow: 1, paddingTop: space.xs, paddingHorizontal: space.lg, paddingBottom: space.lg, gap: 14 },
   column: { flexGrow: 1, gap: 14 },

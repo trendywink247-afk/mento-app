@@ -39,14 +39,14 @@ function loadSkia(): Promise<boolean> {
 }
 
 /** Light and Dark are a plain ground: no aurora. Pastel keeps the sky. */
-export function AmbientBackground({ paused = false }: { paused?: boolean }) {
+export function AmbientBackground({ paused = false, motionKey = null }: { paused?: boolean; motionKey?: unknown }) {
   const { look, colors } = useTheme();
   if (look !== 'pastel') return <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.bg }]} pointerEvents="none" />;
-  return <PastelAmbient paused={paused} />;
+  return <PastelAmbient paused={paused} motionKey={motionKey} />;
 }
 
 /** `paused`: see AuroraCanvas — the root sky holds still under an opaque screen. */
-function PastelAmbient({ paused = false }: { paused?: boolean }) {
+function PastelAmbient({ paused = false, motionKey = null }: { paused?: boolean; motionKey?: unknown }) {
   const [ready, setReady] = useState(skiaLoaded);
   const opacity = useSharedValue(skiaLoaded ? 1 : 0);
 
@@ -80,7 +80,7 @@ function PastelAmbient({ paused = false }: { paused?: boolean }) {
       {ready ? (
         <Animated.View style={[StyleSheet.absoluteFill, fade]}>
           <Suspense fallback={null}>
-            <AuroraCanvas paused={paused} />
+            <AuroraCanvas paused={paused} motionKey={motionKey} />
           </Suspense>
         </Animated.View>
       ) : null}

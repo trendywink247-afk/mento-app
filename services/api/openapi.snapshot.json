@@ -1538,6 +1538,17 @@
               }
             ],
             "title": "Stream Channel Id"
+          },
+          "unread_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unread Count"
           }
         },
         "required": [
@@ -3230,6 +3241,17 @@
             "default": false,
             "title": "In Touch",
             "type": "boolean"
+          },
+          "last_message_preview": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Message Preview"
           },
           "member_masked": {
             "title": "Member Masked",
@@ -5215,6 +5237,16 @@
             "title": "Status",
             "type": "string"
           },
+          "support": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupportOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "target_listener_id": {
             "anyOf": [
               {
@@ -5602,6 +5634,27 @@
         "title": "StepBackOut",
         "type": "object"
       },
+      "SupportOut": {
+        "properties": {
+          "helplines": {
+            "default": [],
+            "items": {
+              "type": "object"
+            },
+            "title": "Helplines",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "SupportOut",
+        "type": "object"
+      },
       "UnlockRequest": {
         "properties": {
           "pin": {
@@ -5704,6 +5757,8 @@
             "enum": [
               "id_card",
               "posting_letter",
+              "mains_admit_card",
+              "interview_letter",
               "result",
               "other"
             ],

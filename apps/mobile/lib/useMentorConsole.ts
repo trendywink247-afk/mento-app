@@ -1,8 +1,10 @@
 /** Mentor console data hook — the native reimplementation of the data flow in
  * components/listener/ListenerConsole.web.tsx: identity + requests + conversations
- * on focus, a 30s request poll so a Personal request never waits a full refresh to
- * appear, and a live per-channel unread/preview/typing mirror driven off Stream
- * channel events (message.new/message.read/typing.start/typing.stop). */
+ * on focus, pushed updates instead of a poll (lib/liveEvents.ts: `request.new` /
+ * `request.gone` refetch the requests, `conversation.changed` the conversations, and
+ * every (re)connect does one full catch-up), and a live per-channel
+ * unread/preview/typing mirror driven off Stream channel events
+ * (message.new/message.read/typing.start/typing.stop). */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Event } from 'stream-chat';
@@ -17,8 +19,9 @@ import {
 } from '@/lib/listenerApi';
 import { mentorFaces } from '@/lib/mentorFaces';
 import { ensureListenerConnected } from '@/lib/listenerStreamClient';
-
-const REQUEST_POLL_MS = 30_000;
+import { streamRooms } from '@/lib/ownLive';
+import { createEventFetch, type EventFetch } from '@/lib/eventFetch';
+import { FALLBACK_REFRESH_MS, useLiveEvent, useLiveStatus } from '@/lib/liveEvents';
 
 export type ChannelLive = {
   unread: number;
@@ -93,6 +96,20 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
   // to touch either. Bumped by refresh() itself and by the focus-effect cleanup.
   const seq = useRef(0);
 
+  // Pushed events for each list settle into one fetch, skipped when a read began after the
+  // event (lib/eventFetch.ts). Created once; the fetch bodies are wired below.
+  const fetchers = useRef<{ requests: EventFetch; conversations: EventFetch } | null>(null);
+  const fetchBodies = useRef<{ requests: () => void; conversations: () => void }>({
+    requests: () => undefined,
+    conversations: () => undefined,
+  });
+  if (!fetchers.current) {
+    fetchers.current = {
+      requests: createEventFetch(() => fetchBodies.current.requests()),
+      conversations: createEventFetch(() => fetchBodies.current.conversations()),
+    };
+  }
+
   const refresh = useCallback(async () => {
     const mySeq = ++seq.current;
     const live = () => seq.current === mySeq;
@@ -101,6 +118,8 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
     try {
       const meData = await listenerApi.me();
       if (!live()) return;
+      fetchers.current?.requests.started();
+      fetchers.current?.conversations.started();
       const [reqs, convos] = await Promise.all([
         listenerApi.requests(),
         listenerApi.conversations(),
@@ -112,17 +131,21 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
       setConversations(convos);
       setError(null);
 
+      // Stream is reached only for Stream rooms. A mentor whose open chats are all own chats never
+      // connects to it (and a build without a Stream key keeps working for them).
+      const active = streamRooms(convos);
+      if (active.length === 0) {
+        unsubscribeAll();
+        setLive({});
+        return;
+      }
       const client = await ensureListenerConnected(
         { id: meData.id, name: meData.persona_name },
         meData.stream_token,
       );
       if (!live()) return;
 
-      // Watch every active channel in parallel — no reason to serialize network calls.
-      const active = convos.filter(
-        (c): c is ListenerConversation & { stream_channel_id: string } =>
-          c.status === 'active' && c.stream_channel_id !== null,
-      );
+      // Watch every active Stream channel in parallel — no reason to serialize network calls.
       const watched = await Promise.all(
         active.map(async (c) => {
           const ch = client.channel('messaging', c.stream_channel_id);
@@ -216,43 +239,78 @@ export function useMentorConsole(atCapacityText: string, takenText = ''): Mentor
     }
   }, [unsubscribeAll]);
 
+  // Pushed updates. Each event refetches only its own list, outside refresh()'s generation on
+  // purpose: accept / decline / going online / saving the line all call refresh(), which bumps
+  // `seq`, and an update pinned to an older generation would silently stop after the first action.
+  // `focused` keeps a late answer from landing on a screen that has gone.
+  const focused = useRef(false);
+  const fetchRequests = useCallback(() => {
+    fetchers.current?.requests.started();
+    void listenerApi
+      .requests()
+      .then((r) => {
+        if (focused.current) setRequests(r);
+      })
+      .catch(() => {
+        /* the next event, focus or reconnect catches up */
+      });
+  }, []);
+  // Own chats have no Stream mirror: who is waiting and what is unread arrives with the rows.
+  const fetchConversations = useCallback(() => {
+    fetchers.current?.conversations.started();
+    void listenerApi
+      .conversations()
+      .then((rows) => {
+        if (focused.current) setConversations(rows);
+      })
+      .catch(() => {
+        /* same */
+      });
+  }, []);
+  // A hello right after the focus refresh would only repeat it: skip a resync within 3 s of focus.
+  const focusedAt = useRef(0);
+  useLiveEvent('listener', ['resync', 'request.new', 'request.gone', 'conversation.changed'], (event) => {
+    if (!focused.current) return;
+    if (event.t === 'resync') {
+      if (Date.now() - focusedAt.current < 3_000) return;
+      void refresh();
+    } else if (event.t === 'conversation.changed') fetchers.current?.conversations.onEvent();
+    else fetchers.current?.requests.onEvent();
+  });
+  fetchBodies.current = { requests: fetchRequests, conversations: fetchConversations };
+  const status = useLiveStatus('listener');
+
   useFocusEffect(
     useCallback(() => {
+      focused.current = true;
+      focusedAt.current = Date.now();
       void refresh();
-      // The poll lives exactly as long as this focus. It must NOT be pinned to refresh()'s
-      // generation: accept / decline / going online / saving the line all call refresh(),
-      // which bumps `seq`, and a poll pinned to the first generation silently stopped
-      // updating after the first action — a new request then waited for a relaunch.
-      let focused = true;
-      const id = setInterval(() => {
-        void listenerApi
-          .requests()
-          .then((r) => {
-            if (focused) setRequests(r);
-          })
-          .catch(() => {
-            /* the 30s poll is a freshness nicety, not a source of truth — swallow */
-          });
-        // Own chats have no Stream mirror: who is waiting and what is unread arrives with the rows.
-        void listenerApi
-          .conversations()
-          .then((rows) => {
-            if (focused) setConversations(rows);
-          })
-          .catch(() => {
-            /* same: the next poll or focus catches up */
-          });
-      }, REQUEST_POLL_MS);
       return () => {
-        focused = false;
+        focused.current = false;
+        fetchers.current?.requests.cancel();
+        fetchers.current?.conversations.cancel();
         // Invalidate any in-flight refresh() first so it bails out of its own
         // setStates/subscribes and unsubscribes only the subs IT created.
         seq.current += 1;
         unsubscribeAll();
-        clearInterval(id);
       };
     }, [refresh, unsubscribeAll]),
   );
+
+  // Only an older server that cannot push gets a safety net: one quiet read of both lists per
+  // FALLBACK_REFRESH_MS while focused. Never faster, and never while the socket is live.
+  useEffect(() => {
+    if (status !== 'unavailable') return;
+    let handle: ReturnType<typeof setTimeout> | null = null;
+    const tick = () => {
+      handle = setTimeout(() => {
+        if (focused.current) { fetchRequests(); fetchConversations(); }
+        tick();
+      }, FALLBACK_REFRESH_MS);
+    };
+    tick();
+    return () => { if (handle) clearTimeout(handle); };
+  }, [status, fetchRequests, fetchConversations]);
 
   useEffect(() => onListenerSessionLost(() => setError('session')), []);
 

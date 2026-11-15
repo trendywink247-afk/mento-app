@@ -21,7 +21,7 @@ class MentorDocument(UUIDMixin, TimestampMixin, Base):
     listener_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("listener_profiles.id", ondelete="CASCADE"), index=True
     )
-    # id_card | posting_letter | result | other (services/verification.py)
+    # id_card | posting_letter | mains_admit_card | interview_letter | result | other (services/verification.py)
     kind: Mapped[str] = mapped_column(String(24))
     content_type: Mapped[str] = mapped_column(String(32))
     size_bytes: Mapped[int] = mapped_column(Integer)

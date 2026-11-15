@@ -298,3 +298,42 @@ test('typing frames are throttled to one per cooldown, restart after it, and res
   h.client.typing(false); assert.equal(typing(), 3);
   h.client.forget();
 });
+
+test('a pong that carries last_seq fetches history only when something was missed', async () => {
+  const h = harness({ store: [message(1)] });
+  await h.client.start(); const socket = await h.open(1);
+  const before = h.historyCalls.length;
+  await h.advance(25_000); socket.frame({ t: 'pong', last_seq: 1 }); await settle();
+  assert.equal(h.historyCalls.length, before); // nothing missed: no REST call per keepalive
+  h.store.push(message(2));
+  await h.advance(25_000); socket.frame({ t: 'pong', last_seq: 2 }); await settle();
+  assert.equal(h.historyCalls.length, before + 1);
+  assert.deepEqual(h.state().messages.map(m => m.seq), [1, 2]);
+  h.client.forget();
+});
+
+test('the pushed state frame carries the exam suggestion and ends the chat', async () => {
+  const h = harness(); await h.client.start(); const socket = await h.open();
+  assert.equal(h.state().examRedirect, null);
+  socket.frame({ t: 'state', exam_redirect: true, status: 'active' });
+  assert.equal(h.state().examRedirect, true);
+  assert.equal(h.state().status, 'ready');
+  socket.frame({ t: 'state', exam_redirect: false, status: 'ended' });
+  assert.equal(h.state().examRedirect, false);
+  assert.equal(h.state().status, 'terminal');
+  assert.equal(h.state().reason, 'ended');
+  h.client.forget();
+});
+
+test('presence and typing re-notify without rebuilding the message list', async () => {
+  const h = harness({ store: [message(1), message(2)] });
+  await h.client.start(); const socket = await h.open(2);
+  const first = h.client.snapshot().messages;
+  socket.frame({ t: 'presence', user: 'mentor-a', online: false });
+  socket.frame({ t: 'typing', from: 'mentor-a', on: true });
+  assert.equal(h.client.snapshot().messages, first); // same array: React can skip the list
+  socket.frame({ t: 'message', message: message(3) }); await settle();
+  assert.notEqual(h.client.snapshot().messages, first);
+  assert.equal(h.client.snapshot().messages.length, 3);
+  h.client.forget();
+});

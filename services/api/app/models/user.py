@@ -28,6 +28,10 @@ class User(UUIDMixin, TimestampMixin, Base):
 
     # Optional email — recovery only, never shown to others, never required.
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    # When the member confirmed `email` with a code (DECISIONS R.10); null = not confirmed.
+    email_verified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     # Growth companion (personalization/theme; NEVER the chat handle).
     companion_animal: Mapped[str | None] = mapped_column(String(32), nullable=True)

@@ -33,7 +33,8 @@ services/recovery_receiver/  Isolated encrypted-recovery receiver service
 deploy/               Compose stacks, deploy.sh, bluegreen.sh, backups, monitoring, drills (test-*.sh)
 scripts/ci/           Release policy, DB budget and drill tests (python unittest)
 scripts/local/        api.py launcher; workspace.ps1 is Windows-only legacy
-.github/workflows/    api-ci, test-ci, maestro, staging-release, production-release, rollback-rehearsal
+ops/                  Local CI (ci.sh, ci-poll.sh), builds, QA deploy/APK/OTA, prod release and backups
+infra/                Caddy, SonarQube, systemd timers, root helpers for the agent (qa-agent/)
 docs/                 Current docs; index in docs/README.md; state in docs/STATUS.md
 docs/archive/         STALE. Never read it or use it as guidance.
 ```
@@ -43,17 +44,19 @@ docs/archive/         STALE. Never read it or use it as guidance.
 | Env | Where | Notes |
 |---|---|---|
 | Local | `/srv/mento/mento-app` | Dev only; no production data or secrets |
-| QA / staging | host `129.121.171.140`; `qa-api`/`qa-app`/`qa-admin.mento.chat` via Caddy (Nginx + certbot disabled, 2026-10-23 cutover — `infra/caddy/*.md` on `feat/qa-caddy`); `staging.mento.chat` kept as an alias pending retirement; reachable over the operator's Tailscale network, not a public IP allowlist; web releases installed by root via `/usr/local/sbin/qa-install-web` | Deployed only by the Staging Release workflow |
-| Production | URL and host to be confirmed | Off limits to agents (see branch rules) |
+| QA / staging | host `129.121.171.140`; `qa-api`/`qa-app`/`qa-admin.mento.chat` via Caddy (`infra/caddy/`); `staging.mento.chat` kept as an alias pending retirement; reachable over the operator's Tailscale network, not a public IP allowlist; web releases installed by root via `/usr/local/sbin/qa-install-web` | Deployed from `dev` (or uncommitted work) by the `ops/` scripts |
+| Production | URL and host to be confirmed | Off limits to agents; deploys only from `main` on request |
 
-## Branch rules
+## Branch and release rules (founder, 2026-11-11)
 
-- Branch `feat/<topic>` from `dev`. One topic per branch.
-- Ask the user before opening a PR into `dev`.
-- Never push to `master` or `main`. Never force-push shared branches.
-- Never deploy to production, and never trigger production-release or staging-release workflows, unless the user explicitly asks for that specific run.
-- Don't delete tags or other people's branches; you may delete your own merged feat/* branches. History lives in `archive/*` tags.
-- Before opening any PR: run the full API checks (ruff, black --check, alembic upgrade head, alembic check, pytest against the local test DB on 127.0.0.1) and the mobile typecheck + test:* scripts. Paste pass/fail counts in the PR description. Never open a PR with failures unless the user approves.
+One working branch. Keep it lean: no feature branches, no PRs into `dev`.
+
+- Commit to `dev` and push it. Run `ops/ci.sh <sha>` (or `--quick` while iterating) before pushing; never push failing checks unless the user approves.
+- QA: you may deploy to QA from `dev`, or from uncommitted work when something must be tested before it is committed. Commit once QA testing passes.
+- `main`: merge `dev` into `main` only with the user's explicit approval for that merge. Never push anything else to `main`. Never force-push.
+- Production deploys only from `main`, only when the user asks for that specific deploy.
+- No GitHub automation: no Actions, no Dependabot. CI/CD is local (`ops/`, `docs/OPERATIONS.md`).
+- Don't delete tags. History lives in `archive/*` tags.
 
 ## Commands
 
@@ -76,8 +79,10 @@ Mobile (from `apps/mobile`):
 npm ci
 npm run typecheck                           # tsc --noEmit; there is no ESLint
 npm run test:route && npm run test:question && npm run test:placement && npm run test:bubble
-node --test e2e/*.test.cjs                  # unit tests run in CI (see test-ci.yml for the exact list)
+node --test e2e/*.test.cjs                  # unit tests
 ```
+
+All of the above in one go, in parallel, with a log: `ops/ci.sh <sha>` (full) or `ops/ci.sh --quick <sha>`.
 
 Release tooling (from repo root; these are drills against fakes, not deploys):
 
@@ -105,12 +110,15 @@ bash deploy/test-worker-rollback.sh
 
 ## Secrets
 
+- Keys the founder shares go in `/srv/mento/mento-app/.secrets/` (git-ignored, mode 700/600). Write them straight there, never echo them back, reply with the file and variable name only. Production-critical keys (`MESSAGE_KEY`, DB passwords, age private keys) do not go there. Full rules: `docs/SECRETS.md`.
 - Never print, log, echo, commit or paste secret values: `.env` files, tokens, keys, the decrypted SOPS env, SSH keys. Refer to secrets by name only.
 - `EXPO_PUBLIC_*` values ship inside the client, so they can never hold secrets.
 - Production secrets are SOPS + age encrypted (`deploy/secrets/`). Don't decrypt them.
 
 ## Docs
 
+- Map: `docs/README.md`. Architecture `docs/ARCHITECTURE.md`; build/CI/CD/release/rollback `docs/OPERATIONS.md`; secrets `docs/SECRETS.md`; hosts and users `docs/environments.md`.
+- Pipelines are scripts in `ops/` and `infra/`; never rely on remembered steps. If you do something by hand twice, script it and document it in `docs/OPERATIONS.md`.
 - `docs/archive/` is stale. Never read it and never cite it as current.
 - After each task, update `docs/STATUS.md`: current state, next 3 tasks, open questions. Keep it at 20 lines or fewer.
 - When you add, move or retire a doc, update `docs/README.md`.

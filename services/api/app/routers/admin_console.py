@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app import live_events
 from app.config import get_settings
 from app.db import get_db
 from app.errors import ApiProblem
@@ -61,6 +62,7 @@ from app.schemas import (
     AdminMessageItem,
     AdminOverviewOut,
     AdminReconcileOut,
+    AdminTierIn,
     AttentionItem,
     ModerationItem,
     ModerationResolveIn,
@@ -77,8 +79,10 @@ from app.services import (
     member_status,
     mentor_face,
     mentor_invites,
+    mentor_names,
     paths,
     stream,
+    tiers,
 )
 from app.services.categories import availability_note, ordered_times
 from app.services.links import admin_link, mentor_console_link
@@ -513,6 +517,9 @@ def _listener_item(li: ListenerProfile) -> AdminListenerItem:
         ),
         step_back_reason=li.step_back_reason,
         certified=bool(li.certified_exam),
+        tier=tiers.tier_of(li),
+        exam_history=li.exam_history,
+        exam_history_checked=li.exam_history_checked_at is not None,
     )
 
 
@@ -556,9 +563,29 @@ def create_listener(
         active_conversations=0,
         max_concurrent=payload.max_concurrent,
     )
+    if payload.tier == tiers.MENTOR:
+        # DECISIONS R.4: an admin may create a Mentor directly.
+        try:
+            tiers.set_mentor(
+                li,
+                prelims=payload.prelims,
+                mains=payload.mains,
+                interview=payload.interview,
+                checked=payload.exam_history_checked,
+                now=datetime.now(UTC),
+            )
+        except tiers.TierError as e:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
     db.add(li)
     db.flush()
-    audit.record(db, admin, "listener.created", subject_type="listener", subject_id=li.id)
+    audit.record(
+        db,
+        admin,
+        "listener.created",
+        subject_type="listener",
+        subject_id=li.id,
+        meta={"tier": tiers.tier_of(li)},
+    )
     db.commit()
     db.refresh(li)
     item = _listener_item(li)
@@ -684,9 +711,21 @@ def approve_application(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "This applicant did not choose an exam road, so there is nothing to verify.",
         )
+    as_mentor = bool(payload and payload.tier == tiers.MENTOR)
+    if as_mentor and certify:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Choose one: Mentor or Mento Verified.",
+        )
+    if as_mentor and payload.prelims < 1:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "a Mentor has cleared prelims at least once"
+        )
+    # Anonymity: the mentor side never carries the member's name or avatar seed.
+    mentor_name, mentor_avatar = mentor_names.new_mentor_identity(db, applicant.persona_name)
     li = ListenerProfile(
-        persona_name=applicant.persona_name,
-        persona_avatar=applicant.persona_avatar,
+        persona_name=mentor_name,
+        persona_avatar=mentor_avatar,
         categories=[],
         certified_exam=certify,
         certified_at=datetime.now(UTC) if certify else None,
@@ -704,24 +743,34 @@ def approve_application(
         availability_note=availability_note(a.available_times, a.availability),
         languages=languages.clean(a.languages),
     )
+    if as_mentor:
+        tiers.set_mentor(
+            li,
+            prelims=payload.prelims,
+            mains=payload.mains,
+            interview=payload.interview,
+            checked=payload.exam_history_checked,
+            now=datetime.now(UTC),
+        )
     db.add(li)
     db.flush()
     a.status = ApplicationStatus.approved
     a.listener_id = li.id
+    live_events.review_decided(db, member_id=a.user_id)  # the applicant's path page, on commit
     audit.record(
         db,
         admin,
         "listener.application_approved",
         subject_type="application",
         subject_id=a.id,
-        meta={"certified_exam": certify},
+        meta={"certified_exam": certify, "tier": tiers.tier_of(li)},
     )
     # TODO(email-provider): when an email service is wired, send the console
     # link to a.email here (spec: store now, send later).
     db.commit()
     db.refresh(a)
     item = _application_item(a, applicant.persona_name, certified=certify)
-    new_listener = (a.listener_id, applicant.persona_name, applicant.persona_avatar)
+    new_listener = (a.listener_id, mentor_name, mentor_avatar)
     # End refresh's transaction BEFORE the outbound Stream call (onboarding's
     # phasing) — without this upsert the listener's first channel creation fails
     # in prod (only seed_listeners upserted until now).
@@ -815,6 +864,53 @@ def certify_listener(
     return {"id": li.id, "certified": li.certified_exam}
 
 
+@router.post("/listeners/{listener_id}/tier", response_model=dict)
+def set_listener_tier(
+    listener_id: str,
+    payload: AdminTierIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Peer listener <-> Mentor and the exam history behind the badges (DECISIONS R.4, R.7):
+    an admin sets it after reading the mentor's prelims/mains proof (the Documents tab).
+    Nobody who has not cleared prelims mentors, so Mentor needs at least one prelims.
+    Audited; counts only in the audit row."""
+    li = db.get(ListenerProfile, listener_id, with_for_update=True)
+    if li is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "mentor not found")
+    if li.vetting_status != VettingStatus.approved:
+        raise HTTPException(status.HTTP_409_CONFLICT, "only an approved mentor can change tier")
+    if payload.tier == tiers.MENTOR and payload.prelims < 1:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "a Mentor has cleared prelims at least once"
+        )
+    counts = {"prelims": payload.prelims, "mains": payload.mains, "interview": payload.interview}
+    li.tier = payload.tier
+    tiers.set_exam_history(
+        li, checked=payload.exam_history_checked, now=datetime.now(UTC), **counts
+    )
+    audit.record(
+        db,
+        admin,
+        "listener.tier_set",
+        subject_type="listener",
+        subject_id=li.id,
+        meta={
+            "tier": payload.tier,
+            "prelims": payload.prelims,
+            "mains": payload.mains,
+            "interview": payload.interview,
+            "checked": payload.exam_history_checked,
+        },
+    )
+    db.commit()
+    return {
+        "id": li.id,
+        "tier": tiers.tier_of(li),
+        "exam_history_checked": payload.exam_history_checked,
+    }
+
+
 @router.post("/applications/{app_id}/decline", response_model=AdminApplicationItem)
 def decline_application(
     app_id: str,
@@ -834,6 +930,7 @@ def decline_application(
     applicant = db.get(User, a.user_id)
     a.status = ApplicationStatus.declined
     a.decline_reason = payload.reason
+    live_events.review_decided(db, member_id=a.user_id)
     audit.record(
         db, admin, "listener.application_declined", subject_type="application", subject_id=a.id
     )

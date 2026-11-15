@@ -60,7 +60,8 @@ export function PresenceHeader({
   // The rule under the greeting, the countdown in the card — each says its own thing.
   // (Before, both carried the whole sentence: "…names change every day at 4 am" and
   // "· your name changes in 2 h".)
-  const rotation = t('mentorHomePage.rotationLine');
+  // Only while names rotate (the server sends name_changes_at); off by DECISIONS R.8.
+  const rotation = me.name_changes_at ? t('mentorHomePage.rotationLine') : null;
   const sub = [
     t('mentor.seats', { used: me.active_conversations, max: me.max_concurrent }),
     hours ? t('mentorHomePage.namesIn', { hours }) : null,

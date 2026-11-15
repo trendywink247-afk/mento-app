@@ -26,6 +26,7 @@ from app.schemas.admin import (
     AdminMessageItem,
     AdminOverviewOut,
     AdminReconcileOut,
+    AdminTierIn,
     AttentionItem,
     ModerationItem,
     ModerationResolveIn,
@@ -101,6 +102,7 @@ from app.schemas.listeners import (
     ListenerProfileOut,
     PersonalRequestIn,
     RequestOut,
+    SupportOut,
 )
 from app.schemas.matching import (
     MatchRequest,
@@ -146,6 +148,7 @@ __all__ = [
     "AdminApplicationApproveIn",
     "AdminApplicationDeclineIn",
     "AdminCertifyIn",
+    "AdminTierIn",
     "AdminApplicationItem",
     "AdminAuditItem",
     "AdminConsoleLinkOut",
@@ -223,6 +226,7 @@ __all__ = [
     "ReflectionIn",
     "ReportRequest",
     "RequestOut",
+    "SupportOut",
     "ScanRequest",
     "ScanResult",
     "StatusMaskRequest",

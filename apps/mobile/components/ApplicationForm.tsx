@@ -42,6 +42,14 @@ const SAGE_INK = COMPANION_COLORS.sage.accentEdge;
  * (app/apply.tsx). Assumes a session already exists (the member's own, or a throwaway
  * one the caller minted via onboarding/start for the public path). The pledge is a hard
  * gate (T&S #2): until it is ticked Submit is a dashed, disabled key. */
+const CREDENTIAL_OPTIONS = [
+  'mentorApply.credClearedUpsc',
+  'mentorApply.credCleared',
+  'mentorApply.credInterview',
+  'mentorApply.credMains',
+  'mentorApply.credPrelims',
+] as const satisfies readonly TKey[];
+
 export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApplication) => void }) {
   const { colors } = useTheme();
   const { t } = useI18n();
@@ -194,6 +202,26 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
         <Entrance index={2} style={styles.group}>
           <Text style={[type.rowTitle, { color: colors.ink }]}>{t('mentorApply.credentialLabel')}</Text>
           <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorApply.credentialHint')}</Text>
+          <View style={styles.credChips}>
+            {CREDENTIAL_OPTIONS.map((key) => {
+              const text = t(key);
+              const on = credential === text;
+              return (
+                <PressKey
+                  key={key}
+                  onPress={() => setCredential(on ? '' : text)}
+                  edge={on ? colors.accentEdge : colors.edgeSurface}
+                  radius={radius.pill}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  testID={`apply-cred-${key}`}
+                  style={[styles.credChip, { backgroundColor: on ? colors.accentTint : colors.surface, borderColor: on ? colors.accent : colors.border }]}
+                >
+                  <Text style={[type.label, { color: colors.ink }]}>{text}</Text>
+                </PressKey>
+              );
+            })}
+          </View>
           <EdgeSurface edge={colors.edgeSurface} travel={4} radius={radius.md} style={styles.bare}>
             <TextInput
               value={credential}
@@ -375,6 +403,8 @@ export function ApplicationForm({ onSuccess }: { onSuccess: (result: ListenerApp
 }
 
 const styles = StyleSheet.create({
+  credChips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+  credChip: { paddingHorizontal: space.md, paddingVertical: 10, borderRadius: radius.pill, borderWidth: 1 },
   form: { gap: 14 },
   group: { gap: 6 },
   labelRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: space.sm },

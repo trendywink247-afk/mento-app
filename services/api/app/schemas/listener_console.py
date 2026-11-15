@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 
 from app.models.enums import ListenerReportReason
+from app.schemas.mentee_profile import MenteeBriefOut
 
 
 class ListenerMeOut(BaseModel):
@@ -25,6 +26,8 @@ class ListenerMeOut(BaseModel):
     # Certified for exam mentoring (DECISIONS section O): decides whether the chat menu offers
     # "This is about an exam".
     certified: bool = False
+    # DECISIONS R.4: the mentor's own tier, shown on their profile. Additive.
+    tier: str = "listener"
     # The usual time to accept a request over 30 days ("day" / "two_days"), only once there is enough
     # to say (DECISIONS section P.6). Null otherwise.
     reply_within: str | None = None
@@ -100,6 +103,9 @@ class ListenerConversationItem(BaseModel):
     # mentor has not read. Counts and a time, never text.
     waiting_since: str | None = None
     unread: int = 0
+    # Own chats only: the latest message, cut to 120 characters (Stream rows are previewed
+    # client-side, so null). Null for a wiped chat.
+    last_message_preview: str | None = None
     # The MEMBER's growth companion in their colour (board A10 rows) — the same two
     # values the member brief carries. Never the companion's name (private, lane u7).
     user_companion_animal: str | None = None
@@ -136,6 +142,9 @@ class MemberBriefOut(BaseModel):
     safety_flags_open: int
     care_prompt: str
     in_touch: bool = False
+    # DECISIONS R.6: the member's mentorship form, for the mentor in this chat (marks only
+    # when the member allowed this mentor's tier). Additive: older apps ignore it.
+    mentee_brief: MenteeBriefOut | None = None
 
 
 class ListenerRequestItem(BaseModel):
@@ -156,8 +165,12 @@ class ListenerRequestItem(BaseModel):
     stage_label: str | None = None
     # The member's age as a band ("18–24"); never a date of birth. Additive.
     age_band: str | None = None
-    # Who the request was offered to ("any", "in_service" or "peer"). Additive.
+    # Who the request was offered to ("any", "in_service", "peer", "listeners" or
+    # "mentorship" — services/tiers.py). Additive.
     audience: str = "any"
+    # What the member shared in the mentorship intake form (DECISIONS R.6): no name, no
+    # contact; marks only as the member allowed for this mentor's tier (R.14). Additive.
+    mentee_brief: MenteeBriefOut | None = None
 
 
 class RequestsSeenIn(BaseModel):

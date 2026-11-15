@@ -5,11 +5,14 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, View } from
 import Animated from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CertifiedBadge } from '@/components/CertifiedBadge';
 import { BackKey } from '@/components/DeepHeader';
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { ExamEmblems } from '@/components/ExamEmblem';
 import { InTouchBadge } from '@/components/InTouchBadge';
 import { OpenQuestionNote } from '@/components/OpenQuestionNote';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { TierMark } from '@/components/TierMark';
 import { Companion } from '@/components/art/Companion';
 import { MentorFace, MentorFaceFigure } from '@/components/art/MentorFace';
 import { DeepArrival } from '@/components/motion/DeepArrival';
@@ -19,6 +22,7 @@ import { useBreathing } from '@/components/motion/useBreathing';
 import { ApiError, api, type ListenerProfile, type PathTree } from '@/lib/api';
 import { cachedPathTree, communityLabel } from '@/lib/communityLabel';
 import { useI18n, type TKey } from '@/lib/i18n';
+import { tierKey } from '@/lib/tierWord';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { requestLetter } from '@/lib/requestLetter';
@@ -67,7 +71,7 @@ const TOPIC_WORDS = [
 export default function MentorBeforeAsk() {
   useSessionGuard();
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const mentorBreath = useBreathing(true);
@@ -227,9 +231,11 @@ export default function MentorBeforeAsk() {
               </View>
               <View style={styles.fieldFill}>
                 {/* The member's companion peeks over the field (decor only). */}
-                <View style={styles.peek} pointerEvents="none">
-                  <Companion animal={animal ?? null} size={COMPANION} />
-                </View>
+                {companionShown ? (
+                  <View style={styles.peek} pointerEvents="none">
+                    <Companion animal={animal ?? null} size={COMPANION} />
+                  </View>
+                ) : null}
                 <EdgeSurface
                   edge={colors.edgeSurface}
                   travel={3}
@@ -373,7 +379,7 @@ export default function MentorBeforeAsk() {
   }
 
   const statusLine = [
-    online ? t('mentorProfile.online') : t('mentorProfile.away'),
+    online ? t('mentorProfile.onlineAs', { tier: t(tierKey(mentor.tier)) }) : t('mentorProfile.awayAs', { tier: t(tierKey(mentor.tier)) }),
     mentor.community_slug ? t('inTouch.community', { name: communityLabel(tree, mentor.community_slug) }) : null,
     !online && mentor.availability_note ? t('mentorProfile.usually', { note: mentor.availability_note }) : null,
   ]
@@ -393,7 +399,7 @@ export default function MentorBeforeAsk() {
               <Animated.View style={[styles.mentorFigure, mentorBreath]}>
                 <MentorFaceFigure animal={mentor.companion_animal} width={96} height={110} />
               </Animated.View>
-              {animal ? (
+              {animal && companionShown ? (
                 <View style={styles.memberFigure}>
                   <Companion animal={animal} size={84} awake />
                 </View>
@@ -411,6 +417,15 @@ export default function MentorBeforeAsk() {
                     {name}
                   </Text>
                   {mentor.in_touch ? <InTouchBadge flat testID="mentor-in-touch" /> : null}
+                </View>
+                <View style={styles.marksRow}>
+                  {mentor.certified || mentor.tier === 'verified' ? (
+                    <CertifiedBadge testID="mentor-profile-certified" />
+                  ) : (
+                    <TierMark tier={mentor.tier ?? 'listener'} testID="mentor-profile-tier" />
+                  )}
+                  {/* The full emblems (DECISIONS R.15): subtle, only once an admin checked them. */}
+                  <ExamEmblems badges={mentor.exam_badges} size={46} testID="mentor-profile-emblems" />
                 </View>
                 <View style={styles.statusRow}>
                   <View style={[styles.statusDot, { backgroundColor: online ? colors.success : colors.dotIdle }]} />
@@ -476,6 +491,7 @@ export default function MentorBeforeAsk() {
 }
 
 const styles = StyleSheet.create({
+  marksRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8, paddingVertical: 4 },
   safe: { flex: 1 },
   fill: { flex: 1 },
   page: { flexGrow: 1, paddingTop: space.xs, paddingHorizontal: GUTTER, paddingBottom: space.lg, gap: 14 },

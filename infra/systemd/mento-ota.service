@@ -1,0 +1,56 @@
+# Mento self-hosted OTA server (services/ota). Install steps: docs/OTA.md.
+# Runs as a throwaway system user with read-only access to the published updates. systemd
+# itself reads the signing key (LoadCredential), so the key file stays 0600 for its owner and
+# the service sees a private copy at $CREDENTIALS_DIRECTORY/signing-key.
+[Unit]
+Description=Mento OTA update server (Expo Updates protocol)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/opt/mento-ota/src
+Environment=OTA_DATA_DIR=/srv/mento/ota-data
+Environment=OTA_PUBLIC_URL=https://qa-api.mento.chat/ota
+Environment=OTA_HOST=127.0.0.1
+Environment=OTA_PORT=18020
+LoadCredential=signing-key:/srv/mento/ota-keys/qa-private-key.pem
+Environment=OTA_PRIVATE_KEY=%d/signing-key
+ExecStart=/opt/mento-ota/venv/bin/python -m app.main
+Restart=on-failure
+RestartSec=3
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0077
+ReadOnlyPaths=/srv/mento/ota-data /opt/mento-ota
+InaccessiblePaths=-/srv/mento/mento-app -/srv/mento/ota-keys
+MemoryMax=256M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

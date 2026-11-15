@@ -32,6 +32,7 @@ from app.services import (
     languages,
     locks,
     mentor_invites,
+    mentor_names,
     moderation,
     stream,
 )
@@ -205,9 +206,11 @@ def claim_invite(
     now = datetime.now(UTC)
     launch = [r for r in get_settings().launch_roads.split(",") if r.strip() and r != "life"]
     road = launch[0].strip() if launch else "upsc"
+    # Anonymity: the mentor side never carries the member's name or avatar seed.
+    mentor_name, mentor_avatar = mentor_names.new_mentor_identity(db, user.persona_name)
     listener = ListenerProfile(
-        persona_name=user.persona_name,
-        persona_avatar=user.persona_avatar,
+        persona_name=mentor_name,
+        persona_avatar=mentor_avatar,
         categories=[],
         certified_exam=True,
         certified_at=now,
@@ -235,7 +238,7 @@ def claim_invite(
     invite.listener_id = listener.id
     db.commit()
     db.refresh(row)
-    stream.ensure_user(listener.id, user.persona_name, user.persona_avatar)
+    stream.ensure_user(listener.id, mentor_name, mentor_avatar)
     return _out(db, row)
 
 

@@ -13,7 +13,7 @@
  * away, instead of snapping to a different still mid-transition (session 35).
  */
 import { useIsFocused } from '@react-navigation/native';
-import LottieView from 'lottie-react-native';
+import { BoundedLottie } from '@/components/art/BoundedLottie';
 import { Platform, View } from 'react-native';
 
 import { SceneTile } from '@/components/art/SceneTile';
@@ -59,10 +59,8 @@ export function LottieTile({
         justifyContent: 'center',
       }}
     >
-      <LottieView
+      <BoundedLottie
         source={LOTTIE_TILES[name]}
-        autoPlay
-        loop
         style={{ width: '100%', height: '100%' }}
         webStyle={{ width: '100%', height: '100%' }}
       />

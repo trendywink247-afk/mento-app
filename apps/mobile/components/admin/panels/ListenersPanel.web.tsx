@@ -11,16 +11,28 @@ import {
 
 import { MentorFace } from '@/components/art/MentorFace';
 import { MemberDisc } from '@/components/mentor/MemberDisc';
+import { EMPTY_COUNTS, ExamCountsFields } from '@/components/admin/ExamCountsFields.web';
+import { TierEditor } from '@/components/admin/TierEditor.web';
 import { ConsolePressable } from '@/components/console/ConsolePressable';
 import { adminApi, type AdminApplication, type AdminListener, type AdminMentorInvite } from '@/lib/adminApi';
+import {
+  canBeMentor,
+  parseCounts,
+  rosterMatches,
+  TIER_LABEL,
+  type ExamCountsText,
+  type RosterFilter,
+} from '@/lib/adminTiers';
 import { formatTimestamp, formatTopic } from '@/lib/format';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type, wash, washInk } from '@/theme/tokens';
 
 /**
- * Listener roster + provisioning. Owners create listeners (categories + capacity),
- * copy their private console link, and suspend/reinstate — suspension revokes the
- * token instantly (T&S #9). Members are never shown here; listeners are personas.
+ * Volunteers (DECISIONS R.4): applications, Mento Verified invitations, creating a volunteer
+ * directly, and the roster with each one's tier. Approving makes a Peer listener, or a Mentor
+ * with the exam history the admin checked. Suspending revokes the console token at once
+ * (T&S #9) and hides the volunteer from members (R.13: how seed mentors are hidden).
+ * Members are never shown here; volunteers are personas.
  */
 export default function ListenersPanel() {
   const { colors, elevation } = useTheme();
@@ -31,9 +43,18 @@ export default function ListenersPanel() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [clearConfirmId, setClearConfirmId] = useState<string | null>(null);
 
-  const [categories, setCategories] = useState('');
   const [maxConc, setMaxConc] = useState('3');
   const [creating, setCreating] = useState(false);
+  const [createAs, setCreateAs] = useState<'listener' | 'mentor'>('listener');
+  const [createCounts, setCreateCounts] = useState<ExamCountsText>(EMPTY_COUNTS);
+  const [createChecked, setCreateChecked] = useState(true);
+
+  // Approving an application as a Mentor opens the exam-history fields first.
+  const [mentorAppId, setMentorAppId] = useState<string | null>(null);
+  const [appCounts, setAppCounts] = useState<ExamCountsText>(EMPTY_COUNTS);
+  const [appChecked, setAppChecked] = useState(false);
+
+  const [filter, setFilter] = useState<RosterFilter>({ tier: 'all', state: 'active' });
 
   const [applications, setApplications] = useState<AdminApplication[] | null>(null);
   const [declineId, setDeclineId] = useState<string | null>(null);
@@ -110,17 +131,19 @@ export default function ListenersPanel() {
     void loadInvites();
   }, []);
 
-  const approve = async (id: string, certify = false) => {
+  const approve = async (id: string, asMentor = false) => {
     setBusy(id);
     setError(null);
     setConfirmId(null);
     try {
-      await adminApi.approveApplication(id, certify);
-      setToast(
-        certify
-          ? 'Approved and verified for exam mentoring — listener added to the roster'
-          : 'Application approved — listener added to the roster',
+      await adminApi.approveApplication(
+        id,
+        asMentor ? { ...parseCounts(appCounts), exam_history_checked: appChecked } : false,
       );
+      setMentorAppId(null);
+      setAppCounts(EMPTY_COUNTS);
+      setAppChecked(false);
+      setToast(asMentor ? 'Approved as a Mentor' : 'Approved as a Peer listener');
       await Promise.all([loadApplications(), load()]);
     } catch {
       setError('Could not approve that application. Try again.');
@@ -159,33 +182,19 @@ export default function ListenersPanel() {
     setError(null);
     setConfirmId(null);
     try {
-      const parsed = categories
-        .split(',')
-        .map((c) => c.trim())
-        .filter(Boolean);
-      const created = await adminApi.createListener(parsed, Number(maxConc) || 1);
+      const created = await adminApi.createListener(
+        [],
+        Number(maxConc) || 1,
+        createAs === 'mentor' ? { ...parseCounts(createCounts), exam_history_checked: createChecked } : undefined,
+      );
       setListeners((prev) => (prev ? [created, ...prev] : [created]));
-      setCategories('');
       setMaxConc('3');
-      setToast('Listener created');
+      setCreateCounts(EMPTY_COUNTS);
+      setToast(`${TIER_LABEL[created.tier ?? 'listener']} ${created.persona_name} created. Copy their console link below.`);
     } catch {
-      setError('Could not create that listener. Try again.');
+      setError('Could not create that volunteer. Try again.');
     } finally {
       setCreating(false);
-    }
-  };
-
-  const certify = async (id: string, certified: boolean) => {
-    setBusy(id);
-    setError(null);
-    try {
-      await adminApi.certifyListener(id, certified);
-      setToast(certified ? 'Verified for exam mentoring' : 'Verification removed');
-      await load();
-    } catch {
-      setError("Couldn't update that verification. Try again.");
-    } finally {
-      setBusy(null);
     }
   };
 
@@ -202,7 +211,7 @@ export default function ListenersPanel() {
       else await adminApi.reinstateListener(id);
       await load();
     } catch {
-      setError("Couldn't update that listener. Try again.");
+      setError("Couldn't update that volunteer. Try again.");
     } finally {
       setBusy(null);
     }
@@ -244,47 +253,75 @@ export default function ListenersPanel() {
 
   return (
     <ScrollView contentContainerStyle={styles.body} testID="admin-panel-listeners">
-      {/* Add listener */}
-      <View style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]}>
-        <Text style={[type.bodySemi, { color: colors.ink }]}>Add listener</Text>
-        <TextInput
-          value={categories}
-          onChangeText={setCategories}
-          placeholder="Categories (comma-separated)"
-          placeholderTextColor={colors.inkMuted}
-          accessibilityLabel="Categories (comma-separated)"
-          style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
-          testID="admin-listener-categories"
-        />
+      {/* Create a volunteer directly (DECISIONS R.4: an admin may create a Mentor). */}
+      <View style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]} testID="admin-create">
+        <Text style={[type.bodySemi, { color: colors.ink }]}>Create a volunteer directly</Text>
+        <Text style={[type.caption, { color: colors.inkMuted }]}>
+          For someone you know, without an application. Copy their console link from the roster afterwards.
+        </Text>
+        <View style={styles.actions}>
+          {(['listener', 'mentor'] as const).map((t) => (
+            <ConsolePressable
+              key={t}
+              onPress={() => setCreateAs(t)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: createAs === t }}
+              testID={`admin-create-as-${t}`}
+              style={[
+                styles.secondaryBtn,
+                createAs === t ? { backgroundColor: colors.accentTint, borderColor: colors.accent } : { borderColor: colors.border },
+              ]}
+            >
+              <Text style={[type.label, { color: colors.ink }]}>{TIER_LABEL[t]}</Text>
+            </ConsolePressable>
+          ))}
+        </View>
+        {createAs === 'mentor' ? (
+          <ExamCountsFields
+            value={createCounts}
+            onChange={setCreateCounts}
+            checked={createChecked}
+            onChecked={setCreateChecked}
+            testID="admin-create-counts"
+          />
+        ) : null}
         <TextInput
           value={maxConc}
           onChangeText={setMaxConc}
-          placeholder="Max concurrent"
+          placeholder="Chats at once"
           placeholderTextColor={colors.inkMuted}
-          accessibilityLabel="Max concurrent"
+          accessibilityLabel="Chats at once"
           keyboardType="number-pad"
           style={[styles.input, { borderColor: colors.border, color: colors.ink }]}
           testID="admin-listener-maxconc"
         />
         <ConsolePressable
           onPress={() => void create()}
-          disabled={creating}
+          disabled={creating || (createAs === 'mentor' && !canBeMentor(parseCounts(createCounts)))}
           accessibilityRole="button"
           testID="admin-listener-create"
-          style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
+          style={[
+            styles.primaryBtn,
+            { backgroundColor: colors.accent },
+            createAs === 'mentor' && !canBeMentor(parseCounts(createCounts)) && styles.disabledBtn,
+          ]}
         >
           <Text style={[type.label, { color: colors.onAccent }]}>
-            {creating ? 'Creating…' : 'Create'}
+            {creating ? 'Creating…' : `Create ${TIER_LABEL[createAs]}`}
           </Text>
         </ConsolePressable>
+        {createAs === 'mentor' && !canBeMentor(parseCounts(createCounts)) ? (
+          <Text style={[type.caption, { color: colors.inkMuted }]}>A Mentor has cleared prelims at least once.</Text>
+        ) : null}
       </View>
 
-      {/* Gold invitations: a single-use code the founder sends himself. No email is stored. */}
+      {/* Mento Verified invitations (§P.3): a single-use code the founder sends himself. No email is stored. */}
       <View style={[styles.card, { backgroundColor: colors.surface }, elevation.sm]} testID="admin-invites">
-        <Text style={[type.bodySemi, { color: colors.ink }]}>Gold mentor invitations</Text>
+        <Text style={[type.bodySemi, { color: colors.ink }]}>Mento Verified invitations</Text>
         <Text style={[type.caption, { color: colors.inkMuted }]}>
           Makes a single-use code, valid 7 days. Send it yourself. The mentor enters it in the app under
-          Become a mentor and is verified at once. Keep the note free of real names and contacts.
+          Become a mentor and is Mento Verified at once (in-service mentors only). Keep the note free of real
+          names and contacts.
         </Text>
         <TextInput
           value={inviteNote}
@@ -394,6 +431,21 @@ export default function ListenersPanel() {
                 </View>
               ) : null}
 
+              {mentorAppId === app.id ? (
+                <View style={[styles.stepBack, { backgroundColor: colors.surfaceAlt }]}>
+                  <Text style={[type.caption, { color: colors.ink }]}>
+                    Exam history you checked (from their proof or the Documents tab):
+                  </Text>
+                  <ExamCountsFields
+                    value={appCounts}
+                    onChange={setAppCounts}
+                    checked={appChecked}
+                    onChecked={setAppChecked}
+                    testID={`admin-app-counts-${app.id}`}
+                  />
+                </View>
+              ) : null}
+
               {declineId === app.id ? (
                 <TextInput
                   value={declineReason}
@@ -411,26 +463,38 @@ export default function ListenersPanel() {
                   onPress={() => void approve(app.id)}
                   disabled={busy === app.id}
                   accessibilityRole="button"
-                  accessibilityLabel={`Approve ${app.persona_name}`}
+                  accessibilityLabel={`Approve ${app.persona_name} as a Peer listener`}
                   testID={`admin-app-approve-${app.id}`}
                   style={[styles.primaryBtn, { backgroundColor: colors.accent }]}
                 >
                   <Text style={[type.label, { color: colors.onAccent }]}>
-                    {busy === app.id ? 'Working…' : 'Approve'}
+                    {busy === app.id ? 'Working…' : 'Approve as Peer listener'}
                   </Text>
                 </ConsolePressable>
-                {app.wants_exam ? (
-                  <ConsolePressable
-                    onPress={() => void approve(app.id, true)}
-                    disabled={busy === app.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Approve and verify ${app.persona_name} for exam mentoring`}
-                    testID={`admin-app-approve-certify-${app.id}`}
-                    style={[styles.secondaryBtn, { borderColor: colors.accent }]}
-                  >
-                    <Text style={[type.label, { color: colors.ink }]}>Approve + verify</Text>
-                  </ConsolePressable>
-                ) : null}
+                <ConsolePressable
+                  onPress={() => {
+                    if (mentorAppId !== app.id) {
+                      setMentorAppId(app.id);
+                      setAppCounts(EMPTY_COUNTS);
+                      setAppChecked(false);
+                      return;
+                    }
+                    void approve(app.id, true);
+                  }}
+                  disabled={busy === app.id || (mentorAppId === app.id && !canBeMentor(parseCounts(appCounts)))}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Approve ${app.persona_name} as a Mentor`}
+                  testID={`admin-app-approve-mentor-${app.id}`}
+                  style={[
+                    styles.secondaryBtn,
+                    { borderColor: colors.accent },
+                    mentorAppId === app.id && !canBeMentor(parseCounts(appCounts)) && styles.disabledBtn,
+                  ]}
+                >
+                  <Text style={[type.label, { color: colors.ink }]}>
+                    {mentorAppId === app.id ? 'Confirm: approve as Mentor' : 'Approve as Mentor…'}
+                  </Text>
+                </ConsolePressable>
                 <ConsolePressable
                   onPress={() => void decline(app.id)}
                   disabled={
@@ -452,15 +516,51 @@ export default function ListenersPanel() {
         )}
       </View>
 
-      <Text style={[type.bodySemi, { color: colors.ink }]}>Roster</Text>
+      <Text style={[type.bodySemi, { color: colors.ink }]}>Volunteers</Text>
+      <View style={styles.actions} testID="admin-roster-filter">
+        {(['all', 'listener', 'mentor', 'verified'] as const).map((t) => (
+          <ConsolePressable
+            key={t}
+            onPress={() => setFilter((f) => ({ ...f, tier: t }))}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: filter.tier === t }}
+            testID={`admin-roster-tier-${t}`}
+            style={[
+              styles.filterChip,
+              filter.tier === t ? { backgroundColor: colors.accentTint, borderColor: colors.accent } : { borderColor: colors.border },
+            ]}
+          >
+            <Text style={[type.caption, { color: colors.ink }]}>
+              {t === 'all' ? 'All tiers' : TIER_LABEL[t]} ({(listeners ?? []).filter((li) => rosterMatches(li, { tier: t, state: filter.state })).length})
+            </Text>
+          </ConsolePressable>
+        ))}
+        {(['active', 'hidden', 'all'] as const).map((st) => (
+          <ConsolePressable
+            key={st}
+            onPress={() => setFilter((f) => ({ ...f, state: st }))}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: filter.state === st }}
+            testID={`admin-roster-state-${st}`}
+            style={[
+              styles.filterChip,
+              filter.state === st ? { backgroundColor: colors.surfaceAlt, borderColor: colors.ink } : { borderColor: colors.border },
+            ]}
+          >
+            <Text style={[type.caption, { color: colors.ink }]}>
+              {st === 'active' ? 'Active' : st === 'hidden' ? 'Suspended (hidden)' : 'Everyone'}
+            </Text>
+          </ConsolePressable>
+        ))}
+      </View>
       {!listeners ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.accent} />
         </View>
-      ) : listeners.length === 0 ? (
-        <Text style={[type.caption, { color: colors.inkMuted }]}>No listeners yet.</Text>
+      ) : listeners.filter((li) => rosterMatches(li, filter)).length === 0 ? (
+        <Text style={[type.caption, { color: colors.inkMuted }]}>Nobody here.</Text>
       ) : (
-        listeners.map((li) => {
+        listeners.filter((li) => rosterMatches(li, filter)).map((li) => {
           const approved = li.vetting_status === 'approved';
           const suspended = li.vetting_status === 'suspended';
           return (
@@ -474,8 +574,8 @@ export default function ListenersPanel() {
                 <View style={{ flex: 1 }}>
                   <Text style={[type.bodySemi, { color: colors.ink }]}>{li.persona_name}</Text>
                   <Text style={[type.caption, styles.rosterNums, { color: colors.inkMuted }]}>
-                    {li.vetting_status} · {li.status} · {li.active_conversations}/{li.max_concurrent}{' '}
-                    · rank {li.rank}
+                    {TIER_LABEL[li.tier ?? 'listener']} · {suspended ? 'suspended, hidden from members' : li.vetting_status} ·{' '}
+                    {li.status} · {li.active_conversations}/{li.max_concurrent} chats · rank {li.rank}
                   </Text>
                 </View>
               </View>
@@ -507,31 +607,18 @@ export default function ListenersPanel() {
                 {li.public_line ?? '—'}
               </Text>
 
-              {li.categories.length > 0 ? (
-                <View style={styles.chips}>
-                  {li.categories.map((c) => (
-                    <View key={c} style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
-                      <Text style={[type.caption, { color: colors.ink }]}>{c}</Text>
-                    </View>
-                  ))}
-                </View>
+              {approved ? (
+                <TierEditor
+                  key={`${li.id}-${li.tier ?? 'listener'}`}
+                  listener={li}
+                  onSaved={(message) => {
+                    setToast(message);
+                    void load();
+                  }}
+                />
               ) : null}
 
               <View style={styles.actions}>
-                {approved ? (
-                  <ConsolePressable
-                    onPress={() => void certify(li.id, !li.certified)}
-                    disabled={busy === li.id}
-                    accessibilityRole="button"
-                    accessibilityLabel={`${li.certified ? 'Remove verification from' : 'Verify'} ${li.persona_name}`}
-                    testID={`admin-listener-${li.id}-certify`}
-                    style={[styles.secondaryBtn, { borderColor: li.certified ? colors.accent : colors.border }]}
-                  >
-                    <Text style={[type.label, { color: colors.ink }]}>
-                      {li.certified ? 'Verified ✓ (remove)' : 'Verify for exams'}
-                    </Text>
-                  </ConsolePressable>
-                ) : null}
                 {approved ? (
                   <ConsolePressable
                     onPress={() => void setStatus(li.id, 'suspend')}
@@ -557,7 +644,7 @@ export default function ListenersPanel() {
                         { color: confirmId === li.id ? colors.onAccent : colors.danger },
                       ]}
                     >
-                      {confirmId === li.id ? 'Confirm suspend?' : 'Suspend'}
+                      {confirmId === li.id ? 'Confirm: suspend and hide?' : 'Suspend (hide from members)'}
                     </Text>
                   </ConsolePressable>
                 ) : null}
@@ -628,6 +715,7 @@ const styles = StyleSheet.create({
   stepBack: { borderRadius: radius.md, paddingVertical: space.sm, paddingHorizontal: space.md, gap: 2 },
   disabledBtn: { opacity: 0.4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
+  filterChip: { borderWidth: 1, borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: space.sm },
   chip: {
     borderRadius: radius.pill,
     paddingVertical: 2,

@@ -194,3 +194,100 @@ def test_unread_files_are_wiped_after_thirty_days(db_session):
         assert s.get(MentorDocument, old_id).content is None
         assert s.get(MentorDocument, old_id).status == "expired"
         assert s.get(MentorDocument, fresh_id).content == b"def"
+
+
+@requires_postgres
+def test_mains_admission_card_and_interview_letter_are_accepted_kinds(client, db_session):
+    with TestSession() as s:
+        lid = _mentor(s)
+        s.commit()
+    for kind in ("mains_admit_card", "interview_letter"):
+        r = client.post(
+            "/api/v1/listener/me/verification",
+            json={"kind": kind, "content_base64": _b64(JPG)},
+            headers=_l(lid),
+        )
+        assert r.status_code == 201 and r.json()["kind"] == kind
+        # one pending at a time: clear it so the next kind can be sent
+        with TestSession() as s:
+            doc = s.get(MentorDocument, r.json()["id"])
+            doc.status = "rejected"
+            doc.content = None
+            s.commit()
+    assert (
+        client.post(
+            "/api/v1/listener/me/verification",
+            json={"kind": "driving_licence", "content_base64": _b64(JPG)},
+            headers=_l(lid),
+        ).status_code
+        == 422
+    )
+
+
+def _upload(client, lid, kind="mains_admit_card") -> str:
+    up = client.post(
+        "/api/v1/listener/me/verification",
+        json={"kind": kind, "content_base64": _b64(PDF)},
+        headers=_l(lid),
+    )
+    assert up.status_code == 201, up.text
+    return up.json()["id"]
+
+
+@requires_postgres
+def test_an_exam_document_can_make_a_mentor_with_checked_badges(client, db_session):
+    """DECISIONS R.4 (option b): an exam document grants Mentor, not Mento Verified."""
+    with TestSession() as s:
+        lid, aid = _mentor(s), _admin(s)
+        s.commit()
+    doc_id = _upload(client, lid)
+    refused = client.post(
+        f"/api/v1/admin/verifications/{doc_id}/approve",
+        json={"grant": "mentor", "prelims": 0, "mains": 1},
+        headers=_a(aid),
+    )
+    assert refused.status_code == 422  # nobody who has not cleared prelims mentors
+    with TestSession() as s:
+        assert s.get(MentorDocument, doc_id).status == "pending"  # nothing changed
+    done = client.post(
+        f"/api/v1/admin/verifications/{doc_id}/approve",
+        json={"grant": "mentor", "prelims": 2, "mains": 1},
+        headers=_a(aid),
+    )
+    assert done.status_code == 200 and done.json()["has_file"] is False
+    with TestSession() as s:
+        li = s.get(ListenerProfile, lid)
+        assert li.certified_exam is False and li.tier == "mentor"
+        assert li.exam_history == {"prelims": 2, "mains": 1, "interview": 0}
+        assert li.exam_history_checked_at is not None
+        log = s.scalars(
+            select(AdminAuditLog).where(
+                AdminAuditLog.action == "verification.approved", AdminAuditLog.subject_id == lid
+            )
+        ).one()
+        assert log.meta["grant"] == "mentor"
+
+
+@requires_postgres
+def test_approve_without_a_grant_still_makes_mento_verified(client, db_session):
+    """Older admin builds send no grant: the approval means what it always meant."""
+    with TestSession() as s:
+        lid, aid = _mentor(s), _admin(s)
+        s.commit()
+    doc_id = _upload(client, lid, kind="result")
+    done = client.post(
+        f"/api/v1/admin/verifications/{doc_id}/approve", json={"note": None}, headers=_a(aid)
+    )
+    assert done.status_code == 200
+    with TestSession() as s:
+        assert s.get(ListenerProfile, lid).certified_exam is True
+
+
+def test_document_kinds_map_to_the_founders_tiers():
+    from app.services import tiers
+
+    assert tiers.grant_for_document("id_card") == "verified"
+    assert tiers.grant_for_document("posting_letter") == "verified"
+    for kind in ("mains_admit_card", "interview_letter", "result"):
+        assert tiers.grant_for_document(kind) == "mentor"
+    assert tiers.grant_for_document("other") == "verified"

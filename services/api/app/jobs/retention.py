@@ -110,7 +110,9 @@ def drop_expired(
     dropped = []
     for name, first in monthly_partitions(conn):
         if _next_month(first) <= cutoff:  # the partition's whole range is past retention
-            conn.execute(text(f"DROP TABLE {name}"))
+            # name comes from the catalog's own partition list; DDL cannot take a bound name
+            # nosemgrep: avoid-sqlalchemy-text
+            conn.execute(text(f"DROP TABLE {name}"))  # nosec B608
             dropped.append(name)
     if dropped:
         logger.info("own-chat retention dropped %s", ",".join(dropped))
@@ -118,4 +120,7 @@ def drop_expired(
 
 
 def default_partition_rows(conn: Connection | Session) -> int:
-    return int(conn.execute(text(f"SELECT count(*) FROM {DEFAULT_PARTITION}")).scalar_one())
+    # DEFAULT_PARTITION is a module constant, not input
+    # nosemgrep: avoid-sqlalchemy-text
+    query = text(f"SELECT count(*) FROM {DEFAULT_PARTITION}")  # nosec B608
+    return int(conn.execute(query).scalar_one())

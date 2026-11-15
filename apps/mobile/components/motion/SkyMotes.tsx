@@ -12,6 +12,7 @@ import Animated, {
 
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { drift, easing } from '@/theme/motion';
+import { useMotionBudget } from '@/lib/motionBudget';
 
 /**
  * Three soft light motes drifting up through the sky, SEQUENCED so only one moves
@@ -29,8 +30,15 @@ const ACTIVE = drift.period / 3;
 
 function Mote({ index, left, top, size }: { index: number } & (typeof MOTES)[number]) {
   const t = useSharedValue(0);
+  // One bounded round of the three motes (lib/motionBudget), then all rest.
+  const budget = useMotionBudget();
 
   useEffect(() => {
+    if (!budget.live) {
+      cancelAnimation(t);
+      t.value = 0;
+      return;
+    }
     // Each mote drifts for one window, then holds at rest while the other two take
     // their turns — so exactly one mote animates at any instant.
     t.value = withDelay(
@@ -41,11 +49,11 @@ function Mote({ index, left, top, size }: { index: number } & (typeof MOTES)[num
           withTiming(0, { duration: 0 }),
           withTiming(0, { duration: ACTIVE * 2 }),
         ),
-        -1,
+        1,
       ),
     );
     return () => cancelAnimation(t);
-  }, [index, t]);
+  }, [index, t, budget.live, budget.run]);
 
   const style = useAnimatedStyle(() => ({
     // sin curve: fade in, peak mid-drift, fade out — never pops at the reset.

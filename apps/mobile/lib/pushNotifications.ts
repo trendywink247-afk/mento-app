@@ -1,6 +1,7 @@
-/** Expo push registration for either role (spec 2026-09-05 push §3). Best-effort,
- * native-only: simulators have no push, a denied permission is normal, and a
- * missing EAS projectId or local acceptance mode skips permissions entirely. The
+/** Push registration for either role (spec 2026-09-05 push §3), straight to FCM: the raw
+ * device token goes to our server, which sends through Firebase. No Expo push relay and no
+ * Expo project. Best-effort, native-only: simulators have no push, a denied permission is
+ * normal, and local acceptance mode skips permissions entirely. The
  * permission prompt appears on first entry to the member tabs or the mentor
  * console, never on the landing. */
 import Constants from 'expo-constants';
@@ -16,11 +17,6 @@ import { beginPushIdentityChange, pushAlreadyRegistered, pushGeneration,
 
 export type { PushRole } from './pushRegistrationState';
 
-// Direct FCM: the raw Android device token goes to our server, which sends through
-// Firebase itself instead of Expo's relay. Opt-in per build (a public flag, no secret);
-// the server accepts both token kinds, so builds on either path keep working.
-const DIRECT_PUSH = process.env.EXPO_PUBLIC_PUSH_DIRECT === '1';
-
 let lastToken: string | null = null;
 // A newer account waits for the previous same-role operation to settle. Successful
 // stale responses cannot overwrite cache state or overtake a fresh registration.
@@ -28,12 +24,13 @@ const flights = new Map<PushRole, { generation: number; promise: Promise<void> }
 const rolePath = (role: PushRole) => role === 'member' ? '/notifications/register-token' : '/listener/me/push-token';
 const storedBearer = (role: PushRole) => role === 'member' ? getSessionToken() : getListenerToken();
 
-function projectIdForPush(): string | null {
-  const extra = Constants.expoConfig?.extra;
-  // Local acceptance has no provider: do not even read permissions or prompt.
-  if (extra?.localAcceptance) return null;
-  const projectId = extra?.eas?.projectId;
-  return typeof projectId === 'string' && projectId.trim() ? projectId.trim() : null;
+/** Push needs FCM on this platform. Android: the device token is an FCM token. iOS: the device
+ * token is an APNs token, which FCM cannot address until the Firebase iOS SDK is added
+ * (docs/BUILDS.md), so iOS stays without push until then. Local acceptance has no provider:
+ * do not even read permissions or prompt. */
+function pushAvailable(): boolean {
+  if (Constants.expoConfig?.extra?.localAcceptance) return false;
+  return Platform.OS === 'android' && Device.isDevice;
 }
 
 /** Mento's own Android channel, so notifications are tunable in system settings under
@@ -52,9 +49,7 @@ async function ensureAndroidChannel(): Promise<void> {
 
 async function currentToken(options: { prompt?: boolean; current?: () => boolean } = {}): Promise<string | null> {
   const { prompt = true, current = () => true } = options;
-  if (Platform.OS === 'web' || !Device.isDevice) return null;
-  const projectId = projectIdForPush();
-  if (!projectId) return null;
+  if (!pushAvailable()) return null;
   await ensureAndroidChannel();
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (!current()) return null;
@@ -64,29 +59,12 @@ async function currentToken(options: { prompt?: boolean; current?: () => boolean
     ({ status } = await Notifications.requestPermissionsAsync());
   }
   if (!current() || status !== 'granted') return null;
-  if (DIRECT_PUSH && Platform.OS === 'android') {
-    const { data } = await Notifications.getDevicePushTokenAsync();
-    return typeof data === 'string' && data ? data : null;
-  }
-  const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
-  return data;
-}
-
-/** A device that moves to the direct token still has its old Expo token registered, so it
- * would get every push twice. Remove that one once the direct token is saved. Best-effort:
- * if it fails, the old token stays until the provider reports it dead. */
-async function dropExpoToken(role: PushRole, bearer: string, projectId: string): Promise<void> {
-  try {
-    const { data } = await Notifications.getExpoPushTokenAsync({ projectId });
-    if (typeof data !== 'string' || !data) return;
-    await apiRequest(rolePath(role), { method: 'DELETE',
-      body: JSON.stringify({ expo_push_token: data }) }, async () => bearer);
-  } catch { /* see above */ }
+  const { data } = await Notifications.getDevicePushTokenAsync();
+  return typeof data === 'string' && data ? data : null;
 }
 
 export async function registerPush(role: PushRole): Promise<void> {
-  const projectId = projectIdForPush();
-  if (!projectId || Platform.OS === 'web' || !Device.isDevice) return;
+  if (!pushAvailable()) return;
   const generation = pushGeneration(role);
   if (!pushScopeActive(role, generation)) return;
   const previous = flights.get(role);
@@ -111,7 +89,6 @@ export async function registerPush(role: PushRole): Promise<void> {
       }) }, async () => bearer);
       if (!await current()) return;
       rememberPushRegistration(role, generation, identity.id, token);
-      if (DIRECT_PUSH && Platform.OS === 'android') await dropExpoToken(role, bearer, projectId);
     } catch { /* best-effort — no credential clearing or stale cache success */ }
   })();
   flights.set(role, { generation, promise: operation });
@@ -122,7 +99,7 @@ export async function registerPush(role: PushRole): Promise<void> {
 /** Start Fresh: stop the old persona's device from receiving anything. Never prompts
  * for permission — if it was never granted there's no token to delete anyway. */
 export async function unregisterPush(): Promise<void> {
-  if (!projectIdForPush()) return;
+  if (!pushAvailable()) return;
   const roles: PushRole[] = ['member', 'listener'];
   const generations = roles.map(beginPushIdentityChange);
   const credentials = await Promise.all(roles.map(storedBearer));

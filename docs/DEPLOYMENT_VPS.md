@@ -266,8 +266,7 @@ Old hosts keep redirecting for as long as their DNS records and certs live.
 
 1. Do the work locally against Test, verify per `mento-verify` (pytest, `alembic
    check`, `tsc --noEmit`, e2e for touched flows).
-2. Ship: `bash scripts/lanes/ship.sh "what changed"` (gate → push → box checkout to
-   that exact commit → `deploy.sh --backup <sha>` → web → OTA). By hand:
+2. Ship: `scripts/lanes/ship.sh` was removed 2026-11-11; production ships from `main` only (docs/OPERATIONS.md). By hand:
    `ssh mento-ops@<vps-ip> 'cd /opt/mento && git fetch -q origin && git reset -q --hard <sha> && ./deploy/deploy.sh --backup <sha>'`
 
 What `deploy.sh` does (WS1 T1.9; proof: `bash deploy/test-deploy.sh`):
@@ -337,8 +336,8 @@ GitHub → Settings → Secrets and variables → Actions: secrets `API_DEPLOY_S
 variable `API_AUTO_DEPLOY=true` to deploy after every green API CI on main. Manual
 runs (Actions → API Deploy → Run workflow) work without the variable. Optional:
 Settings → Environments → `production` → required reviewers, to approve each deploy.
-CI deploys do not ship the web build or the OTA — `ship.sh` still does.
-**Turn CI on only after one `ship.sh` run** has put this version of `deploy.sh` on the
+CI deploys do not ship the web build or the OTA — `ship.sh` (removed) still does.
+**Turn CI on only after one `ship.sh` (removed) run** has put this version of `deploy.sh` on the
 box: the forced command runs the `deploy.sh` already on disk, and the one before
 WS1 T1.9 knows nothing about `--from-ssh`.
 
@@ -385,55 +384,12 @@ mkcert -cert-file deploy/caddy/certs/cert.pem -key-file deploy/caddy/certs/key.p
 
 then start the stack with `CADDY_TLS=mkcert` (the `.pem` files are gitignored).
 
-### Error tracker (GlitchTip)
+### Error tracker
 
-T1.7. MIT-licensed, self-hosted, Sentry-protocol compatible — `SENTRY_DSN` /
-`EXPO_PUBLIC_SENTRY_DSN` just point at it, no code change either side. Its own
-database inside the existing Postgres (`glitchtip`, not `mento`) and its own
-Valkey db index (1 — the API uses 0). `SERVER_ROLE=all_in_one` runs web, worker
-and migrations in one container; migrations run automatically on boot.
-
-Not on Caddy — it's a staff tool, not a public surface, and `deploy/domains.env`
-stays the only place a public hostname is written. Reachable over an SSH tunnel
-only (`ports: 127.0.0.1:8010:8000` in `compose.prod.yml`).
-
-**One-time setup**, after `MENTO_STACK=balanced` first comes up:
-
-```bash
-# Once: a real secret, not the placeholder below.
-openssl rand -hex 32   # → GLITCHTIP_SECRET_KEY in the prod env file
-
-# Once: create the database (Postgres only auto-creates the one named by
-# POSTGRES_DB). Safe to re-run — checks before creating.
-docker compose --profile tools run --rm glitchtip-init-db
-
-docker compose up -d glitchtip
-```
-
-Web signup is closed from the start (`ENABLE_USER_REGISTRATION: "False"` in
-`compose.prod.yml` — no window where it's briefly open to the internet). Create
-the one account from the shell instead:
-
-```bash
-docker exec -it mento-glitchtip python manage.py createsuperuser
-```
-
-**Everyday access** (never expose the port publicly):
-
-```bash
-ssh -L 8010:localhost:8010 <vps-ssh-alias>
-# then open http://localhost:8010 and log in with the account above
-```
-
-Create an organization and a project from the UI; the project's DSN goes into
-`SENTRY_DSN` (API) and `EXPO_PUBLIC_SENTRY_DSN` (mobile).
-
-Verified (session 41): a crafted event with a request body, query string,
-cookies and an `Authorization` header — sent through the app's own
-`observability.py` `before_send` hook — arrives with all four stripped (checked
-byte-for-byte against the raw stored event, not just the fields we expected to
-check); a plain unhandled exception arrives with its type and message intact
-(by design — only *request* data is stripped, not the error itself).
+The self-hosted GlitchTip that used to run here was removed on 2026-11-11: errors go to
+Sentry instead (`docs/SENTRY.md`). `deploy/secrets/prod.env.sops.yaml` may still hold an
+unused `GLITCHTIP_SECRET_KEY`; it is harmless, and the founder can delete it with
+`sops deploy/secrets/prod.env.sops.yaml`.
 
 ### Legacy to Balanced cutover — acceptance contract
 

@@ -14,6 +14,7 @@ import { OptionsSheet, type SheetChoice } from './options/OptionsSheet';
 import { PauseFlow } from './options/PauseFlow';
 import { ReportFlow } from './options/ReportFlow';
 import { EndFlow } from './options/EndFlow';
+import { ConfirmModal } from './options/bits';
 
 /**
  * Conversation options (PRD §6, board A20) — the sheet over the settled-back chat, and the
@@ -41,6 +42,8 @@ type Props = {
   onLeft: () => void; // called after wipe/report/block (navigate away)
   /** "Save to Journal": the chat opens the save key on the mentor's latest message. */
   onSaveToJournal: () => void;
+  /** False when there is no mentor message left to keep (the row explains instead). */
+  canSave?: boolean;
   /** Persona name, echoed on the reflection screen. */
   listenerName?: string;
   /** Opens straight onto a sub-flow instead of the choice sheet — the mentor-profile
@@ -59,6 +62,7 @@ export function ConversationOptions({
   onClose,
   onLeft,
   onSaveToJournal,
+  canSave,
   listenerName,
   initial,
 }: Props) {
@@ -72,6 +76,9 @@ export function ConversationOptions({
   const [mask, setMask] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Founder 2026-11-15: End asks once; a switch turned off says so, with Undo.
+  const [confirmEnd, setConfirmEnd] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; undo: () => void } | null>(null);
   // The sheet starts blank each time the chat opens, so the lock / pause / mask switches must
   // come from the server. Without this a locked chat always offered "Lock with a PIN" and
   // there was no way to unlock it again.
@@ -136,21 +143,47 @@ export function ConversationOptions({
       close();
       onSaveToJournal();
     } else if (c === 'status' && mask !== null) {
-      void run(async () => setMask((await api.setStatusMask(conversationId, null)).status_mask ?? null));
-    } else if (c === 'pause' && paused) {
-      void run(async () => setPaused((await api.setPause(conversationId, false)).is_paused));
-    } else if (c === 'end') {
-      // Plain End flows into the private reflection (board A23).
+      const before = mask;
       void run(async () => {
-        await api.endConversation(conversationId);
-        router.replace({
-          pathname: '/reflection',
-          params: { conversation: conversationId, listener: listenerName ?? '' },
+        setMask((await api.setStatusMask(conversationId, null)).status_mask ?? null);
+        setNotice({
+          text: t('options.sheet.maskOffNote'),
+          undo: () => {
+            setNotice(null);
+            void run(async () => setMask((await api.setStatusMask(conversationId, before)).status_mask ?? null));
+          },
         });
       });
+    } else if (c === 'pause' && paused) {
+      void run(async () => {
+        setPaused((await api.setPause(conversationId, false)).is_paused);
+        setNotice({
+          text: t('options.sheet.pauseOffNote'),
+          undo: () => {
+            setNotice(null);
+            void run(async () => setPaused((await api.setPause(conversationId, true)).is_paused));
+          },
+        });
+      });
+    } else if (c === 'end') {
+      setNotice(null);
+      setConfirmEnd(true);
     } else {
+      setNotice(null);
       setFlow(c);
     }
+  };
+
+  const endNow = () => {
+    setConfirmEnd(false);
+    // Plain End flows into the private reflection (board A23).
+    void run(async () => {
+      await api.endConversation(conversationId);
+      router.replace({
+        pathname: '/reflection',
+        params: { conversation: conversationId, listener: listenerName ?? '' },
+      });
+    });
   };
 
   return (
@@ -170,7 +203,10 @@ export function ConversationOptions({
           paused={paused}
           busy={busy || !ready}
           error={error}
+          notice={notice?.text ?? null}
+          onUndo={notice?.undo}
           onChoose={choose}
+          canSave={canSave}
           onClose={close}
           progress={depth.progress}
           reduced={depth.reduced}
@@ -202,6 +238,15 @@ export function ConversationOptions({
       ) : (
         <ReportFlow conversationId={conversationId} onBack={() => setFlow(null)} onDone={onLeft} />
       )}
+      <ConfirmModal
+        visible={confirmEnd}
+        title={t('options.sheet.endConfirmTitle')}
+        body={t('options.sheet.endConfirmBody')}
+        cta={t('options.sheet.endConfirmCta')}
+        onDone={endNow}
+        secondary={t('options.sheet.endConfirmKeep')}
+        onSecondary={() => setConfirmEnd(false)}
+      />
     </View>
   );
 }

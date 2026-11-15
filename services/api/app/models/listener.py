@@ -88,6 +88,18 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     )
     step_back_reason: Mapped[str | None] = mapped_column(String(280), nullable=True)
 
+    # Three tiers (DECISIONS R.4): Peer listener -> Mentor -> Mento Verified. "mentor" is set
+    # by an admin after checking prelims/mains proof; NULL or "listener" = Peer listener.
+    # Mento Verified stays `certified_exam` (services/tiers.py resolves the one tier).
+    tier: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    # Exam history for the badges (DECISIONS R.7, R.15): {"prelims": n, "mains": n,
+    # "interview": n}. Shown to members only once an admin has checked it
+    # (exam_history_checked_at); the mentor's own entry alone shows nothing.
+    exam_history: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    exam_history_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
 
 @event.listens_for(ListenerProfile, "before_insert")
 def _deal_face(_mapper, _connection, target: ListenerProfile) -> None:

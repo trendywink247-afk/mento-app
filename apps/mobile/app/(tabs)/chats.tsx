@@ -28,6 +28,8 @@ import { requestLetter } from '@/lib/requestLetter';
 import { useI18n } from '@/lib/i18n';
 import { mentorFaces } from '@/lib/mentorFaces';
 import { screenCache, type ChatPreview, type WaitingQuestion } from '@/lib/screenCache';
+import { useLiveRefresh } from '@/lib/liveEvents';
+import { rowUnread } from '@/lib/rowUnread';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected } from '@/lib/streamClient';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -221,6 +223,16 @@ export default function ChatsTab() {
       void load();
     }, [load]),
   );
+
+  // A pushed change (a new line, an end, a wipe) or a reconnect re-reads only the list itself:
+  // own rows carry their unread count and last line from the server; Stream rows keep their
+  // client-side previews. Focus still does the full load above.
+  const refreshRows = useCallback(async () => {
+    const list = await api.listConversations();
+    setRows(list);
+    screenCache.set('chats', { ...(screenCache.get('chats') ?? { previews: {} }), rows: list });
+  }, []);
+  useLiveRefresh('member', ['conversation.changed'], refreshRows, { onFocus: false });
 
   // Clean Wipe happens in a chat stacked over this (still mounted) list: the moment the wipe
   // is asked for, the row becomes its "wiped" marker and its message preview is dropped — the
@@ -478,7 +490,7 @@ export default function ChatsTab() {
           }
           lastLine={s === 'wiped' ? t('chats.wiped') : c.is_locked ? t('chatsList.lockedLine') : p?.text || c.last_message || t('chats.sayHello')}
           time={relativeTime((p?.at ?? new Date(c.created_at)).toISOString(), t)}
-          unread={Boolean(p && p.unread > 0) && s === 'active'}
+          unread={rowUnread(p, c) && s === 'active'}
           unreadLabel={t('chatsList.newMessageA11y')}
           savedLabel={s !== 'wiped' && count > 0 ? t('chatsList.savedCount', { count }) : null}
           lockedLabel={c.is_locked ? t('chatsList.locked') : null}
@@ -515,7 +527,9 @@ export default function ChatsTab() {
         <CompanionPerches placement={perch}>
           <Entrance style={styles.head}>
             <View style={styles.headRow}>
-              <Text style={[type.display, { color: colors.ink }]} accessibilityRole="header">
+              {/* flex: 1 — a title sized to its own text is under-measured on Android in Hindi
+                * and loses its accent word to a hidden second line (QA 2026-11-15). */}
+              <Text style={[type.display, styles.title, { color: colors.ink }]} accessibilityRole="header">
                 {t('chatsList.titleLead')} <Text style={{ color: colors.accent }}>{t('chatsList.titleAccent')}</Text>
               </Text>
               <FeedbackPill testID="chats-feedback" />
@@ -720,7 +734,7 @@ export default function ChatsTab() {
                             : p?.text || (item.status === 'online' ? t('inTouch.hereNow') : t('inTouch.away'))
                       }
                       time={relativeTime((p?.at ?? new Date(item.since ?? item.first_met_at)).toISOString(), t)}
-                      unread={Boolean(p && p.unread > 0) && live}
+                      unread={rowUnread(p, c) && live}
                       unreadLabel={t('chatsList.newMessageA11y')}
                       lockedLabel={c?.is_locked ? t('chatsList.locked') : null}
                       accessibilityLabel={t('inTouch.rowA11y', { name: item.persona_name })}
@@ -757,8 +771,9 @@ export default function ChatsTab() {
 
           {!loading && hasAnything ? (
             <>
-              <View style={[styles.fadeWrap, { bottom: dock }]} pointerEvents="none">
-                <GroundFade height={136} />
+              {/* the fade runs to the screen edge, so no card shows beside the rounded pill below it */}
+              <View style={[styles.fadeWrap, { bottom: 0, height: 176 + dock }]} pointerEvents="none">
+                <GroundFade height={176 + dock} />
               </View>
               <View style={[styles.newChatWrap, { bottom: 36 + dock }]} pointerEvents="box-none">
                 <CompanionSlot id="fabTop" size={52} align="left" inset={space.lg} />
@@ -866,6 +881,7 @@ const styles = StyleSheet.create({
   archiveRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: space.md },
   head: { paddingTop: space.xs, paddingHorizontal: space.lg, paddingBottom: 10 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  title: { flex: 1, minWidth: 0 },
   tools: { zIndex: 3, paddingHorizontal: space.md, paddingBottom: 10, gap: 10, borderBottomWidth: 1 },
   toolsEdge: { position: 'absolute', left: 0, right: 0, bottom: -4, height: 3 },
   toolsFloor: { position: 'absolute', left: 0, right: 0, bottom: -1, height: 0 },

@@ -1,24 +1,50 @@
-# Docs index
+# Docs
 
-Current documents only. `archive/` holds stale history: don't read it or use it as guidance.
+Current documents only. `archive/` is stale history: don't read it or use it as guidance.
 
-| Doc | What it is |
+## Start here
+
+| Doc | Read it for |
 |---|---|
-| [STATUS.md](STATUS.md) | Current state, next 3 tasks, open questions |
-| [DECISIONS.md](DECISIONS.md) | Authoritative product rulings; wins over the PRD and mockups |
-| [PRD.md](PRD.md) | Product requirements v2.0 |
-| [PRIVACY.md](PRIVACY.md) | Engineering-draft privacy policy, kept in step with real data flows |
-| [MOCKUP_INVENTORY.md](MOCKUP_INVENTORY.md) | Catalogue of the 64 UI mockups in `Mockups/` |
-| [Mockups/](Mockups/) | Original UI mockup images |
-| [ANDROID_BUILD.md](ANDROID_BUILD.md) | Local Android APK build and self-hosted OTA updates |
-| [PLAY_RELEASE.md](PLAY_RELEASE.md) | Google Play upload key, signing and release steps |
-| [environments.md](environments.md) | QA and production hosts, users, containers, config locations, QA encrypted secrets, deploy and rollback (prod is TBD), Sentry error-reporting variables (names only) |
-| [DEPLOYMENT_VPS.md](DEPLOYMENT_VPS.md) | Self-managed VPS runbook, including SOPS + age secrets |
-| [BACKUP_CONTENT_POLICY.md](BACKUP_CONTENT_POLICY.md) | What encrypted backups contain and exclude; recovery activation contract |
-| [SAME_DATABASE_REHEARSAL.md](SAME_DATABASE_REHEARSAL.md) | Local rehearsal of the classic ↔ Balanced topology switch on one database |
-| [OWN_CHAT_LOCAL_ACCEPTANCE.md](OWN_CHAT_LOCAL_ACCEPTANCE.md) | Local own-chat replica and process-loss proof |
-| [DEPENDENCY_AUDIT_2026-10-05.md](DEPENDENCY_AUDIT_2026-10-05.md) | npm advisories and required treatment |
-| [specs/qa-deploy-path.md](specs/qa-deploy-path.md) | QA deploy paths compared (Actions receiver vs `ops/qa-deploy-api.sh`), the `master` rename finding, recommendation |
-| [specs/2026-09-20-mento-balanced-architecture-design.md](specs/2026-09-20-mento-balanced-architecture-design.md) | Balanced architecture design (current baseline) |
-| [proposals/self-assessment-and-community.md](proposals/self-assessment-and-community.md) | Thinking on the deferred self-assessment suite and Community (not built) |
-| [diagrams/](diagrams/) | Current and target architecture images, plus their renderer |
+| [STATUS.md](STATUS.md) | State today, next 3 tasks, open questions |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | How the system fits together, in one page |
+| [OPERATIONS.md](OPERATIONS.md) | Build, test, release, rollback: who runs what |
+| [SECURITY_AUDIT.md](SECURITY_AUDIT.md) | Automated security scans (pinned tools) and the IDOR matrix: results and triage |
+| [SONARQUBE.md](SONARQUBE.md) | Self-hosted SonarQube: install, box-local scan, proposed quality gate |
+| [SECRETS.md](SECRETS.md) | Where keys live and how they are handled |
+
+## Product
+
+| Doc | Read it for |
+|---|---|
+| [DECISIONS.md](DECISIONS.md) | Authoritative rulings; wins over everything below |
+| [PRD.md](PRD.md) | Requirements v2.0 |
+| [PRIVACY.md](PRIVACY.md) | Privacy policy draft, kept in step with real data flows |
+| [MOCKUP_INVENTORY.md](MOCKUP_INVENTORY.md), [Mockups/](Mockups/) | The 64 UI mockups |
+| [proposals/](proposals/) | Deferred ideas (self-assessment, Community); not built |
+
+## Infrastructure and delivery
+
+| Doc | Read it for |
+|---|---|
+| [environments.md](environments.md) | QA and production hosts, users, containers, config paths, QA SOPS secrets |
+| [DEPLOYMENT_VPS.md](DEPLOYMENT_VPS.md) | Self-managed VPS runbook (older; check against environments.md) |
+| [BACKUP_CONTENT_POLICY.md](BACKUP_CONTENT_POLICY.md) | What encrypted backups hold |
+| [SENTRY.md](SENTRY.md) | Error reporting: the four DSNs, where each goes, how to verify |
+| [PERFORMANCE_AND_DB.md](PERFORMANCE_AND_DB.md) | Valkey, Postgres, indexes, pools, load tests: findings and numbers |
+| [specs/qa-deploy-path.md](specs/qa-deploy-path.md) | Why QA deploys through `ops/` scripts |
+| [specs/2026-09-20-mento-balanced-architecture-design.md](specs/2026-09-20-mento-balanced-architecture-design.md) | Balanced architecture design |
+| [diagrams/](diagrams/) | Architecture images |
+| [SAME_DATABASE_REHEARSAL.md](SAME_DATABASE_REHEARSAL.md), [OWN_CHAT_LOCAL_ACCEPTANCE.md](OWN_CHAT_LOCAL_ACCEPTANCE.md) | Local rehearsals |
+
+## Mobile and launch
+
+| Doc | Read it for |
+|---|---|
+| [BUILDS.md](BUILDS.md) | Android (QA/prod) and iOS (remote Mac) builds, all local, no EAS |
+| [OTA.md](OTA.md) | Self-hosted signed over-the-air updates: publish, roll back, install |
+| [ANDROID_BUILD.md](ANDROID_BUILD.md) | Native caveats and Android build troubleshooting |
+| [MOBILE_DEPENDENCIES.md](MOBILE_DEPENDENCIES.md) | Mobile package audit: findings, risk, what was fixed |
+| [PLAY_RELEASE.md](PLAY_RELEASE.md) | Play signing and release |
+| [PRODUCTION_AND_PLAY_STEPS.md](PRODUCTION_AND_PLAY_STEPS.md) | Founder-only steps for production and Play Console |
+| [DEPENDENCY_AUDIT_2026-10-05.md](DEPENDENCY_AUDIT_2026-10-05.md) | Older npm advisory notes (superseded by MOBILE_DEPENDENCIES.md) |
