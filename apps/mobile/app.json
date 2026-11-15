@@ -23,12 +23,13 @@
         "monochromeImage": "./assets/icon/adaptive-monochrome.png",
         "backgroundColor": "#F4EFE6"
       },
-      "versionCode": 12,
+      "versionCode": 20,
       "permissions": [],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.ACTIVITY_RECOGNITION"
       ]
     },
     "web": {

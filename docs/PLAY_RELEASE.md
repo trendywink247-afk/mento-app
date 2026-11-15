@@ -4,42 +4,41 @@ Package `chat.mento.app`. Play needs a signed `.aab`. The build never signs with
 
 Preview and development builds are a different app, "Mento QA" (`chat.mento.app.qa`), so a QA build and the Play build install side by side on one phone. Only the production variant is the store app. The QA package gets push once it is added as an Android app in the Firebase project and `google-services.json` is refreshed: `app.config.ts` attaches the Firebase file only when it lists the package.
 
-## One-time: upload key (on your own machine, not the server)
+## One-time: upload key (made 2026-11-15, on the build box)
 
-```bash
-keytool -genkeypair -v -storetype PKCS12 -keystore mento-upload.jks \
-  -alias mento-upload -keyalg RSA -keysize 2048 -validity 10000
-```
+The founder asked for the upload key to be made and used on the build box, so the store build is
+signed by `ops/build-android.sh prod --aab` with no step on a PC. It lives in
+`.secrets/play-upload.jks` with its passwords in `.secrets/play-upload.env` (git-ignored, 600):
+PKCS12, alias `mento-upload`, RSA 4096, certificate SHA-256
+`71:2D:79:6E:94:E0:4F:99:0E:A8:E5:70:98:88:16:4F:BC:87:5D:F9:77:24:E8:7D:B0:50:FE:4C:60:95:0C:33`.
 
-Use a long password. Keep the `.jks` and the passwords in a password manager plus one offline
-backup. Never commit them. Turn on **Play App Signing** when creating the app: Google holds the
-real signing key, and a lost upload key can be reset through Play support.
+Keep a copy of both files in the password manager and one offline backup; never commit them.
+**Play App Signing** must be on: Google holds the real app-signing key, and a lost upload key can
+be reset through the Play Console (App integrity, upload key reset, with a new certificate).
+If an older upload key is already registered for `chat.mento.app`, use that same reset with this
+key's certificate (`keytool -exportcert -rfc -alias mento-upload -keystore .secrets/play-upload.jks`).
 
 ## Each release
 
 1. Raise `expo.android.versionCode` in `apps/mobile/app.json` (integer, never reused; store line
    starts at 10). Leave `version` alone while OTA runtime matching depends on it.
-2. Build the bundle with the production variant, all ABIs (the QA APKs are arm64-only and Play
-   will not take them). The production variant is https-only and uses the `production` update
-   channel. The release block is unsigned unless `MENTO_UPLOAD_KEYSTORE` is set
-   (`plugins/withReleaseSigning.js`):
+2. Build and sign the bundle from a commit on `main` (production variant, all four ABIs,
+   https-only, `production` update channel, signed with the upload key above):
 
    ```bash
-   APP_VARIANT=production EXPO_PUBLIC_APP_ENV=<qa|production> EXPO_PUBLIC_API_URL=<api>/api/v1 \
-   EXPO_PUBLIC_STREAM_API_KEY=<public key> EXPO_PUBLIC_GIT_SHA=<sha> \
-   SENTRY_DISABLE_AUTO_UPLOAD=true npx expo prebuild --platform android --clean
-   cd android && ./gradlew bundleRelease
+   ops/build-android.sh prod --aab --sha <main sha>
    ```
 
-3. Sign the unsigned bundle on your PC with the upload key:
+   It lands in `~/build-out/prod/mento-prod-<version>-<code>-<sha>.aab` with a `.sha256` beside it.
 
-   ```bash
-   jarsigner -keystore mento-upload.jks -sigalg SHA256withRSA -digestalg SHA-256 \
-     app-release.aab mento-upload
-   ```
+3. Check before uploading: `jarsigner -verify -certs <aab>` says "jar verified" with the
+   certificate above; the merged manifest (`android/app/build/intermediates/merged_manifest/release/`
+   in `~/build/prod/apps/mobile`) shows `chat.mento.app`, the version code, and none of the blocked
+   permissions (`SYSTEM_ALERT_WINDOW`, storage, `ACTIVITY_RECOGNITION`).
 
-4. Check before uploading: `bundletool dump manifest` shows `chat.mento.app`, the version code and
-   no `SYSTEM_ALERT_WINDOW` or storage permissions; `jarsigner -verify -verbose` shows your key.
+4. Record the build's native fingerprint for production OTA (`/opt/mento-prod/state/store_fp`,
+   docs/OTA.md), so `ops/ota-publish.sh prod` only ships updates this build can run.
+
 5. Upload to **Internal testing**, then **Closed testing**, then apply for production. Never
    upload straight to production.
 
