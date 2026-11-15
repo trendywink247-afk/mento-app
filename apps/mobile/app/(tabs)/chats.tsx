@@ -527,7 +527,9 @@ export default function ChatsTab() {
         <CompanionPerches placement={perch}>
           <Entrance style={styles.head}>
             <View style={styles.headRow}>
-              <Text style={[type.display, { color: colors.ink }]} accessibilityRole="header">
+              {/* flex: 1 — a title sized to its own text is under-measured on Android in Hindi
+                * and loses its accent word to a hidden second line (QA 2026-11-15). */}
+              <Text style={[type.display, styles.title, { color: colors.ink }]} accessibilityRole="header">
                 {t('chatsList.titleLead')} <Text style={{ color: colors.accent }}>{t('chatsList.titleAccent')}</Text>
               </Text>
               <FeedbackPill testID="chats-feedback" />
@@ -879,6 +881,7 @@ const styles = StyleSheet.create({
   archiveRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52, paddingHorizontal: space.md },
   head: { paddingTop: space.xs, paddingHorizontal: space.lg, paddingBottom: 10 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  title: { flex: 1, minWidth: 0 },
   tools: { zIndex: 3, paddingHorizontal: space.md, paddingBottom: 10, gap: 10, borderBottomWidth: 1 },
   toolsEdge: { position: 'absolute', left: 0, right: 0, bottom: -4, height: 3 },
   toolsFloor: { position: 'absolute', left: 0, right: 0, bottom: -1, height: 0 },

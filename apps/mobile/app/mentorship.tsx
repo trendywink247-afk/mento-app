@@ -99,7 +99,13 @@ function Chips<T extends string>({
                 : { backgroundColor: on ? colors.accentTint : colors.surface, borderColor: on ? colors.accent : colors.border },
             ]}
           >
-            <Text style={[type.label, { color: o.disabled ? colors.inkMuted : on ? colors.accentInk : colors.ink }]}>{o.label}</Text>
+            {/* Android under-measures Devanagari in Baloo: the chip is sized a hair too
+              * narrow and the last word wraps onto a hidden second line (Hindi QA
+              * 2026-11-15). A trailing space counts when the label is measured but hangs off
+              * the line when it wraps, which gives the label that hair of slack. */}
+            <Text style={[type.label, styles.chipText, { color: o.disabled ? colors.inkMuted : on ? colors.accentInk : colors.ink }]}>
+              {Platform.OS === 'android' ? `${o.label} ` : o.label}
+            </Text>
           </PressKey>
         );
       })}
@@ -416,7 +422,8 @@ const styles = StyleSheet.create({
   body: { padding: space.md, paddingBottom: 48, gap: space.sm },
   q: { paddingTop: space.sm },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  chip: { minHeight: 40, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  chip: { minHeight: 40, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1 },
+  chipText: { textAlign: 'center' },
   input: { minHeight: 44, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 12, fontFamily: font.sans, fontSize: 16 },
   noteInput: { minHeight: 88, paddingTop: 10, textAlignVertical: 'top' },
   count: { alignSelf: 'flex-end' },
