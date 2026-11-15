@@ -277,7 +277,7 @@ export default function BrowseMentors() {
               {second}
             </Text>
           ) : null}
-          <ExamEmblems badges={l.exam_badges} size={26} compact testID={`mentor-emblems-${l.id}`} />
+          <ExamEmblems badges={l.exam_badges} size={38} testID={`mentor-emblems-${l.id}`} />
           <Text style={[styles.availability, { color: l.available ? washInk.green : colors.inkMuted }]} numberOfLines={1}>
             {availability}
           </Text>
