@@ -90,7 +90,7 @@ commits on `origin/main`, only when the founder asks.
 
 | | |
 |---|---|
-| Host | `129.121.171.140` (same box as QA). Not live yet: DNS for `app`/`api`/`admin.mento.chat` still points at the old server `129.121.122.28` (test data only; to be retired) |
+| Host | `129.121.171.140` (same box as QA). Live since 2026-11-15 (first release 1f4eed5, own chat, no Stream). DNS for `app`/`api`/`admin.mento.chat` points here; the old server `129.121.122.28` (test data only) is to be retired |
 | URLs | `api.mento.chat` (API + `/ota`), `app.mento.chat` (web app), `admin.mento.chat` (staff console, operator IPs + Tailscale only) |
 | Edge | Caddy: `infra/caddy/prod.caddy` -> `/etc/caddy/mento-prod.caddy`, imported at the end of `/etc/caddy/Caddyfile` |
 | Compose project | `mento-prod`, `/opt/mento-prod/compose.yml` (from `deploy/prod-local/compose.yml`): `postgres`, `valkey`, `api` (127.0.0.1:18110), `worker`, `migrate` (tools). Own network and volume |

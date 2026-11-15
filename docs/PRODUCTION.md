@@ -24,7 +24,7 @@ when the founder asks. Nothing here is started by an agent on its own.
 | QA stack (api, worker, postgres, valkey) | 0.85 GB | ~0.27 GB |
 | SonarQube + its Postgres | 2.5 GB (3.5 GB once raised to 3 GB) | ~1.7 GB |
 | Shared test DB (`mento-postgres`, `mento-redis`; root-managed, uncapped) | none | ~1.0 GB |
-| **Production**: postgres 768 MB, valkey 192 MB, api 768 MB, worker 384 MB (migrate 384 MB, only while migrating) | **2.1 GB** | 0 (not started) |
+| **Production**: postgres 768 MB, valkey 192 MB, api 768 MB, worker 384 MB (migrate 384 MB, only while migrating) | **2.1 GB** | running since 2026-11-15 |
 | Two OTA servers (`MemoryMax=256M` each) | 0.5 GB | small |
 | Caddy | ~0.1 GB | small |
 | **Total caps** | **~7.1-8.1 GB** | |
