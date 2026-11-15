@@ -79,6 +79,7 @@ from app.services import (
     member_status,
     mentor_face,
     mentor_invites,
+    mentor_names,
     paths,
     stream,
     tiers,
@@ -720,9 +721,11 @@ def approve_application(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, "a Mentor has cleared prelims at least once"
         )
+    # Anonymity: the mentor side never carries the member's name or avatar seed.
+    mentor_name, mentor_avatar = mentor_names.new_mentor_identity(db, applicant.persona_name)
     li = ListenerProfile(
-        persona_name=applicant.persona_name,
-        persona_avatar=applicant.persona_avatar,
+        persona_name=mentor_name,
+        persona_avatar=mentor_avatar,
         categories=[],
         certified_exam=certify,
         certified_at=datetime.now(UTC) if certify else None,
@@ -767,7 +770,7 @@ def approve_application(
     db.commit()
     db.refresh(a)
     item = _application_item(a, applicant.persona_name, certified=certify)
-    new_listener = (a.listener_id, applicant.persona_name, applicant.persona_avatar)
+    new_listener = (a.listener_id, mentor_name, mentor_avatar)
     # End refresh's transaction BEFORE the outbound Stream call (onboarding's
     # phasing) — without this upsert the listener's first channel creation fails
     # in prod (only seed_listeners upserted until now).

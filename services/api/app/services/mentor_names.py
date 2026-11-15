@@ -127,8 +127,8 @@ def _recent_names(db: Session, now: datetime) -> set[str]:
     )
 
 
-def _pick(db: Session, now: datetime) -> str | None:
-    hard = _held_names(db)
+def _pick(db: Session, now: datetime, avoid: Iterable[str] = ()) -> str | None:
+    hard = _held_names(db) | set(avoid)
     soft = hard | _recent_names(db, now)
     for avoid in (soft, hard):
         for _ in range(_PICK_TRIES):
@@ -204,14 +204,115 @@ def _rotate_one(db: Session, listener_id: str, today: date, now: datetime) -> bo
     return True
 
 
+# --- a mentor's name is never their member name (anonymity, founder 2026-11-15) ----------
+#
+# A person can be both a member and a mentor. If the two sides shared a name, anyone who met
+# "Calm Peak" asking for help could recognise "Calm Peak" the mentor (and the reverse), so a
+# new mentor profile gets its own name and avatar seed, and older profiles that were given
+# the member's name (every approval before this change) are renamed once.
+
+
+def new_mentor_identity(
+    db: Session, member_name: str, now: datetime | None = None
+) -> tuple[str, str]:
+    """A fresh (name, avatar seed) for a new mentor profile: never the member's own name,
+    never a name another mentor carries or a member still holds as "first met as"."""
+    now = now or _utcnow()
+    if db.get_bind().dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(:k)"), {"k": _ADVISORY_KEY})
+    name = _pick(db, now, avoid=(member_name,))
+    if name is None:  # the name space is exhausted; still never the member's name
+        name = next(n for n in iter(lambda: generate_persona().name, None) if n != member_name)
+    return name, generate_persona().avatar
+
+
+_separated = False  # once per process: the one-time rename has run here
+
+
+def _shared_name_ids(db: Session) -> list[str]:
+    from app.models.listener_application import ListenerApplication
+    from app.models.user import User
+
+    return list(
+        db.scalars(
+            select(ListenerProfile.id)
+            .join(ListenerApplication, ListenerApplication.listener_id == ListenerProfile.id)
+            .join(User, User.id == ListenerApplication.user_id)
+            .where(User.persona_name == ListenerProfile.persona_name)
+            .order_by(ListenerProfile.id)
+        ).all()
+    )
+
+
+def separate_shared_names(db: Session, now: datetime | None = None) -> int:
+    """Rename every mentor whose name is their own member name. Recorded in the name
+    history like a rotation (so chats keep a coherent "first talked as"), the avatar seed
+    replaced too, Stream re-synced by the usual catch-up. Returns how many were renamed."""
+    from app.models.listener_application import ListenerApplication
+    from app.models.user import User
+
+    now = now or _utcnow()
+    renamed = 0
+    for listener_id in _shared_name_ids(db):
+        li = db.get(ListenerProfile, listener_id, with_for_update=True)
+        member_name = db.scalar(
+            select(User.persona_name)
+            .join(ListenerApplication, ListenerApplication.user_id == User.id)
+            .where(ListenerApplication.listener_id == listener_id)
+        )
+        if li is None or member_name is None or li.persona_name != member_name:
+            db.rollback()
+            continue
+        name, avatar = new_mentor_identity(db, member_name, now)
+        span = _open_span(db, li)
+        if span is None:
+            db.add(
+                ListenerNameHistory(
+                    listener_id=li.id,
+                    persona_name=li.persona_name,
+                    valid_from=li.created_at,
+                    valid_to=now,
+                )
+            )
+        else:
+            span.valid_to = now
+        db.add(ListenerNameHistory(listener_id=li.id, persona_name=name, valid_from=now))
+        li.persona_name = name
+        li.persona_avatar = avatar
+        li.persona_stream_synced = False
+        db.commit()
+        renamed += 1
+    if renamed:
+        logger.info("renamed %d mentor(s) whose name was their member name", renamed)
+    return renamed
+
+
+def _separate_once(db: Session) -> bool:
+    """Run the one-time rename the first time this process shows a mentor name. True when
+    Stream now has names to catch up on. Never raises."""
+    global _separated
+    if _separated:
+        return False
+    try:
+        renamed = separate_shared_names(db)
+        db.rollback()
+    except Exception as exc:  # noqa: BLE001 — never take a read endpoint down
+        db.rollback()
+        logger.warning("separating mentor names failed (%s)", type(exc).__name__)
+        return False
+    _separated = True
+    return renamed > 0
+
+
 def ensure_fresh(db: Session, now: datetime | None = None, *, force: bool = False) -> bool:
     """Rotate every mentor whose name belongs to an earlier rotation day. Cheap when
     there is nothing to do (one indexed probe at most once a minute per process).
     Returns True when Stream has names to catch up on. Never raises — a failed
     rotation must not take Browse down with it."""
     global _memo
+    owed = _separate_once(db)
     if not is_enabled():
-        return False
+        return owed
     now = now or _utcnow()
     today = rotation_day(now)
     if not force:
@@ -245,7 +346,7 @@ def ensure_fresh(db: Session, now: datetime | None = None, *, force: bool = Fals
         return False
     with _memo_lock:
         _memo = (today, time.monotonic())
-    return unsynced is not None
+    return owed or unsynced is not None
 
 
 def sync_stream_names() -> None:

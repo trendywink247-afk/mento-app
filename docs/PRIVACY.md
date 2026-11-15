@@ -20,6 +20,8 @@ Mento is an anonymous emotional-support chat app. You are never asked for your n
 a photo, or a phone number to use the core product. Everyone in a conversation — the
 person seeking support and the listener — appears only as an auto-assigned persona
 (e.g. "Purple Valley"). Real identity is never shown to the other party in a chat.
+If you are both a member and a mentor, your two sides carry different personas, so
+the people you meet on one side cannot recognise you on the other.
 
 ## 2. What we collect
 

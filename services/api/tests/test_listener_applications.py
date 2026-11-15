@@ -244,8 +244,10 @@ def test_admin_queue_approve_creates_listener(client, admin_headers):
 
     # Approval must create a REAL listener, ready for the matcher.
     with TestSession() as s:
-        li = s.query(ListenerProfile).filter_by(persona_name="Quiet Cove").one()
+        li = s.query(ListenerProfile).one()
         assert li.vetting_status == VettingStatus.approved
+        # Anonymity (2026-11-15): the mentor side gets its own name, never the member's.
+        assert li.persona_name != "Quiet Cove"
         assert "listener.application_approved" in [a.action for a in s.query(AdminAuditLog).all()]
 
     # The member now sees an approved card. The poll no longer mints a console token
