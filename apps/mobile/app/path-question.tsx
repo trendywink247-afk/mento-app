@@ -116,7 +116,7 @@ function PreviewCaret({ color }: { color: string }) {
 export default function PathQuestion() {
   useSessionGuard();
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const params = useLocalSearchParams<{ starter?: string; community?: string; lens?: string }>();
@@ -348,9 +348,11 @@ export default function PathQuestion() {
           </View>
           <View>
             {/* The companion peeks over the draft (decor only — flow is untouched). */}
-            <View style={styles.companion} pointerEvents="none">
-              <Companion animal={animal ?? null} size={COMPANION} />
-            </View>
+            {companionShown ? (
+              <View style={styles.companion} pointerEvents="none">
+                <Companion animal={animal ?? null} size={COMPANION} />
+              </View>
+            ) : null}
             <View
               style={[styles.panel, { backgroundColor: colors.bgLavender, borderColor: colors.border }]}
               accessibilityLiveRegion="polite"

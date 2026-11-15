@@ -99,6 +99,18 @@ export async function getAppearance(): Promise<string | null> {
   return store.getItemAsync(APPEARANCE_KEY);
 }
 
+const COMPANION_SHOWN_KEY = 'mento.companionShown';
+
+/** Whether the member's own companion is drawn ("1" / "0"). Kept on this phone only;
+ * unset means shown. Skipping the companion at signup turns it off (DECISIONS R.3). */
+export async function saveCompanionShown(shown: boolean): Promise<void> {
+  await store.setItemAsync(COMPANION_SHOWN_KEY, shown ? '1' : '0');
+}
+
+export async function getCompanionShown(): Promise<boolean> {
+  return (await store.getItemAsync(COMPANION_SHOWN_KEY)) !== '0';
+}
+
 /** Growth-companion colour drives the per-user accent theme (see ThemeProvider). */
 export async function saveCompanionColor(color: string): Promise<void> {
   await store.setItemAsync(COMPANION_COLOR_KEY, color);

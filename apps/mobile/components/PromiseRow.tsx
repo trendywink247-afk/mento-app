@@ -19,7 +19,8 @@ export function PromiseRow({
   icon: keyof typeof Ionicons.glyphMap;
   tone: Wash;
   title: string;
-  body: string;
+  /** Optional second line; the signup Ready screen shows titles only (DECISIONS R.1). */
+  body?: string;
 }) {
   const { colors } = useTheme();
   return (
@@ -27,7 +28,7 @@ export function PromiseRow({
       <IconBadge icon={icon} tone={tone} size={40} />
       <View style={styles.text}>
         <Text style={[type.rowTitle, { color: colors.ink }]}>{title}</Text>
-        <Text style={[type.caption, { color: colors.inkMuted }]}>{body}</Text>
+        {body ? <Text style={[type.caption, { color: colors.inkMuted }]}>{body}</Text> : null}
       </View>
     </View>
   );

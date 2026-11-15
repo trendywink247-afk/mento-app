@@ -22,6 +22,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import {
   COMPANION_COLOR_LABELS,
   COMPANION_COLORS,
+  DEFAULT_COMPANION_COLOR,
   type CompanionColor,
 } from '@/theme/companion';
 import { radius, space, type } from '@/theme/tokens';
@@ -83,7 +84,17 @@ export function CompanionStep({
   onNext: () => void;
   onAnimalPicked?: (animal: CompanionAnimal) => void;
 }) {
-  const { colors, companionColor, setCompanionColor } = useTheme();
+  const { colors, companionColor, setCompanionColor, setCompanionShown } = useTheme();
+  // A colour tried here is a preview until Continue: going back puts the colour from
+  // before this step back, so Screen 1 never wears it (DECISIONS R.3).
+  const colourBefore = useRef(companionColor);
+  const leaving = useRef(false);
+  useEffect(
+    () => () => {
+      if (!leaving.current) setCompanionColor(colourBefore.current);
+    },
+    [setCompanionColor]
+  );
   const { t } = useI18n();
   const reduced = useReducedMotion();
   const insets = useSafeAreaInsets();
@@ -172,6 +183,20 @@ export function CompanionStep({
     });
     // The animal only — the name is the member's own and never goes to analytics.
     capture('onboarding_companion_chosen', { companion: animal });
+    leaving.current = true;
+    setCompanionShown(true);
+    Keyboard.dismiss();
+    onNext();
+  };
+
+  // Skip = no companion: the plain look, nothing drawn for the member (DECISIONS R.3).
+  // Profile can turn a companion on later.
+  const skip = () => {
+    setDraft({ companionAnimal: null, companionColour: null, companionName: null });
+    capture('onboarding_companion_chosen', { companion: 'none' });
+    leaving.current = true;
+    setCompanionColor(DEFAULT_COMPANION_COLOR);
+    setCompanionShown(false);
     Keyboard.dismiss();
     onNext();
   };
@@ -199,7 +224,6 @@ export function CompanionStep({
               {t('onboarding.companion.headline')}
               <Text style={{ color: colors.accent }}>{t('onboarding.companion.headlineAccent')}</Text>
             </Text>
-            <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{t('onboarding.companion.sub')}</Text>
           </View>
           <View
             style={styles.hero}
@@ -241,6 +265,12 @@ export function CompanionStep({
               />
             </View>
           </View>
+          <PrimaryButton
+            label={t('onboarding.companion.skip')}
+            variant="link"
+            onPress={skip}
+            testID="companion-skip"
+          />
           <Text style={[type.caption, styles.changeLater, { color: colors.inkMuted }]}>
             {t('onboarding.companion.changeLater')}
           </Text>
@@ -296,7 +326,6 @@ export function CompanionStep({
           <Text style={[type.bodySemi, styles.sectionTitle, { color: colors.ink }]}>
             {t('onboarding.companion.step2')}
           </Text>
-          <Text style={[type.caption, { color: colors.inkMuted }]}>{t('onboarding.companion.step2Sub')}</Text>
         </View>
         <View style={styles.swatches}>
           {COLOR_KEYS.map((key) => {

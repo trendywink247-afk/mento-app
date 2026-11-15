@@ -25,7 +25,8 @@ const RULES: Record<keyof EventMap, Record<string, readonly (string | boolean)[]
   onboarding_age_passed: {},
   onboarding_email_step: { skipped: [true, false] },
   onboarding_companion_chosen: {
-    companion: ['Panda', 'Elephant', 'Fox', 'Turtle', 'Deer', 'Owl', 'Dog', 'Cat', 'Capybara'],
+    // 'none' = skipped at signup (DECISIONS R.3).
+    companion: ['Panda', 'Elephant', 'Fox', 'Turtle', 'Deer', 'Owl', 'Dog', 'Cat', 'Capybara', 'none'],
   },
   onboarding_completed: {},
   // Coarse public road names only (services/api paths_exams.py); never a stage, never an id.

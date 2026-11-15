@@ -26,6 +26,12 @@ export type Persona = { id: string; persona_name: string; persona_avatar: string
 
 /** `GET /me` and the answer to `PUT /me/companion`: the persona plus the companion the
  * SERVER holds (canonical spelling; null = none stored). */
+/** GET /app-config — switches the app reads; every field defaults to off. */
+export type AppConfig = {
+  signup_verification_required?: boolean;
+  email_required_from_second_visit?: boolean;
+};
+
 export type Me = Persona & {
   companion_animal: string | null;
   companion_colour: string | null;
@@ -748,6 +754,8 @@ export const api = {
 
   // --- Paths (Communities) ---
   pathTree: () => request<PathTree>('/paths/tree'),
+  /** Optional steps the server has switched on (DECISIONS R.10, R.11). Public. */
+  appConfig: () => request<AppConfig>('/app-config'),
   pathCommunities: () => request<PathCommunity[]>('/paths/communities'),
   myPath: () => request<PathState>('/paths/me', {}, true),
   choosePath: (community: string, stage: string) =>

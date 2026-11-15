@@ -50,6 +50,7 @@ import {
   type PlacementSlot,
 } from '@/lib/companionPlacement';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing } from '@/theme/motion';
 
@@ -88,7 +89,10 @@ export function useCompanionPlacement(
     hidden?: boolean;
   } = {},
 ): CompanionPlacement {
-  const { still = false, hidden = false } = options;
+  const { still = false, hidden: hiddenHere = false } = options;
+  // Companion switched off (Profile, or skipped at signup): never perched (DECISIONS R.3).
+  const { companionShown } = useTheme();
+  const hidden = hiddenHere || !companionShown;
   const stored = useCompanionAnimal(); // undefined while the read is in flight
   const known = stored !== undefined;
   const animal = stored ?? null;

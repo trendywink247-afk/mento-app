@@ -152,8 +152,17 @@ class Settings(BaseSettings):
     allowance_budget_ms: int = 800
 
     # Rotating mentor names + consented "stay in touch" (DECISIONS §L.6–7,
-    # services/mentor_names.py, services/in_touch.py). Names change at 04:00 IST.
-    mentor_name_rotation_enabled: bool = True
+    # services/mentor_names.py, services/in_touch.py). Names change at 04:00 IST when on.
+    # Off by default since DECISIONS R.8: each mentor keeps the name given at the start.
+    mentor_name_rotation_enabled: bool = False
+
+    # DECISIONS R.11: a verification step at signup — a stub, off.
+    signup_verification_required: bool = False
+    # DECISIONS R.10: email required from the second visit, confirmed by a code. Off until
+    # an email service exists. "log" = no service: a send is only logged (never the address
+    # or the code), and the requirement stays off whatever the switch says.
+    email_required_from_second_visit: bool = False
+    email_provider: str = "log"
     in_touch_limit: int = 2
     # After a quiet "not now", how long before the same member may ask that mentor
     # again ("the ask is one tap and never nags").

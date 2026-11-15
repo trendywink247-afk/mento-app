@@ -51,7 +51,7 @@ function blockFromCode(code: string | null): Block | null {
 export default function MentorProfileScreen() {
   useSessionGuard();
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const mentorBreath = useBreathing(true);
@@ -183,7 +183,7 @@ export default function MentorProfileScreen() {
                   </Animated.View>
                 </FlyFrom>
               ) : null}
-              {animal ? (
+              {animal && companionShown ? (
                 <View style={styles.memberFigure}>
                   <Companion animal={animal} size={84} awake />
                 </View>
@@ -220,7 +220,7 @@ export default function MentorProfileScreen() {
           <Entrance index={2}>
             <View style={[styles.explain, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
               <View style={[styles.explainIcon, { backgroundColor: wash.indigo }]}>
-                <Ionicons name="refresh-outline" size={20} color={COMPANION_COLORS.plum.accentEdge} />
+                <Ionicons name="people-outline" size={20} color={COMPANION_COLORS.plum.accentEdge} />
               </View>
               <View style={styles.explainText}>
                 <Text style={[type.keyDense, styles.explainTitle, { color: colors.ink }]}>{t('inTouch.namesTitle')}</Text>

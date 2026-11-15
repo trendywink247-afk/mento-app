@@ -31,6 +31,7 @@ import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 export type StageStep =
   | 'role'
   | 'age'
+  | 'verify'
   | 'email'
   | 'companion'
   | 'ready'
@@ -52,6 +53,7 @@ const ANCHORS: Record<StageStep, { x: number; y: number; scale: number; opacity:
   // header companion steps aside there; it still guides the mentor's primer + hand-off.
   role: { x: 0, y: 0, scale: 1, opacity: 0 },
   age: { x: 0, y: 0, scale: 1, opacity: 0 },
+  verify: { x: 0, y: 0, scale: 1, opacity: 0 },
   email: { x: 0, y: 0, scale: 1, opacity: 0 },
   companion: { x: 0, y: 0, scale: 1, opacity: 0 },
   ready: { x: 0, y: 0, scale: 1, opacity: 0 },

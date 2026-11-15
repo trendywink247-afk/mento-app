@@ -725,7 +725,9 @@ function ConsoleBody({
           <EdgeSurface edge={colors.edgeSurface} style={[styles.profile, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-profile">
             <Companion animal={(c.me.companion_animal as CompanionAnimal | undefined) ?? animal} size={84} awake />
             <Text style={[styles.display, { color: colors.ink, fontSize: 26, lineHeight: 34 }]}>{c.me.persona_name}</Text>
-            <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
+            {c.me.name_changes_at ? (
+              <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
+            ) : null}
             {c.me.certified ? <CertifiedBadge testID="mentor-profile-certified" /> : null}
           </EdgeSurface>
 

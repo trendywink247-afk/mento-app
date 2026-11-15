@@ -369,3 +369,37 @@ Recorded from the founder's answers of 2026-11-10; the founder approved each rec
 **10. "Time to update" screen.** When the server answers 426 `upgrade_required` the app shows one calm screen with an Update button; chats and the account are untouched.
 
 **11. Decided later:** telling a member when a mentor comes online (a suggestion, not built).
+
+## R. Rulings — 2026-11-15 (QA walkthrough: signup copy, three tiers, two ways in)
+
+Source: the 2026-11-14 QA walkthrough call and the checklist review answered on 2026-11-15. Screens are numbered in signup order: **1** Landing, **2** What brings you here, **3** Age, **4** Email, **5** Companion, **6** Ready. Where this section disagrees with an earlier one, this section wins; each override is named.
+
+**1. Signup copy.** Screen 1: subline "Talk honestly. No one here knows who you are."; footer "Every mentor here has sat in a UPSC exam hall." ("mentor" means the Mentor and Mento Verified tiers of R.4; listeners are described separately); the headline is unchanged. Screen 2: no subline; the cards are **Mentee** ("A mentor who has lived this journey is ready to listen.") and **Mentor** ("Your UPSC journey shaped you. Now help someone still in the middle of theirs."); footer "A peer-to-peer community where experience becomes guidance". Screen 3: "Just to make sure this space is right for you."; house rules "This space runs on trust. Tap Continue to honour that." Screen 4: subline "One email so you can always get back in."; privacy "No promotions. No sharing. Just account recovery."; skip note "Not now? Add it later in Settings."; no "(optional)". Screen 5: no subline, no colour caption; "Can be changed anytime from profile." Screen 6: promises "Someone who has walked this path." / "No one knows who you are." / "No pressure. No deadlines."; no change-later line. The New chat title and line stay for now. **Overrides §L.1** on one point: "No one knows who you are" brings anonymity back into member copy.
+
+**2. "Mentors are peers, not therapists".** Kept on safety surfaces (helpline card, crisis notes, the request-sent note), where it is a disclosure. Elsewhere it becomes the Screen 2 footer line or is dropped where it repeats.
+
+**3. Signup behaviour.** Screen 4: Continue with an empty field asks for an email; only Skip moves on. Screen 5 is optional: Skip, and a **None** choice (plain look, no companion); Profile can turn the companion off. Screen 6 fits large fonts and screens. Screen 1 stays plain when the member goes back. **New installs default to Light** (overrides the Pastel default of §Q.2; Pastel, Dark and System stay in Profile).
+
+**4. Three tiers.** **Peer listener** (has not cleared prelims) → **Mentor** (cleared prelims or mains, proven by a document an admin checks) → **Mento Verified** (in-service; invite-only as in §P.3). An admin may also create a Mentor directly. Nobody who has not cleared prelims mentors. Existing Mento Verified mentors stay Mento Verified; every other approved mentor becomes a Peer listener. The 10-a-day allowance stays on Mento Verified only (§O.1, §Q.1). **Overrides §P.2** ("one listener category for now"). Sample questions for Mento Verified come later.
+
+**5. Two ways in.** *Instant*: "Start new chat" on My Chats opens a popup with two choices. **Talk to a peer listener → Connect now** goes to the general requests of listeners and Mentors, never Mento Verified. **Talk to a mentor → Start mentorship** opens the intake form (R.6, skippable), then goes to the general requests of Mentors and Mento Verified, never listeners. **Overrides the Any / Verified / Peers picker of §Q.3.** Signup keeps its own instant connect. *Deliberate*: **Find a listener or mentor** (Browse) is sorted by who is online and filters by type (Listener, Mentor, Mento Verified), gender, language and availability.
+
+**6. Mentorship intake form (example fields until the real form is supplied).** What you prepare for (UPSC; others greyed "Coming soon"), where you are now, attempts so far, furthest stage reached, optional subject, marks (optional), how you prepare, language, what you want help with, a 200-character note. Every step skippable; editable and clearable from Profile; deleted by Clean Wipe. Stored on the mentee profile and shown only to the mentor receiving that member's request, never with a name or contact. The note is crisis-scanned when sent, like request text (§Q.8). Marks are new personal data: `docs/PRIVACY.md` must say so. Needs tests and review before merge (crisis scan).
+
+**7. Profiles.** *Mentee*: road, stage, attempts, marks, languages, topic, from the intake form; private as R.6. *Mentor card*: persona name, companion, tier mark, exam badges in the "PPP MM I" style (prelims / mains / interview), languages, gender if shared, availability, one-line description, usual reply time. **No counts and no ratings** (chat and mentorship counts would be a reputation score, T&S #5). Exam badges show only after an admin has checked the mentor's document.
+
+**8. Names do not rotate.** Each mentor keeps the name given at the start until this is revisited (`mentor_name_rotation_enabled=false`). **Overrides §L.6** rotation (stay in touch is unchanged).
+
+**9. Notifications name the tier**, e.g. "Listener · Juno" or "Mentor · Juno".
+
+**10. Email is required from the second visit.** Optional on the first visit; from the second, the member adds and confirms an email by code. **Overrides §L.3 and §H.3.** Built now behind a switch that stays off: no email service is configured yet, so sending is a placeholder that logs only that a send would happen (never the address or the code). Turning it on needs the service, the `PRIVACY.md` update and review (anonymity).
+
+**11. Verification at signup is a stub.** A `SIGNUP_VERIFICATION_REQUIRED` switch, off, and an empty signup step skipped while it is off.
+
+**12. Parked, not built:** the Path screen before email (while launch is UPSC-only), Mento Verified also acting as mentee or listener, paid one-on-one and group sessions for Mentors.
+
+**13. QA housekeeping.** Update the QA app on the test phone; hide the seed mentors from members.
+
+**14. Marks in the intake form (amends R.6, 2026-11-15).** Marks are entered **per attempt, by year**; a member with several attempts sees them year by year. Per attempt: **Prelims** GS, CSAT; **Mains** GS-I, GS-II, GS-III, GS-IV; **Optional** Paper I, Paper II; **Interview**. Mains and Optional fields appear only for an attempt where the member says they wrote Mains; Interview only where they reached it. The member chooses who sees marks: **nobody**, **mentors only** (Mentor and Mento Verified), or **mentors and listeners**. Open: whether the Mains Essay paper is added (it counts toward the merit total).
+
+**15. Exam badges are emblems (amends R.7).** Per the founder's sample (2026-11-15): a round coin with a thin ring, a laurel wreath on both sides, a serif letter in the centre and a small line icon under it: **P** with an open book (Prelims), **M** with a pillared building (Mains), **I** with a microphone (Interview). Soft grey, low contrast: **subtle, never prominent**. **Counts** (founder's second sample, 2026-11-15): a small circle joined to the coin's ring at the top right holds the number of attempts at that stage (e.g. P with 3, M with 2, I with 1), same grey. In lists the coin is reduced to ring + letter + count; the full emblem shows on the mentor's profile page.

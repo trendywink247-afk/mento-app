@@ -32,7 +32,7 @@ import { api, type ListenerApplication } from '@/lib/api';
 import { useLiveRefresh } from '@/lib/liveEvents';
 import { setDraft } from '@/lib/onboardingDraft';
 import { screenCache } from '@/lib/screenCache';
-import { getCompanionAnimal, saveCompanionAnimal, saveRole } from '@/lib/session';
+import { getCompanionAnimal, getCompanionShown, saveCompanionAnimal, saveRole } from '@/lib/session';
 
 export type MentorPathState = 'none' | 'review' | 'declined' | 'approved';
 
@@ -204,9 +204,11 @@ export async function continueAsMember(
     animal = await getCompanionAnimal();
     complete = Boolean(animal);
   }
-  if (complete && animal) {
+  // Skipped the companion on this phone (DECISIONS R.3): it is optional, so never ask again.
+  const skipped = !animal && !(await getCompanionShown());
+  if ((complete && animal) || skipped) {
     // The account has it; make sure this device does too (a reinstall, another device).
-    if ((await getCompanionAnimal()) !== animal) await saveCompanionAnimal(animal);
+    if (animal && (await getCompanionAnimal()) !== animal) await saveCompanionAnimal(animal);
     await saveRole('mentee');
     router.dismissTo('/chats');
     return;

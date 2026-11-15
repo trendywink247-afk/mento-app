@@ -17,6 +17,7 @@ from app.db import init_db
 from app.events_hub import hub as events_hub
 from app.routers import (
     admin_console,
+    app_config,
     auth,
     chat,
     conversation,
@@ -202,6 +203,7 @@ app.add_middleware(
 
 API = "/api/v1"
 app.include_router(health.router, prefix=API)
+app.include_router(app_config.router, prefix=API)
 app.include_router(onboarding.router, prefix=API)
 app.include_router(auth.router, prefix=API)
 app.include_router(me.router, prefix=API)

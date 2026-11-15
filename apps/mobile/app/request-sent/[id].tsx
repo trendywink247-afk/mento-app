@@ -457,7 +457,7 @@ function Scene({
   question: string;
   sentAt: string | null;
 }) {
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t } = useI18n();
   const [width, setWidth] = useState(342);
   const arcW = Math.max(120, width - ARC_LEFT - ARC_RIGHT);
@@ -542,7 +542,7 @@ function Scene({
 
       <View style={styles.companion} accessible accessibilityLabel={t('requestSent.companionA11y')}>
         <Animated.View style={[styles.feet, breath]}>
-          {animal !== undefined ? <Companion animal={animal} size={84} awake /> : null}
+          {animal !== undefined && companionShown ? <Companion animal={animal} size={84} awake /> : null}
         </Animated.View>
       </View>
 

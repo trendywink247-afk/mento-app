@@ -21,19 +21,21 @@ const COMPANION = 132;
  * that hosts this must not also draw the perched companion — one companion per screen.
  */
 export function ChatsEmpty({ onStart }: { onStart: () => void }) {
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t } = useI18n();
   const animal = useCompanionAnimal();
   const breath = useBreathing(true);
 
   return (
     <View style={styles.root} testID="chats-empty">
-      <View style={styles.stage} accessible accessibilityRole="image" accessibilityLabel={t('chatsEmpty.companionA11y')}>
-        <View style={[styles.shelf, { backgroundColor: colors.edgeSurface }]} />
-        <Animated.View style={[styles.feet, breath]}>
-          <Companion animal={animal ?? null} size={COMPANION} awake />
-        </Animated.View>
-      </View>
+      {companionShown ? (
+        <View style={styles.stage} accessible accessibilityRole="image" accessibilityLabel={t('chatsEmpty.companionA11y')}>
+          <View style={[styles.shelf, { backgroundColor: colors.edgeSurface }]} />
+          <Animated.View style={[styles.feet, breath]}>
+            <Companion animal={animal ?? null} size={COMPANION} awake />
+          </Animated.View>
+        </View>
+      ) : null}
       <Entrance index={1} style={styles.words}>
         <Text style={[type.title, styles.center, { color: colors.ink }]} accessibilityRole="header">
           {t('chats.emptyTitle')}

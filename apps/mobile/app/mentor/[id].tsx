@@ -67,7 +67,7 @@ const TOPIC_WORDS = [
 export default function MentorBeforeAsk() {
   useSessionGuard();
   const router = useRouter();
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const mentorBreath = useBreathing(true);
@@ -227,9 +227,11 @@ export default function MentorBeforeAsk() {
               </View>
               <View style={styles.fieldFill}>
                 {/* The member's companion peeks over the field (decor only). */}
-                <View style={styles.peek} pointerEvents="none">
-                  <Companion animal={animal ?? null} size={COMPANION} />
-                </View>
+                {companionShown ? (
+                  <View style={styles.peek} pointerEvents="none">
+                    <Companion animal={animal ?? null} size={COMPANION} />
+                  </View>
+                ) : null}
                 <EdgeSurface
                   edge={colors.edgeSurface}
                   travel={3}
@@ -393,7 +395,7 @@ export default function MentorBeforeAsk() {
               <Animated.View style={[styles.mentorFigure, mentorBreath]}>
                 <MentorFaceFigure animal={mentor.companion_animal} width={96} height={110} />
               </Animated.View>
-              {animal ? (
+              {animal && companionShown ? (
                 <View style={styles.memberFigure}>
                   <Companion animal={animal} size={84} awake />
                 </View>

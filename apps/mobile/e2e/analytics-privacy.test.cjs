@@ -31,7 +31,7 @@ test('all existing approved event shapes survive the runtime boundary', () => {
   for (const [event, props] of Object.entries(shapes)) {
     assert.deepEqual(plain(safeEvent(event, props)), props ?? {});
   }
-  for (const companion of ['Panda', 'Elephant', 'Fox', 'Turtle', 'Deer', 'Owl', 'Dog', 'Cat', 'Capybara']) {
+  for (const companion of ['Panda', 'Elephant', 'Fox', 'Turtle', 'Deer', 'Owl', 'Dog', 'Cat', 'Capybara', 'none']) {
     assert.deepEqual(plain(safeEvent('onboarding_companion_chosen', { companion })), { companion });
   }
   for (const community of ['upsc', 'neet', 'jee', 'exams', 'life', 'ssc', 'banking', 'railways', 'psc', 'defence',

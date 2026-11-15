@@ -26,13 +26,14 @@ const SHOTS = process.env.SHOTS;
 
 const COPY = {
   en: {
-    sub: 'Your companion and colour travel with you across Mento.',
+    // The step's last line (DECISIONS R.1 removed the sub-line).
+    sub: 'Can be changed anytime from profile.',
     support: 'Support the team',
     empty: 'No conversations yet',
     start: 'Start a conversation',
   },
   hi: {
-    sub: 'आपका साथी और रंग पूरे Mento में आपके साथ चलते हैं।',
+    sub: 'आप अपनी थीम बाद में प्रोफ़ाइल से बदल सकते हैं।',
     support: 'टीम का साथ दें',
     empty: 'अभी कोई बातचीत नहीं',
     start: 'बातचीत शुरू करें',

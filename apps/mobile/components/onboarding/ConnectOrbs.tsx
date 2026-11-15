@@ -8,6 +8,7 @@
  * Transform and opacity only. Reduced motion: no drift, no pulse — the found state is
  * simply drawn. An error leaves everything still (T&S #11).
  */
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useId, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -56,7 +57,7 @@ type Props = {
 };
 
 export function ConnectOrbs({ width, animal, memberName, mentorName, mentorFace = null, still = false }: Props) {
-  const { colors } = useTheme();
+  const { colors, companionShown } = useTheme();
   const { t } = useI18n();
   const reduced = useReducedMotion();
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
@@ -189,9 +190,14 @@ export function ConnectOrbs({ width, animal, memberName, mentorName, mentorFace 
         <View style={{ width: orb, height: orb + 4 }}>
           <View style={[edge, { backgroundColor: colors.accentTintEdge }]} />
           <View style={[round, styles.orbFace, styles.companionFace, { backgroundColor: colors.accentTint, borderColor: colors.bg }]}>
-            <Animated.View style={[styles.originBottom, breathing]}>
-              <Companion animal={animal} size={106 * k} trigger={joy} awake />
-            </Animated.View>
+            {companionShown ? (
+              <Animated.View style={[styles.originBottom, breathing]}>
+                <Companion animal={animal} size={106 * k} trigger={joy} awake />
+              </Animated.View>
+            ) : (
+              // No companion (skipped at signup, DECISIONS R.3): a plain figure holds the orb.
+              <Ionicons name="person-outline" size={48 * k} color={colors.accent} />
+            )}
           </View>
         </View>
         <View style={styles.labelBox}>

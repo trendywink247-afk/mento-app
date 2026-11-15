@@ -112,13 +112,6 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
             <Text style={{ color: colors.accent }}>{t('onboarding.role.headlineAccent')}</Text>
           </Text>
         </Entrance>
-        <Entrance
-          index={1}
-          delay={fromLanding ? forkArrival.sub : undefined}
-          distance={fromLanding ? forkArrival.textRise : undefined}
-        >
-          <Text style={[type.body, { color: colors.inkMuted }]}>{t('onboarding.role.sub')}</Text>
-        </Entrance>
       </View>
 
       <View style={styles.zone} onLayout={(e) => setZoneH(e.nativeEvent.layout.height)}>
