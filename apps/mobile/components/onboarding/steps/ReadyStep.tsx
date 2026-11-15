@@ -64,6 +64,9 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
         </>
       }
     >
+      {/* No companion: the headline and the promises sit together in the middle, with no
+        * empty stage between them (QA 2026-11-15). */}
+      {companionShown ? null : <View style={styles.grow} />}
       <View style={styles.head}>
         <Entrance index={0}>
           <Text style={[type.displayHeadline, styles.center, { color: colors.ink }]} accessibilityRole="header">
@@ -119,7 +122,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
         </>
       ) : null}
 
-      <View style={styles.grow} />
+      <View style={companionShown ? styles.grow : styles.gap} />
 
       <Entrance index={3}>
         <EdgeSurface
@@ -145,6 +148,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
           />
         </EdgeSurface>
       </Entrance>
+      {companionShown ? null : <View style={styles.grow} />}
     </StepScaffold>
   );
 }
@@ -167,6 +171,7 @@ const styles = StyleSheet.create({
   },
   pillDot: { width: 10, height: 10, borderRadius: radius.pill },
   grow: { flexGrow: 1, minHeight: 12 },
+  gap: { height: space.xl },
   promises: { paddingVertical: 12, paddingHorizontal: space.md, gap: 10, borderWidth: 1 },
   changeLater: { textAlign: 'center', marginTop: space.sm },
 });

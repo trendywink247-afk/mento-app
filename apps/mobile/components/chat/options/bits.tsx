@@ -195,6 +195,8 @@ export function ConfirmModal({
   rows,
   cta,
   onDone,
+  secondary,
+  onSecondary,
 }: {
   visible: boolean;
   art?: ReactNode;
@@ -203,6 +205,9 @@ export function ConfirmModal({
   rows?: { icon: keyof typeof Ionicons.glyphMap; tone?: Wash; title: string; body?: string }[];
   cta: string;
   onDone: () => void;
+  /** A quieter second choice under the main one (e.g. "Keep talking"). */
+  secondary?: string;
+  onSecondary?: () => void;
 }) {
   const { colors, elevation } = useTheme();
   if (!visible) return null;
@@ -231,6 +236,16 @@ export function ConfirmModal({
         >
           <Text style={[type.label, { color: colors.onAccent }]}>{cta}</Text>
         </Pressable>
+        {secondary && onSecondary ? (
+          <Pressable
+            onPress={onSecondary}
+            accessibilityRole="button"
+            testID="opt-modal-secondary"
+            style={[styles.modalBtn, { backgroundColor: colors.surfaceAlt }]}
+          >
+            <Text style={[type.label, { color: colors.ink }]}>{secondary}</Text>
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

@@ -461,7 +461,14 @@
       "coffee": "Support the team",
       "coffeeBody": "Support the Mento team and help us keep this space safe and free.",
       "footerTitle": "Your well-being and safety are our priority.",
-      "footerBody": "You're not alone. We're here for you."
+      "footerBody": "You're not alone. We're here for you.",
+      "undo": "Undo",
+      "maskOffNote": "Away Mask is off. Your mentor sees you as usual.",
+      "pauseOffNote": "Quiet Pause is off. Notifications for this chat are back on.",
+      "endConfirmTitle": "End this chat?",
+      "endConfirmBody": "You can start a new one any time.",
+      "endConfirmCta": "End chat",
+      "endConfirmKeep": "Keep talking"
     },
     "pin": {
       "digitsA11y": "%{count} of 4 digits entered",

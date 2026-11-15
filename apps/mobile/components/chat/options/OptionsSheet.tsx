@@ -108,6 +108,9 @@ type Props = {
   busy: boolean;
   /** A switch or End could not be saved — one still line, nothing shakes. */
   error: string | null;
+  /** What a switch just turned off, with Undo (founder 2026-11-15: never silently). */
+  notice?: string | null;
+  onUndo?: () => void;
   onChoose: (c: SheetChoice) => void;
   /** False when the mentor has written nothing not yet kept: the row says so instead of doing nothing. */
   canSave?: boolean;
@@ -116,7 +119,7 @@ type Props = {
   reduced: boolean;
 };
 
-export function OptionsSheet({ locked, maskOn, paused, busy, error, onChoose, canSave = true, onClose, progress, reduced }: Props) {
+export function OptionsSheet({ locked, maskOn, paused, busy, error, notice, onUndo, onChoose, canSave = true, onClose, progress, reduced }: Props) {
   const { colors, elevation } = useTheme();
   const { t } = useI18n();
   const insets = useSafeAreaInsets();
@@ -203,6 +206,21 @@ export function OptionsSheet({ locked, maskOn, paused, busy, error, onChoose, ca
             switchOn={paused}
             reduced={reduced}
           />
+          {notice ? (
+            <View style={[styles.notice, { backgroundColor: colors.surfaceAlt }]} accessibilityLiveRegion="polite" testID="options-notice">
+              <Text style={[type.caption, styles.noticeText, { color: colors.ink }]}>{notice}</Text>
+              {onUndo ? (
+                <Text
+                  onPress={onUndo}
+                  accessibilityRole="button"
+                  style={[type.label, { color: colors.accent }]}
+                  testID="options-undo"
+                >
+                  {t('options.sheet.undo')}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
         </Entrance>
         <Entrance index={4}>
           <Row
@@ -290,6 +308,8 @@ const styles = StyleSheet.create({
     borderTopRightRadius: CROWN,
     paddingTop: 10,
   },
+  notice: { flexDirection: 'row', alignItems: 'center', gap: space.sm, borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: space.md },
+  noticeText: { flex: 1, minWidth: 0 },
   handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: radius.pill },
   body: { paddingHorizontal: space.lg, paddingTop: 10, gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: space.xs },
