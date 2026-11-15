@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.errors import ApiProblem
 from app.models.listener import ListenerProfile
 from app.models.mentor_document import MentorDocument
+from app.services import tiers
 
 KINDS = ("id_card", "posting_letter", "mains_admit_card", "interview_letter", "result", "other")
 MAX_BYTES = 3 * 1024 * 1024  # base64 of this stays under the 5 MB request limit
@@ -94,8 +95,12 @@ def decide(
     approve: bool,
     admin_id: str,
     note: str | None = None,
+    grant: str = tiers.VERIFIED,
+    exam_history: dict | None = None,
 ) -> None:
-    """Record the decision and wipe the file. Approval marks the mentor Mento Verified."""
+    """Record the decision and wipe the file. Approval grants `grant` (DECISIONS R.4): Mento
+    Verified, or Mentor with the `exam_history` the admin read off the document (marked
+    checked, so the badges show). The caller validates the grant first (`check_grant`)."""
     now = datetime.now(UTC)
     doc.status = "approved" if approve else "rejected"
     doc.decided_at = now
@@ -105,8 +110,31 @@ def decide(
     if approve:
         listener = db.get(ListenerProfile, doc.listener_id)
         if listener is not None:
-            listener.certified_exam = True
-            listener.certified_at = now
+            h = exam_history or {}
+            if grant == tiers.MENTOR:
+                tiers.set_mentor(
+                    listener,
+                    prelims=h.get("prelims", 0),
+                    mains=h.get("mains", 0),
+                    interview=h.get("interview", 0),
+                    checked=True,
+                    now=now,
+                )
+            else:
+                listener.certified_exam = True
+                listener.certified_at = now
+                if exam_history is not None:
+                    tiers.set_exam_history(listener, checked=True, now=now, **_counts(h))
+
+
+def _counts(h: dict) -> dict:
+    return {k: int(h.get(k, 0) or 0) for k in ("prelims", "mains", "interview")}
+
+
+def check_grant(grant: str, exam_history: dict | None) -> None:
+    """Raise tiers.TierError before anything changes when the grant is not allowed."""
+    if grant == tiers.MENTOR and int((exam_history or {}).get("prelims", 0) or 0) < 1:
+        raise tiers.TierError("a Mentor has cleared prelims at least once")
 
 
 def purge_unread(db: Session, now: datetime | None = None) -> int:

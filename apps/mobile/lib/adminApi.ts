@@ -1,4 +1,5 @@
 /** Typed client for the admin dashboard (/admin endpoints), bound to the admin token. */
+import type { ExamCounts } from '@/lib/adminTiers';
 import { API_BASE_URL, apiRequest } from '@/lib/api';
 import { getAdminToken } from '@/lib/adminSession';
 
@@ -162,6 +163,9 @@ export type AdminMentorInvite = {
   claimed_at: string | null;
 };
 
+/** A Mentor's exam history as an admin checked it (DECISIONS R.4, R.7). */
+export type MentorGrant = ExamCounts & { exam_history_checked: boolean };
+
 export type AdminVerification = {
   id: string;
   listener_id: string;
@@ -200,10 +204,11 @@ export const adminApi = {
   clearListenerLine: (id: string) =>
     req<{ status: string }>(`/admin/listeners/${id}/clear-line`, { method: 'POST' }),
   listeners: () => req<AdminListener[]>('/admin/listeners'),
-  createListener: (categories: string[], max_concurrent: number) =>
+  /** DECISIONS R.4: `asMentor` creates a Mentor directly, with the exam history the admin checked. */
+  createListener: (categories: string[], max_concurrent: number, asMentor?: MentorGrant) =>
     req<AdminListener>('/admin/listeners', {
       method: 'POST',
-      body: JSON.stringify({ categories, max_concurrent }),
+      body: JSON.stringify({ categories, max_concurrent, ...(asMentor ? { tier: 'mentor', ...asMentor } : {}) }),
     }),
   patchListener: (
     id: string,
@@ -226,14 +231,24 @@ export const adminApi = {
   // --- Listener applications (spec 2026-07-24) ---
   listApplications: (status?: string) =>
     req<AdminApplication[]>(`/admin/applications${status ? `?status=${status}` : ''}`),
-  approveApplication: (id: string, certify = false) =>
+  /** Plain approve = Peer listener. `true` = Mento Verified (older path); a MentorGrant = Mentor (R.4). */
+  approveApplication: (id: string, as: boolean | MentorGrant = false) =>
     req<AdminApplication>(`/admin/applications/${id}/approve`, {
       method: 'POST',
-      ...(certify ? { body: JSON.stringify({ certify: true }) } : {}),
+      ...(as === true
+        ? { body: JSON.stringify({ certify: true }) }
+        : as
+          ? { body: JSON.stringify({ tier: 'mentor', ...as }) }
+          : {}),
     }),
   // --- Mento Verified by document (founder, 2026-11-10) ---
   listVerifications: (status = 'pending') => req<AdminVerification[]>(`/admin/verifications?status_filter=${status}`),
-  approveVerification: (id: string) => req<AdminVerification>(`/admin/verifications/${id}/approve`, { method: 'POST' }),
+  /** DECISIONS R.4 (option b): grant Mento Verified (in-service proof) or Mentor (exam proof, with counts). */
+  approveVerification: (id: string, grant?: { grant: 'verified' } | ({ grant: 'mentor' } & ExamCounts)) =>
+    req<AdminVerification>(`/admin/verifications/${id}/approve`, {
+      method: 'POST',
+      ...(grant ? { body: JSON.stringify(grant) } : {}),
+    }),
   rejectVerification: (id: string, note: string | null) =>
     req<AdminVerification>(`/admin/verifications/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) }),
   /** The file as a temporary browser address (web only). Every read is written to the audit log. */

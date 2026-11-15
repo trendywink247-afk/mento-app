@@ -388,7 +388,7 @@ def test_approve_and_certify_in_one_step_is_audited(client, admin_headers):
         li = s.query(ListenerProfile).one()
         assert li.certified_exam is True and li.certified_at is not None
         row = s.query(AdminAuditLog).filter_by(action="listener.application_approved").one()
-        assert row.meta == {"certified_exam": True}
+        assert row.meta["certified_exam"] is True and row.meta["tier"] == "verified"
 
 
 def test_a_life_applicant_cannot_be_certified(client, admin_headers):

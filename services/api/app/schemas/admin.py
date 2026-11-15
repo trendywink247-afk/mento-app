@@ -82,6 +82,12 @@ class AdminListenerItem(BaseModel):
 class AdminListenerCreateIn(BaseModel):
     categories: list[str] = []
     max_concurrent: int = Field(default=3, ge=1, le=20)
+    # DECISIONS R.4: an admin may create a Mentor directly. Omitted = Peer listener, as before.
+    tier: Literal["listener", "mentor"] | None = None
+    prelims: int = Field(default=0, ge=0, le=20)
+    mains: int = Field(default=0, ge=0, le=20)
+    interview: int = Field(default=0, ge=0, le=20)
+    exam_history_checked: bool = False
 
 
 class AdminListenerPatchIn(BaseModel):
@@ -196,6 +202,13 @@ class AdminApplicationApproveIn(BaseModel):
     approve as a general listener, exactly as before."""
 
     certify: bool = False
+    # DECISIONS R.4: approve straight in as a Mentor with the exam history the admin checked.
+    # Omitted = Peer listener (or Mento Verified with `certify`), exactly as before.
+    tier: Literal["listener", "mentor"] | None = None
+    prelims: int = Field(default=0, ge=0, le=20)
+    mains: int = Field(default=0, ge=0, le=20)
+    interview: int = Field(default=0, ge=0, le=20)
+    exam_history_checked: bool = False
 
 
 class AdminCertifyIn(BaseModel):

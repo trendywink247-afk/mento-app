@@ -19,7 +19,7 @@ from app.schemas.verification import (
     VerificationIn,
     VerificationOut,
 )
-from app.services import audit, verification
+from app.services import audit, tiers, verification
 
 mentor_router = APIRouter(prefix="/listener/me/verification", tags=["verification"])
 admin_router = APIRouter(prefix="/admin/verifications", tags=["admin"])
@@ -134,8 +134,28 @@ def _decide(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "document not found")
     if doc.status != "pending":
         raise HTTPException(status.HTTP_409_CONFLICT, "already decided")
+    # DECISIONS R.4 (option b): omitted grant = Mento Verified, as older admin builds expect.
+    grant = (payload.grant if payload else None) or tiers.VERIFIED
+    counts = (
+        {"prelims": payload.prelims, "mains": payload.mains, "interview": payload.interview}
+        if payload
+        and any(v is not None for v in (payload.prelims, payload.mains, payload.interview))
+        else None
+    )
+    exam_history = {k: v or 0 for k, v in counts.items()} if counts else None
+    if approve:
+        try:
+            verification.check_grant(grant, exam_history)
+        except tiers.TierError as e:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
     verification.decide(
-        db, doc, approve=approve, admin_id=admin.id, note=payload.note if payload else None
+        db,
+        doc,
+        approve=approve,
+        admin_id=admin.id,
+        note=payload.note if payload else None,
+        grant=grant,
+        exam_history=exam_history,
     )
     live_events.review_decided(db, listener_id=doc.listener_id)  # sent on commit
     audit.record(
@@ -144,7 +164,7 @@ def _decide(
         "verification.approved" if approve else "verification.rejected",
         subject_type="listener",
         subject_id=doc.listener_id,
-        meta={"document": doc.id, "kind": doc.kind},
+        meta={"document": doc.id, "kind": doc.kind, **({"grant": grant} if approve else {})},
     )
     li = db.get(ListenerProfile, doc.listener_id)
     db.commit()
@@ -159,7 +179,7 @@ def approve(
     admin: AdminAccount = Depends(current_admin),
     db: Session = Depends(get_db),
 ) -> AdminVerificationItem:
-    """Mark the mentor Mento Verified and wipe the file."""
+    """Approve the document and wipe the file: Mento Verified, or Mentor with `grant`."""
     return _decide(doc_id, True, payload, admin, db)
 
 

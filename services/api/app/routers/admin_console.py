@@ -562,9 +562,29 @@ def create_listener(
         active_conversations=0,
         max_concurrent=payload.max_concurrent,
     )
+    if payload.tier == tiers.MENTOR:
+        # DECISIONS R.4: an admin may create a Mentor directly.
+        try:
+            tiers.set_mentor(
+                li,
+                prelims=payload.prelims,
+                mains=payload.mains,
+                interview=payload.interview,
+                checked=payload.exam_history_checked,
+                now=datetime.now(UTC),
+            )
+        except tiers.TierError as e:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(e))
     db.add(li)
     db.flush()
-    audit.record(db, admin, "listener.created", subject_type="listener", subject_id=li.id)
+    audit.record(
+        db,
+        admin,
+        "listener.created",
+        subject_type="listener",
+        subject_id=li.id,
+        meta={"tier": tiers.tier_of(li)},
+    )
     db.commit()
     db.refresh(li)
     item = _listener_item(li)
@@ -690,6 +710,16 @@ def approve_application(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             "This applicant did not choose an exam road, so there is nothing to verify.",
         )
+    as_mentor = bool(payload and payload.tier == tiers.MENTOR)
+    if as_mentor and certify:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "Choose one: Mentor or Mento Verified.",
+        )
+    if as_mentor and payload.prelims < 1:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "a Mentor has cleared prelims at least once"
+        )
     li = ListenerProfile(
         persona_name=applicant.persona_name,
         persona_avatar=applicant.persona_avatar,
@@ -710,6 +740,15 @@ def approve_application(
         availability_note=availability_note(a.available_times, a.availability),
         languages=languages.clean(a.languages),
     )
+    if as_mentor:
+        tiers.set_mentor(
+            li,
+            prelims=payload.prelims,
+            mains=payload.mains,
+            interview=payload.interview,
+            checked=payload.exam_history_checked,
+            now=datetime.now(UTC),
+        )
     db.add(li)
     db.flush()
     a.status = ApplicationStatus.approved
@@ -721,7 +760,7 @@ def approve_application(
         "listener.application_approved",
         subject_type="application",
         subject_id=a.id,
-        meta={"certified_exam": certify},
+        meta={"certified_exam": certify, "tier": tiers.tier_of(li)},
     )
     # TODO(email-provider): when an email service is wired, send the console
     # link to a.email here (spec: store now, send later).
@@ -842,13 +881,11 @@ def set_listener_tier(
         raise HTTPException(
             status.HTTP_422_UNPROCESSABLE_ENTITY, "a Mentor has cleared prelims at least once"
         )
+    counts = {"prelims": payload.prelims, "mains": payload.mains, "interview": payload.interview}
     li.tier = payload.tier
-    li.exam_history = {
-        "prelims": payload.prelims,
-        "mains": payload.mains,
-        "interview": payload.interview,
-    }
-    li.exam_history_checked_at = datetime.now(UTC) if payload.exam_history_checked else None
+    tiers.set_exam_history(
+        li, checked=payload.exam_history_checked, now=datetime.now(UTC), **counts
+    )
     audit.record(
         db,
         admin,

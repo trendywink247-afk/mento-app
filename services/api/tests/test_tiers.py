@@ -368,3 +368,76 @@ def test_browse_filters_by_type_gender_and_online(client):
     assert ids(gender="female") == {peer}
     assert ids(online="true") == {peer, mentor}
     assert ids() == {peer, mentor, verified}
+
+
+def _applicant(s) -> str:
+    from app.models.enums import ApplicationStatus
+    from app.models.listener_application import ListenerApplication
+
+    uid = _member(s)
+    a = ListenerApplication(
+        user_id=uid,
+        motivation="Cleared prelims twice; want to help.",
+        availability="few_hours_week",
+        communities=["upsc"],
+        status=ApplicationStatus.pending,
+        pledge_accepted_at=datetime.now(UTC),
+    )
+    s.add(a)
+    s.flush()
+    return a.id
+
+
+def test_admin_approves_an_application_straight_in_as_a_mentor(client):
+    with TestSession() as s:
+        admin = _admin(s)
+        app_id = _applicant(s)
+        s.commit()
+    both = client.post(
+        f"/api/v1/admin/applications/{app_id}/approve",
+        json={"tier": "mentor", "prelims": 1, "certify": True},
+        headers=admin,
+    )
+    assert both.status_code == 422
+    no_prelims = client.post(
+        f"/api/v1/admin/applications/{app_id}/approve",
+        json={"tier": "mentor", "prelims": 0},
+        headers=admin,
+    )
+    assert no_prelims.status_code == 422
+    r = client.post(
+        f"/api/v1/admin/applications/{app_id}/approve",
+        json={"tier": "mentor", "prelims": 2, "mains": 1, "exam_history_checked": True},
+        headers=admin,
+    )
+    assert r.status_code == 200, r.text
+    listed = client.get("/api/v1/admin/listeners", headers=admin).json()
+    assert [(x["tier"], x["exam_history_checked"]) for x in listed] == [("mentor", True)]
+
+
+def test_plain_approve_still_makes_a_peer_listener(client):
+    with TestSession() as s:
+        admin = _admin(s)
+        app_id = _applicant(s)
+        s.commit()
+    r = client.post(f"/api/v1/admin/applications/{app_id}/approve", headers=admin)
+    assert r.status_code == 200, r.text
+    listed = client.get("/api/v1/admin/listeners", headers=admin).json()
+    assert [x["tier"] for x in listed] == ["listener"]
+
+
+def test_admin_creates_a_mentor_directly(client):
+    with TestSession() as s:
+        admin = _admin(s)
+        s.commit()
+    bad = client.post("/api/v1/admin/listeners", json={"tier": "mentor"}, headers=admin)
+    assert bad.status_code == 422
+    r = client.post(
+        "/api/v1/admin/listeners",
+        json={"tier": "mentor", "prelims": 1, "exam_history_checked": True},
+        headers=admin,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["tier"] == "mentor" and r.json()["exam_history_checked"] is True
+    plain = client.post("/api/v1/admin/listeners", json={}, headers=admin)
+    assert plain.json()["tier"] == "listener"

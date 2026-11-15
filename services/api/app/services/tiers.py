@@ -90,3 +90,38 @@ def pool_clause(audience: str, certified, tier) -> ColumnElement[bool] | None:
     if audience not in AUDIENCES:
         return false()
     return None
+
+
+# --- Setting a tier (admin actions) -----------------------------------------------------
+
+# DECISIONS R.4 (founder, 2026-11-15, option b): which tier an approved document grants.
+IN_SERVICE_DOCUMENTS = ("id_card", "posting_letter")
+EXAM_DOCUMENTS = ("mains_admit_card", "interview_letter", "result")
+
+
+def grant_for_document(kind: str) -> str:
+    """The tier an approved document of this kind grants by default ("other": Mento Verified)."""
+    return MENTOR if kind in EXAM_DOCUMENTS else VERIFIED
+
+
+class TierError(ValueError):
+    """An admin asked for a tier the rules do not allow (the message is shown to the admin)."""
+
+
+def set_mentor(profile, *, prelims: int, mains: int, interview: int, checked: bool, now) -> None:
+    """Make an approved profile a Mentor with the exam history an admin read (R.4, R.7).
+
+    Nobody who has not cleared prelims mentors. Mento Verified is left to `certified_exam`."""
+    if prelims < 1:
+        raise TierError("a Mentor has cleared prelims at least once")
+    profile.tier = MENTOR
+    set_exam_history(
+        profile, prelims=prelims, mains=mains, interview=interview, checked=checked, now=now
+    )
+
+
+def set_exam_history(
+    profile, *, prelims: int, mains: int, interview: int, checked: bool, now
+) -> None:
+    profile.exam_history = {"prelims": prelims, "mains": mains, "interview": interview}
+    profile.exam_history_checked_at = now if checked else None

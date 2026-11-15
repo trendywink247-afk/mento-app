@@ -189,6 +189,9 @@ export default function AllowancePanel({ onGoto }: { onGoto: (tab: string) => vo
               <Text style={[styles.chip, { backgroundColor: wash.danger, color: washInk.danger }]}>
                 Crisis traffic exempt
               </Text>
+              <Text style={[styles.chip, { backgroundColor: colors.accentTint, color: colors.accentInk }]}>
+                Mento Verified chats only
+              </Text>
               {rule.enforced ? null : (
                 // Honest mode line: counting runs, holding is switched off (ALLOWANCE_ENFORCED).
                 <Text
