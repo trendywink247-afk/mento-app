@@ -288,6 +288,8 @@ Built on 2026-09-19 (`feat/board-port`, API only). Each is a default the code al
 
 **5. Still open (decide before launch, disclose in `PRIVACY.md`):** cutover style (the spec recommends a hard cutover); chat backup option (A, B or C; spec recommends B); staff visibility of chats (A to D; spec recommends B); two-person approval; push payload shape (notification plus data today, data-only to be tested).
 
+**6. Production launches on own chat, without Stream — founder, 2026-11-15 ("I'll go with u").** This supersedes M.2's "production keeps running on Stream" and "the first Google Play closed-test build runs on Stream". Production is a fresh database with no Stream rooms, so it starts with `OWN_CHAT_NEW_CONVERSATIONS=true` (`deploy/prod-local/compose.yml`) and needs no Stream keys: the API already boots without them when own chat is on and no Stream room is active, and `ops/prod-release.sh` asks for them only when the compose file does not turn own chat on. Before the first production release: `docs/PRIVACY.md` and the Clean Wipe wording describe own chat (M.4), the founder reviews the own-chat safety paths (M.3), and the M.5 items that touch launch are decided. QA keeps its Stream keys until the Stream code is removed (`docs/OWN_CHAT_PARITY.md`).
+
 ---
 
 ## N. Founder rulings — 2026-11-08 (Path before connecting; accept for exam niches)

@@ -141,3 +141,42 @@ class ProdGuards(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    # --- required settings (names only) ---------------------------------------------------
+
+    def secrets_check(self, compose: str, api_env: str) -> subprocess.CompletedProcess:
+        """Run prod-release.sh's secrets_ok against fake files, without the rest of the script."""
+        root = self.tmp / "prod"
+        (root / "secrets" / "files").mkdir(parents=True, exist_ok=True)
+        (root / "compose.yml").write_text(compose)
+        (root / "secrets" / "api.env").write_text(api_env)
+        src = RELEASE.read_text()
+        start = src.index("REQUIRED_NAMES=(")
+        names = src[start : src.index("\n", src.index("STREAM_NAMES=(")) + 1]
+        fn = src[src.index("secrets_ok() {") :]
+        fn = fn[: fn.index("\n}\n") + 3]
+        script = (
+            f'ROOT_DIR="{root}"; COMPOSE_FILE="$ROOT_DIR/compose.yml"; API_ENV="$ROOT_DIR/secrets/api.env"\n'
+            'say() { echo "$*"; }\n' + names + fn + "secrets_ok\n"
+        )
+        return sh("bash", "-c", script)
+
+    BASE_ENV = "DATABASE_URL=x\nJWT_SECRET=x\nADMIN_JWT_SECRET=x\nLISTENER_JWT_SECRET=x\nMESSAGE_KEY=x\n"
+
+    def test_stream_keys_not_required_on_own_chat(self) -> None:
+        own = 'services:\n  api:\n    environment:\n      OWN_CHAT_NEW_CONVERSATIONS: "true"\n'
+        out = self.secrets_check(own, self.BASE_ENV + "STREAM_API_KEY=\nSTREAM_API_SECRET=\n")
+        self.assertEqual(out.returncode, 0, out.stderr)
+
+    def test_stream_keys_required_without_own_chat(self) -> None:
+        out = self.secrets_check("services:\n  api: {}\n", self.BASE_ENV)
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("STREAM_API_KEY", out.stderr)
+        off = 'services:\n  api:\n    environment:\n      OWN_CHAT_NEW_CONVERSATIONS: "false"\n'
+        self.assertNotEqual(self.secrets_check(off, self.BASE_ENV).returncode, 0)
+
+    def test_message_key_always_required(self) -> None:
+        own = 'services:\n  api:\n    environment:\n      OWN_CHAT_NEW_CONVERSATIONS: "true"\n'
+        out = self.secrets_check(own, self.BASE_ENV.replace("MESSAGE_KEY=x", "MESSAGE_KEY="))
+        self.assertNotEqual(out.returncode, 0)
+        self.assertIn("MESSAGE_KEY", out.stderr)

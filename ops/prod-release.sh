@@ -40,8 +40,9 @@ HEALTH_URL=http://127.0.0.1:18110/api/v1/health/ready
 HEALTH_TIMEOUT=90
 WEB_BUILD_ROOT=${PROD_WEB_BUILD_ROOT:-/srv/mento/build}
 # Names (never values) the API refuses to run safely without (app/main.py invariants + own chat).
-REQUIRED_NAMES=(DATABASE_URL JWT_SECRET ADMIN_JWT_SECRET LISTENER_JWT_SECRET MESSAGE_KEY
-                STREAM_API_KEY STREAM_API_SECRET)
+REQUIRED_NAMES=(DATABASE_URL JWT_SECRET ADMIN_JWT_SECRET LISTENER_JWT_SECRET MESSAGE_KEY)
+# Stream keys are required only while production is not on own chat (DECISIONS M.6).
+STREAM_NAMES=(STREAM_API_KEY STREAM_API_SECRET)
 
 # shellcheck source=lib/prod-guards.sh
 . "$(dirname "${BASH_SOURCE[0]}")/lib/prod-guards.sh"
@@ -87,7 +88,9 @@ log_history() { # key=value pairs
 secrets_ok() {
   local missing=() n
   [ -r "$API_ENV" ] || { echo "prod-release: cannot read $API_ENV (run infra/prod-root-setup.sh)" >&2; return 1; }
-  for n in "${REQUIRED_NAMES[@]}"; do
+  local names=("${REQUIRED_NAMES[@]}")
+  grep -qE '^\s*OWN_CHAT_NEW_CONVERSATIONS:\s*"?true"?\s*$' "$COMPOSE_FILE" 2>/dev/null || names+=("${STREAM_NAMES[@]}")
+  for n in "${names[@]}"; do
     grep -qE "^${n}=.+" "$API_ENV" || missing+=("$n")
   done
   [ ! -s "$ROOT_DIR/secrets/files/fcm.json" ] && say "WARNING: no FCM service account (secrets/files/fcm.json): push stays off"

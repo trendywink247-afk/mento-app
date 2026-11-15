@@ -41,6 +41,9 @@ x-app: &app
     APP_BASE_URL: https://app.mento.chat
     ADMIN_BASE_URL: https://admin.mento.chat
     FCM_SERVICE_ACCOUNT_FILE: /run/mento-secrets/fcm.json
+    # Own chat carries every conversation (founder 2026-11-15: production launches without
+    # Stream, DECISIONS M.6). With no Stream room the API boots without Stream keys.
+    OWN_CHAT_NEW_CONVERSATIONS: "true"
     GIT_SHA: ${MENTO_GIT_SHA:-}
   volumes:
     # Files only (FCM service account). Root-only on the host; read-only here.
