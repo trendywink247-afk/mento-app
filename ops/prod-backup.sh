@@ -36,7 +36,9 @@ flock --nonblock 9 || { echo "prod-backup: another backup is running" >&2; exit 
 
 PARTIAL=$(mktemp "$OUT_DIR/.partial.XXXXXX")
 trap 'rm -f -- "$PARTIAL" "$PARTIAL.gz"' EXIT
-compose exec -T postgres pg_dump -U mento -d mento | gzip > "$PARTIAL.gz"
+# Message bodies are never backed up (DECISIONS M.7): the table and its schema are, its rows
+# are not, so a wiped chat cannot come back from a backup.
+compose exec -T postgres pg_dump -U mento -d mento --exclude-table-data-and-children=public.chat_messages | gzip > "$PARTIAL.gz"
 gzip -t "$PARTIAL.gz"
 age --encrypt --recipients-file "$RECIPIENTS" --output "$PARTIAL" "$PARTIAL.gz"
 rm -f -- "$PARTIAL.gz"

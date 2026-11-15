@@ -140,10 +140,11 @@ predeploy_dump() { # <tag>
     say "no running prod database yet (first release): no pre-deploy dump needed"; return 0
   fi
   [ -s "$RECIPIENTS" ] || die "no age recipients at $RECIPIENTS; nothing was changed"
+  # Message bodies stay out of every dump (DECISIONS M.7), this one too.
   install -d -m 700 "$BACKUP_DIR"
   out="$BACKUP_DIR/predeploy-$1-$(date -u +%Y%m%dT%H%M%SZ).sql.gz.age"
   if ! ( set -o pipefail; umask 077
-         compose exec -T postgres pg_dump -U mento -d mento | gzip \
+         compose exec -T postgres pg_dump -U mento -d mento --exclude-table-data-and-children=public.chat_messages | gzip \
            | age --encrypt --recipients-file "$RECIPIENTS" --output "$out" ) || [ ! -s "$out" ]; then
     rm -f "$out"; die "pre-deploy database dump FAILED; nothing was changed"
   fi

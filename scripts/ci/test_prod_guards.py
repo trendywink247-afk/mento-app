@@ -180,3 +180,16 @@ if __name__ == "__main__":
         out = self.secrets_check(own, self.BASE_ENV.replace("MESSAGE_KEY=x", "MESSAGE_KEY="))
         self.assertNotEqual(out.returncode, 0)
         self.assertIn("MESSAGE_KEY", out.stderr)
+
+
+class NoMessageBodiesInBackups(unittest.TestCase):
+    """DECISIONS M.7: no production dump may carry chat message rows. The rows live in monthly
+    partitions, so a plain --exclude-table-data on the parent would still copy them."""
+
+    def test_every_production_dump_skips_message_rows_and_partitions(self) -> None:
+        for script in (ROOT / "ops" / "prod-backup.sh", RELEASE):
+            dumps = [ln for ln in script.read_text().splitlines()
+                     if "pg_dump" in ln and not ln.lstrip().startswith("#")]
+            self.assertTrue(dumps, f"{script.name}: no pg_dump found")
+            for ln in dumps:
+                self.assertIn("--exclude-table-data-and-children=public.chat_messages", ln, script.name)
