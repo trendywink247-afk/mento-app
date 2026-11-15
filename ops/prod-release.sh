@@ -178,7 +178,9 @@ install_web() { # <export dir> <full sha>
   cp -r "$src" "$WEB_RELEASES/.$name.tmp"
   chown -R root:root "$WEB_RELEASES/.$name.tmp"; chmod -R a+rX,go-w "$WEB_RELEASES/.$name.tmp"
   mv "$WEB_RELEASES/.$name.tmp" "$WEB_RELEASES/$name"
-  current=$(readlink -f "$WEB_LINK" 2>/dev/null || true)
+  # -e: only a link that resolves to something that exists. On the first release there is no
+  # web link yet, and -f would hand back the link path itself (previous-web -> web).
+  current=$(readlink -e "$WEB_LINK" 2>/dev/null || true)
   swap_symlink "$WEB_LINK" "$WEB_RELEASES/$name"
   [ -z "$current" ] || [ ! -d "$current" ] || swap_symlink "$PREV_WEB" "$current"
   say "web live: $name"
