@@ -98,6 +98,17 @@ class ProdGuards(unittest.TestCase):
         self.assertNotEqual(self.guard("prod_ci_passed", str(self.logs), self.main_sha[:12]).returncode, 0)
 
     # --- prod-release.sh -------------------------------------------------------------
+    def test_the_current_ci_summary_format_counts(self) -> None:
+        # ops/ci.sh since 61a8916: "(tier, Ns wall)" in the marker and "[group] " before each line.
+        new = "ops/ci: ---- summary (pr, 255s wall) ----"
+        self.write_log(self.main_sha, f"{new}\n[api-lint] PASS    0.0s  api ruff\n[tooling] SKIP  drills\n")
+        self.assertEqual(self.guard("prod_ci_passed", str(self.logs), self.main_sha).returncode, 0)
+        self.write_log(self.main_sha, f"{new}\n[api-lint] PASS  ruff\n[api-db] FAIL  pytest\n")
+        self.assertNotEqual(self.guard("prod_ci_passed", str(self.logs), self.main_sha).returncode, 0)
+        # Only the last summary counts (a re-run appended to the same log).
+        self.write_log(self.main_sha, f"{new}\n[api-db] FAIL  pytest\n{new}\n[api-db] PASS  pytest\n")
+        self.assertEqual(self.guard("prod_ci_passed", str(self.logs), self.main_sha).returncode, 0)
+
     def release(self, *args: str) -> subprocess.CompletedProcess:
         env = dict(os.environ, PROD_REPO=str(self.repo), PROD_CI_LOG_DIR=str(self.logs),
                    PROD_ROOT=str(self.tmp / "prod"))

@@ -48,8 +48,8 @@ prod_ci_passed() {
   [[ $sha =~ ^[0-9a-f]{40}$ ]] || { echo "prod-guard: need the full 40-char sha for the CI check" >&2; return 1; }
   log="$dir/$sha.log"
   [ -f "$log" ] || { echo "prod-guard: no ops/ci log for $sha ($log); run ops/ci.sh $sha first" >&2; return 1; }
-  summary=$(awk '/^ops\/ci: ---- summary ----/ {f=1; next} f' "$log")
-  if [ -z "$summary" ] || ! grep -q '^PASS' <<<"$summary" || grep -q '^FAIL' <<<"$summary"; then
+  summary=$(awk '/^ops\/ci: ---- summary( \(.*\))? ----$/ {buf=""; f=1; next} f {buf=buf $0 "\n"} END {printf "%s", buf}' "$log")
+  if [ -z "$summary" ] || ! grep -Eq '^(\[[^]]+\] +)?PASS' <<<"$summary" || grep -Eq '^(\[[^]]+\] +)?FAIL' <<<"$summary"; then
     echo "prod-guard: ops/ci did not pass for $sha (see $log)" >&2
     return 1
   fi
