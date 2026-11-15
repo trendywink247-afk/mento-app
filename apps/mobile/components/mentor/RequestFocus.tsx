@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { MemberDisc } from '@/components/mentor/MemberDisc';
+import { MenteeBriefCard } from '@/components/mentor/MenteeBriefCard';
 import { PressKey } from '@/components/motion/PressKey';
 import { ageLabel } from '@/lib/age';
 import { useI18n } from '@/lib/i18n';
@@ -48,6 +49,7 @@ export function RequestFocus({
     request.community_label ? { text: request.community_label, tone: 'sky' as const } : null,
     request.stage_label ? { text: request.stage_label, tone: 'sky' as const } : null,
     topic ? { text: topic, tone: 'orange' as const } : null,
+    request.audience === 'mentorship' ? { text: t('mentor.reqMentorship'), tone: 'orange' as const } : null,
   ].filter(Boolean) as { text: string; tone: 'sky' | 'orange' }[];
 
   return (
@@ -111,6 +113,7 @@ export function RequestFocus({
               <Text style={[type.body, styles.factValue, { color: colors.inkMuted }]}>{f.value}</Text>
             </View>
           ))}
+          {request.mentee_brief ? <MenteeBriefCard brief={request.mentee_brief} /> : null}
           <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentor.reqNeverShown')}</Text>
         </EdgeSurface>
       ) : null}

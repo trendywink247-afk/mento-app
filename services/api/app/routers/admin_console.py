@@ -62,6 +62,7 @@ from app.schemas import (
     AdminMessageItem,
     AdminOverviewOut,
     AdminReconcileOut,
+    AdminTierIn,
     AttentionItem,
     ModerationItem,
     ModerationResolveIn,
@@ -80,6 +81,7 @@ from app.services import (
     mentor_invites,
     paths,
     stream,
+    tiers,
 )
 from app.services.categories import availability_note, ordered_times
 from app.services.links import admin_link, mentor_console_link
@@ -514,6 +516,9 @@ def _listener_item(li: ListenerProfile) -> AdminListenerItem:
         ),
         step_back_reason=li.step_back_reason,
         certified=bool(li.certified_exam),
+        tier=tiers.tier_of(li),
+        exam_history=li.exam_history,
+        exam_history_checked=li.exam_history_checked_at is not None,
     )
 
 
@@ -815,6 +820,55 @@ def certify_listener(
     )
     db.commit()
     return {"id": li.id, "certified": li.certified_exam}
+
+
+@router.post("/listeners/{listener_id}/tier", response_model=dict)
+def set_listener_tier(
+    listener_id: str,
+    payload: AdminTierIn,
+    admin: AdminAccount = Depends(current_admin),
+    db: Session = Depends(get_db),
+) -> dict:
+    """Peer listener <-> Mentor and the exam history behind the badges (DECISIONS R.4, R.7):
+    an admin sets it after reading the mentor's prelims/mains proof (the Documents tab).
+    Nobody who has not cleared prelims mentors, so Mentor needs at least one prelims.
+    Audited; counts only in the audit row."""
+    li = db.get(ListenerProfile, listener_id, with_for_update=True)
+    if li is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "mentor not found")
+    if li.vetting_status != VettingStatus.approved:
+        raise HTTPException(status.HTTP_409_CONFLICT, "only an approved mentor can change tier")
+    if payload.tier == tiers.MENTOR and payload.prelims < 1:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, "a Mentor has cleared prelims at least once"
+        )
+    li.tier = payload.tier
+    li.exam_history = {
+        "prelims": payload.prelims,
+        "mains": payload.mains,
+        "interview": payload.interview,
+    }
+    li.exam_history_checked_at = datetime.now(UTC) if payload.exam_history_checked else None
+    audit.record(
+        db,
+        admin,
+        "listener.tier_set",
+        subject_type="listener",
+        subject_id=li.id,
+        meta={
+            "tier": payload.tier,
+            "prelims": payload.prelims,
+            "mains": payload.mains,
+            "interview": payload.interview,
+            "checked": payload.exam_history_checked,
+        },
+    )
+    db.commit()
+    return {
+        "id": li.id,
+        "tier": tiers.tier_of(li),
+        "exam_history_checked": payload.exam_history_checked,
+    }
 
 
 @router.post("/applications/{app_id}/decline", response_model=AdminApplicationItem)

@@ -73,6 +73,10 @@ class AdminListenerItem(BaseModel):
     step_back_reason: str | None = None
     # Certified for exam mentoring (DECISIONS section O); the panel shows and toggles it.
     certified: bool = False
+    # DECISIONS R.4 / R.7: the tier and the exam history, with whether an admin checked it.
+    tier: str = "listener"
+    exam_history: dict | None = None
+    exam_history_checked: bool = False
 
 
 class AdminListenerCreateIn(BaseModel):
@@ -196,6 +200,18 @@ class AdminApplicationApproveIn(BaseModel):
 
 class AdminCertifyIn(BaseModel):
     certified: bool
+
+
+class AdminTierIn(BaseModel):
+    """Set a mentor's tier and exam history (DECISIONS R.4, R.7). Mento Verified stays the
+    certify action; this sets Peer listener <-> Mentor. `exam_history_checked` = an admin read
+    the proof, so the badges show to members."""
+
+    tier: Literal["listener", "mentor"]
+    prelims: int = Field(default=0, ge=0, le=20)
+    mains: int = Field(default=0, ge=0, le=20)
+    interview: int = Field(default=0, ge=0, le=20)
+    exam_history_checked: bool = False
 
 
 class AdminApplicationDeclineIn(BaseModel):

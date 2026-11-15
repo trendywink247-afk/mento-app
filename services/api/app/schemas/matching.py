@@ -14,6 +14,9 @@ class MatchRequest(BaseModel):
     issue_category: str | None = Field(default=None, max_length=40)
     target_listener_id: str | None = None
     intro_message: str | None = Field(default=None, max_length=160)
+    # "Connect now" (DECISIONS R.5): "listeners" = listeners and Mentors, never Mento Verified.
+    # Additive: older builds send none and get "any".
+    audience: Literal["any", "listeners"] = "any"
 
 
 class MatchResult(BaseModel):
@@ -31,6 +34,8 @@ class MatchAsk(BaseModel):
 
     issue_category: str | None = Field(default=None, max_length=40)
     intro_message: str | None = Field(default=None, max_length=160)
-    # Who may take it: any approved mentor (the default), Mento Verified ("in_service") or the other
-    # approved mentors ("peer"). Additive: older builds send none and get "any".
-    audience: Literal["any", "in_service", "peer"] = "any"
+    # Who may take it (services/tiers.py): any approved mentor (the default), Mento Verified
+    # ("in_service"), the others ("peer"), "Connect now" ("listeners": listeners and Mentors) or
+    # "Start mentorship" ("mentorship": Mentors and Mento Verified, DECISIONS R.5). Additive:
+    # older builds send none and get "any".
+    audience: Literal["any", "in_service", "peer", "listeners", "mentorship"] = "any"

@@ -67,6 +67,7 @@ from app.models.favourite import FavouriteListener
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentee_profile import MenteeProfile
 from app.models.mentor_link import MentorLink
 from app.models.moderation import ModerationEvent
 from app.models.push_token import PushToken
@@ -102,6 +103,7 @@ MEMBER_TABLES = (
     "allowance_days",
     "applications",
     "contributions",
+    "mentee_profile",
 )
 
 
@@ -234,6 +236,8 @@ def _phase_c_delete(db: Session, user_id: str) -> dict[str, int]:
         "conversations": gone(delete(Conversation).where(Conversation.user_id == user_id)),
         "journal_entries": gone(delete(JournalEntry).where(JournalEntry.user_id == user_id)),
         "favourites": gone(delete(FavouriteListener).where(FavouriteListener.user_id == user_id)),
+        # The mentorship intake answers and marks (DECISIONS R.6, R.14).
+        "mentee_profile": gone(delete(MenteeProfile).where(MenteeProfile.user_id == user_id)),
         "stay_in_touch_links": gone(delete(MentorLink).where(MentorLink.user_id == user_id)),
         "requests": gone(
             delete(ConversationRequest).where(ConversationRequest.requester_id == user_id)

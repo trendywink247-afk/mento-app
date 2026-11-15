@@ -111,6 +111,19 @@ export async function getCompanionShown(): Promise<boolean> {
   return (await store.getItemAsync(COMPANION_SHOWN_KEY)) !== '0';
 }
 
+const VISITS_KEY = 'mento.visits';
+
+/** Counts app opens on this phone (one per process), for "email from the second visit"
+ * (DECISIONS R.10). Returns the count including this open. */
+let countedThisOpen: number | null = null;
+export async function countVisit(): Promise<number> {
+  if (countedThisOpen !== null) return countedThisOpen;
+  const n = (Number(await store.getItemAsync(VISITS_KEY)) || 0) + 1;
+  countedThisOpen = n;
+  await store.setItemAsync(VISITS_KEY, String(n));
+  return n;
+}
+
 /** Growth-companion colour drives the per-user accent theme (see ThemeProvider). */
 export async function saveCompanionColor(color: string): Promise<void> {
   await store.setItemAsync(COMPANION_COLOR_KEY, color);

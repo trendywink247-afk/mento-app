@@ -14,11 +14,13 @@ import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/compon
 import { DeepArrival } from '@/components/motion/DeepArrival';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
-import { ApiError, api, type Listener, type ListenerProfile } from '@/lib/api';
+import { ApiError, api, type BrowseFilters, type Listener, type ListenerProfile, type Tier } from '@/lib/api';
+import { ExamEmblems } from '@/components/ExamEmblem';
+import { TierMark } from '@/components/TierMark';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { formatTopic } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
-import { browseLanguage, languageLine } from '@/lib/languages';
+import { LANGUAGES, browseLanguage, languageLine } from '@/lib/languages';
 import { leaveToChats } from '@/lib/leaveToChats';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
@@ -33,7 +35,7 @@ import { font, radius, space, type, washInk } from '@/theme/tokens';
 /**
  * Browse mentors (board A25) — a deeper page (root stack, no tab bar): the pinned
  * "Next available mentor" key, working filters, and one card per mentor. In-touch mentors
- * come first — the API already sorts (in touch → favourites → available → rank); this
+ * come first — the API already sorts (in touch → online → favourites → rank); this
  * screen never re-orders. No ratings, counts, badges, real names or photos.
  *
  * The list endpoint carries no public line / availability note / community, so each card's
@@ -66,8 +68,13 @@ export default function BrowseMentors() {
   const [loading, setLoading] = useState(!cachedMentors);
   const [listeners, setListeners] = useState<Listener[]>(cachedMentors ?? []);
   const [, setDetailTick] = useState(0);
-  // A mentor's suggestion (DECISIONS §O) opens Browse already on the certified mentors.
-  const [filter, setFilter] = useState<Filter>(startFilter === 'certified' ? 'certified' : 'all');
+  // Server-side filters (DECISIONS R.5): type, gender, online. A mentor's suggestion (DECISIONS §O)
+  // opens Browse already on Mento Verified.
+  const [tierFilter, setTierFilter] = useState<Tier | null>(startFilter === 'certified' ? 'verified' : null);
+  const [gender, setGender] = useState<BrowseFilters['gender'] | null>(null);
+  const [onlineOnly, setOnlineOnly] = useState(false);
+  // Client-side: road, life, in touch, a language.
+  const [filter, setFilter] = useState<Filter>('all');
   const [roadNames, setRoadNames] = useState<Record<string, string>>({});
   const [myRoad, setMyRoad] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -99,9 +106,14 @@ export default function BrowseMentors() {
       let active = true;
       void api
         // The member's own app language is a preference: mentors who talk it come first, nobody is hidden.
-        .listListeners(browseLanguage(locale))
+        .listListeners({
+          language: browseLanguage(locale),
+          ...(tierFilter ? { tier: tierFilter } : {}),
+          ...(gender ? { gender } : {}),
+          ...(onlineOnly ? { online: true } : {}),
+        })
         .then((l) => {
-          screenCache.set('mentors', l);
+          if (!tierFilter && !gender && !onlineOnly) screenCache.set('mentors', l);
           if (!active) return;
           setListeners(l);
           const missing = l.filter((m) => !details.has(m.id)).slice(0, 40);
@@ -129,7 +141,7 @@ export default function BrowseMentors() {
       return () => {
         active = false;
       };
-    }, [locale]),
+    }, [locale, tierFilter, gender, onlineOnly]),
   );
 
   // On an exam road the ask needs the member's own words before it goes out: the box below
@@ -177,9 +189,8 @@ export default function BrowseMentors() {
     () =>
       listeners.filter((l) => {
         const community = details.get(l.id)?.community_slug ?? null;
-        if (filter === 'online') return l.available;
         if (filter === 'touch') return Boolean(l.in_touch);
-        if (filter === 'certified') return Boolean(l.certified);
+        if (filter.startsWith('lang:')) return (l.languages ?? []).includes(filter.slice(5));
         return matchesRoad(filter, community, l.categories);
       }),
     // reason: `details` is a module map; the tick state re-renders when it fills
@@ -187,9 +198,17 @@ export default function BrowseMentors() {
     [listeners, filter, details.size],
   );
 
+  const typeChips: { key: Tier | null; label: string }[] = [
+    { key: null, label: t('browseFilters.all') },
+    { key: 'listener', label: t('browseFilters.listeners') },
+    { key: 'mentor', label: t('browseFilters.mentors') },
+    { key: 'verified', label: t('browseFilters.verified') },
+  ];
+  // Languages someone on the list talks (other than English, which nearly everyone does).
+  const spoken = LANGUAGES.filter((lg) => lg.code !== 'en' && listeners.some((l) => (l.languages ?? []).includes(lg.code)));
   const filters: { key: Filter; label: string }[] = [
     { key: 'all', label: t('chats.filterAll') },
-    { key: 'online', label: t('browse.filterOnline') },
+    ...spoken.map((lg) => ({ key: `lang:${lg.code}`, label: t('browseFilters.languageIn', { name: lg.name }) })),
     ...roadChips(
       roadNames,
       listeners.map((l) => details.get(l.id)?.community_slug),
@@ -197,8 +216,6 @@ export default function BrowseMentors() {
     ).map((c) => ({ key: c.key, label: c.label })),
     { key: 'life', label: t('browse.filterLife') },
     { key: 'touch', label: t('inTouch.badge') },
-    // Only when at least one mentor is certified: an empty filter would be a dead end.
-    ...(listeners.some((l) => l.certified) ? [{ key: 'certified', label: t('certified.badge') }] : []),
   ];
 
   const communityTag = (slug: string | null | undefined): string | null =>
@@ -247,7 +264,11 @@ export default function BrowseMentors() {
               {l.persona_name}
             </Text>
             {l.in_touch ? <InTouchBadge flat testID={`mentor-in-touch-${l.id}`} /> : null}
-            {l.certified ? <CertifiedBadge testID={`mentor-certified-${l.id}`} /> : null}
+            {l.certified || l.tier === 'verified' ? (
+              <CertifiedBadge testID={`mentor-certified-${l.id}`} />
+            ) : (
+              <TierMark tier={l.tier ?? 'listener'} testID={`mentor-tier-${l.id}`} />
+            )}
             <View style={styles.grow} />
             <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} />
           </View>
@@ -256,6 +277,7 @@ export default function BrowseMentors() {
               {second}
             </Text>
           ) : null}
+          <ExamEmblems badges={l.exam_badges} size={26} compact testID={`mentor-emblems-${l.id}`} />
           <Text style={[styles.availability, { color: l.available ? washInk.green : colors.inkMuted }]} numberOfLines={1}>
             {availability}
           </Text>
@@ -328,6 +350,24 @@ export default function BrowseMentors() {
               <AskIntroBox drafted={question} onSend={(text) => answerAsk(text)} onCancel={() => answerAsk(null)} testID="browse-ask-intro" />
             ) : null}
             <Entrance index={2}>
+              {/* Type (DECISIONS R.5): Everyone / Listeners / Mentors / Mento Verified. */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+                {typeChips.map((c) => (
+                  <FilterChip
+                    key={c.key ?? 'all'}
+                    label={c.label}
+                    on={tierFilter === c.key}
+                    onPress={() => setTierFilter(c.key)}
+                    testID={`browse-type-${c.key ?? 'all'}`}
+                  />
+                ))}
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                <FilterChip label={t('browseFilters.online')} on={onlineOnly} onPress={() => setOnlineOnly((v) => !v)} testID="browse-online" />
+                <FilterChip label={t('browseFilters.women')} on={gender === 'female'} onPress={() => setGender((g) => (g === 'female' ? null : 'female'))} testID="browse-gender-female" />
+                <FilterChip label={t('browseFilters.men')} on={gender === 'male'} onPress={() => setGender((g) => (g === 'male' ? null : 'male'))} testID="browse-gender-male" />
+              </ScrollView>
+            </Entrance>
+            <Entrance index={2}>
               {/* A row that scrolls: with every road, Life, In touch and Mento Verified there are too many chips to
                   share one line, and squeezing them left only "U…" and "N…". */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
@@ -396,7 +436,7 @@ export default function BrowseMentors() {
               <Text style={[type.note, styles.empty, { color: colors.inkMuted }]} testID="browse-empty">
                 {filter === 'touch'
                   ? t('inTouch.emptyBody')
-                  : filter === 'certified'
+                  : tierFilter === 'verified'
                     ? t('browse.emptyCertified')
                     : t('browse.empty')}
               </Text>
@@ -416,7 +456,30 @@ export default function BrowseMentors() {
   );
 }
 
+function FilterChip({ label, on, onPress, testID }: { label: string; on: boolean; onPress: () => void; testID: string }) {
+  const { colors } = useTheme();
+  return (
+    <PressKey
+      onPress={onPress}
+      edge={on ? colors.edgeInk : colors.edgeSurface}
+      travel={4}
+      radius={radius.pill}
+      intent="select"
+      accessibilityRole="button"
+      accessibilityState={{ selected: on }}
+      testID={testID}
+      containerStyle={styles.filterCell}
+      style={[styles.filter, on ? { backgroundColor: colors.ink, borderColor: colors.ink } : { backgroundColor: colors.surface, borderColor: colors.border }]}
+    >
+      <Text style={[styles.filterText, { color: on ? colors.onBrand : colors.ink }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </PressKey>
+  );
+}
+
 const styles = StyleSheet.create({
+  divider: { width: 1, height: 28, alignSelf: 'center', marginHorizontal: 2 },
   safe: { flex: 1 },
   pinned: { zIndex: 3, paddingTop: 12, paddingHorizontal: space.md, paddingBottom: 10, borderBottomWidth: 1 },
   pinnedCol: { gap: 12 },

@@ -15,13 +15,29 @@ from app.models.favourite import FavouriteListener
 from app.models.listener import ListenerProfile
 from app.models.mentor_link import MentorLink
 from app.schemas import ListenerOut, ListenerProfileOut
+from app.schemas.listeners import ExamBadges
 from app.services import categories as issue_categories
-from app.services import in_touch, mentor_face, mentor_names, reply_time
+from app.services import in_touch, mentor_face, mentor_names, reply_time, tiers
 
 # Conversation statuses that count toward "conversations held" on a mentor
 # profile — spec 2026-09-06 §3.3: the count is about the mentor's experience,
 # so a wiped conversation (member-side hard delete) still counts.
 _HELD_STATUSES = (ConversationStatus.active, ConversationStatus.ended, ConversationStatus.wiped)
+
+
+def exam_badges(li: ListenerProfile) -> ExamBadges | None:
+    """The checked exam history (DECISIONS R.7): nothing until an admin has checked it."""
+    if li.exam_history_checked_at is None or not isinstance(li.exam_history, dict):
+        return None
+    h = li.exam_history
+    try:
+        return ExamBadges(
+            prelims=int(h.get("prelims") or 0),
+            mains=int(h.get("mains") or 0),
+            interview=int(h.get("interview") or 0),
+        )
+    except (TypeError, ValueError):
+        return None
 
 
 def is_favourite(db: Session, user_id: str, listener_id: str) -> bool:
@@ -55,6 +71,8 @@ def card(
         certified=bool(li.certified_exam),
         reply_within=reply_within,
         languages=list(li.languages or []),
+        tier=tiers.tier_of(li),
+        exam_badges=exam_badges(li),
     )
 
 
@@ -92,6 +110,8 @@ def profile(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOu
         certified=bool(li.certified_exam),
         reply_within=reply_time.reply_within(db, [li.id])[li.id],
         languages=list(li.languages or []),
+        tier=tiers.tier_of(li),
+        exam_badges=exam_badges(li),
     )
 
 

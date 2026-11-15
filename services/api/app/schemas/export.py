@@ -139,3 +139,5 @@ class ExportOut(BaseModel):
     applications: list[ExportApplication]
     contributions: list[ExportContribution]
     reports_filed: list[ExportReportFiled]
+    # The mentorship intake answers and marks (DECISIONS R.6, R.14), if any. Additive.
+    mentee_profile: dict | None = None

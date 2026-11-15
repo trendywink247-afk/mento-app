@@ -36,7 +36,7 @@ from app.models.listener import ListenerProfile
 from app.models.push_token import PushToken
 from app.models.request import ConversationRequest
 from app.models.user import User
-from app.services import fcm, member_status, message_crypto, snooze, stream
+from app.services import fcm, member_status, message_crypto, snooze, stream, tiers
 from app.services.matching import (
     blocked_listener_ids,
     broadcast_candidate_ids,
@@ -118,6 +118,14 @@ def tokens_for(db: Session, kind: PushOwnerKind, owner_id: str) -> list[str]:
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
 TITLE = "Mento"
+
+TIER_LABELS = {"listener": "Listener", "mentor": "Mentor", "verified": "Mento Verified"}
+
+
+def mentor_label(li) -> str:
+    """The mentor's name with their tier, "Listener · Juno" (DECISIONS R.9)."""
+    return f"{TIER_LABELS[tiers.tier_of(li)]} · {li.persona_name}"
+
 
 # Closed template set — no free text ever enters a push (spec §5).
 TEMPLATES = {
@@ -438,10 +446,8 @@ def notify_message(db: Session, *, conversation_id: str, sender_stream_user_id: 
     elif sender_stream_user_id == convo.listener_id:
         recipient_kind, recipient_id = PushOwnerKind.member, convo.user_id
         li = db.get(ListenerProfile, convo.listener_id)
-        body = TEMPLATES["message_from_listener"] % {
-            "persona": li.persona_name if li else "Your mentor"
-        }
-        who = li.persona_name if li else "Your mentor"
+        who = mentor_label(li) if li else "Your mentor"
+        body = TEMPLATES["message_from_listener"] % {"persona": who}
         member = db.get(User, convo.user_id)
         wants_text = bool(member and member.push_preview)
     else:
@@ -569,7 +575,7 @@ def notify_request_accepted(db: Session, *, request_id: str) -> None:
         PushOwnerKind.member,
         req.requester_id,
         tokens,
-        TEMPLATES["accepted"] % {"persona": li.persona_name},
+        TEMPLATES["accepted"] % {"persona": mentor_label(li)},
         {
             "kind": "accepted",
             "conversation_id": convo.id,

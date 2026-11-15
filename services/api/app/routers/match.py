@@ -71,7 +71,7 @@ def create_match(
     open_question.enforce(db, user_id)
 
     try:
-        convo = match_general(db, user, category=payload.issue_category)
+        convo = match_general(db, user, category=payload.issue_category, audience=payload.audience)
     except NoListenerAvailable:
         raise HTTPException(
             status.HTTP_503_SERVICE_UNAVAILABLE,

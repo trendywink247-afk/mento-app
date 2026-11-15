@@ -41,8 +41,6 @@ import { openNewChat } from '@/lib/askLoop';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { pathCopy } from '@/lib/pathCopy';
 import { openQuestionFrom, type OpenQuestion } from '@/lib/openQuestion';
-import { AudiencePicker } from '@/components/AudiencePicker';
-import type { Audience } from '@/lib/api';
 import { matchOrAsk, openAsked } from '@/lib/startChat';
 import {
   EMPTY_CHOICE,
@@ -183,7 +181,6 @@ export default function PathQuestion() {
     setStarter(prompts[(at + 1) % prompts.length]);
   };
 
-  const [audience, setAudience] = useState<Audience>('any');
   const go = async (mode: 'continue' | 'edit') => {
     if (busy || !assembled.text) return;
     setBusy(mode);
@@ -191,7 +188,8 @@ export default function PathQuestion() {
     setBusyExit(false);
     setOpenQ(null);
     try {
-      const started = await matchOrAsk({ audience }, assembled.text);
+      // The Any / Verified / Peers picker is gone (DECISIONS R.5): a path question goes to any mentor.
+      const started = await matchOrAsk({ audience: 'any' }, assembled.text);
       if (started.kind === 'ask') {
         openAsked(router, started.request);
         return;
@@ -419,11 +417,6 @@ export default function PathQuestion() {
               }}
               testID="pq-open"
             />
-          </View>
-        ) : null}
-        {acceptFirst ? (
-          <View style={styles.footNote}>
-            <AudiencePicker value={audience} onChange={setAudience} />
           </View>
         ) : null}
         {note ? (

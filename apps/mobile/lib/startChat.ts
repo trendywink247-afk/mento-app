@@ -45,10 +45,12 @@ export async function matchOrAsk(
   client: Client = api,
   askFor?: AskForIntro,
 ): Promise<Started> {
-  // The audience matters only to an ask; the instant match has no such choice.
+  // "Connect now" narrows the instant match too (listeners and Mentors, DECISIONS R.5); the
+  // other audiences exist only for an ask.
   const { audience, ...matchBody } = body;
+  const instant = audience === 'listeners' ? { audience: 'listeners' as const } : {};
   try {
-    return { kind: 'chat', match: await client.match({ kind: 'general', ...matchBody }) };
+    return { kind: 'chat', match: await client.match({ kind: 'general', ...matchBody, ...instant }) };
   } catch (e) {
     if (!acceptRequired(e)) throw e;
     // An ask is a question in the member's own words: when the door has none yet, the member

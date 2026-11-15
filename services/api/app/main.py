@@ -21,6 +21,7 @@ from app.routers import (
     auth,
     chat,
     conversation,
+    email_confirm,
     events,
     feedback,
     health,
@@ -31,6 +32,7 @@ from app.routers import (
     listeners,
     match,
     me,
+    mentee_profile,
     notifications,
     onboarding,
     paths,
@@ -207,6 +209,8 @@ app.include_router(app_config.router, prefix=API)
 app.include_router(onboarding.router, prefix=API)
 app.include_router(auth.router, prefix=API)
 app.include_router(me.router, prefix=API)
+app.include_router(mentee_profile.router, prefix=API)
+app.include_router(email_confirm.router, prefix=API)
 app.include_router(match.router, prefix=API)
 app.include_router(paths.router, prefix=API)
 app.include_router(safety.router, prefix=API)

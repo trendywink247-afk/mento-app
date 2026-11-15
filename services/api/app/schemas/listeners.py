@@ -7,6 +7,15 @@ from pydantic import BaseModel, Field
 from app.schemas.in_touch import StayInTouchOut
 
 
+class ExamBadges(BaseModel):
+    """How many times this mentor reached each UPSC stage (DECISIONS R.7, R.15). Served only
+    after an admin checked it; the app draws the P / M / I coins with these counts."""
+
+    prelims: int = Field(default=0, ge=0, le=20)
+    mains: int = Field(default=0, ge=0, le=20)
+    interview: int = Field(default=0, ge=0, le=20)
+
+
 class ListenerOut(BaseModel):
     """Anonymous persona card — no real names/photos/star ratings in v1 (T&S #7)."""
 
@@ -35,6 +44,10 @@ class ListenerOut(BaseModel):
     reply_within: str | None = None
     # Language codes this mentor talks in (services/languages.py); empty when not said. Additive.
     languages: list[str] = []
+    # DECISIONS R.4: "listener" | "mentor" | "verified" (services/tiers.py). Additive.
+    tier: str = "listener"
+    # DECISIONS R.7: admin-checked exam history, else null. Additive.
+    exam_badges: ExamBadges | None = None
 
 
 class ListenerProfileOut(BaseModel):
@@ -69,6 +82,8 @@ class ListenerProfileOut(BaseModel):
     # the app never shows a raw slug. Additive.
     category_labels: list[str] = []
     languages: list[str] = []
+    tier: str = "listener"
+    exam_badges: ExamBadges | None = None
 
 
 class ConversationMentorOut(ListenerProfileOut):

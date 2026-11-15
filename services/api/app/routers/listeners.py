@@ -9,8 +9,10 @@ real and testable today without a mentor app.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import and_, case, cast, exists, select, tuple_
+from sqlalchemy import and_, case, cast, exists, or_, select, tuple_
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -20,6 +22,7 @@ from app.db import get_db
 from app.jobs import tasks
 from app.models.admin import AdminAccount
 from app.models.enums import (
+    Gender,
     LinkStatus,
     ListenerStatus,
     RequestKind,
@@ -52,6 +55,7 @@ from app.services import (
     reply_time,
     safety,
     terms,
+    tiers,
 )
 from app.services.matching import (
     ListenerAtCapacity,
@@ -99,6 +103,10 @@ def list_listeners(
     db: Session = Depends(get_db),
     page: pagination.Page = Depends(pagination.page_params(5)),
     language: str | None = Query(default=None, max_length=8),
+    # Browse filters (DECISIONS R.5), all optional and additive.
+    tier: Literal["listener", "mentor", "verified"] | None = Query(default=None),
+    gender: Gender | None = Query(default=None),
+    online: bool = Query(default=False),
 ) -> list[ListenerOut]:
     """Approved listeners (minus anyone this user blocked — and minus the user's
     own listener profile, if their application was approved). Ordered IN TOUCH first
@@ -144,7 +152,8 @@ def list_listeners(
         else_=1,
     )
     neg_rank = -ListenerProfile.rank
-    key = (touch, fav, avail, neg_rank, li_id)
+    # Online first (DECISIONS R.5), after the mentors this member is in touch with.
+    key = (touch, avail, fav, neg_rank, li_id)
     # A language is a PREFERENCE (services/languages.py): mentors who talk it come first among the
     # rest, nobody is hidden. Only part of the order when asked for, so cursors stay consistent.
     wanted = languages.clean([language])[:1] if language else []
@@ -153,13 +162,28 @@ def list_listeners(
             (cast(ListenerProfile.languages, JSONB).contains(wanted), 0),
             else_=1,
         )
-        key = (touch, speaks, fav, avail, neg_rank, li_id)
+        key = (touch, avail, speaks, fav, neg_rank, li_id)
     labelled = [k.label(f"k{i}") for i, k in enumerate(key)]
     stmt = select(ListenerProfile, *labelled).where(
         ListenerProfile.vetting_status == VettingStatus.approved
     )
     if excluded:
         stmt = stmt.where(li_id.notin_(excluded))
+    if tier == tiers.VERIFIED:
+        stmt = stmt.where(ListenerProfile.certified_exam.is_(True))
+    elif tier == tiers.MENTOR:
+        stmt = stmt.where(
+            ListenerProfile.certified_exam.is_(False), ListenerProfile.tier == tiers.MENTOR
+        )
+    elif tier == tiers.LISTENER:
+        stmt = stmt.where(
+            ListenerProfile.certified_exam.is_(False),
+            or_(ListenerProfile.tier.is_(None), ListenerProfile.tier != tiers.MENTOR),
+        )
+    if gender is not None:
+        stmt = stmt.where(ListenerProfile.gender == gender)
+    if online:
+        stmt = stmt.where(avail == 0)
     if page.after is not None:
         stmt = stmt.where(tuple_(*key) > tuple_(*page.after))
     rows = db.execute(stmt.order_by(*key).limit(page.limit + 1)).all()

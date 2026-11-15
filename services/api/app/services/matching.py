@@ -26,7 +26,7 @@ from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
 from app.models.request import ConversationRequest, RequestPass
 from app.models.user import User
-from app.services import stream
+from app.services import stream, tiers
 
 logger = logging.getLogger("mento.matching")
 
@@ -80,6 +80,7 @@ def _pick_available_listener(
     blocked_ids: set[str],
     community: str | None = None,
     certified_only: bool = False,
+    audience: str = "any",
 ) -> ListenerProfile | None:
     """Lowest current load, then highest rank; community + category preferred (in
     Python — portable across JSON/JSONB); blocked listeners excluded. Community is a
@@ -101,6 +102,17 @@ def _pick_available_listener(
             # An exam question goes only to a mentor an admin certified for exams (DECISIONS
             # section O); the instant general match never sets this.
             *([ListenerProfile.certified_exam.is_(True)] if certified_only else []),
+            # "Connect now" (DECISIONS R.5): listeners and Mentors, never Mento Verified.
+            *(
+                [pool]
+                if (
+                    pool := tiers.pool_clause(
+                        audience, ListenerProfile.certified_exam, ListenerProfile.tier
+                    )
+                )
+                is not None
+                else []
+            ),
         )
         .order_by(ListenerProfile.active_conversations.asc(), ListenerProfile.rank.desc())
         .limit(10)
@@ -255,12 +267,17 @@ def sweep_stale_presence(db: Session, *, now: datetime | None = None) -> int:
     return len(flipped)
 
 
-def match_general(db: Session, user: User, category: str | None = None) -> Conversation:
-    """Match the user to the next available listener and open a Stream channel."""
+def match_general(
+    db: Session, user: User, category: str | None = None, audience: str = "any"
+) -> Conversation:
+    """Match the user to the next available listener and open a Stream channel. `audience`
+    narrows who may be picked (services/tiers.py); "any" keeps the old behaviour."""
     sweep_stale_presence(db)
     db.commit()
     blocked_ids = blocked_listener_ids(db, user.id) | own_listener_ids(db, user.id)
-    listener = _pick_available_listener(db, category, blocked_ids, community=user.community_slug)
+    listener = _pick_available_listener(
+        db, category, blocked_ids, community=user.community_slug, audience=audience
+    )
     if listener is None:
         # Self-heal before giving up. Prod finding (2026-09-06): every slot was held
         # by abandoned chats older than conversation_max_age_hours, and the sweep
@@ -272,7 +289,7 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
         # the listener rows, our SKIP LOCKED pick saw nobody — and their sweep, not
         # ours, is the one that freed the slot. A genuinely full pool still 503s.
         listener = _pick_available_listener(
-            db, category, blocked_ids, community=user.community_slug
+            db, category, blocked_ids, community=user.community_slug, audience=audience
         )
     if listener is None:
         raise NoListenerAvailable()
@@ -282,19 +299,18 @@ def match_general(db: Session, user: User, category: str | None = None) -> Conve
 BROADCAST_LIMIT = 20
 
 
-def audience_allows(audience: str, certified: bool) -> bool:
-    """May a mentor of this kind take a broadcast offered to `audience`? "in_service" = Mento
-    Verified only, "peer" = the other approved mentors, anything else = every approved mentor."""
-    if audience == "in_service":
-        return certified
-    if audience == "peer":
-        return not certified
-    return True
+def audience_allows(audience: str, certified: bool, tier: str | None = None) -> bool:
+    """May a mentor of this kind take a broadcast offered to `audience`? (services/tiers.py)"""
+    return tiers.audience_allows(
+        audience, tiers.VERIFIED if certified else (tier if tier in tiers.TIERS else tiers.LISTENER)
+    )
 
 
-def audiences_for(certified: bool) -> list[str]:
+def audiences_for(certified: bool, tier: str | None = None) -> list[str]:
     """The `audience` values a mentor of this kind may take (for an inbox query)."""
-    return ["any", "in_service"] if certified else ["any", "peer"]
+    return tiers.audiences_for(
+        tiers.VERIFIED if certified else (tier if tier in tiers.TIERS else tiers.LISTENER)
+    )
 
 
 def broadcast_candidate_ids(
@@ -313,10 +329,9 @@ def broadcast_candidate_ids(
         ListenerProfile.status == ListenerStatus.online,
         ListenerProfile.active_conversations < ListenerProfile.max_concurrent,
     ]
-    if audience == "in_service":
-        where.append(ListenerProfile.certified_exam.is_(True))
-    elif audience == "peer":
-        where.append(ListenerProfile.certified_exam.is_(False))
+    pool = tiers.pool_clause(audience, ListenerProfile.certified_exam, ListenerProfile.tier)
+    if pool is not None:
+        where.append(pool)
     rows = db.execute(
         select(ListenerProfile.id, ListenerProfile.categories, ListenerProfile.community_slug)
         .where(*where)
@@ -340,7 +355,7 @@ def can_take_broadcast(
     if not (
         request.broadcast
         and request.target_listener_id is None
-        and audience_allows(request.audience, bool(listener.certified_exam))
+        and tiers.audience_allows(request.audience, tiers.tier_of(listener))
         and listener.vetting_status == VettingStatus.approved
     ):
         return False

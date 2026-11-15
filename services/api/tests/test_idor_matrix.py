@@ -69,6 +69,7 @@ _plan(
     "POST /admin/listeners/{listener_id}/console-link",
     "POST /admin/listeners/{listener_id}/reinstate",
     "POST /admin/listeners/{listener_id}/suspend",
+    "POST /admin/listeners/{listener_id}/tier",
     "POST /admin/mentor-invites/{invite_id}/revoke",
     "POST /admin/moderation/{event_id}/resolve",
     "POST /admin/safety/flags/{flag_id}/review",
@@ -148,6 +149,7 @@ EXEMPT: dict[tuple[str, str], str] = {
 BODIES: dict[tuple[str, str], dict] = {
     ("post", "/admin/applications/{app_id}/decline"): {"reason": "no"},
     ("post", "/admin/listeners/{listener_id}/certify"): {"certified": True},
+    ("post", "/admin/listeners/{listener_id}/tier"): {"tier": "listener"},
     ("post", "/admin/safety/flags/{flag_id}/review"): {"action": "no_action"},
     ("post", "/conversations/{convo_id}/block"): {},
     ("post", "/conversations/{convo_id}/report"): {},

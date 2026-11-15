@@ -22,31 +22,28 @@ from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
 from app.models.moderation import ModerationEvent
 from app.models.request import ConversationRequest, RequestPass
+from app.services import tiers
 
 
-def _audience_ok(certified) -> ColumnElement[bool]:
-    """`audience` values a mentor may take (matching.audiences_for): "any" for everyone,
-    "in_service" for Mento Verified mentors, "peer" for the others; nothing else."""
-    a = ConversationRequest.audience
-    return or_(
-        a == "any",
-        and_(a == "in_service", certified.is_(True)),
-        and_(a == "peer", certified.is_(False)),
-    )
+def _audience_ok(certified, tier) -> ColumnElement[bool]:
+    """`audience` values a mentor may take: the one rule in services/tiers.py."""
+    return tiers.audience_clause(ConversationRequest.audience, certified, tier)
 
 
-def inbox_clause(listener_id, certified) -> ColumnElement[bool]:
-    """Status is NOT part of it: the listing adds `status == pending` itself."""
+def inbox_clause(listener_id, certified, tier=None) -> ColumnElement[bool]:
+    """Status is NOT part of it: the listing adds `status == pending` itself. `tier` is the
+    profile's tier column or value (DECISIONS R.4); None = Peer listener."""
     if isinstance(listener_id, str):
         listener_id = literal(listener_id)
     if isinstance(certified, bool):
         certified = literal(certified)
+
     return or_(
         ConversationRequest.target_listener_id == listener_id,
         and_(
             ConversationRequest.broadcast.is_(True),
             ConversationRequest.target_listener_id.is_(None),
-            _audience_ok(certified),
+            _audience_ok(certified, tier),
             ~select(RequestPass.id)
             .where(
                 RequestPass.request_id == ConversationRequest.id,
@@ -84,7 +81,9 @@ def recipient_ids(db: Session, request: ConversationRequest | str) -> list[str]:
                 select(ConversationRequest.id)
                 .where(
                     ConversationRequest.id == request_id,
-                    inbox_clause(ListenerProfile.id, ListenerProfile.certified_exam),
+                    inbox_clause(
+                        ListenerProfile.id, ListenerProfile.certified_exam, ListenerProfile.tier
+                    ),
                 )
                 .exists(),
             )

@@ -38,6 +38,7 @@ from app.models.favourite import FavouriteListener
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentee_profile import MenteeProfile
 from app.models.mentor_link import MentorLink
 from app.models.moderation import ModerationEvent
 from app.models.push_token import PushToken
@@ -155,6 +156,7 @@ def _world(s, uid: str, lid: str, tag: str) -> dict:
                 meta={"conversation_id": active},
             ),
             FavouriteListener(user_id=uid, listener_id=lid),
+            MenteeProfile(user_id=uid, data={"attempts": [{"year": 2025, "prelims_gs": 92}]}),
             MentorLink(
                 user_id=uid,
                 listener_id=lid,
@@ -215,6 +217,7 @@ def _rows_for(s, uid: str, convo_ids: list[str]) -> dict[str, int]:
         "conversations": _count(s, Conversation, Conversation.user_id == uid),
         "journals": _count(s, JournalEntry, JournalEntry.user_id == uid),
         "favourites": _count(s, FavouriteListener, FavouriteListener.user_id == uid),
+        "mentee_profile": _count(s, MenteeProfile, MenteeProfile.user_id == uid),
         "links": _count(s, MentorLink, MentorLink.user_id == uid),
         "requests": _count(s, ConversationRequest, ConversationRequest.requester_id == uid),
         "push": _count(s, PushToken, PushToken.owner_id == uid),

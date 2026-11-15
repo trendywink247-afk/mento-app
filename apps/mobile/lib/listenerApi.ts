@@ -1,6 +1,6 @@
 /** Typed client for the listener console (/listener/me endpoints). Same transport as
  * lib/api.ts, bound to the listener token instead of the member session. */
-import { ApiError, type ApiPage, apiRequest, apiRequestPage, collectPages } from '@/lib/api';
+import { ApiError, type ApiPage, type ExamAttempt, apiRequest, apiRequestPage, collectPages } from '@/lib/api';
 import { clearListenerSession, getListenerToken } from '@/lib/listenerSession';
 
 export type ListenerMe = {
@@ -116,8 +116,24 @@ export type ListenerRequest = {
   stage_label?: string | null;
   /** "18–24": the member's age as a band, never a date of birth. */
   age_band?: string | null;
-  /** Who it was offered to: any approved mentor, Mento Verified only, or peers. */
-  audience?: 'any' | 'in_service' | 'peer';
+  /** Who it was offered to (server `services/tiers.py`); "mentorship" = Start mentorship. */
+  audience?: 'any' | 'in_service' | 'peer' | 'listeners' | 'mentorship';
+  /** The mentorship intake answers (DECISIONS R.6); marks only as the member allowed (R.14). */
+  mentee_brief?: MenteeBrief | null;
+};
+
+export type MenteeBrief = {
+  exam?: string | null;
+  current_stage?: string | null;
+  attempts_count?: number | null;
+  furthest_stage?: string | null;
+  optional_subject?: string | null;
+  prep_mode?: string | null;
+  language?: string | null;
+  help_with?: string[];
+  note?: string | null;
+  attempts?: ExamAttempt[];
+  marks_shown?: boolean;
 };
 
 /** Dev-only picker row (the /listener/dev/* endpoints 404 in production). */

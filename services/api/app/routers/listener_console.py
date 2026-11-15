@@ -35,6 +35,7 @@ from app.models.enums import (
     VettingStatus,
 )
 from app.models.listener import ListenerProfile
+from app.models.mentee_profile import MenteeProfile
 from app.models.moderation import ModerationEvent
 from app.models.request import ConversationRequest
 from app.models.safety import SafetyFlag
@@ -68,6 +69,7 @@ from app.services import (
     conversations,
     in_touch,
     languages,
+    mentee_profiles,
     mentor_face,
     mentor_names,
     paths,
@@ -76,6 +78,7 @@ from app.services import (
     request_visibility,
     snooze,
     stream,
+    tiers,
 )
 from app.services.matching import (
     ListenerAtCapacity,
@@ -452,7 +455,9 @@ def my_pending_requests(
         .where(
             ConversationRequest.status == RequestStatus.pending,
             # One rule shared with the live events (services/request_visibility.py).
-            request_visibility.inbox_clause(listener.id, bool(listener.certified_exam)),
+            request_visibility.inbox_clause(
+                listener.id, bool(listener.certified_exam), listener.tier
+            ),
         )
     )
     if after is not None:
@@ -467,6 +472,14 @@ def my_pending_requests(
     rows = pagination.set_next(
         response, list(rows), page, lambda r: [r[0].created_at.isoformat(), r[0].id]
     )
+    # The mentorship intake answers of the members on this page (DECISIONS R.6, R.14).
+    viewer_tier = tiers.tier_of(listener)
+    profiles = {
+        p.user_id: p
+        for p in db.scalars(
+            select(MenteeProfile).where(MenteeProfile.user_id.in_({u.id for _, u in rows}))
+        )
+    }
     return [
         ListenerRequestItem(
             id=req.id,
@@ -482,6 +495,7 @@ def my_pending_requests(
             stage_label=paths.stage_label(user.community_slug, user.journey_stage),
             age_band=age_band.age_band(user.dob),
             audience=req.audience,
+            mentee_brief=mentee_profiles.brief(profiles.get(user.id), viewer_tier),
         )
         for req, user in rows
     ]
@@ -513,7 +527,7 @@ def mark_requests_seen(
                         ConversationRequest.broadcast.is_(True),
                         ConversationRequest.target_listener_id.is_(None),
                         ConversationRequest.audience.in_(
-                            audiences_for(bool(listener.certified_exam))
+                            audiences_for(bool(listener.certified_exam), listener.tier)
                         ),
                     ),
                 ),

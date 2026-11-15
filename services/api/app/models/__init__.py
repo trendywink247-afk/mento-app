@@ -8,12 +8,14 @@ from app.models.console_code import ConsoleCode
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation
 from app.models.data_request import DataRequest
+from app.models.email_confirmation import EmailConfirmation
 from app.models.erasure_receipt import ErasureReceipt
 from app.models.favourite import FavouriteListener
 from app.models.feedback import ProductFeedback
 from app.models.journal import JournalEntry
 from app.models.listener import ListenerProfile
 from app.models.listener_application import ListenerApplication
+from app.models.mentee_profile import MenteeProfile
 from app.models.mentor_document import MentorDocument
 from app.models.mentor_invite import MentorInvite
 from app.models.mentor_link import ListenerNameHistory, MentorLink
@@ -37,11 +39,13 @@ __all__ = [
     "ConversationReflection",
     "ConversationRequest",
     "DataRequest",
+    "EmailConfirmation",
     "ErasureReceipt",
     "FavouriteListener",
     "JournalEntry",
     "ListenerApplication",
     "ListenerNameHistory",
+    "MenteeProfile",
     "MentorDocument",
     "MentorInvite",
     "ListenerProfile",

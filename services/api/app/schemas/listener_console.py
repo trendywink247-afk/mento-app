@@ -7,6 +7,7 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 
 from app.models.enums import ListenerReportReason
+from app.schemas.mentee_profile import MenteeBriefOut
 
 
 class ListenerMeOut(BaseModel):
@@ -159,8 +160,12 @@ class ListenerRequestItem(BaseModel):
     stage_label: str | None = None
     # The member's age as a band ("18–24"); never a date of birth. Additive.
     age_band: str | None = None
-    # Who the request was offered to ("any", "in_service" or "peer"). Additive.
+    # Who the request was offered to ("any", "in_service", "peer", "listeners" or
+    # "mentorship" — services/tiers.py). Additive.
     audience: str = "any"
+    # What the member shared in the mentorship intake form (DECISIONS R.6): no name, no
+    # contact; marks only as the member allowed for this mentor's tier (R.14). Additive.
+    mentee_brief: MenteeBriefOut | None = None
 
 
 class RequestsSeenIn(BaseModel):

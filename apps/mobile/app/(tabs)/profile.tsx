@@ -397,6 +397,16 @@ export default function ProfileTab() {
                 testID="profile-appearance"
               />
 
+              <Row
+                icon="school-outline"
+                tone="orange"
+                title={t('intake.profileRow')}
+                body={t('intake.profileRowSub')}
+                right={chevron}
+                onPress={() => router.push({ pathname: '/mentorship', params: { edit: '1' } })}
+                testID="profile-mentorship-form"
+              />
+
               <MentorRow application={application} onPress={openMentor} chevron={chevron} />
 
               <Row

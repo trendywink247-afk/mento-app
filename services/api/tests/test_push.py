@@ -271,7 +271,7 @@ def test_listener_message_pushes_the_member_with_listener_persona(sent):
         uid, lid, cid = _seed_pair(s, token_kind=PushOwnerKind.member)
     with TestSession() as s:
         push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
-    assert len(sent) == 1 and sent[0]["body"] == "Open River replied"
+    assert len(sent) == 1 and sent[0]["body"] == "Listener · Open River replied"
 
 
 @pytest.mark.parametrize(
@@ -333,7 +333,7 @@ def test_accepted_pushes_member_even_when_paused(sent):
     with TestSession() as s:
         push.notify_request_accepted(s, request_id=rid)
     assert len(sent) == 1
-    assert sent[0]["body"] == "Open River is ready to talk"
+    assert sent[0]["body"] == "Listener · Open River is ready to talk"
     assert sent[0]["data"]["kind"] == "accepted" and sent[0]["data"]["conversation_id"] == cid
 
 
@@ -674,7 +674,7 @@ def test_retry_keeps_accepted_pause_exemption(sent):
             s,
             recipient_kind="member",
             recipient_id=uid,
-            body="Open River is ready to talk",
+            body="Listener · Open River is ready to talk",
             data={"kind": "accepted", "conversation_id": cid, "stream_channel_id": None},
         )
     assert len(sent) == 1
@@ -900,7 +900,7 @@ def test_a_notification_shows_the_words_only_for_someone_who_turned_it_on(sent):
         push.notify_message(
             s, conversation_id=cid, sender_stream_user_id=lid
         )  # to the member (opted in)
-    assert sent[-1]["body"] == "Open River: Thank you for sharing this"
+    assert sent[-1]["body"] == "Listener · Open River: Thank you for sharing this"
     with TestSession() as s:
         push.notify_message(
             s, conversation_id=cid, sender_stream_user_id=uid
@@ -924,7 +924,7 @@ def test_the_words_never_appear_for_a_locked_chat_a_flagged_message_or_a_redacte
         )
     with TestSession() as s:
         push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
-    assert sent and sent[-1]["body"] == "Open River replied"
+    assert sent and sent[-1]["body"] == "Listener · Open River replied"
 
 
 def test_a_long_message_is_cut_for_the_notification(sent):
@@ -935,9 +935,9 @@ def test_a_long_message_is_cut_for_the_notification(sent):
         push.notify_message(s, conversation_id=cid, sender_stream_user_id=lid)
     body = sent[-1]["body"]
     assert (
-        body.startswith("Open River: word word")
+        body.startswith("Listener · Open River: word word")
         and body.endswith("…")
-        and len(body) <= len("Open River: ") + push.PREVIEW_CHARS
+        and len(body) <= len("Listener · Open River: ") + push.PREVIEW_CHARS
     )
 
 

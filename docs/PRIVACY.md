@@ -26,8 +26,19 @@ person seeking support and the listener — appears only as an auto-assigned per
 - **Date of birth** — collected once at onboarding, solely to compute your age and
   enforce the 18+ minimum-age gate server-side. We do not retain or display your DOB
   or exact age anywhere else in the product.
-- **Email — optional, and truly skippable.** Used only for account recovery / PIN
-  reset if you choose to provide it. Never required to use Mento.
+- **Email.** Used only for account recovery / PIN reset; never shown to anyone. Today it
+  is optional. A switch (off now, and staying off until we have an email service) can
+  ask a member to add and confirm an email from their second visit: we send a six-digit
+  code, keep only a hash of it for 15 minutes, and record when the address was
+  confirmed. The address is never shown to mentors or other members.
+- **Mentorship form — optional, every field.** If you ask for mentorship you can tell
+  us your exam stage, attempts, optional subject, how you prepare, what you want help
+  with and a short note, and, per attempt, your marks (Prelims GS and CSAT; Mains GS I-IV
+  and Optional Papers I and II if you reached Mains; Interview if you reached it). You
+  choose who sees the marks: nobody, mentors only, or mentors and listeners. The rest
+  of the form is shown to the person who receives your request, never with your
+  identity. The note is checked by the same crisis scan as chat messages. You can edit
+  or clear it at any time; your data export includes it and Start fresh deletes it.
 - **Chat messages** — stored by our real-time messaging provider (Stream Chat) to
   deliver the conversation to both participants, show typing/read state, and allow
   reconnection after a dropped connection. Deleting a conversation ("Clean Wipe")
@@ -58,6 +69,10 @@ person seeking support and the listener — appears only as an auto-assigned per
   when. It is never shown to members or other mentors, and every time an admin opens it
   the audit log records that. Until backups roll off, a copy can exist in a database
   backup (§5, backups). It is deleted with the mentor's profile.
+- **A mentor's exam history** (mentors only). How many times a mentor cleared Prelims,
+  reached Mains and reached the Interview, entered by an admin after reading the proof.
+  Members see it as small P / M / I badges with those counts; never years, marks or the
+  proof. It is deleted with the mentor's profile.
 - **Your look and your pinned and archived chats** — kept on your phone only (Pastel,
   Light, Dark or System; which chats you pinned or archived). Never sent to us. A
   cleared session removes the pins and archives; the look is a device setting.
@@ -122,7 +137,8 @@ separate mentor-verification flow and does not apply to people seeking support).
   can **report** a conversation from their console; a report records only the
   conversation, a reason category and an optional short note — no new data about
   you is collected, and the report goes to the same human review as member reports.
-- **Push notifications** show the other person's persona name and the kind of
+- **Push notifications** show the other person's persona name (for a mentor, with
+  their tier, e.g. "Mentor · Juno") and the kind of
   event (a request, an acceptance, a new message) — **never message content**. You can
   turn them off any time in your phone's system settings; nothing else changes.
 - **Safety-review staff (admins)** can, through an audited, read-only admin tool,
@@ -186,6 +202,7 @@ choice); every journal entry, including
 Mentor Notes you saved from a chat; your saved mentors and any "stay in touch"
 links (the mentor sees the link end); requests you sent to a mentor; your
 notification registration; the daily message counts; your end-of-chat reflections;
+your mentorship form and marks; a pending email confirmation;
 any mentor application that did not become an active mentor role; and every
 conversation — each open one is ended, and its messages and channel are
 hard-deleted from our messaging provider (Stream Chat) exactly as Clean Wipe does,
