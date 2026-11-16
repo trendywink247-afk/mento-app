@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { TAB_BAR_HEIGHT, TAB_DOCK_MIN_INSET } from '@/components/tabDock';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space } from '@/theme/tokens';
 
 export type TabPillItem = {
@@ -38,14 +38,23 @@ export function TabPill({
   testID?: string;
 }) {
   const { colors, elevation } = useTheme();
+  // Light and Dark: a full-width bar with a hairline on top, as on WhatsApp (DECISIONS T.1).
+  const flat = useFlatSurfaces();
   const insets = useSafeAreaInsets();
   return (
     <View
       pointerEvents={floating ? 'box-none' : 'auto'}
-      style={[floating ? styles.floating : styles.dock, { paddingBottom: Math.max(insets.bottom, TAB_DOCK_MIN_INSET) }]}
+      style={[
+        floating ? styles.floating : styles.dock,
+        { paddingBottom: Math.max(insets.bottom, TAB_DOCK_MIN_INSET) },
+        flat && [styles.flatDock, { backgroundColor: colors.surface, borderTopColor: colors.border }],
+      ]}
     >
       <View
-        style={[styles.bar, elevation.md, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        style={[
+          styles.bar,
+          flat ? styles.flatBar : [elevation.md, { backgroundColor: colors.surface, borderColor: colors.border }],
+        ]}
         accessibilityRole="tablist"
         testID={testID}
       >
@@ -109,6 +118,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tab: { flex: 1 },
+  flatDock: { paddingHorizontal: 0, borderTopWidth: StyleSheet.hairlineWidth },
+  flatBar: { borderRadius: 0, borderWidth: 0, backgroundColor: 'transparent' },
   cellBox: { alignSelf: 'stretch' },
   cell: { height: 48, alignItems: 'center', justifyContent: 'center', gap: 1 },
   label: { fontSize: 12, fontFamily: font.sansBold, lineHeight: 14 },

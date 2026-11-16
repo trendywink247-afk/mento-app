@@ -551,8 +551,10 @@ export default function ChatsTab() {
               <EdgeSurface
                 edge={colors.edgeSurface}
                 travel={4}
-                radius={radius.md}
-                style={[styles.search, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                radius={flat ? radius.pill : radius.md}
+                style={[styles.search, flat
+                  ? { backgroundColor: colors.surfaceAlt, borderColor: colors.surfaceAlt }
+                  : { backgroundColor: colors.surface, borderColor: colors.border }]}
               >
                 <Ionicons name="search-outline" size={20} color={colors.inkMuted} />
                 <TextInput
