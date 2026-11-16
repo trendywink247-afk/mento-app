@@ -25,6 +25,7 @@ import Animated, {
 
 import { haptic } from '@/lib/haptics';
 import { useReducedMotion } from '@/lib/useReducedMotion';
+import { useFlatSurfaces } from '@/theme/ThemeProvider';
 import { easing, press as pressTiming, spring } from '@/theme/motion';
 import { radius as radiusTokens } from '@/theme/tokens';
 
@@ -94,12 +95,16 @@ export function PressKey({
   testID,
 }: Props) {
   const reduced = useReducedMotion();
+  // Light and Dark are flat (DECISIONS T.2): no edge, and the press is an opacity dip.
+  const flat = useFlatSurfaces();
+  const travelPx = flat ? 0 : travel;
+  const dip = reduced || flat;
   const press = useSharedValue(0);
   const cornerStyle = faceRadiusStyle ? { borderRadius: radius, ...faceRadiusStyle } : { borderRadius: radius };
 
   const face = useAnimatedStyle(() => ({
-    transform: [{ translateY: reduced || disabled ? 0 : press.value * travel }],
-    opacity: disabled ? 0.55 : reduced ? 1 - press.value * 0.15 : 1,
+    transform: [{ translateY: dip || disabled ? 0 : press.value * travelPx }],
+    opacity: disabled ? 0.55 : dip ? 1 - press.value * 0.15 : 1,
   }));
 
   const onPressIn = () => {
@@ -119,7 +124,7 @@ export function PressKey({
   };
   const onPressOut = () => {
     if (disabled) return;
-    press.value = reduced
+    press.value = dip
       ? withTiming(0, { duration: pressTiming.reduced })
       : withSpring(0, spring.calm);
   };
@@ -149,16 +154,18 @@ export function PressKey({
       aria-selected={accessibilityState?.selected}
       aria-expanded={accessibilityState?.expanded}
       testID={testID}
-      style={[{ paddingBottom: travel }, containerStyle]}
+      style={[{ paddingBottom: travelPx }, containerStyle]}
     >
-      <View
-        pointerEvents="none"
-        style={[
-          StyleSheet.absoluteFill,
-          { top: travel, backgroundColor: disabled ? 'transparent' : edge },
-          cornerStyle,
-        ]}
-      />
+      {travelPx > 0 ? (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            { top: travelPx, backgroundColor: disabled ? 'transparent' : edge },
+            cornerStyle,
+          ]}
+        />
+      ) : null}
       <Animated.View style={[style, cornerStyle, face]}>{children}</Animated.View>
     </Pressable>
   );

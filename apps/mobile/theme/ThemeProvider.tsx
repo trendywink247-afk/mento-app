@@ -75,7 +75,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [companionColor, setColor] = useState<CompanionColor>(DEFAULT_COMPANION_COLOR);
   // New installs start on Light (DECISIONS R.3); a saved choice always wins.
   const [appearance, setAppearanceState] = useState<Appearance>('light');
-  const [companionShown, setShown] = useState(true);
+  const [companionShown, setShown] = useState(false);
   const [ready, setReady] = useState(false);
   const phone = useColorScheme();
   const look: Look = appearance === 'system' ? (phone === 'dark' ? 'dark' : 'light') : appearance;
@@ -152,6 +152,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   if (!ready) return null;
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+}
+
+/** DECISIONS T.2: Light and Dark draw keys and cards flat; only Pastel keeps the pillow edge.
+ * Safe outside the provider (reads as pillow), so shared keys never throw. */
+export function useFlatSurfaces(): boolean {
+  const ctx = useContext(ThemeContext);
+  return ctx ? ctx.look !== 'pastel' : false;
 }
 
 export function useTheme(): ThemeValue {

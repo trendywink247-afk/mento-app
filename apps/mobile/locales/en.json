@@ -674,7 +674,7 @@
   },
   "tabs": {
     "chats": "Chats",
-    "path": "Path",
+    "path": "Threads",
     "journals": "Journal",
     "profile": "Profile"
   },
@@ -686,6 +686,7 @@
     "filterAll": "All",
     "filterActive": "Active",
     "filterCompleted": "Completed",
+    "filterUnread": "Unread",
     "loadError": "We couldn't load your conversations. Please check your connection.",
     "retry": "Retry",
     "retryA11y": "Retry loading conversations",
@@ -1004,7 +1005,7 @@
     "emptyCertified": "No verified mentor is online right now. You can ask a question and the first one to be free will take it, or look at everyone.",
     "replyDay": "Usually replies within a day",
     "replyTwoDays": "Usually replies within 2 days",
-    "title": "Find a listener or mentor",
+    "title": "Peers",
     "sub": "Real people. Always private.",
     "backA11y": "Back to My Chats",
     "nextSub": "Right away if someone is online",
@@ -1798,10 +1799,10 @@
     "peerKey": "Connect now",
     "peerSub": "Someone who listens. The first one free takes it.",
     "mentorTitle": "Talk to a mentor",
-    "mentorKey": "Start mentorship",
+    "mentorKey": "Start guidance",
     "mentorSub": "A Mentor who has cleared the exam. Tell them about your preparation first, if you like.",
-    "browseKey": "Find a listener or mentor",
-    "browseSub": "See who is around and choose."
+    "browseKey": "Find a specific peer",
+    "browseSub": "Choose someone and send a personal request."
   },
   "browseFilters": {
     "type": "Type",

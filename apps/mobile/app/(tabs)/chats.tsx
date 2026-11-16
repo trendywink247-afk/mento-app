@@ -6,8 +6,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { FeedbackPill } from '@/components/FeedbackPill';
-import { GroundFade } from '@/components/GroundFade';
-import { LinkedRings } from '@/components/InTouchBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { PinPad } from '@/components/chat/options/bits';
@@ -52,7 +50,8 @@ const CARD_PERCHES: PlacementSlot[] = [
 /** Rows that fit above the New chat card on the smallest supported phone (360×740). */
 const SHORT_LIST = 2;
 
-type Filter = 'all' | 'active' | 'completed';
+// DECISIONS T.1: All, In touch and Unread as one row of chips (In touch switches the view).
+type Filter = 'all' | 'unread';
 type View2 = 'all' | 'touch';
 type Row =
   | { kind: 'convo'; key: string; at: number; convo: ConversationListItem }
@@ -312,15 +311,14 @@ export default function ChatsTab() {
     for (const c of rows) {
       const isArchived = chatPrefs.archived.includes(c.id);
       if (showArchived ? !isArchived : isArchived) continue;
-      if (filter === 'active' && c.status !== 'active') continue;
-      if (filter === 'completed' && c.status === 'active') continue;
+      const p = c.stream_channel_id ? previews[c.stream_channel_id] : undefined;
+      if (filter === 'unread' && !(rowUnread(p, c) && c.status === 'active')) continue;
       if (
         needle &&
         !c.listener_persona_name.toLowerCase().includes(needle) &&
         !(c.first_met_as ?? '').toLowerCase().includes(needle)
       )
         continue;
-      const p = c.stream_channel_id ? previews[c.stream_channel_id] : undefined;
       out.push({
         kind: 'convo',
         key: c.id,
@@ -328,7 +326,7 @@ export default function ChatsTab() {
         convo: c,
       });
     }
-    if (filter !== 'completed' && !showArchived) {
+    if (filter === 'all' && !showArchived) {
       for (const w of waiting) {
         if (needle && !w.name.toLowerCase().includes(needle)) continue;
         out.push({ kind: 'waiting', key: `ask-${w.id}`, at: new Date(w.createdAt).getTime(), ask: w });
@@ -389,11 +387,19 @@ export default function ChatsTab() {
     [merged],
   );
 
-  const chips: { key: Filter; label: string }[] = [
+  const chips: { key: Filter | 'touch'; label: string }[] = [
     { key: 'all', label: t('chats.filterAll') },
-    { key: 'active', label: t('chats.filterActive') },
-    { key: 'completed', label: t('chats.filterCompleted') },
+    { key: 'touch', label: t('inTouch.tabPlain') },
+    { key: 'unread', label: t('chats.filterUnread') },
   ];
+  const pickChip = (key: Filter | 'touch') => {
+    if (key === 'touch') {
+      setView('touch');
+      return;
+    }
+    setView('all');
+    setFilter(key);
+  };
 
   const hasAnything = rows.length > 0 || waiting.length > 0;
   const showTools = hasAnything && view === 'all';
@@ -560,62 +566,31 @@ export default function ChatsTab() {
               </EdgeSurface>
             ) : null}
 
-            <View
-              style={[styles.switch, { backgroundColor: colors.bgLavender }]}
-              accessibilityRole="tablist"
-              accessibilityLabel={t('chatsList.switchA11y')}
-            >
-              {(['all', 'touch'] as const).map((v) => {
-                const on = view === v;
-                return (
-                  <PressKey
-                    key={v}
-                    onPress={() => setView(v)}
-                    edge={on ? colors.edgeAlt : 'transparent'}
-                    travel={3}
-                    radius={radius.pill}
-                    intent="select"
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: on }}
-                    testID={`chats-view-${v}`}
-                    containerStyle={styles.switchCell}
-                    style={[styles.switchFace, on && { backgroundColor: colors.surface }]}
-                  >
-                    {v === 'touch' ? <LinkedRings color={on ? colors.ink : colors.inkMuted} size={14} /> : null}
-                    <Text style={[styles.switchText, { color: on ? colors.ink : colors.inkMuted }]} numberOfLines={2}>
-                      {v === 'all'
-                        ? t('chatsList.allChats')
-                        : slots
-                          ? t('inTouch.tab', { used: slots.in_touch, limit: slots.limit })
-                          : t('inTouch.tabPlain')}
-                    </Text>
-                  </PressKey>
-                );
-              })}
-            </View>
-
-            {showTools ? (
-              <View style={styles.chips} accessibilityLabel={t('chatsList.filterA11y')}>
+            {hasAnything ? (
+              <View style={styles.chips} accessibilityRole="tablist" accessibilityLabel={t('chatsList.filterA11y')}>
                 {chips.map((c) => {
-                  const selected = filter === c.key;
+                  const selected = c.key === 'touch' ? view === 'touch' : view === 'all' && filter === c.key;
                   return (
                     <PressKey
                       key={c.key}
-                      onPress={() => setFilter(c.key)}
-                      edge={selected ? colors.edgeInk : colors.edgeSurface}
-                      travel={4}
+                      onPress={() => pickChip(c.key)}
+                      edge={selected ? colors.accentEdge : colors.edgeSurface}
+                      travel={3}
                       radius={radius.pill}
                       intent="select"
+                      accessibilityRole="tab"
                       accessibilityState={{ selected }}
-                      testID={`filter-${c.key}`}
+                      testID={c.key === 'touch' ? 'chats-view-touch' : `filter-${c.key}`}
                       style={[
                         styles.chip,
                         selected
-                          ? { backgroundColor: colors.ink, borderColor: colors.ink }
-                          : { backgroundColor: colors.surface, borderColor: colors.border },
+                          ? { backgroundColor: colors.accentTint, borderColor: colors.accentTint }
+                          : { backgroundColor: colors.surfaceAlt, borderColor: colors.surfaceAlt },
                       ]}
                     >
-                      <Text style={[type.label, { color: selected ? colors.onBrand : colors.ink }]}>{c.label}</Text>
+                      <Text style={[type.label, { color: selected ? colors.accentInk : colors.ink }]}>
+                        {c.key === 'touch' && slots ? t('inTouch.tab', { used: slots.in_touch, limit: slots.limit }) : c.label}
+                      </Text>
                     </PressKey>
                   );
                 })}
@@ -674,7 +649,7 @@ export default function ChatsTab() {
               data={touch?.items ?? []}
               keyExtractor={(i) => i.link_id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.list, { paddingBottom: 170 + dock }]}
+              contentContainerStyle={[styles.list, { paddingBottom: 110 + dock }]}
               testID="in-touch-list"
               ListEmptyComponent={
                 // Still on purpose: an empty or failed view is a limit state.
@@ -753,7 +728,7 @@ export default function ChatsTab() {
               data={merged}
               keyExtractor={(r) => r.key}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.list, { paddingBottom: 170 + dock }]}
+              contentContainerStyle={[styles.list, { paddingBottom: 110 + dock }]}
               ListEmptyComponent={
                 <Text style={[type.note, styles.centerText, { color: colors.inkMuted }]}>{t('chatsList.noMatches')}</Text>
               }
@@ -771,54 +746,22 @@ export default function ChatsTab() {
 
           {!loading && hasAnything ? (
             <>
-              {/* the fade runs to the screen edge, so no card shows beside the rounded pill below it */}
-              <View style={[styles.fadeWrap, { bottom: 0, height: 176 + dock }]} pointerEvents="none">
-                <GroundFade height={176 + dock} />
-              </View>
-              <View style={[styles.newChatWrap, { bottom: 36 + dock }]} pointerEvents="box-none">
-                <CompanionSlot id="fabTop" size={52} align="left" inset={space.lg} />
-                <CompanionSlot id="fabDangle" size={56} align="left" inset={space.lg} nudge={4} />
-                <View
-                  style={[styles.newChatCard, elevation.md, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              {/* New chat: one round key, bottom right (DECISIONS T.1, as on WhatsApp). An open
+                  question still opens the sheet — the server has no "one open question" rule. */}
+              <View style={[styles.newChatWrap, { bottom: 20 + dock }]} pointerEvents="box-none">
+                <CompanionSlot id="fabTop" size={52} align="right" inset={space.xs} />
+                <CompanionSlot id="fabDangle" size={56} align="right" inset={space.xs} nudge={4} />
+                <PressKey
+                  onPress={openNewChat}
+                  edge={colors.accentEdge}
+                  radius={18}
+                  accessibilityLabel={waitingOn ? `${t('chats.newChatA11y')}. ${t('chatsList.newChatWaiting', { name: waitingOn.name })}` : t('chats.newChatA11y')}
+                  testID="new-chat-fab"
+                  containerStyle={styles.fabBox}
+                  style={[styles.fab, { backgroundColor: colors.accent }]}
                 >
-                  <Text style={[type.caption, styles.newChatHelp, { color: colors.ink }]} testID="new-chat-help">
-                    {waitingOn ? t('chatsList.newChatWaiting', { name: waitingOn.name }) : t('chatsList.newChatFree')}
-                  </Text>
-                  {waitingOn ? (
-                    // A question is already open: the board draws the key dashed and quiet.
-                    // reason: it still opens the sheet — the server has no "one open question"
-                    // rule and no way to close a question, so locking it would be a dead end.
-                    <PressKey
-                      onPress={openNewChat}
-                      edge="transparent"
-                      travel={2}
-                      radius={radius.md}
-                      haptic="none"
-                      accessibilityLabel={t('chats.newChatA11y')}
-                      testID="new-chat-fab"
-                      style={[styles.newChatKey, styles.newChatDashed, { backgroundColor: colors.bgLavender, borderColor: colors.dotIdle }]}
-                    >
-                      <Ionicons name="add" size={18} color={colors.inkMuted} />
-                      <Text style={[styles.newChatText, { color: colors.inkMuted }]}>{t('chats.newChat')}</Text>
-                    </PressKey>
-                  ) : (
-                    <PressKey
-                      onPress={openNewChat}
-                      edge={colors.accentEdge}
-                      radius={radius.md}
-                      accessibilityLabel={t('chats.newChatA11y')}
-                      testID="new-chat-fab"
-                      style={[styles.newChatKey, { backgroundColor: colors.accent }]}
-                    >
-                      <Ionicons name="add" size={18} color={colors.onAccent} />
-                      <Text style={[styles.newChatText, { color: colors.onAccent }]}>{t('chats.newChat')}</Text>
-                    </PressKey>
-                  )}
-                </View>
-              </View>
-              <View style={[styles.privacy, { bottom: 8 + dock }]} pointerEvents="none">
-                <Ionicons name="lock-closed-outline" size={15} color={colors.inkMuted} />
-                <Text style={[type.caption, { color: colors.inkMuted }]}>{t('chats.privacyFooter')}</Text>
+                  <Ionicons name="add" size={28} color={colors.onAccent} />
+                </PressKey>
               </View>
             </>
           ) : null}
@@ -894,10 +837,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   searchInput: { flex: 1, minWidth: 0, minHeight: 44, paddingVertical: 4, ...type.body },
-  switch: { flexDirection: 'row', padding: 4, borderRadius: radius.pill },
-  switchCell: { flex: 1 },
-  switchFace: { minHeight: 44, paddingHorizontal: 6, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-  switchText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20, textAlign: 'center', flexShrink: 1 },
   chips: { flexDirection: 'row', gap: space.sm },
   touchLine: { minHeight: 48, justifyContent: 'center', paddingLeft: space.sm, paddingRight: 96 },
   touchLineText: {},
@@ -907,7 +846,6 @@ const styles = StyleSheet.create({
   list: { paddingTop: 14, paddingHorizontal: space.md, paddingBottom: 170, gap: 10 },
   footerGap: { gap: 10 },
   // The ground fade ends where the floating tab bar's pill begins.
-  fadeWrap: { position: 'absolute', left: 0, right: 0, height: 136 },
   peers: { textAlign: 'center', paddingTop: space.xs, paddingHorizontal: space.sm },
   calm: { padding: space.md, gap: 10, borderRadius: radius.lg, borderWidth: 1 },
   calmHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -915,39 +853,9 @@ const styles = StyleSheet.create({
   pip: { width: 28, height: 10, borderRadius: radius.pill },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.sm, paddingHorizontal: space.lg },
   centerText: { textAlign: 'center' },
-  newChatWrap: { position: 'absolute', left: space.md, right: space.md, bottom: 36 },
-  newChatCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
-    paddingRight: 10,
-    paddingLeft: 14,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
-  newChatHelp: { flex: 1, minWidth: 0 },
-  newChatKey: {
-    height: 48,
-    paddingLeft: 10,
-    paddingRight: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: radius.md,
-  },
-  newChatDashed: { borderWidth: 1, borderStyle: 'dashed' },
-  newChatText: { fontFamily: font.sansBold, fontSize: 15, lineHeight: 20 },
-  privacy: {
-    position: 'absolute',
-    left: space.md,
-    right: space.md,
-    bottom: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
+  newChatWrap: { position: 'absolute', right: space.md, bottom: 36, alignItems: 'flex-end' },
+  fabBox: { alignSelf: 'flex-end' },
+  fab: { width: 58, height: 58, alignItems: 'center', justifyContent: 'center' },
   gateBackdrop: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 50,

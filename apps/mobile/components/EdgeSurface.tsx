@@ -6,6 +6,7 @@
 import { ReactNode } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
+import { useFlatSurfaces } from '@/theme/ThemeProvider';
 import { radius as radiusTokens } from '@/theme/tokens';
 
 export function EdgeSurface({
@@ -37,13 +38,17 @@ export function EdgeSurface({
   testID?: string;
 }) {
   const cornerStyle = faceRadiusStyle ? { borderRadius: radius, ...faceRadiusStyle } : { borderRadius: radius };
+  // Light and Dark are flat (DECISIONS T.2); Pastel keeps the pillow edge.
+  const travelPx = useFlatSurfaces() ? 0 : travel;
 
   return (
-    <View style={[{ paddingBottom: travel }, containerStyle]} testID={testID}>
-      <View
-        pointerEvents="none"
-        style={[StyleSheet.absoluteFill, { top: travel, backgroundColor: edge }, cornerStyle]}
-      />
+    <View style={[{ paddingBottom: travelPx }, containerStyle]} testID={testID}>
+      {travelPx > 0 ? (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { top: travelPx, backgroundColor: edge }, cornerStyle]}
+        />
+      ) : null}
       <View style={[style, cornerStyle]}>{children}</View>
     </View>
   );

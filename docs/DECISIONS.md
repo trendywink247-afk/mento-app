@@ -435,3 +435,23 @@ Source: the 2026-11-16 profile design call; the working map of every profile fea
 **10. Verification after launch.** Mentor verification and onboarding move to a separate module after launch; the screens are hidden at launch and the server side stays. At launch the admin creates about 50 Mentor and Mento Verified profiles directly.
 
 **11. Not decided:** chat and mentorship counts on cards (the founder leaned toward counting from launch); exam year on tags (trust versus year plus language identifying someone); whether a Mentor now needs Mains (R.4 says prelims); mentorship by stage; the four visibility stages' exact contents (before contact, after contact, stay in touch, private details; media only after stay in touch and 15 to 30 days); Share a thought (needs moderation).
+
+## T. Rulings — 2026-11-16 (evening call, architecture v1.1)
+
+Source: the 2026-11-16 evening call and the "Mentee Application Architecture V1.1" document; screens on the "Mento Screens v1.1" canvas. Where this section disagrees with an earlier one, this section wins.
+
+**1. Layout: direction A ("Familiar").** Chats with filter chips (All, In touch, Unread), Archived as a row, a round + opening a sheet with Connect now and Start guidance; Peers as a searchable list with filter chips; labelled bottom tabs Chats, Threads, Journal, Profile. No companion shown by default.
+
+**2. Looks.** Light becomes the flat direction-A design. Dark follows the same design. Pastel keeps the same layout but keeps the pillow ("bubbly") keys and surfaces; Light and Dark use flat ones.
+
+**3. Words.** "Start guidance" replaces "Start mentorship"; "Peers" replaces "Find your mentor"; "Threads" replaces My Path; "In touch" stays the name for connections. Contacts come later (one to two months).
+
+**4. Member profile access area ("My Mento").** Threads, In touch, Journal, and "Get an answer evaluated" marked Soon. Preferences and Account and support follow.
+
+**5. Mentor earnings now (brings part of Module B into scope).** The mentor profile drops the path for Earnings and Opportunities: balance, evaluation requests, completed evaluations, mentorship sessions, create a mentorship link, paid one-to-one sessions, earning history. Stubs and metrics from day one of testing; no money moves until payments are approved.
+
+**6. Last seen, not an online dot (amends S.8).** Mentors and listeners show last seen. Members are never searchable, so their last seen is never shown.
+
+**7. Likes.** A member can like a message in a listener chat. Like only: no count, meter or score is shown.
+
+**8. Later, worked on behind switches that stay off:** trust score from mutual likes (private, never shown), paid answer evaluation (Mains answers about ₹35–40, essays ₹300–500, payout falling with time), contact exchange with a 24-hour review, a gender filter on Peers, an AI assistant over the journal. Each needs the privacy policy and Play forms to match before it is switched on; contact exchange and the journal assistant also need tests and user review (anonymity, no AI reading).

@@ -174,7 +174,7 @@ async function run(browser, reduced) {
     const today = (await call(`/listeners/${m.id}`, member)).body.persona_name;
     if (!listed.includes(today)) throw new Error(`In touch is missing ${today}`);
   }
-  await visible('chats-view-all').click();
+  await visible('filter-all').click();
   const allRows = await page.locator('[data-testid^="convo-"]:visible').count();
   if (allRows !== 3) throw new Error(`All chats lists ${allRows} rows, expected 3`);
   const badges = await page.locator('[data-testid^="convo-"]:visible [data-testid="in-touch-badge"]').count();

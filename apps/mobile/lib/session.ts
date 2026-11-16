@@ -108,7 +108,8 @@ export async function saveCompanionShown(shown: boolean): Promise<void> {
 }
 
 export async function getCompanionShown(): Promise<boolean> {
-  return (await store.getItemAsync(COMPANION_SHOWN_KEY)) !== '0';
+  // Hidden unless chosen (DECISIONS T.1): only an explicit yes shows the companion.
+  return (await store.getItemAsync(COMPANION_SHOWN_KEY)) === '1';
 }
 
 const VISITS_KEY = 'mento.visits';
