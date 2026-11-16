@@ -410,3 +410,28 @@ Source: the 2026-11-14 QA walkthrough call and the checklist review answered on 
 
 
 **16. What a checked document grants (amends R.4, founder 2026-11-15, option b).** In the admin Documents tab an **in-service** document (ID card, posting letter) approves the mentor as **Mento Verified**; an **exam** document (Mains admission card, interview letter, result) approves them as a **Mentor**, with the prelims / mains / interview counts the admin reads off it (marked checked, so the badges show). "Something else" defaults to Mento Verified. The admin can switch the grant per document. Approving an application makes a Peer listener, or a Mentor when the admin enters the checked exam history; "Approve + verify" is retired from the panel. An admin may still make or remove Mento Verified on the roster, with a confirm. Seed mentors are hidden from members by suspending them (R.13).
+## S. Rulings — 2026-11-16 (profile design call)
+
+Source: the 2026-11-16 profile design call; the working map of every profile feature is the "Mento Profile Map" page (placements there are proposals until the founder confirms them). Where this section disagrees with an earlier one, this section wins; each override is named.
+
+**1. No ratings.** Mentors and listeners are never rated. Badges show authenticity, not mentoring ability.
+
+**2. Two tags: Mains and Interview (amends R.15).** No Prelims tag (Mains implies it) and no attempt counts. The P / M / I emblem coins are retired; the admin ticks the stages reached. Cards take the tag from the profile; the type filter (Mento Verified, Mentor, Peer listener) stays and every profile names its type.
+
+**3. Bios.** Unverified people may write a free bio. Once verified, the free bio goes; verified mentors pick bio lines built from their approved documents. Bios need moderation before they ship.
+
+**4. Pictures are caricatures.** A person may upload a photo; it is turned into a caricature and the original is never stored on our servers. Not built until the image service and the privacy policy match that promise.
+
+**5. WhatsApp layout.** Own profile and **Peer info** (WhatsApp's Contact info) copy WhatsApp's layout, buttons, plain icons, spacing and dividers, English only on these screens. In member-facing words the user is a mentee and everyone else is a peer.
+
+**6. Peer info is a chat's settings page.** Rename the peer on this phone only (their username stays), notifications on or off, block, report; the chat menu takes its options from here. Search later.
+
+**7. Own profile in groups.** A (quick access, not named on screen): picture, name, bio, availability, the same for mentee and listener. B (account and app): account, privacy, notifications, and a **Theme** page holding companion, colour and appearance. C: support. Mentors get one more group at the top for verification and marks. No totals such as "people listened to".
+
+**8. Privacy.** Online status, never last seen. Bio visible to everyone, stay in touch only, listeners, mentors or mentees. Mentees cannot be searched. Mentors' away, hours and search settings move under Privacy.
+
+**9. Usernames** are a profile field set later, never at signup; generated names stay at signup.
+
+**10. Verification after launch.** Mentor verification and onboarding move to a separate module after launch; the screens are hidden at launch and the server side stays. At launch the admin creates about 50 Mentor and Mento Verified profiles directly.
+
+**11. Not decided:** chat and mentorship counts on cards (the founder leaned toward counting from launch); exam year on tags (trust versus year plus language identifying someone); whether a Mentor now needs Mains (R.4 says prelims); mentorship by stage; the four visibility stages' exact contents (before contact, after contact, stay in touch, private details; media only after stay in touch and 15 to 30 days); Share a thought (needs moderation).
