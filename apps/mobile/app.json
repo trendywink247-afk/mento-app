@@ -21,7 +21,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/icon/adaptive-foreground.png",
         "monochromeImage": "./assets/icon/adaptive-monochrome.png",
-        "backgroundColor": "#F4EFE6"
+        "backgroundImage": "./assets/icon/adaptive-background.png",
+        "backgroundColor": "#2E0A85"
       },
       "versionCode": 20,
       "permissions": [],
@@ -49,7 +50,7 @@
       [
         "expo-notifications",
         {
-          "color": "#A2533A",
+          "color": "#5B2BB5",
           "icon": "./assets/icon/notification-icon.png",
           "defaultChannel": "default"
         }
