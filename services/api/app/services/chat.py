@@ -36,7 +36,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -149,9 +149,20 @@ def like(db: Session, conversation_id: str, actor_id: str, seq: int, liked: bool
         raise NotAllowed("not_found")
     if row.liked != liked:
         row.liked = liked
+        if get_settings().trust_score_enabled and side_of(convo, actor_id) == "member":
+            _move_trust(db, convo.listener_id, 1 if liked else -1)
         db.commit()
         publish(conversation_id, {"t": "liked", "seq": seq, "liked": liked})
     return liked
+
+
+def _move_trust(db: Session, listener_id: str, delta: int) -> None:
+    """One step of the never-shown trust score, in the like's own transaction; never below 0."""
+    db.execute(
+        update(ListenerProfile)
+        .where(ListenerProfile.id == listener_id)
+        .values(trust_points=func.greatest(ListenerProfile.trust_points + delta, 0))
+    )
 
 
 def message_id_for(conversation_id: str, sender_id: str, client_id: str) -> str:

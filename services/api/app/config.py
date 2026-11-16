@@ -163,6 +163,9 @@ class Settings(BaseSettings):
     # or the code), and the requirement stays off whatever the switch says.
     email_required_from_second_visit: bool = False
     email_provider: str = "log"
+    # DECISIONS T.8: record a trust score from likes (listener_profiles.trust_points). Off;
+    # recorded only, never shown.
+    trust_score_enabled: bool = False
     in_touch_limit: int = 2
     # After a quiet "not now", how long before the same member may ask that mentor
     # again ("the ask is one tap and never nags").

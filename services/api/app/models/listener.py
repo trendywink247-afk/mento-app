@@ -58,6 +58,12 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     # DECISIONS T.6: when this mentor was last online, for "Seen today" on Peers. Stamped while
     # online (heartbeats, sockets) and when they leave; only a coarse bucket ever leaves the server.
     last_online_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # DECISIONS T.8: a trust score recorded from members' likes, never shown to anyone and
+    # never in any response. Only moves while `trust_score_enabled` is on. Just a number:
+    # it names no member and no message, so Clean Wipe has nothing to remove here.
+    trust_points: Mapped[int] = mapped_column(
+        Integer, default=0, server_default="0", nullable=False
+    )
 
     # Chat-profile fields (spec 2026-09-06 "Two in the room"). Mentor-editable via
     # PUT /listener/me/profile; admin can clear public_line but not set it.

@@ -118,3 +118,51 @@ def test_earnings_are_stubs_with_real_counts(client, db_session):
         "/api/v1/listener/me/earnings", headers={"Authorization": f"Bearer {s.member}"}
     )
     assert member.status_code in (401, 403)
+
+
+def _trust(db_session, mentor_id: str) -> int:
+    db_session.expire_all()
+    return db_session.get(ListenerProfile, mentor_id).trust_points
+
+
+def test_trust_score_is_off_by_default(client, db_session):
+    s = seed_chat(db_session)
+    seq = _send(db_session, s, s.mentor_id, "Take it one paper at a time.", "t0")
+    client.post(
+        f"/api/v1/chat/{s.cid}/messages/{seq}/like",
+        headers={"Authorization": f"Bearer {s.member}"},
+    )
+    assert _trust(db_session, s.mentor_id) == 0
+
+
+def test_trust_score_follows_member_likes_and_is_never_shown(client, db_session, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "trust_score_enabled", True)
+    s = seed_chat(db_session)
+    a = _send(db_session, s, s.mentor_id, "Write the intro last.", "t1")
+    b = _send(db_session, s, s.mentor_id, "Keep answers to the word limit.", "t2")
+    mine = _send(db_session, s, s.member_id, "Thanks", "t3")
+    member = {"Authorization": f"Bearer {s.member}"}
+    mentor = {"Authorization": f"Bearer {s.mentor}"}
+    url = f"/api/v1/chat/{s.cid}/messages/%d/like"
+
+    client.post(url % a, headers=member)
+    client.post(url % a, headers=member)  # repeat: no extra point
+    client.post(url % b, headers=member)
+    assert _trust(db_session, s.mentor_id) == 2
+    client.post(url % b, json={"liked": False}, headers=member)
+    assert _trust(db_session, s.mentor_id) == 1
+    # The mentor liking the member's message moves nothing.
+    client.post(url % mine, headers=mentor)
+    assert _trust(db_session, s.mentor_id) == 1
+
+    # Never in any response either side can read.
+    for path, who in (
+        ("/api/v1/listener/me", mentor),
+        (f"/api/v1/listeners/{s.mentor_id}", member),
+        ("/api/v1/listeners", member),
+        (f"/api/v1/conversations/{s.cid}/mentor", member),
+    ):
+        r = client.get(path, headers=who)
+        assert "trust" not in r.text, path
