@@ -41,8 +41,8 @@ export const BUBBLE_SHARE = 0.8;
  * the kit's own bubble view) instead of using <Bubble>. */
 export function bubbleFace(mine: boolean, colors: ReturnType<typeof useTheme>['colors']) {
   return {
-    backgroundColor: mine ? colors.accent : colors.surface,
-    textColor: mine ? colors.onAccent : colors.ink,
+    backgroundColor: mine ? colors.bubbleMine : colors.bubbleTheirs,
+    textColor: mine ? colors.bubbleMineInk : colors.ink,
     edge: mine ? colors.accentEdge : colors.edgeSurface,
     tail: mine
       ? ({ borderBottomRightRadius: radius.sm } as const)
@@ -76,7 +76,9 @@ export function Bubble({
       style={[
         styles.bubble,
         { backgroundColor: face.backgroundColor },
-        mine ? null : { borderWidth: 1, borderColor: colors.border },
+        mine || colors.bubbleTheirs !== colors.surface || colors.chatGround !== colors.bg
+          ? null
+          : { borderWidth: 1, borderColor: colors.border },
       ]}
       containerStyle={[{ maxWidth: Math.round(width * BUBBLE_SHARE) }, containerStyle]}
       testID={testID}
@@ -93,7 +95,7 @@ export function Bubble({
 export function BubbleText({ mine, text }: { mine: boolean; text: string }) {
   const { colors } = useTheme();
   return (
-    <Text style={[type.body, { color: mine ? colors.onAccent : colors.ink }]} maxFontSizeMultiplier={1.3}>
+    <Text style={[type.body, { color: mine ? colors.bubbleMineInk : colors.ink }]} maxFontSizeMultiplier={1.3}>
       {text}
     </Text>
   );

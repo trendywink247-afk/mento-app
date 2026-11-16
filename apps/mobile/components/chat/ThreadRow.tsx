@@ -184,7 +184,11 @@ export const ThreadRow = memo(function ThreadRow({
               faceRadiusStyle={{ borderBottomLeftRadius: radius.sm }}
               accessibilityHint={t('chat.actionsHintA11y')}
               testID={`msg-${item.id}`}
-              style={[styles.bubble, styles.theirs, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={[
+                styles.bubble,
+                styles.theirs,
+                { backgroundColor: colors.bubbleTheirs, borderColor: colors.chatGround !== colors.bg ? 'transparent' : colors.border },
+              ]}
             >
               <BubbleText mine={false} text={item.text} />
             </PressKey>

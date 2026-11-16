@@ -221,65 +221,74 @@ type ColorMap = { [K in keyof typeof colors]: string };
 
 const PASTEL: ColorMap = { ...colors };
 
+// Light is WhatsApp's light scheme (founder, 2026-11-16): pure white ground, WhatsApp greys, no
+// off-white, nothing playful. Pastel is the playful look; Light borrows nothing from it.
 const LIGHT: ColorMap = {
   ...colors,
-  // Lighter than Pastel throughout (founder, 2026-11-16): near-white ground, white cards.
-  bg: '#FCFCFA',
-  bgLavender: '#F7F7F4',
+  bg: '#FFFFFF',
+  bgLavender: '#FFFFFF',
   surface: '#FFFFFF',
-  surfaceAlt: '#F9F9F6',
-  ink: '#222426',
-  inkMuted: '#5E6266',
-  border: '#EBECE7',
-  scrim: 'rgba(34,36,38,0.4)',
-  scrimSheet: 'rgba(34,36,38,0.35)',
-  handle: '#DCDED8',
-  edgeSurface: '#E9EAE5',
-  edgeAlt: '#E1E3DD',
-  dotIdle: '#D1D4CC',
-  dashIdle: '#B4B8AE',
-  borderStrong: '#DEE0D9',
-  heldFace: '#EEEFEA',
-  heldInk: '#767A73',
+  surfaceAlt: '#F0F2F5',
+  ink: '#111B21',
+  inkMuted: '#5B6970',
+  border: '#E9EDEF',
+  scrim: 'rgba(11,20,26,0.4)',
+  scrimSheet: 'rgba(11,20,26,0.35)',
+  handle: '#D1D7DB',
+  edgeSurface: '#E9EDEF',
+  edgeAlt: '#E9EDEF',
+  edgeInk: '#111B21',
+  dotIdle: '#D1D7DB',
+  dashIdle: '#AEBAC1',
+  borderStrong: '#D1D7DB',
+  heldFace: '#F0F2F5',
+  heldInk: '#5B6970',
+  success: '#008069',
+  warning: '#8A6D00',
+  danger: '#D32F2F',
 };
 
+// Dark is WhatsApp's dark scheme (founder: "as you see fit"; kept to the same family as Light).
 const DARK: ColorMap = {
   ...colors,
-  bg: '#0F1419',
-  bgLavender: '#0C1116',
-  surface: '#182028',
-  surfaceAlt: '#141B22',
-  ink: '#ECE8DF',
-  inkMuted: '#A3ACB4',
-  border: '#2A3440',
-  onBrand: '#0F1419',
+  bg: '#0B141A',
+  bgLavender: '#0B141A',
+  surface: '#111B21',
+  surfaceAlt: '#202C33',
+  ink: '#E9EDEF',
+  inkMuted: '#8696A0',
+  border: '#222D34',
+  onBrand: '#111B21',
   scrim: 'rgba(0,0,0,0.6)',
   scrimSheet: 'rgba(0,0,0,0.55)',
-  handle: '#3A4756',
-  edgeSurface: '#0B1015',
-  edgeAlt: '#0B1015',
+  handle: '#3B4A54',
+  edgeSurface: '#0B141A',
+  edgeAlt: '#0B141A',
   edgeInk: '#000000',
-  dotIdle: '#3A4756',
-  dashIdle: '#4A5A6C',
-  brand: '#E0A184',
-  brandPress: '#D69274',
-  brandTint: '#3B2B25',
-  accentSoft: '#E0A184',
+  dotIdle: '#3B4A54',
+  dashIdle: '#54656F',
+  brand: '#00A884',
+  brandPress: '#06CF9C',
+  brandTint: '#103529',
+  accentSoft: '#00A884',
   accentWarm: '#E6C27A',
-  success: '#6CC287',
+  success: '#00A884',
   warning: '#E6C27A',
-  danger: '#F0968F',
-  borderStrong: '#364353',
-  heldFace: '#1E2832',
-  heldInk: '#8A97A4',
-  successWashBorder: '#2C5A3C',
-  dangerWashBorder: '#6B3A37',
-  dangerWashEdge: '#4A2523',
-  dangerInk: '#F5B5B0',
+  danger: '#F15C6D',
+  borderStrong: '#2A3942',
+  heldFace: '#202C33',
+  heldInk: '#8696A0',
+  successWashBorder: '#1F4D3A',
+  dangerWashBorder: '#5E2A30',
+  dangerWashEdge: '#3F1E22',
+  dangerInk: '#F5A3AE',
 };
 
-const WASH_DARK = { accent: '#3B2B25', indigo: '#2D2740', orange: '#3A3020', green: '#1F3A2A', danger: '#3F2423', sky: '#1F3447' };
-const WASH_INK_DARK = { green: '#8FD3A4', orange: '#E6C27A', danger: '#F5B5B0', indigo: '#BFA9E0' };
+// Light and Dark carry no pastel washes: neutral chips, with green and red kept for meaning.
+const WASH_LIGHT = { accent: '#E7FCE3', indigo: '#F0F2F5', orange: '#F0F2F5', green: '#E7FCE3', danger: '#FDE8E8', sky: '#F0F2F5' };
+const WASH_INK_LIGHT = { green: '#00664F', orange: '#54656F', danger: '#B3261E', indigo: '#54656F' };
+const WASH_DARK = { accent: '#103529', indigo: '#202C33', orange: '#202C33', green: '#103529', danger: '#3F1E22', sky: '#202C33' };
+const WASH_INK_DARK = { green: '#7AE3C3', orange: '#AEBAC1', danger: '#F5A3AE', indigo: '#AEBAC1' };
 
 export function colorsFor(look: Look): ColorMap {
   return look === 'dark' ? DARK : look === 'light' ? LIGHT : PASTEL;
@@ -290,10 +299,10 @@ const WASH_INK_PASTEL = { ...washInk };
 const WASH_EDGE_PASTEL = { ...washEdge };
 
 export function washFor(look: Look): { [K in Wash]: string } {
-  return look === 'dark' ? WASH_DARK : WASH_PASTEL;
+  return look === 'dark' ? WASH_DARK : look === 'light' ? WASH_LIGHT : WASH_PASTEL;
 }
 export function washInkFor(look: Look) {
-  return look === 'dark' ? WASH_INK_DARK : WASH_INK_PASTEL;
+  return look === 'dark' ? WASH_INK_DARK : look === 'light' ? WASH_INK_LIGHT : WASH_INK_PASTEL;
 }
 
 /** Rewrite the module-level palettes in place (see the note above). */

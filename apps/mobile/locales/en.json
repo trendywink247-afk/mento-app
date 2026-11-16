@@ -1687,11 +1687,11 @@
     "title": "Your look",
     "sub": "Saved on this phone only.",
     "pastel": "Pastel",
-    "pastelSub": "Today's look. Cream, soft colour and companions.",
+    "pastelSub": "Playful. Cream, soft colour, rounded type and companions.",
     "light": "Light",
-    "lightSub": "A soft off-white, plainer and easy on the eyes.",
+    "lightSub": "Plain white, like WhatsApp.",
     "dark": "Dark",
-    "darkSub": "Easy on the eyes at night.",
+    "darkSub": "Plain dark, like WhatsApp at night.",
     "system": "System",
     "systemSub": "Follows your phone.",
     "row": "Appearance",
@@ -1729,7 +1729,8 @@
     "row": "Theme",
     "rowSub": "Companion, colour and appearance",
     "changeCompanion": "Change companion",
-    "pickCompanion": "Choose a companion"
+    "pickCompanion": "Choose a companion",
+    "companionPastelOnly": "Companions and their colours are part of the Pastel look. Light and Dark stay plain."
   },
   "chatActions": {
     "pin": "Pin",

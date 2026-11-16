@@ -18,7 +18,7 @@ import { radius, space, type } from '@/theme/tokens';
  * Profile row, so Profile keeps only what people reach for. */
 export default function Theme() {
   const router = useRouter();
-  const { colors, companionColor, setCompanionShown } = useTheme();
+  const { look, colors, companionColor, setCompanionShown } = useTheme();
   const { t } = useI18n();
   const animal = useCompanionAnimal() ?? null;
 
@@ -44,6 +44,19 @@ export default function Theme() {
           {t('theme.title')}
         </Text>
 
+        {/* Your look first: on Light and Dark (WhatsApp) the companion part below is Pastel's. */}
+        <View style={styles.section}>
+          <Text style={[type.rowTitle, { color: colors.ink }]}>{t('appearance.title')}</Text>
+          <Text style={[type.body, { color: colors.inkMuted }]}>{t('appearance.sub')}</Text>
+          <AppearancePicker />
+        </View>
+
+        {look !== 'pastel' ? (
+          <Text style={[type.caption, { color: colors.inkMuted }]} testID="theme-companion-pastel-only">
+            {t('theme.companionPastelOnly')}
+          </Text>
+        ) : (
+          <>
         <EdgeSurface
           edge={colors.edgeAlt}
           travel={3}
@@ -63,12 +76,8 @@ export default function Theme() {
         </EdgeSurface>
 
         <CompanionSwitch onChange={changeCompanionShown} testID="profile-companion-shown" />
-
-        <View style={styles.section}>
-          <Text style={[type.rowTitle, { color: colors.ink }]}>{t('appearance.title')}</Text>
-          <Text style={[type.body, { color: colors.inkMuted }]}>{t('appearance.sub')}</Text>
-          <AppearancePicker />
-        </View>
+          </>
+        )}
       </View>
     </Screen>
   );

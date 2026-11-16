@@ -48,7 +48,7 @@ import { measureRect, mentorHeroKey, rememberOrigin } from '@/lib/originStore';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { breathe, easing } from '@/theme/motion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, wash } from '@/theme/tokens';
 import { useMotionBudget } from '@/lib/motionBudget';
 
@@ -199,6 +199,8 @@ export function ChatHeaderCard({
   onStayInTouch,
 }: Props) {
   const { colors } = useTheme();
+  // Light and Dark: WhatsApp's app bar — full width, flat, a hairline under it, no glow.
+  const flat = useFlatSurfaces();
   const stay = useStayState(conversationId, Boolean(onStayInTouch));
   const avatarRef = useRef<View>(null);
   const { t } = useI18n();
@@ -220,15 +222,19 @@ export function ChatHeaderCard({
   const showStrip = Boolean(topic) || savedCount > 0;
 
   return (
-    <View style={styles.wrap}>
-      <HeaderGlow color={colors.accentTint} />
+    <View style={[styles.wrap, flat && styles.wrapFlat]}>
+      {flat ? null : <HeaderGlow color={colors.accentTint} />}
       <Entrance from="down" distance={14}>
         <EdgeSurface
           edge={colors.edgeSurface}
           travel={4}
-          radius={radius.lg}
+          radius={flat ? 0 : radius.lg}
           testID="chat-header-card"
-          style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[
+            styles.card,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+            flat && [styles.cardFlat, { borderBottomColor: colors.border }],
+          ]}
         >
           <View style={styles.row}>
             {/* reason: the back key and the identity area are chrome INSIDE the card, not
@@ -385,6 +391,8 @@ const styles = StyleSheet.create({
   glow: { position: 'absolute', left: -GLOW_BLEED, right: -GLOW_BLEED, height: GLOW_HEIGHT },
   // overflow: the strip's flat top edge and tinted ground are clipped to the card's corners.
   card: { borderWidth: 1, overflow: 'hidden' },
+  wrapFlat: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
+  cardFlat: { borderWidth: 0, borderBottomWidth: StyleSheet.hairlineWidth },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

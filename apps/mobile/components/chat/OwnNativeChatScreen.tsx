@@ -286,7 +286,7 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
     </>,
   } : {};
 
-  return <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: colors.bg }]}>
+  return <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: colors.chatGround }]}>
     {member ? <MemberSessionGuard /> : null}
     <CompanionPerches placement={perch}>
     {member ? <ChatHeaderCard conversationId={conversationId} name={name} face={header.face ?? undefined}

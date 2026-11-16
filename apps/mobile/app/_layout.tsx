@@ -5,9 +5,11 @@ import {
   Baloo2_700Bold,
   Baloo2_800ExtraBold,
 } from '@expo-google-fonts/baloo-2';
+import { Roboto_400Regular, Roboto_500Medium, Roboto_700Bold } from '@expo-google-fonts/roboto';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
+import { loadAsync } from 'expo-font';
+import { useEffect, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -18,6 +20,7 @@ import { WebFrame } from '@/components/WebFrame';
 import { installNotificationHandler, useNotificationTaps } from '@/lib/notifications';
 import { useShakeToUpdate } from '@/lib/useShakeToUpdate';
 import { UpgradeRequired } from '@/components/UpgradeRequired';
+import { getAppearance } from '@/lib/session';
 import { ThemeProvider, useTheme } from '@/theme/ThemeProvider';
 
 // Foreground banners without sound + tap routing (spec 2026-09-05 push §6). Web
@@ -40,18 +43,35 @@ export default function RootLayout() {
   useShakeToUpdate();
   useNotificationTaps();
 
-  // Family names must match theme/tokens.ts `font`. One family (DECISIONS §K.6):
-  // Baloo 2 carries Latin AND Devanagari, so the Lora/Noto pairing is retired.
-  const [fontsLoaded] = useFonts({
-    Baloo2_400Regular,
-    Baloo2_500Medium,
-    Baloo2_600SemiBold,
-    Baloo2_700Bold,
-    Baloo2_800ExtraBold,
-    // The one icon family the app uses. Without it in this gate the tab bar (and every
-    // icon key) painted first and its glyphs popped in a beat later — empty boxes on web.
-    ...Ionicons.font,
-  });
+  // Family names must match theme/tokens.ts `font`. Pastel draws in Baloo 2 (rounded, playful);
+  // Light and Dark draw in Roboto, plain as WhatsApp (founder, 2026-11-16), loaded UNDER THE SAME
+  // NAMES so no style changes. A face is fixed for the run, so switching between Pastel and the
+  // plain looks restarts the app once (ThemeProvider.setAppearance). Hindi glyphs Roboto lacks fall
+  // back to the system's Devanagari face.
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void getAppearance()
+      .catch(() => null)
+      .then((a) => {
+        const plain = a !== 'pastel';
+        return loadAsync({
+          Baloo2_400Regular: plain ? Roboto_400Regular : Baloo2_400Regular,
+          Baloo2_500Medium: plain ? Roboto_500Medium : Baloo2_500Medium,
+          Baloo2_600SemiBold: plain ? Roboto_500Medium : Baloo2_600SemiBold,
+          Baloo2_700Bold: plain ? Roboto_700Bold : Baloo2_700Bold,
+          Baloo2_800ExtraBold: plain ? Roboto_700Bold : Baloo2_800ExtraBold,
+          // The one icon family the app uses. Without it in this gate the tab bar (and every
+          // icon key) painted first and its glyphs popped in a beat later — empty boxes on web.
+          ...Ionicons.font,
+        });
+      })
+      .catch(() => {})
+      .finally(() => live && setFontsLoaded(true));
+    return () => {
+      live = false;
+    };
+  }, []);
   // Fonts are bundled locally (expo-google-fonts, vector-icons), so this resolves in a frame
   // or two; the Expo splash stays up meanwhile — no flash of fallback type or missing icons.
   if (!fontsLoaded) return null;

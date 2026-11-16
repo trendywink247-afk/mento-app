@@ -11,11 +11,12 @@
  * has arrived the caller passes what `lib/mentorFaces` remembers, and with nothing at all
  * the disc shows the board's default mentor, the Owl on sage.
  */
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image, StyleSheet, View } from 'react-native';
 
 import { COMPANION_GENERATED } from '@/assets/companions/generated';
 import type { CompanionAnimal } from '@/components/art/Companions';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { accentFor } from '@/theme/companion';
 import { radius } from '@/theme/tokens';
 
@@ -47,7 +48,9 @@ export function MentorFace({
   presence?: boolean;
   testID?: string;
 }) {
-  const { colors } = useTheme();
+  const { colors, look } = useTheme();
+  // Light and Dark are WhatsApp (founder, 2026-11-16): a plain avatar, no animal. Pastel keeps it.
+  const plain = useFlatSurfaces();
   const art = Math.round(size * 0.92);
   const dot = Math.max(12, Math.round(size * 0.27));
   const shown = animal ?? DEFAULT_MENTOR_ANIMAL;
@@ -64,17 +67,24 @@ export function MentorFace({
           on every screen (e2e/mentor-face.e2e.js). */}
       <View
         testID={`face-mentor-${shown}`}
-        style={[styles.disc, { width: size, height: size, backgroundColor: mentorWash(colour) }]}
+        style={[
+          styles.disc,
+          { width: size, height: size, backgroundColor: plain ? (look === 'dark' ? '#6A7175' : '#DFE5E7') : mentorWash(colour) },
+          plain && styles.plainDisc,
+        ]}
       >
-        {/* reason: a STILL of the idle painting, not the Companion rig — a list of ten rigs
-            would be ten idle movers (motion budget: three). The mentor is not the member's
-            companion; it never reacts. */}
-        <Image
+        {plain ? (
+          <Ionicons name="person" size={Math.round(size * 0.62)} color={look === 'dark' ? '#CFD4D6' : '#FFFFFF'} />
+        ) : (
+          // reason: a STILL of the idle painting, not the Companion rig — a list of ten rigs
+          // would be ten idle movers (motion budget: three). The mentor never reacts.
+          <Image
           source={artFor(animal)}
           resizeMode="contain"
           accessibilityIgnoresInvertColors
           style={{ width: art, height: art }}
         />
+        )}
       </View>
       {presence !== undefined ? (
         <View
@@ -106,6 +116,16 @@ export function MentorFaceFigure({
   height: number;
 }) {
   const shown = animal ?? DEFAULT_MENTOR_ANIMAL;
+  const plain = useFlatSurfaces();
+  if (plain) {
+    // Light and Dark: no standing figure, a plain avatar the figure's width (WhatsApp profile).
+    const d = Math.min(width, height);
+    return (
+      <View testID={`face-mentor-${shown}`} style={{ width, height, alignItems: 'center', justifyContent: 'center' }}>
+        <MentorFace animal={animal} size={d} />
+      </View>
+    );
+  }
   return (
     <View testID={`face-mentor-${shown}`} style={{ width, height }}>
       <Image source={artFor(animal)} resizeMode="contain" accessibilityIgnoresInvertColors style={{ width, height }} />
@@ -115,5 +135,6 @@ export function MentorFaceFigure({
 
 const styles = StyleSheet.create({
   disc: { borderRadius: radius.pill, overflow: 'hidden', alignItems: 'center', justifyContent: 'flex-end' },
+  plainDisc: { justifyContent: 'center' },
   dot: { position: 'absolute', right: -1, bottom: -1, borderRadius: radius.pill, borderWidth: 2 },
 });

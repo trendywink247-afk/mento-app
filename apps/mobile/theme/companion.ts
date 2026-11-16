@@ -77,3 +77,24 @@ export function darkAccentFor(color: CompanionColor | string | null | undefined)
     onAccent: ground,
   };
 }
+
+/** Light and Dark are WhatsApp's schemes (founder, 2026-11-16): one green, whatever companion colour
+ * the member chose. The companion colour belongs to Pastel. */
+export const WHATSAPP_LIGHT_ACCENT: AccentSet = {
+  accent: '#008069',
+  accentPress: '#006D59',
+  accentEdge: '#006D59',
+  accentInk: '#00664F',
+  accentTint: '#E7FCE3',
+  accentTintEdge: '#D1F4CC',
+  onAccent: '#FFFFFF',
+};
+export const WHATSAPP_DARK_ACCENT: AccentSet = {
+  accent: '#00A884',
+  accentPress: '#06CF9C',
+  accentEdge: '#008069',
+  accentInk: '#21C063',
+  accentTint: '#103529',
+  accentTintEdge: '#0B2A20',
+  onAccent: '#111B21',
+};

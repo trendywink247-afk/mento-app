@@ -14,7 +14,8 @@ import {
   accentFor,
   COMPANION_COLORS,
   DEFAULT_COMPANION_COLOR,
-  darkAccentFor,
+  WHATSAPP_DARK_ACCENT,
+  WHATSAPP_LIGHT_ACCENT,
   type AccentSet,
   type CompanionColor,
 } from '@/theme/companion';
@@ -34,7 +35,14 @@ import {
 
 /** Base neutral colours + the active companion accent merged in (widened from the
  * `as const` literals so the accent can override brand* at runtime). */
-export type ThemeColors = { [K in keyof ReturnType<typeof colorsFor>]: string } & AccentSet;
+export type ThemeColors = { [K in keyof ReturnType<typeof colorsFor>]: string } &
+  AccentSet & {
+    /** The chat's own ground and bubbles: WhatsApp's on Light and Dark, the accent pillow on Pastel. */
+    chatGround: string;
+    bubbleMine: string;
+    bubbleMineInk: string;
+    bubbleTheirs: string;
+  };
 
 type ThemeValue = {
   colors: ThemeColors;
@@ -60,9 +68,16 @@ function buildColors(accent: AccentSet, look: Look): ThemeColors {
   const baseColors = colorsFor(look);
   // The accent overrides the default brand* so existing brand-based components also
   // pick up the companion colour without a rewrite.
+  const chat =
+    look === 'light'
+      ? { chatGround: '#EFEAE2', bubbleMine: '#D9FDD3', bubbleMineInk: '#111B21', bubbleTheirs: '#FFFFFF' }
+      : look === 'dark'
+        ? { chatGround: '#0B141A', bubbleMine: '#005C4B', bubbleMineInk: '#E9EDEF', bubbleTheirs: '#202C33' }
+        : { chatGround: baseColors.bg, bubbleMine: accent.accent, bubbleMineInk: accent.onAccent, bubbleTheirs: baseColors.surface };
   return {
     ...baseColors,
     ...accent,
+    ...chat,
     brand: accent.accent,
     brandPress: accent.accentPress,
     brandTint: accent.accentTint,
@@ -97,10 +112,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const setAppearance = useCallback((a: Appearance) => {
-    setAppearanceState(a);
-    void saveAppearance(a);
-  }, []);
+  const setAppearance = useCallback(
+    (a: Appearance) => {
+      const fontChanges = (appearance === 'pastel') !== (a === 'pastel');
+      setAppearanceState(a);
+      void saveAppearance(a).then(() => {
+        // Pastel draws in Baloo 2, Light and Dark in Roboto (app/_layout.tsx); a face is fixed
+        // for the run, so moving between them restarts once, after the choice is saved.
+        if (fontChanges) void restartForFont();
+      });
+    },
+    [appearance],
+  );
 
   // Hydrate the persisted companion colour and the companion switch on launch.
   useEffect(() => {
@@ -130,7 +153,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<ThemeValue>(
     () => ({
-      colors: buildColors(look === 'dark' ? darkAccentFor(companionColor) : accentFor(companionColor), look),
+      colors: buildColors(
+        look === 'dark' ? WHATSAPP_DARK_ACCENT : look === 'light' ? WHATSAPP_LIGHT_ACCENT : accentFor(companionColor),
+        look,
+      ),
       space,
       radius,
       type,
@@ -140,7 +166,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       appearance,
       look,
       setAppearance,
-      companionShown,
+      // Companions belong to Pastel: Light and Dark (WhatsApp) never draw the member's own.
+      companionShown: companionShown && look === 'pastel',
       setCompanionShown,
       wash: washFor(look),
       washInk: washInkFor(look),
@@ -156,6 +183,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
 /** DECISIONS T.2: Light and Dark draw keys and cards flat; only Pastel keeps the pillow edge.
  * Safe outside the provider (reads as pillow), so shared keys never throw. */
+async function restartForFont(): Promise<void> {
+  try {
+    if (typeof window !== 'undefined' && typeof window.location?.reload === 'function') {
+      window.location.reload();
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Updates = require('expo-updates') as { reloadAsync: () => Promise<void> };
+    await Updates.reloadAsync();
+  } catch {
+    /* reason: a dev client without expo-updates keeps the old face until the next launch */
+  }
+}
+
 export function useFlatSurfaces(): boolean {
   const ctx = useContext(ThemeContext);
   return ctx ? ctx.look !== 'pastel' : false;
