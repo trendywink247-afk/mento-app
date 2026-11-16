@@ -27,6 +27,8 @@
 # Functions run via traps and background tiers, which ShellCheck cannot follow.
 # shellcheck disable=SC2317,SC2016
 set -uo pipefail
+# The CI poller runs under systemd with a bare PATH; python3.12 and friends live in ~/.local/bin.
+[ -d "$HOME/.local/bin" ] && case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) PATH="$HOME/.local/bin:$PATH" ;; esac
 
 ROOT=/srv/mento
 LOG_DIR="$ROOT/logs/ci"
