@@ -804,6 +804,10 @@ class EarningsOut(BaseModel):
     completed_evaluations: int = 0
     mentorship_sessions: int = 0
     personal_requests: int = 0
+    # What returned evaluations would have paid, by turnaround (a record; nothing is paid).
+    evaluation_paise: int = 0
+    # Whether answer evaluations are switched on (evaluations_enabled).
+    evaluations_live: bool = False
 
 
 @router.get("/me/earnings", response_model=EarningsOut)
@@ -829,4 +833,13 @@ def earnings(
             ConversationRequest.broadcast.is_(False),
         )
     )
-    return EarningsOut(mentorship_sessions=sessions or 0, personal_requests=personal or 0)
+    out = EarningsOut(mentorship_sessions=sessions or 0, personal_requests=personal or 0)
+    if get_settings().evaluations_enabled:
+        from app.services import evaluations
+
+        ev = evaluations.mentor_counts(db, listener)
+        out.evaluation_requests = ev["waiting"]
+        out.completed_evaluations = ev["returned"]
+        out.evaluation_paise = ev["paise"]
+        out.evaluations_live = True
+    return out

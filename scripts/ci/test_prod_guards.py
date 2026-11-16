@@ -193,3 +193,5 @@ class NoMessageBodiesInBackups(unittest.TestCase):
             self.assertTrue(dumps, f"{script.name}: no pg_dump found")
             for ln in dumps:
                 self.assertIn("--exclude-table-data-and-children=public.chat_messages", ln, script.name)
+                # DECISIONS T.8: answer photos are member content too; never in a dump.
+                self.assertIn("--exclude-table-data=public.answer_pages", ln, script.name)

@@ -180,6 +180,21 @@ def maintenance_verification_purge(timestamp: int) -> dict[str, int]:
     return {"wiped": wiped}
 
 
+# --- answer evaluations (DECISIONS T.8) -----------------------------------------------
+
+
+# Daily: unclaimed answers expire, held ones go back to everyone, photos are wiped on time.
+@queue.periodic(cron="41 3 * * *", periodic_id="evaluations-sweep")
+@queue.task(name="maintenance.evaluations_sweep", queue="maintenance", queueing_lock="maint-evals")
+def maintenance_evaluations_sweep(timestamp: int) -> dict[str, int]:
+    from app.services import evaluations
+
+    with SessionLocal() as db:
+        counts = evaluations.sweep(db)
+        db.commit()
+    return counts
+
+
 # --- the queue's own retention ------------------------------------------------------
 
 JOB_RETENTION_DAYS = 30

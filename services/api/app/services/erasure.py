@@ -48,6 +48,7 @@ from sqlalchemy.orm import Session
 
 from app.models.admin import AdminAuditLog
 from app.models.allowance import MessageAllowanceDay
+from app.models.answer_evaluation import AnswerEvaluation
 from app.models.contribution import Contribution
 from app.models.conversation import Conversation
 from app.models.enums import (
@@ -104,6 +105,7 @@ MEMBER_TABLES = (
     "applications",
     "contributions",
     "mentee_profile",
+    "answer_evaluations",
 )
 
 
@@ -255,6 +257,10 @@ def _phase_c_delete(db: Session, user_id: str) -> dict[str, int]:
             delete(ListenerApplication).where(ListenerApplication.user_id == user_id)
         ),
         "contributions": gone(delete(Contribution).where(Contribution.user_id == user_id)),
+        # Photos go with them (answer_pages ON DELETE CASCADE).
+        "answer_evaluations": gone(
+            delete(AnswerEvaluation).where(AnswerEvaluation.user_id == user_id)
+        ),
         "sessions": gone(delete(AuthSession).where(AuthSession.user_id == user_id)),
         "safety_flags_detached": gone(
             update(SafetyFlag).where(SafetyFlag.user_id == user_id).values(user_id=None)

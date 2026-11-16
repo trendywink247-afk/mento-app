@@ -144,7 +144,7 @@ predeploy_dump() { # <tag>
   install -d -m 700 "$BACKUP_DIR"
   out="$BACKUP_DIR/predeploy-$1-$(date -u +%Y%m%dT%H%M%SZ).sql.gz.age"
   if ! ( set -o pipefail; umask 077
-         compose exec -T postgres pg_dump -U mento -d mento --exclude-table-data-and-children=public.chat_messages | gzip \
+         compose exec -T postgres pg_dump -U mento -d mento --exclude-table-data-and-children=public.chat_messages --exclude-table-data=public.answer_pages | gzip \
            | age --encrypt --recipients-file "$RECIPIENTS" --output "$out" ) || [ ! -s "$out" ]; then
     rm -f "$out"; die "pre-deploy database dump FAILED; nothing was changed"
   fi

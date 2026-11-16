@@ -22,6 +22,7 @@ from app.routers import (
     chat,
     conversation,
     email_confirm,
+    evaluations,
     events,
     feedback,
     health,
@@ -224,6 +225,8 @@ app.include_router(listeners.router, prefix=API)
 app.include_router(listener_console.router, prefix=API)
 app.include_router(verification.mentor_router, prefix=API)
 app.include_router(verification.admin_router, prefix=API)
+app.include_router(evaluations.member_router, prefix=API)
+app.include_router(evaluations.mentor_router, prefix=API)
 app.include_router(in_touch.router, prefix=API)
 app.include_router(feedback.router, prefix=API)
 app.include_router(admin_console.router, prefix=API)

@@ -2214,10 +2214,20 @@
             "title": "Currency",
             "type": "string"
           },
+          "evaluation_paise": {
+            "default": 0,
+            "title": "Evaluation Paise",
+            "type": "integer"
+          },
           "evaluation_requests": {
             "default": 0,
             "title": "Evaluation Requests",
             "type": "integer"
+          },
+          "evaluations_live": {
+            "default": false,
+            "title": "Evaluations Live",
+            "type": "boolean"
           },
           "mentorship_sessions": {
             "default": 0,
@@ -2290,6 +2300,182 @@
           "required"
         ],
         "title": "EmailStatusOut",
+        "type": "object"
+      },
+      "EvaluationOut": {
+        "properties": {
+          "audience": {
+            "title": "Audience",
+            "type": "string"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "mentor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mentor Name"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "pages": {
+            "default": 0,
+            "title": "Pages",
+            "type": "integer"
+          },
+          "pages_available": {
+            "default": true,
+            "title": "Pages Available",
+            "type": "boolean"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "returned_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returned At"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupportOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "audience",
+          "status"
+        ],
+        "title": "EvaluationOut",
+        "type": "object"
+      },
+      "EvaluationStartIn": {
+        "properties": {
+          "audience": {
+            "default": "everyone",
+            "enum": [
+              "everyone",
+              "one"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "mains",
+              "essay"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "listener_id": {
+            "anyOf": [
+              {
+                "maxLength": 36,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listener Id"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "EvaluationStartIn",
         "type": "object"
       },
       "ExamBadges": {
@@ -2564,6 +2750,115 @@
         "title": "ExportConversation",
         "type": "object"
       },
+      "ExportEvaluation": {
+        "description": "An answer sent for evaluation (DECISIONS T.8). The photos themselves are not in the file\n(the member sees them in the app while they are kept); their count is.",
+        "properties": {
+          "audience": {
+            "title": "Audience",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "mentor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mentor Name"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "returned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returned At"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "audience",
+          "status",
+          "question",
+          "note",
+          "pages",
+          "mentor_name",
+          "feedback",
+          "sent_at",
+          "returned_at",
+          "created_at"
+        ],
+        "title": "ExportEvaluation",
+        "type": "object"
+      },
       "ExportFavourite": {
         "properties": {
           "created_at": {
@@ -2723,6 +3018,14 @@
               "$ref": "#/components/schemas/ExportAllowanceDay"
             },
             "title": "Allowance Days",
+            "type": "array"
+          },
+          "answer_evaluations": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ExportEvaluation"
+            },
+            "title": "Answer Evaluations",
             "type": "array"
           },
           "applications": {
@@ -3107,58 +3410,6 @@
           "created_at"
         ],
         "title": "ExportRequest",
-        "type": "object"
-      },
-      "FeedbackIn": {
-        "description": "`screen` is the ROUTE the sheet was opened from (\"(tabs)/journals\",\n\"chat/[id]\") — a template, never a path with an id in it, never free text.",
-        "properties": {
-          "app_version": {
-            "anyOf": [
-              {
-                "maxLength": 32,
-                "pattern": "^[A-Za-z0-9_\\-.+ ()]+$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "App Version"
-          },
-          "category": {
-            "enum": [
-              "broken",
-              "confusing",
-              "idea"
-            ],
-            "title": "Category",
-            "type": "string"
-          },
-          "screen": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "pattern": "^[A-Za-z0-9_\\-/\\[\\]().+]+$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Screen"
-          },
-          "text": {
-            "maxLength": 1000,
-            "minLength": 1,
-            "title": "Text",
-            "type": "string"
-          }
-        },
-        "required": [
-          "category",
-          "text"
-        ],
-        "title": "FeedbackIn",
         "type": "object"
       },
       "FeedbackReceived": {
@@ -5393,6 +5644,104 @@
         "title": "MenteeProfileOut",
         "type": "object"
       },
+      "MentorEvaluationOut": {
+        "properties": {
+          "due_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due At"
+          },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "pages": {
+            "default": 0,
+            "title": "Pages",
+            "type": "integer"
+          },
+          "pages_available": {
+            "default": true,
+            "title": "Pages Available",
+            "type": "boolean"
+          },
+          "payout_paise": {
+            "default": 0,
+            "title": "Payout Paise",
+            "type": "integer"
+          },
+          "personal": {
+            "title": "Personal",
+            "type": "boolean"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "personal",
+          "status"
+        ],
+        "title": "MentorEvaluationOut",
+        "type": "object"
+      },
       "MentorNoteIn": {
         "properties": {
           "body": {
@@ -5790,6 +6139,34 @@
           "count"
         ],
         "title": "OrganizeTheme",
+        "type": "object"
+      },
+      "PageAdded": {
+        "properties": {
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "pages"
+        ],
+        "title": "PageAdded",
+        "type": "object"
+      },
+      "PageIn": {
+        "properties": {
+          "content_base64": {
+            "maxLength": 4400000,
+            "minLength": 8,
+            "title": "Content Base64",
+            "type": "string"
+          }
+        },
+        "required": [
+          "content_base64"
+        ],
+        "title": "PageIn",
         "type": "object"
       },
       "PathChoice": {
@@ -6912,6 +7289,73 @@
           "pin"
         ],
         "title": "VerifyPinRequest",
+        "type": "object"
+      },
+      "app__schemas__evaluations__FeedbackIn": {
+        "properties": {
+          "feedback": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Feedback",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feedback"
+        ],
+        "title": "FeedbackIn",
+        "type": "object"
+      },
+      "app__schemas__feedback__FeedbackIn": {
+        "description": "`screen` is the ROUTE the sheet was opened from (\"(tabs)/journals\",\n\"chat/[id]\") — a template, never a path with an id in it, never free text.",
+        "properties": {
+          "app_version": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "pattern": "^[A-Za-z0-9_\\-.+ ()]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "App Version"
+          },
+          "category": {
+            "enum": [
+              "broken",
+              "confusing",
+              "idea"
+            ],
+            "title": "Category",
+            "type": "string"
+          },
+          "screen": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_\\-/\\[\\]().+]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Screen"
+          },
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "text"
+        ],
+        "title": "FeedbackIn",
         "type": "object"
       }
     },
@@ -9808,6 +10252,285 @@
         ]
       }
     },
+    "/api/v1/evaluations": {
+      "get": {
+        "operationId": "my_evaluations_api_v1_evaluations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/EvaluationOut"
+                  },
+                  "title": "Response My Evaluations Api V1 Evaluations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "My Evaluations",
+        "tags": [
+          "evaluations"
+        ]
+      },
+      "post": {
+        "operationId": "start_evaluation_api_v1_evaluations_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluationStartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Start Evaluation",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/api/v1/evaluations/{evaluation_id}": {
+      "delete": {
+        "operationId": "withdraw_evaluation_api_v1_evaluations__evaluation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evaluation_id",
+            "required": true,
+            "schema": {
+              "title": "Evaluation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Withdraw Evaluation",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/api/v1/evaluations/{evaluation_id}/pages": {
+      "post": {
+        "operationId": "add_page_api_v1_evaluations__evaluation_id__pages_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evaluation_id",
+            "required": true,
+            "schema": {
+              "title": "Evaluation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageAdded"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Add Page",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/api/v1/evaluations/{evaluation_id}/pages/{idx}": {
+      "get": {
+        "operationId": "my_page_api_v1_evaluations__evaluation_id__pages__idx__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evaluation_id",
+            "required": true,
+            "schema": {
+              "title": "Evaluation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "idx",
+            "required": true,
+            "schema": {
+              "title": "Idx",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "My Page",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/api/v1/evaluations/{evaluation_id}/send": {
+      "post": {
+        "operationId": "send_evaluation_api_v1_evaluations__evaluation_id__send_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evaluation_id",
+            "required": true,
+            "schema": {
+              "title": "Evaluation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvaluationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Send Evaluation",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
     "/api/v1/feedback": {
       "post": {
         "operationId": "send_feedback_api_v1_feedback_post",
@@ -9815,7 +10538,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/FeedbackIn"
+                "$ref": "#/components/schemas/app__schemas__feedback__FeedbackIn"
               }
             }
           },
@@ -11178,6 +11901,194 @@
         "summary": "Earnings",
         "tags": [
           "listener-console"
+        ]
+      }
+    },
+    "/api/v1/listener/me/evaluations": {
+      "get": {
+        "operationId": "mentor_queue_api_v1_listener_me_evaluations_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MentorEvaluationOut"
+                  },
+                  "title": "Response Mentor Queue Api V1 Listener Me Evaluations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Mentor Queue",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/api/v1/listener/me/evaluations/{evaluation_id}/claim": {
+      "post": {
+        "operationId": "claim_evaluation_api_v1_listener_me_evaluations__evaluation_id__claim_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evaluation_id",
+            "required": true,
+            "schema": {
+              "title": "Evaluation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MentorEvaluationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Claim Evaluation",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/api/v1/listener/me/evaluations/{evaluation_id}/pages/{idx}": {
+      "get": {
+        "operationId": "mentor_page_api_v1_listener_me_evaluations__evaluation_id__pages__idx__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evaluation_id",
+            "required": true,
+            "schema": {
+              "title": "Evaluation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "idx",
+            "required": true,
+            "schema": {
+              "title": "Idx",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Mentor Page",
+        "tags": [
+          "evaluations"
+        ]
+      }
+    },
+    "/api/v1/listener/me/evaluations/{evaluation_id}/return": {
+      "post": {
+        "operationId": "return_evaluation_api_v1_listener_me_evaluations__evaluation_id__return_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "evaluation_id",
+            "required": true,
+            "schema": {
+              "title": "Evaluation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/app__schemas__evaluations__FeedbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MentorEvaluationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Return Evaluation",
+        "tags": [
+          "evaluations"
         ]
       }
     },

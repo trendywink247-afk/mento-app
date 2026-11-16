@@ -111,6 +111,23 @@ class ExportContribution(BaseModel):
     created_at: datetime
 
 
+class ExportEvaluation(BaseModel):
+    """An answer sent for evaluation (DECISIONS T.8). The photos themselves are not in the file
+    (the member sees them in the app while they are kept); their count is."""
+
+    kind: str
+    audience: str
+    status: str
+    question: str | None
+    note: str | None
+    pages: int
+    mentor_name: str | None
+    feedback: str | None
+    sent_at: datetime | None
+    returned_at: datetime | None
+    created_at: datetime
+
+
 class ExportReportFiled(BaseModel):
     conversation_id: str | None
     level: int
@@ -141,3 +158,5 @@ class ExportOut(BaseModel):
     reports_filed: list[ExportReportFiled]
     # The mentorship intake answers and marks (DECISIONS R.6, R.14), if any. Additive.
     mentee_profile: dict | None = None
+    # Answers sent for evaluation (DECISIONS T.8). Additive.
+    answer_evaluations: list[ExportEvaluation] = []

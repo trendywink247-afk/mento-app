@@ -25,7 +25,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 
+from app.config import get_settings
 from app.main import app
+from app.models.answer_evaluation import AnswerEvaluation, AnswerPage
 from app.models.conversation import Conversation
 from app.models.enums import JournalChannel, LinkStatus, RequestStatus
 from app.models.journal import JournalEntry
@@ -104,6 +106,10 @@ _plan(
     "DELETE /in-touch/{link_id}",
     "DELETE /journals/entries/{entry_id}",
     "DELETE /listeners/requests/{request_id}",
+    "DELETE /evaluations/{evaluation_id}",
+    "GET /evaluations/{evaluation_id}/pages/{idx}",
+    "POST /evaluations/{evaluation_id}/pages",
+    "POST /evaluations/{evaluation_id}/send",
 )
 _plan(
     MENTOR,
@@ -120,6 +126,9 @@ _plan(
     "POST /listener/me/stay-in-touch/{link_id}/not-now",
     "POST /listeners/requests/{request_id}/accept",
     "POST /listeners/requests/{request_id}/decline",
+    "GET /listener/me/evaluations/{evaluation_id}/pages/{idx}",
+    "POST /listener/me/evaluations/{evaluation_id}/claim",
+    "POST /listener/me/evaluations/{evaluation_id}/return",
 )
 
 # Not an IDOR surface, each with the reason. Review a new entry like a security change.
@@ -161,11 +170,15 @@ BODIES: dict[tuple[str, str], dict] = {
     ("post", "/conversations/{convo_id}/unlock"): {"pin": "1234"},
     ("post", "/conversations/{convo_id}/verify-pin"): {"pin": "1234"},
     ("post", "/listener/me/conversations/{convo_id}/report"): {"reason": "other"},
+    ("post", "/evaluations/{evaluation_id}/pages"): {"content_base64": "iVBORw0KGgo="},
+    ("post", "/listener/me/evaluations/{evaluation_id}/return"): {"feedback": "x" * 60},
 }
 
 
 @pytest.fixture(autouse=True)
 def _stub_stream(monkeypatch):
+    # Answer evaluations are attacked switched on (off, every route is a plain 404).
+    monkeypatch.setattr(get_settings(), "evaluations_enabled", True)
     monkeypatch.setattr(
         stream, "create_dm_channel", lambda channel_id, user_id, listener_id: channel_id
     )
@@ -228,7 +241,32 @@ class World:
                 content=b"abc",
             )
             s.add_all([request, link, entry, doc])
+            s.flush()
+            # Member A's answer, sent to mentor M1 by name and held by M1.
+            s.get(ListenerProfile, a.mentor_id).tier = "mentor"
+            ev = AnswerEvaluation(
+                user_id=a.member_id,
+                kind="mains",
+                audience="one",
+                target_listener_id=a.mentor_id,
+                listener_id=a.mentor_id,
+                status="claimed",
+                sent_at=now,
+                claimed_at=now,
+            )
+            s.add(ev)
+            s.flush()
+            s.add(
+                AnswerPage(
+                    evaluation_id=ev.id,
+                    idx=0,
+                    content_type="image/png",
+                    size_bytes=3,
+                    content=b"png",
+                )
+            )
             s.commit()
+            self.evid = ev.id
             self.cid, self.rid, self.lid, self.eid, self.did = (
                 a.cid,
                 request.id,
@@ -257,6 +295,8 @@ class World:
             "doc_id": self.did,
             "listener_id": self.mentor_1,
             "seq": "1",
+            "evaluation_id": self.evid,
+            "idx": "0",
         }
         out = path
         while "{" in out:
@@ -314,6 +354,15 @@ class World:
                 "doc": (doc.status, doc.content),
                 "mentor": (mentor.status, mentor.vetting_status, mentor.certified_exam),
                 "journal_count": len(s.execute(select(JournalEntry.id)).all()),
+                "evaluation": (lambda e: (e.status, e.listener_id, e.feedback, e.pages_wiped_at))(
+                    s.get(AnswerEvaluation, self.evid)
+                ),
+                "pages": sorted(
+                    (p.idx, p.content)
+                    for p in s.scalars(
+                        select(AnswerPage).where(AnswerPage.evaluation_id == self.evid)
+                    )
+                ),
             }
 
 

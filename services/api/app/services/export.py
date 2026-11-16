@@ -41,6 +41,7 @@ from app.schemas.export import (
     ExportApplication,
     ExportContribution,
     ExportConversation,
+    ExportEvaluation,
     ExportFavourite,
     ExportJournalEntry,
     ExportLink,
@@ -53,6 +54,37 @@ from app.schemas.export import (
     ExportRequest,
 )
 from app.services import mentee_profiles, mentor_names
+
+
+def _evaluations(db: Session, uid: str) -> list[ExportEvaluation]:
+    from app.models.answer_evaluation import AnswerEvaluation
+    from app.services.evaluations import page_count
+
+    out = []
+    for e in db.scalars(
+        select(AnswerEvaluation)
+        .where(AnswerEvaluation.user_id == uid)
+        .order_by(AnswerEvaluation.created_at)
+    ).all():
+        who = e.listener_id or e.target_listener_id
+        li = db.get(ListenerProfile, who) if who else None
+        out.append(
+            ExportEvaluation(
+                kind=e.kind,
+                audience=e.audience,
+                status=e.status,
+                question=e.question,
+                note=e.note,
+                pages=page_count(db, e.id),
+                mentor_name=li.persona_name if li else None,
+                feedback=e.feedback,
+                sent_at=e.sent_at,
+                returned_at=e.returned_at,
+                created_at=e.created_at,
+            )
+        )
+    return out
+
 
 # erasure.MEMBER_TABLES key → the ExportOut section that carries it.
 SECTIONS_BY_ERASURE_KEY = {
@@ -67,6 +99,7 @@ SECTIONS_BY_ERASURE_KEY = {
     "applications": "applications",
     "contributions": "contributions",
     "mentee_profile": "mentee_profile",
+    "answer_evaluations": "answer_evaluations",
 }
 
 NOTES = ExportNotes(
@@ -245,6 +278,7 @@ def build(db: Session, user: User) -> ExportOut:
                 .order_by(ListenerApplication.created_at)
             ).all()
         ],
+        answer_evaluations=_evaluations(db, uid),
         contributions=[
             ExportContribution(
                 amount_paise=c.amount_paise,
