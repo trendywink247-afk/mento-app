@@ -42,6 +42,9 @@ export type ThemeColors = { [K in keyof ReturnType<typeof colorsFor>]: string } 
     bubbleMine: string;
     bubbleMineInk: string;
     bubbleTheirs: string;
+    /** The coloured word in a two-tone title ("My **Chats**"): the accent on Pastel, plain ink on
+     * Light and Dark (WhatsApp titles are one colour). */
+    titleAccent: string;
   };
 
 type ThemeValue = {
@@ -78,6 +81,7 @@ function buildColors(accent: AccentSet, look: Look): ThemeColors {
     ...baseColors,
     ...accent,
     ...chat,
+    titleAccent: look === 'pastel' ? accent.accent : baseColors.ink,
     brand: accent.accent,
     brandPress: accent.accentPress,
     brandTint: accent.accentTint,

@@ -158,7 +158,7 @@ export function OptionsSheet({ locked, maskOn, paused, busy, error, notice, onUn
           <View style={styles.titleText}>
             <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
               {t('options.sheet.title')}
-              <Text style={{ color: colors.accent }}>{t('chatOptions.titleAccent')}</Text>
+              <Text style={{ color: colors.titleAccent }}>{t('chatOptions.titleAccent')}</Text>
             </Text>
             <Text style={[type.note, { color: colors.inkMuted }]}>{t('options.sheet.sub')}</Text>
           </View>

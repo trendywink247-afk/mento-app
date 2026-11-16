@@ -537,7 +537,7 @@ export default function ChatsTab() {
               {/* flex: 1 — a title sized to its own text is under-measured on Android in Hindi
                 * and loses its accent word to a hidden second line (QA 2026-11-15). */}
               <Text style={[type.display, styles.title, { color: colors.ink }]} accessibilityRole="header">
-                {t('chatsList.titleLead')} <Text style={{ color: colors.accent }}>{t('chatsList.titleAccent')}</Text>
+                {t('chatsList.titleLead')} <Text style={{ color: colors.titleAccent }}>{t('chatsList.titleAccent')}</Text>
               </Text>
               <FeedbackPill testID="chats-feedback" />
             </View>

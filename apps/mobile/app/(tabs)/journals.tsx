@@ -16,7 +16,7 @@ import { haptic } from '@/lib/haptics';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { dayId, moodLabelKey } from '@/lib/journalDays';
 import { screenCache } from '@/lib/screenCache';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
 /** Canonical mood values (same set as journal/[channel].tsx — stored in entry meta). */
@@ -66,6 +66,7 @@ const dayKey = dayId;
 export default function JournalsTab() {
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t, locale } = useI18n();
   // Last-loaded shelf first, quiet refresh on focus (lib/screenCache.ts).
   const cachedJournal = screenCache.get('journal');
@@ -161,7 +162,7 @@ export default function JournalsTab() {
 
         {/* Today — one card that reads as a story: kept guidance, then the member's own words. */}
         <Entrance index={0}>
-          <View style={styles.todayWrap}>
+          <View style={[styles.todayWrap, flat && styles.todayWrapFlat]}>
             {/* The Today card is the furniture: its slots are its own absolute children. */}
             <View style={styles.furniture}>
             <CompanionSlot id="todayTopRight" size={64} inset={space.md} nudge={8} />
@@ -170,7 +171,7 @@ export default function JournalsTab() {
             <CompanionSlot id="todayDangle" size={68} inset={space.lg} />
             <CompanionSlot id="todayPeek" size={46} align="center" />
             <CompanionSlot id="todayHang" size={54} inset={space.lg} />
-            <EdgeSurface edge={colors.edgeSurface} radius={radius.lg} style={[styles.card, { backgroundColor: colors.surface }]} testID="journal-today">
+            <EdgeSurface edge={colors.edgeSurface} radius={radius.lg} style={[styles.card, { backgroundColor: colors.surface }, flat && styles.cardFlat]} testID="journal-today">
               <Text style={[styles.cardTitle, { color: colors.ink }]}>{t('journals.today')}</Text>
 
               {keptToday.length > 0 ? (
@@ -448,6 +449,9 @@ const styles = StyleSheet.create({
   // Room above the Today card for whoever is perched on its top edge (decor only).
   furniture: { zIndex: 1 },
   card: { borderRadius: radius.lg, padding: space.md, gap: space.md },
+  // Light and Dark: no card on the white ground, so the content lines up with the headings.
+  cardFlat: { paddingHorizontal: 0, paddingTop: space.sm },
+  todayWrapFlat: { paddingTop: space.sm },
   cardTitle: { fontFamily: font.sansHeavy, fontSize: 22, lineHeight: 28 },
   block: { gap: space.sm },
   eyebrow: { fontFamily: font.sansBold, fontSize: 12, lineHeight: 16, letterSpacing: 0.5, textTransform: 'uppercase' },

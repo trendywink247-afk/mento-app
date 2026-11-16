@@ -269,7 +269,7 @@ export default function RequestSentScreen() {
           <Entrance index={1}>
             <Text style={[type.displayHeadline, styles.title, { color: colors.ink }]} accessibilityRole="header">
               {t('requestSent.titleLead')}
-              <Text style={{ color: colors.accent }}>{t('requestSent.titleAccent')}</Text>
+              <Text style={{ color: colors.titleAccent }}>{t('requestSent.titleAccent')}</Text>
             </Text>
           </Entrance>
 

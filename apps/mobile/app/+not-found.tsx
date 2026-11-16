@@ -141,7 +141,7 @@ export default function NotFound() {
           <Entrance index={0}>
             <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
               {t('notFound.title')}
-              <Text style={{ color: colors.accent }}>{t('notFound.titleAccent')}</Text>
+              <Text style={{ color: colors.titleAccent }}>{t('notFound.titleAccent')}</Text>
               {t('notFound.titleEnd')}
             </Text>
           </Entrance>

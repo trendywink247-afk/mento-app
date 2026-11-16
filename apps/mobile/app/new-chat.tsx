@@ -180,7 +180,7 @@ export default function NewChatSheet() {
         <Entrance index={2} style={styles.head}>
           <Text style={[type.sheetTitle, { color: colors.ink }]} accessibilityRole="header">
             {t('newChat.titleLead')}
-            <Text style={{ color: colors.accent }}>{t('newChat.titleAccent')}</Text>
+            <Text style={{ color: colors.titleAccent }}>{t('newChat.titleAccent')}</Text>
             {t('newChat.titleTail')}
           </Text>
           <Text style={[type.bodySmall, { color: colors.inkMuted }]}>{t('chats.newChatBody')}</Text>

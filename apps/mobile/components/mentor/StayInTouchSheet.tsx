@@ -82,7 +82,7 @@ export function StayInTouchSheet({
         </View>
         <Text style={[styles.title, styles.shrink, { color: colors.ink }]} accessibilityRole="header">
           {t('mentorInTouch.title', { name })}
-          <Text style={{ color: colors.accent }}>{t('mentorInTouch.titleAccent')}</Text>
+          <Text style={{ color: colors.titleAccent }}>{t('mentorInTouch.titleAccent')}</Text>
         </Text>
       </Entrance>
 

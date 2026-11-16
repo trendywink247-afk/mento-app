@@ -113,7 +113,7 @@ export default function PathTab() {
     <Entrance index={1} style={styles.head}>
       <Text style={[type.pageTitle, styles.title, { color: colors.ink }]} accessibilityRole="header">
         {t('pathHome.titleLead')}
-        <Text style={{ color: colors.accent }}>{t('pathHome.titleAccent')}</Text>
+        <Text style={{ color: colors.titleAccent }}>{t('pathHome.titleAccent')}</Text>
       </Text>
       <FeedbackPill testID="path-feedback" />
     </Entrance>

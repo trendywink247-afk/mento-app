@@ -68,7 +68,7 @@ export default function CoffeeScreen() {
             <Entrance index={1}>
               <Text style={[type.displayHeadline, styles.title, { color: colors.ink }]} accessibilityRole="header">
                 {t('support.titleLead')}
-                <Text style={{ color: colors.accent }}>{t('support.titleAccent')}</Text>
+                <Text style={{ color: colors.titleAccent }}>{t('support.titleAccent')}</Text>
                 {t('support.titleTail')}
               </Text>
             </Entrance>

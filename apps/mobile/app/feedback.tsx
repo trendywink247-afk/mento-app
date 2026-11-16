@@ -151,7 +151,7 @@ export default function FeedbackSheet() {
                 <Entrance index={2} style={styles.head}>
                   <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
                     {t('feedback.title')}
-                    <Text style={{ color: colors.accent }}>{t('feedback.titleAccent')}</Text>
+                    <Text style={{ color: colors.titleAccent }}>{t('feedback.titleAccent')}</Text>
                   </Text>
                   <Text style={[styles.sub, { color: colors.inkMuted }]}>{t('feedback.sub')}</Text>
                 </Entrance>

@@ -6,7 +6,7 @@ import { applyAnswer, slashQuery, suggest, usePreparedAnswers } from '@/lib/prep
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
@@ -48,7 +48,7 @@ import { useKeyboardPad } from '@/lib/useKeyboardPad';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useLiveRefresh } from '@/lib/liveEvents';
 import { useSessionGuard } from '@/lib/useSessionGuard';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { space, type } from '@/theme/tokens';
 
 type Controller = ReturnType<typeof createOwnChatScreenController>;
@@ -62,6 +62,8 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
   const member = role === 'member';
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
+  const insets = useSafeAreaInsets();
   const { t } = useI18n();
   const params = useLocalSearchParams<{ listener?: string; member?: string; starter?: string; masked?: string }>();
   const [snapshot, setSnapshot] = useState<OwnChatSnapshot | null>(null);
@@ -286,7 +288,9 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
     </>,
   } : {};
 
-  return <SafeAreaView edges={['top', 'bottom']} style={[styles.safe, { backgroundColor: colors.chatGround }]}>
+  // The status-bar strip takes the header's colour (WhatsApp: white over the beige thread).
+  return <SafeAreaView edges={['bottom']} style={[styles.safe, { backgroundColor: colors.chatGround }]}>
+    <View style={{ height: insets.top, backgroundColor: member ? colors.surface : colors.chatGround }} />
     {member ? <MemberSessionGuard /> : null}
     <CompanionPerches placement={perch}>
     {member ? <ChatHeaderCard conversationId={conversationId} name={name} face={header.face ?? undefined}
@@ -305,7 +309,8 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
       renderItem={({ item }) => <ThreadRow item={item} dayText={null} statusText={null} arrival={null}
         arrivalStep={0} saveOpen={false} nudge={false} isSaved={false} savedNow={false} onToggleSave={() => {}}
         onSave={() => {}} onArrived={() => {}} onLongPress={setHeld} />}
-      ListFooterComponent={<Text style={[type.body, { color: colors.inkMuted, textAlign: 'center', paddingTop: space.md }]}
+      ListFooterComponent={<Text style={[type.body, { color: colors.inkMuted, textAlign: 'center', marginTop: space.md },
+        flat && [styles.systemPill, { backgroundColor: colors.surface }]]}
         testID="own-native-ended">{t('reflection.ended')}</Text>} />
     : connectionFailed ? <View style={styles.center}>
       <Text style={[type.body, { color: colors.ink }]}>{t(endedByState || snapshot?.reason === 'ended' ||
@@ -381,6 +386,8 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 }, flex: { flex: 1 },
+  // WhatsApp's centred system note: a small rounded label on the thread.
+  systemPill: { alignSelf: 'center', fontSize: 13, lineHeight: 18, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, overflow: 'hidden' },
   center: { flex: 1, padding: space.lg, justifyContent: 'center', gap: space.md },
   thread: { padding: space.md, gap: space.sm }, typing: { paddingHorizontal: space.md, paddingVertical: space.sm },
   helplines: { position: 'absolute', top: 140, left: space.md, right: space.md, zIndex: 10 },

@@ -59,7 +59,7 @@ export function TabPill({
         testID={testID}
       >
         {items.map((item) => {
-          const ink = item.focused ? colors.accent : colors.inkMuted;
+          const ink = flat ? (item.focused ? colors.ink : colors.inkMuted) : item.focused ? colors.accent : colors.inkMuted;
           const count = item.count ?? 0;
           return (
             <Pressable
@@ -79,10 +79,11 @@ export function TabPill({
                 travel={3}
                 radius={radius.pill}
                 containerStyle={styles.cellBox}
-                style={[styles.cell, { backgroundColor: item.focused ? colors.accentTint : 'transparent' }]}
+                style={[styles.cell, { backgroundColor: item.focused && !flat ? colors.accentTint : 'transparent' }]}
               >
-                <View>
-                  <Ionicons name={item.focused ? item.iconOn : item.icon} size={22} color={ink} />
+                {/* Light and Dark: WhatsApp's indicator, a tinted pill behind the icon only. */}
+                <View style={flat ? [styles.flatIndicator, { backgroundColor: item.focused ? colors.accentTint : 'transparent' }] : undefined}>
+                  <Ionicons name={item.focused ? item.iconOn : item.icon} size={22} color={flat && item.focused ? colors.accentInk : ink} />
                   {count > 0 ? (
                     <View style={[styles.badge, { backgroundColor: colors.accent }]}>
                       <Text style={[styles.badgeText, { color: colors.onAccent }]} maxFontSizeMultiplier={1.2}>
@@ -119,6 +120,7 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1 },
   flatDock: { paddingHorizontal: 0, borderTopWidth: StyleSheet.hairlineWidth },
+  flatIndicator: { width: 56, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   flatBar: { borderRadius: 0, borderWidth: 0, backgroundColor: 'transparent' },
   cellBox: { alignSelf: 'stretch' },
   cell: { height: 48, alignItems: 'center', justifyContent: 'center', gap: 1 },

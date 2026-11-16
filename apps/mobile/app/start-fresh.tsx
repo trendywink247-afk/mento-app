@@ -142,7 +142,7 @@ export default function StartFreshSheet() {
       <View style={styles.head}>
         <Text style={[type.sheetTitle, { color: colors.ink }]} accessibilityRole="header">
           {t('startFresh.titleLead')}
-          <Text style={{ color: colors.accent }}>{t('startFresh.titleAccent')}</Text>
+          <Text style={{ color: colors.titleAccent }}>{t('startFresh.titleAccent')}</Text>
           {t('startFresh.titleTail')}
         </Text>
         <Text style={[type.bodySmall, { color: colors.ink }]}>{t('startFresh.sub')}</Text>

@@ -318,6 +318,7 @@ export function ChatHeaderCard({
                   stay === 'in_touch'
                     ? { backgroundColor: colors.accentTint, borderColor: colors.accentTint }
                     : { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+                  flat && stay !== 'in_touch' && styles.plainKey,
                 ]}
               >
                 <Ionicons
@@ -340,7 +341,7 @@ export function ChatHeaderCard({
               radius={radius.pill}
               testID="open-options"
               accessibilityLabel={t('chat.optionsA11y')}
-              style={[styles.key, styles.optionsKey, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+              style={[styles.key, styles.optionsKey, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }, flat && styles.plainKey]}
             >
               <Ionicons name="ellipsis-horizontal" size={22} color={colors.ink} />
             </PressKey>
@@ -357,7 +358,7 @@ export function ChatHeaderCard({
               {topic ? (
                 <Entrance index={3} distance={6}>
                   <View style={[styles.chip, { backgroundColor: wash.orange }]} testID="chat-strip-topic">
-                    <Text style={[styles.chipText, { color: COMPANION_COLORS.mustard.accentEdge }]} numberOfLines={1}>
+                    <Text style={[styles.chipText, { color: flat ? colors.inkMuted : COMPANION_COLORS.mustard.accentEdge }]} numberOfLines={1}>
                       {topic}
                     </Text>
                   </View>
@@ -371,8 +372,8 @@ export function ChatHeaderCard({
                     accessible
                     accessibilityLabel={t('chat.header.savedA11y', { count: savedCount })}
                   >
-                    <Ionicons name="bookmark" size={12} color={COMPANION_COLORS.sage.accentEdge} />
-                    <Text style={[styles.chipText, { color: COMPANION_COLORS.sage.accentEdge }]}>
+                    <Ionicons name="bookmark" size={12} color={flat ? colors.accentInk : COMPANION_COLORS.sage.accentEdge} />
+                    <Text style={[styles.chipText, { color: flat ? colors.accentInk : COMPANION_COLORS.sage.accentEdge }]}>
                       {t('chat.header.saved', { count: savedCount })}
                     </Text>
                   </View>
@@ -391,6 +392,8 @@ const styles = StyleSheet.create({
   glow: { position: 'absolute', left: -GLOW_BLEED, right: -GLOW_BLEED, height: GLOW_HEIGHT },
   // overflow: the strip's flat top edge and tinted ground are clipped to the card's corners.
   card: { borderWidth: 1, overflow: 'hidden' },
+  // WhatsApp's app-bar icons: no disc, no ring.
+  plainKey: { backgroundColor: 'transparent', borderWidth: 0 },
   wrapFlat: { paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 },
   cardFlat: { borderWidth: 0, borderBottomWidth: StyleSheet.hairlineWidth },
   row: {
