@@ -21,7 +21,7 @@ import { screenCache } from '@/lib/screenCache';
 import { getPersona, type Persona } from '@/lib/session';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { checkAndApplyUpdate, runningUpdate, type UpdateStatus } from '@/lib/updates';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { font, radius, space, type, wash, washEdge, type Wash } from '@/theme/tokens';
 
@@ -70,6 +70,7 @@ function Row({
   testID?: string;
 }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const inner = (
     <>
       {disc ? (
@@ -90,10 +91,12 @@ function Row({
   const face = [
     styles.row,
     { backgroundColor: quiet ? colors.surfaceAlt : colors.surface, borderColor: colors.border },
+    // Flat looks: a WhatsApp settings row, no card (DECISIONS T.1).
+    flat ? flatRowStyle(colors.border) : null,
   ];
   if (!onPress) {
     return (
-      <EdgeSurface edge={colors.edgeSurface} travel={3} radius={radius.md} style={face} testID={testID}>
+      <EdgeSurface edge={colors.edgeSurface} travel={3} radius={flat ? 0 : radius.md} style={face} testID={testID}>
         {inner}
       </EdgeSurface>
     );
@@ -103,7 +106,7 @@ function Row({
       onPress={onPress}
       disabled={disabled}
       edge={quiet ? colors.edgeAlt : colors.edgeSurface}
-      radius={radius.md}
+      radius={flat ? 0 : radius.md}
       testID={testID}
       style={face}
     >
@@ -123,6 +126,7 @@ export default function ProfileTab() {
   // where it stands).
   const openMentor = () => void openMentorSide(router, application);
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t, locale, setLocale } = useI18n();
   const sheetOpen = useSheetOpen();
   const [persona, setPersona] = useState<Persona | null>(null);
@@ -237,7 +241,7 @@ export default function ProfileTab() {
                   edge={colors.edgeSurface}
                   travel={3}
                   radius={radius.lg}
-                  style={[styles.identity, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                  style={[styles.identity, { backgroundColor: colors.surface, borderColor: colors.border }, flat && styles.identityFlat]}
                 >
                   <Text style={[styles.name, { color: colors.ink }]} testID="profile-persona">
                     {persona?.persona_name ?? t('profile.anonymous')}
@@ -260,7 +264,7 @@ export default function ProfileTab() {
             </View>
 
             {/* "My Mento", the access area (DECISIONS T.4): new features land here as rows. */}
-            <Entrance index={2} style={styles.rows}>
+            <Entrance index={2} style={[styles.rows, flat && styles.rowsFlat]}>
               <Text style={[styles.group, { color: colors.inkMuted }]} accessibilityRole="header">{t('myMento.title')}</Text>
               <Row icon="git-branch-outline" tone="indigo" title={t('tabs.path')} body={t('myMento.threadsSub')}
                 right={chevron} onPress={() => router.navigate('/(tabs)/path')} testID="profile-threads" />
@@ -273,7 +277,7 @@ export default function ProfileTab() {
                 quiet testID="profile-evaluate" />
             </Entrance>
 
-            <Entrance index={3} style={styles.rows}>
+            <Entrance index={3} style={[styles.rows, flat && styles.rowsFlat]}>
               <Text style={[styles.group, { color: colors.inkMuted }]} accessibilityRole="header">{t('myMento.preferences')}</Text>
               <Row
                 icon="globe-outline"
@@ -533,6 +537,8 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   rows: { gap: 12 },
+  rowsFlat: { gap: 0 },
+  identityFlat: { backgroundColor: 'transparent', borderWidth: 0, paddingLeft: 4 },
   row: {
     minHeight: 60,
     paddingVertical: space.sm,

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { StyleSheet, useColorScheme } from 'react-native';
 
 import {
   getAppearance,
@@ -159,6 +159,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export function useFlatSurfaces(): boolean {
   const ctx = useContext(ThemeContext);
   return ctx ? ctx.look !== 'pastel' : false;
+}
+
+/** A list row on the flat looks (DECISIONS T.1, WhatsApp): no card, no border, one hairline
+ * divider under it. Pastel keeps its cards, so callers use this only when `useFlatSurfaces()`. */
+export function flatRowStyle(border: string) {
+  return {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: border,
+    borderRadius: 0,
+  } as const;
 }
 
 export function useTheme(): ThemeValue {

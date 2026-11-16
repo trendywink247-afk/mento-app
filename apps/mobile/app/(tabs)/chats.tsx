@@ -30,7 +30,7 @@ import { useLiveRefresh } from '@/lib/liveEvents';
 import { rowUnread } from '@/lib/rowUnread';
 import { getPersona, getStreamToken } from '@/lib/session';
 import { ensureConnected } from '@/lib/streamClient';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
 /** My Chats (board A06): the header with its quiet Feedback pill, search, the
@@ -63,6 +63,7 @@ type Row =
 export default function ChatsTab() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const sheetOpen = useSheetOpen();
   // Coming back from a chat remounts this tab (see lib/screenCache.ts): start from what was
@@ -649,7 +650,7 @@ export default function ChatsTab() {
               data={touch?.items ?? []}
               keyExtractor={(i) => i.link_id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.list, { paddingBottom: 110 + dock }]}
+              contentContainerStyle={[styles.list, flat && styles.listFlat, { paddingBottom: 110 + dock }]}
               testID="in-touch-list"
               ListEmptyComponent={
                 // Still on purpose: an empty or failed view is a limit state.
@@ -728,7 +729,7 @@ export default function ChatsTab() {
               data={merged}
               keyExtractor={(r) => r.key}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.list, { paddingBottom: 110 + dock }]}
+              contentContainerStyle={[styles.list, flat && styles.listFlat, { paddingBottom: 110 + dock }]}
               ListEmptyComponent={
                 <Text style={[type.note, styles.centerText, { color: colors.inkMuted }]}>{t('chatsList.noMatches')}</Text>
               }
@@ -844,6 +845,8 @@ const styles = StyleSheet.create({
   note: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.sm },
   noteBox: { marginHorizontal: space.md, marginTop: space.sm },
   list: { paddingTop: 14, paddingHorizontal: space.md, paddingBottom: 170, gap: 10 },
+  // Flat looks: full-width rows divided by hairlines, as on WhatsApp (DECISIONS T.1).
+  listFlat: { paddingTop: 4, paddingHorizontal: 0, gap: 0 },
   footerGap: { gap: 10 },
   // The ground fade ends where the floating tab bar's pill begins.
   peers: { textAlign: 'center', paddingTop: space.xs, paddingHorizontal: space.sm },

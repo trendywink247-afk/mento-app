@@ -29,7 +29,7 @@ import { matchesRoad, roadChips } from '@/lib/mentorFilters';
 import { screenCache } from '@/lib/screenCache';
 import { topicLabelKey } from '@/lib/topics';
 import { useSessionGuard } from '@/lib/useSessionGuard';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
 /**
@@ -54,6 +54,7 @@ export default function BrowseMentors() {
   useSessionGuard();
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t, locale } = useI18n();
   // `question`: a draft carried from the first-question builder when nobody was free — it
   // travels on to the mentor page's question step, never sent by itself.
@@ -255,10 +256,10 @@ export default function BrowseMentors() {
           })
         }
         edge={colors.edgeSurface}
-        radius={radius.lg}
+        radius={flat ? 0 : radius.lg}
         accessibilityLabel={[l.persona_name, second, availability].filter(Boolean).join('. ')}
         testID={`mentor-${l.id}`}
-        style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+        style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, flat && [flatRowStyle(colors.border), styles.cardFlat]]}
       >
         <MentorFace animal={l.companion_animal} colour={l.companion_colour} size={52} />
         <View style={styles.cardBody}>
@@ -416,7 +417,7 @@ export default function BrowseMentors() {
             data={shown}
             keyExtractor={(l) => l.id}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, flat && styles.listFlat]}
             testID="browse-list"
             ListHeaderComponent={
               openQ ? (
@@ -496,6 +497,8 @@ const styles = StyleSheet.create({
   filterText: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   list: { paddingTop: 14, paddingHorizontal: space.md, paddingBottom: 104, gap: 10 },
+  listFlat: { paddingTop: 4, paddingHorizontal: 0, gap: 0 },
+  cardFlat: { paddingLeft: 16, paddingRight: 16 },
   note: { padding: 12, borderRadius: radius.md, borderWidth: 1 },
   empty: { textAlign: 'center', paddingVertical: space.lg },
   card: {

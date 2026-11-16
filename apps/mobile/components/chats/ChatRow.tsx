@@ -18,7 +18,7 @@ import { measureRect, rememberOrigin } from '@/lib/originStore';
 import { PressKey } from '@/components/motion/PressKey';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { breathe, easing } from '@/theme/motion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, type, wash, washInk } from '@/theme/tokens';
 
 export type ChatRowState = 'active' | 'waiting' | 'completed' | 'wiped';
@@ -127,6 +127,7 @@ export function ChatRow({
   faceOriginKey?: string;
 }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const faceRef = useRef<View>(null);
   const wiped = state === 'wiped';
   const showFoot = state === 'active' || Boolean(savedLabel) || Boolean(lockedLabel);
@@ -140,12 +141,13 @@ export function ChatRow({
       }}
       onLongPress={onLongPress}
       edge={wiped ? colors.edgeAlt : colors.edgeSurface}
-      radius={radius.lg}
+      radius={flat ? 0 : radius.lg}
       accessibilityLabel={accessibilityLabel}
       testID={testID}
       style={[
         styles.row,
         { backgroundColor: wiped ? colors.surfaceAlt : colors.surface, borderColor: colors.border },
+        flat ? [flatRowStyle(colors.border), styles.flatRow] : null,
         showFoot || secondLine ? styles.rowTop : null,
       ]}
     >
@@ -221,6 +223,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   rowTop: { alignItems: 'flex-start' },
+  flatRow: { paddingLeft: 16, paddingRight: 16 },
   body: { flex: 1, minWidth: 0, gap: 1 },
   // Wraps at large text sizes so the name is never cut to "Gentle …" beside its state chip.
   headline: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 6 },
