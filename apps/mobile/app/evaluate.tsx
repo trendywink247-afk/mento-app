@@ -164,7 +164,7 @@ export default function Evaluate() {
             placeholderTextColor={colors.inkMuted}
             accessibilityLabel={t('evaluate.note')}
             testID="evaluate-note"
-            style={inputStyle}
+            style={[inputStyle, styles.noteInput]}
           />
 
           <PrimaryButton
@@ -246,6 +246,7 @@ export default function Evaluate() {
 
 const styles = StyleSheet.create({
   form: { gap: space.md, marginTop: space.sm },
+  noteInput: { minHeight: 96 },
   kinds: { flexDirection: 'row', gap: space.sm },
   kind: { paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1 },
   input: { minHeight: 64, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, textAlignVertical: 'top', ...type.body },
