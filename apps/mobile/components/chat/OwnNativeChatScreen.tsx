@@ -293,7 +293,8 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
       status={endedByState ? null : header.profile?.status ?? null} tier={header.profile?.tier} replyWithinADay={!!header.profile?.reply_within_a_day}
       community={header.community} topic={header.topic} savedCount={header.savedCount} onBack={leave}
       onOpenProfile={() => router.push({ pathname: '/mentor-profile/[id]', params: { id: conversationId, name } })}
-      onOpenOptions={() => setOptions(true)} /> : <MentorChatHeader memberName={name} brief={brief}
+      onOpenOptions={() => setOptions(true)}
+      onStayInTouch={() => router.push({ pathname: '/mentor-profile/[id]', params: { id: conversationId, name } })} /> : <MentorChatHeader memberName={name} brief={brief}
       here={!!snapshot?.peerOnline} masked={params.masked === '1' || !!brief?.member_masked} onBack={leave}
       onOpenBrief={() => router.push({ pathname: '/mentor/member/[id]', params: { id: conversationId, member: name } })}
       onOptions={() => setMenu('open')} onHelplines={() => setHelplines(true)} />}

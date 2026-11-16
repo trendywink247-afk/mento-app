@@ -436,7 +436,15 @@
     "msgClose": "Close",
     "likedA11y": "You liked this. Tap to take the like back",
     "likeHint": "Double-tap a message to like it",
-    "msgActionsA11y": "Message options"
+    "msgActionsA11y": "Message options",
+    "stay": {
+      "ask": "Stay in touch",
+      "asked": "Asked",
+      "in": "In touch",
+      "askA11y": "Ask %{name} to stay in touch",
+      "askedA11y": "You asked %{name} to stay in touch",
+      "inA11y": "You are in touch with %{name}"
+    }
   },
   "crisis": {
     "title": "You matter. Support is here.",

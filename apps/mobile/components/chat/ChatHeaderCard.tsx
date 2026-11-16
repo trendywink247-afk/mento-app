@@ -22,7 +22,7 @@
  * motion — the avatar is simply where it belongs.
  */
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useId, useRef } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   cancelAnimation,
@@ -39,7 +39,9 @@ import { MentorFace, type MentorLook } from '@/components/art/MentorFace';
 import { Entrance } from '@/components/motion/Entrance';
 import { FlyFrom } from '@/components/motion/FlyFrom';
 import { PressKey } from '@/components/motion/PressKey';
-import type { Tier } from '@/lib/api';
+import { useFocusEffect } from 'expo-router';
+
+import { api, type StayInTouch, type Tier } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
 import { tierKey } from '@/lib/tierWord';
 import { measureRect, mentorHeroKey, rememberOrigin } from '@/lib/originStore';
@@ -85,7 +87,37 @@ type Props = {
   /** The volunteer's tier (DECISIONS R.4, R.9): the status line names it. */
   tier?: Tier;
   onOpenOptions: () => void;
+  /** DECISIONS T (v1.1): a "Stay in touch" key in the header. It reads this chat's standing
+   * (`GET /conversations/{id}/stay-in-touch`) and opens the mentor's profile, where the ask
+   * flow lives. Hidden when nothing can be asked and nothing is pending. */
+  onStayInTouch?: () => void;
 };
+
+type StayState = StayInTouch['state'] | 'hidden';
+
+/** This chat's stay-in-touch standing, re-read whenever the chat regains focus (the profile
+ * may have changed it). Any error hides the key; it never guesses. */
+function useStayState(conversationId: string | undefined, enabled: boolean): StayState {
+  const [state, setState] = useState<StayState>('hidden');
+  useFocusEffect(
+    useCallback(() => {
+      if (!enabled || !conversationId) return;
+      let live = true;
+      api
+        .stayInTouch(conversationId)
+        .then((s) => {
+          if (!live) return;
+          const pending = s.state === 'asked' || s.state === 'in_touch';
+          setState(pending || s.can_ask ? s.state : 'hidden');
+        })
+        .catch(() => live && setState('hidden'));
+      return () => {
+        live = false;
+      };
+    }, [conversationId, enabled]),
+  );
+  return state;
+}
 
 /** Ripples when someone arrives, then still. */
 export const PRESENCE_RIPPLES = 3;
@@ -164,8 +196,10 @@ export function ChatHeaderCard({
   conversationId,
   faceOriginKey,
   tier,
+  onStayInTouch,
 }: Props) {
   const { colors } = useTheme();
+  const stay = useStayState(conversationId, Boolean(onStayInTouch));
   const avatarRef = useRef<View>(null);
   const { t } = useI18n();
   const online = status === 'online';
@@ -263,6 +297,37 @@ export function ChatHeaderCard({
               </View>
             </PressKey>
 
+            {onStayInTouch && stay !== 'hidden' ? (
+              <PressKey
+                onPress={onStayInTouch}
+                edge={colors.edgeAlt}
+                travel={3}
+                intent="navigate"
+                radius={radius.pill}
+                testID="chat-stay-key"
+                accessibilityLabel={t(stay === 'in_touch' ? 'chat.stay.inA11y' : stay === 'asked' ? 'chat.stay.askedA11y' : 'chat.stay.askA11y', { name })}
+                style={[
+                  styles.stayKey,
+                  stay === 'in_touch'
+                    ? { backgroundColor: colors.accentTint, borderColor: colors.accentTint }
+                    : { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
+                ]}
+              >
+                <Ionicons
+                  name={stay === 'in_touch' ? 'people' : 'people-outline'}
+                  size={16}
+                  color={stay === 'in_touch' ? colors.accentInk : colors.ink}
+                />
+                <Text
+                  style={[styles.stayText, { color: stay === 'in_touch' ? colors.accentInk : colors.ink }]}
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.3}
+                >
+                  {t(stay === 'in_touch' ? 'chat.stay.in' : stay === 'asked' ? 'chat.stay.asked' : 'chat.stay.ask')}
+                </Text>
+              </PressKey>
+            ) : null}
+
             <PressKey
               onPress={onOpenOptions}
               edge={colors.edgeAlt}
@@ -332,6 +397,8 @@ const styles = StyleSheet.create({
   },
   key: { width: KEY, height: KEY, alignItems: 'center', justifyContent: 'center' },
   optionsKey: { borderWidth: 1 },
+  stayKey: { height: KEY, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1 },
+  stayText: { fontFamily: font.sansBold, fontSize: 13 },
   identityContainer: { flex: 1, minWidth: 0 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4, minHeight: AVATAR },
   avatarBox: { width: AVATAR, height: AVATAR },
