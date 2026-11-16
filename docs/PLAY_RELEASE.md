@@ -17,6 +17,9 @@ Keep a copy of both files in the password manager and one offline backup; never 
 be reset through the Play Console (App integrity, upload key reset, with a new certificate).
 If an older upload key is already registered for `chat.mento.app`, use that same reset with this
 key's certificate (`keytool -exportcert -rfc -alias mento-upload -keystore .secrets/play-upload.jks`).
+This happened on 2026-11-16: Play had an older upload key (SHA-1 `8A:68:97…`, origin unknown, not on
+this box). The reset to this key (SHA-1 `D0:14:1F…`) was requested and is valid from 2026-11-18 17:00.
+In the current console: Test and release, App integrity, App signing, **Upload key** tab.
 
 ## Each release
 
@@ -38,6 +41,10 @@ key's certificate (`keytool -exportcert -rfc -alias mento-upload -keystore .secr
 
 4. Record the build's native fingerprint for production OTA (`/opt/mento-prod/state/store_fp`,
    docs/OTA.md), so `ops/ota-publish.sh prod` only ships updates this build can run.
+
+Play Console links: privacy policy `https://app.mento.chat/privacy`, delete account
+`https://app.mento.chat/delete-account` (static pages in `apps/mobile/public/`, tested by
+`e2e/public-pages.test.cjs`), contact geekspacetech02@gmail.com.
 
 5. Upload to **Internal testing**, then **Closed testing**, then apply for production. Never
    upload straight to production.

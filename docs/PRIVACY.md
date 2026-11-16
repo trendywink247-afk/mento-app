@@ -1,6 +1,10 @@
 # Mento — Privacy Policy (engineering draft)
 
-> **Status: draft, not published.** Written from the actual data flows in the codebase
+> **Public summary:** `apps/mobile/public/privacy/` and `delete-account/` (app.mento.chat/privacy,
+> /delete-account, published 2026-11-16 for the Play listing, founder approved) state only what the
+> store build does. Change them with this file.
+>
+> **Status of this full draft: not published.** Written from the actual data flows in the codebase
 > (`CLAUDE.md`, `docs/DECISIONS.md`, `services/api`) so it matches reality, not marketing
 > copy. Needs founder review and a legal pass (India — DPDP Act 2023 — before this is the
 > policy shown in-app or on any public page) before publication. Update this file in the
