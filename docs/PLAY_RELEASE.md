@@ -17,6 +17,9 @@ Keep a copy of both files in the password manager and one offline backup; never 
 be reset through the Play Console (App integrity, upload key reset, with a new certificate).
 If an older upload key is already registered for `chat.mento.app`, use that same reset with this
 key's certificate (`keytool -exportcert -rfc -alias mento-upload -keystore .secrets/play-upload.jks`).
+This happened on 2026-11-16: Play had an older upload key (SHA-1 `8A:68:97…`, origin unknown, not on
+this box). The reset to this key (SHA-1 `D0:14:1F…`) was requested and is valid from 2026-11-18 17:00.
+In the current console: Test and release, App integrity, App signing, **Upload key** tab.
 
 ## Each release
 
