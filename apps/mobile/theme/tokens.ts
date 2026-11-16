@@ -223,23 +223,24 @@ const PASTEL: ColorMap = { ...colors };
 
 const LIGHT: ColorMap = {
   ...colors,
-  bg: '#F7F7F4',
-  bgLavender: '#F1F1EC',
-  surface: '#FDFDFC',
-  surfaceAlt: '#F2F2EE',
+  // Lighter than Pastel throughout (founder, 2026-11-16): near-white ground, white cards.
+  bg: '#FCFCFA',
+  bgLavender: '#F7F7F4',
+  surface: '#FFFFFF',
+  surfaceAlt: '#F9F9F6',
   ink: '#222426',
-  inkMuted: '#62666A',
-  border: '#E3E4DF',
+  inkMuted: '#5E6266',
+  border: '#EBECE7',
   scrim: 'rgba(34,36,38,0.4)',
   scrimSheet: 'rgba(34,36,38,0.35)',
-  handle: '#D4D6D0',
-  edgeSurface: '#E3E4DF',
-  edgeAlt: '#D8DAD3',
-  dotIdle: '#C9CCC4',
+  handle: '#DCDED8',
+  edgeSurface: '#E9EAE5',
+  edgeAlt: '#E1E3DD',
+  dotIdle: '#D1D4CC',
   dashIdle: '#B4B8AE',
-  borderStrong: '#D6D8D1',
-  heldFace: '#E8E9E3',
-  heldInk: '#7B7F78',
+  borderStrong: '#DEE0D9',
+  heldFace: '#EEEFEA',
+  heldInk: '#767A73',
 };
 
 const DARK: ColorMap = {
