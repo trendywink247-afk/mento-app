@@ -1,15 +1,16 @@
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useI18n } from '@/lib/i18n';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 /** "Show message text" in notifications, like a chat app. Off by default; the same row on the member and mentor Profile. */
 export function PushStyleSwitch({ value, onChange, disabled = false, testID }: { value: boolean; onChange: (next: boolean) => void; disabled?: boolean; testID: string }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   return (
-    <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}>
       <View style={styles.text}>
         <Text style={[type.rowTitle, { color: colors.ink }]}>{t('pushStyle.title')}</Text>
         <Text style={[type.caption, { color: colors.inkMuted }]}>{value ? t('pushStyle.on') : t('pushStyle.off')}</Text>

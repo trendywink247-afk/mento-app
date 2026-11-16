@@ -4,13 +4,14 @@ import { StyleSheet, Text, View } from 'react-native';
 import { IconBadge } from '@/components/IconBadge';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 /** One pending "stay in touch" ask as a pillow row (board A36 / A10): the link badge,
  * "<persona> asked to stay in touch", "Yes or not now. Decide when you are ready." */
 export function StayInTouchRow({ id, name, onPress }: { id: string; name: string; onPress: () => void }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   return (
     <PressKey
@@ -20,7 +21,7 @@ export function StayInTouchRow({ id, name, onPress }: { id: string; name: string
       radius={radius.md}
       intent="navigate"
       testID={`mentor-intouch-${id}`}
-      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}
     >
       <IconBadge icon="link-outline" tone="accent" size={40} />
       <View style={styles.text}>

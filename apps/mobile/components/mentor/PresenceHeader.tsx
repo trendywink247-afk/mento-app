@@ -13,7 +13,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useI18n } from '@/lib/i18n';
 import type { ListenerMe } from '@/lib/listenerApi';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, space, type, wash } from '@/theme/tokens';
 
@@ -49,6 +49,7 @@ export function PresenceHeader({
 }) {
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const breathing = useBreathing();
   const online = me.status === 'online';
@@ -161,7 +162,7 @@ export function PresenceHeader({
           radius={radius.md}
           accessibilityLabel={t('mentorHomePage.lineA11y')}
           testID="your-line"
-          style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}
         >
           <IconBadge icon="pencil-outline" tone="accent" size={36} />
           <View style={styles.rowText}>
@@ -186,7 +187,7 @@ export function PresenceHeader({
           radius={radius.md}
           intent="navigate"
           testID="mentor-reading-row"
-          style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}
         >
           <IconBadge icon="book-outline" tone="orange" size={36} />
           <View style={styles.rowText}>

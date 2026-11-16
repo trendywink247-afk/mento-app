@@ -12,7 +12,7 @@ import { useBreathing } from '@/components/motion/useBreathing';
 import type { ListenerApplication } from '@/lib/api';
 import { relativeTime } from '@/lib/format';
 import { useI18n } from '@/lib/i18n';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, space, type, wash } from '@/theme/tokens';
 
@@ -50,6 +50,7 @@ export function ApplicationStatusCard({
   bare = false,
 }: Props) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const breathing = useBreathing();
   const mustard = COMPANION_COLORS.mustard.accentEdge;
@@ -143,7 +144,7 @@ export function ApplicationStatusCard({
       {approved ? (
         <>
           <Entrance index={1}>
-            <EdgeSurface edge={colors.edgeSurface} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <EdgeSurface edge={colors.edgeSurface} style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}>
               <IconBadge icon="sync-outline" tone="indigo" size={40} />
               <View style={styles.shrink}>
                 <Text style={[type.cardTitle, { color: colors.ink }]} testID="apply-today-name">

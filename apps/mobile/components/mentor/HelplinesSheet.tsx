@@ -6,7 +6,7 @@ import { IconBadge } from '@/components/IconBadge';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { HELPLINES, telHref } from '@/lib/helplines';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -15,6 +15,7 @@ import { radius, space, type } from '@/theme/tokens';
  * web, Linking on native. */
 export function HelplinesSheet({ onClose }: { onClose: () => void }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const sageInk = COMPANION_COLORS.sage.accentEdge;
 
@@ -58,7 +59,7 @@ export function HelplinesSheet({ onClose }: { onClose: () => void }) {
               key={key}
               edge={colors.edgeSurface}
               radius={radius.md}
-              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}
               testID={`helpline-${key}`}
             >
               <Text style={[type.cardTitle, styles.name, { color: colors.ink }]}>{name}</Text>

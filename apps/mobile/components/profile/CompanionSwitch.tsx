@@ -1,7 +1,7 @@
 import { StyleSheet, Switch, Text, View } from 'react-native';
 
 import { useI18n } from '@/lib/i18n';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 /** "Show my companion" (DECISIONS R.3): off after skipping it at signup; kept on this
@@ -9,9 +9,10 @@ import { radius, space, type } from '@/theme/tokens';
  * (the caller decides — `onChange(true)` with `hasCompanion` false). */
 export function CompanionSwitch({ onChange, testID }: { onChange: (next: boolean) => void; testID: string }) {
   const { colors, companionShown } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   return (
-    <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}>
       <View style={styles.text}>
         <Text style={[type.rowTitle, { color: colors.ink }]}>{t('companionSwitch.title')}</Text>
         <Text style={[type.caption, { color: colors.inkMuted }]}>
