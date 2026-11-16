@@ -29,7 +29,7 @@ import { requestLetter } from '@/lib/requestLetter';
 import { TOPICS, topicLabelKey } from '@/lib/topics';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useSessionGuard } from '@/lib/useSessionGuard';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
 /** The question's bound — the server's `PersonalRequestIn.intro_message` max (160). */
@@ -72,6 +72,7 @@ export default function MentorBeforeAsk() {
   useSessionGuard();
   const router = useRouter();
   const { colors, companionShown } = useTheme();
+  const flat = useFlatSurfaces();
   const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const mentorBreath = useBreathing(true);
@@ -410,7 +411,7 @@ export default function MentorBeforeAsk() {
                 edge={colors.edgeSurface}
                 travel={3}
                 radius={radius.lg}
-                style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }, flat && styles.heroCardFlat]}
               >
                 <View style={styles.nameRow}>
                   <Text style={[styles.name, { color: colors.ink }]} accessibilityRole="header" testID="mentor-name">
@@ -502,6 +503,8 @@ const styles = StyleSheet.create({
   figures: { position: 'absolute', left: 0, right: 0, top: 0, height: 116, zIndex: 2 },
   mentorFigure: { position: 'absolute', left: 18, top: 0 },
   memberFigure: { position: 'absolute', left: 104, top: 26 },
+  // Light and Dark: WhatsApp's profile page — no card around the name.
+  heroCardFlat: { borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 4 },
   heroCard: { paddingTop: 30, paddingHorizontal: 20, paddingBottom: 18, gap: 6, borderWidth: 1 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
   name: { fontFamily: font.sansHeavy, fontSize: 26, lineHeight: 34, flexShrink: 1 },

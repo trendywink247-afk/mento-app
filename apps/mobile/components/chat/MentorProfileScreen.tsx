@@ -29,7 +29,7 @@ import { mentorHeroKey } from '@/lib/originStore';
 import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { COMPANION_COLORS } from '@/theme/companion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type, wash } from '@/theme/tokens';
 
 /**
@@ -56,6 +56,7 @@ export default function MentorProfileScreen() {
   useSessionGuard();
   const router = useRouter();
   const { colors, companionShown } = useTheme();
+  const flat = useFlatSurfaces();
   const { t, locale } = useI18n();
   const animal = useCompanionAnimal();
   const mentorBreath = useBreathing(true);
@@ -198,7 +199,7 @@ export default function MentorProfileScreen() {
                 edge={colors.edgeSurface}
                 travel={3}
                 radius={radius.lg}
-                style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                style={[styles.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }, flat && styles.heroCardFlat]}
               >
                 <Text style={[styles.name, { color: colors.ink }]} accessibilityRole="header" testID="mentor-profile-name">
                   {displayName}
@@ -394,6 +395,7 @@ export default function MentorProfileScreen() {
 
 function ReportLink({ onPress, label }: { onPress: () => void; label: string }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   return (
     <PressKey
       onPress={onPress}
@@ -419,6 +421,8 @@ const styles = StyleSheet.create({
   figures: { position: 'absolute', left: 0, right: 0, top: 0, height: 116, zIndex: 2 },
   mentorFigure: { position: 'absolute', left: 18, top: 0 },
   memberFigure: { position: 'absolute', left: 104, top: 26 },
+  // Light and Dark: WhatsApp's profile page — no card around the name.
+  heroCardFlat: { borderWidth: 0, backgroundColor: 'transparent', paddingHorizontal: 4 },
   heroCard: { paddingTop: 30, paddingHorizontal: 20, paddingBottom: 18, gap: 6, borderWidth: 1 },
   name: { fontFamily: font.sansHeavy, fontSize: 26, lineHeight: 34 },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

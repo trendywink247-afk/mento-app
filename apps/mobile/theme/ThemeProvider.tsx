@@ -45,6 +45,12 @@ export type ThemeColors = { [K in keyof ReturnType<typeof colorsFor>]: string } 
     /** The coloured word in a two-tone title ("My **Chats**"): the accent on Pastel, plain ink on
      * Light and Dark (WhatsApp titles are one colour). */
     titleAccent: string;
+    /** A selected filter chip: ink on Pastel; WhatsApp's light green with green words on Light and Dark. */
+    chipOn: string;
+    chipOnInk: string;
+    /** An unselected chip: white with a hairline on Pastel; WhatsApp's grey fill on Light and Dark. */
+    chipOff: string;
+    chipOffBorder: string;
   };
 
 type ThemeValue = {
@@ -82,6 +88,10 @@ function buildColors(accent: AccentSet, look: Look): ThemeColors {
     ...accent,
     ...chat,
     titleAccent: look === 'pastel' ? accent.accent : baseColors.ink,
+    chipOn: look === 'pastel' ? baseColors.ink : accent.accentTint,
+    chipOnInk: look === 'pastel' ? baseColors.onBrand : accent.accentInk,
+    chipOff: look === 'pastel' ? baseColors.surface : baseColors.surfaceAlt,
+    chipOffBorder: look === 'pastel' ? baseColors.border : baseColors.surfaceAlt,
     brand: accent.accent,
     brandPress: accent.accentPress,
     brandTint: accent.accentTint,

@@ -8,7 +8,7 @@ import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { api } from '@/lib/api';
 import { useI18n } from '@/lib/i18n';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
 /** The recovery code on Profile (WS3 T3.5). An anonymous account has no email or
@@ -19,6 +19,7 @@ import { font, radius, space, type } from '@/theme/tokens';
  * tapping "I've saved it") forgets it; the server keeps only a hash. */
 export function RecoveryCard({ hasCode }: { hasCode: boolean }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const [phrase, setPhrase] = useState<string | null>(null);
   const [has, setHas] = useState(hasCode);
@@ -56,7 +57,7 @@ export function RecoveryCard({ hasCode }: { hasCode: boolean }) {
       edge={colors.edgeSurface}
       travel={3}
       radius={radius.md}
-      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}
       testID="profile-recovery"
     >
       <View style={styles.head}>

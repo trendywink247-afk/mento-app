@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View } from 'react-native';
 
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, wash, type Wash } from '@/theme/tokens';
 
@@ -20,6 +20,8 @@ export function IconBadge({
   size?: number;
 }) {
   const { colors } = useTheme();
+  // Light and Dark: WhatsApp's settings icons — plain grey glyphs, no tinted disc.
+  const flat = useFlatSurfaces();
   // Wash tones keep their legacy names; glyph inks come from the matching clay accents.
   const fg: Record<Wash, string> = {
     accent: colors.accent,
@@ -31,8 +33,8 @@ export function IconBadge({
   };
   const bg = tone === 'accent' ? colors.accentTint : wash[tone];
   return (
-    <View style={[styles.badge, { width: size, height: size, backgroundColor: bg }]}>
-      <Ionicons name={icon} size={Math.round(size * 0.45)} color={fg[tone]} />
+    <View style={[styles.badge, { width: size, height: size, backgroundColor: flat ? 'transparent' : bg }]}>
+      <Ionicons name={icon} size={Math.round(size * (flat ? 0.62 : 0.45))} color={flat ? colors.inkMuted : fg[tone]} />
     </View>
   );
 }

@@ -392,11 +392,11 @@ export default function BrowseMentors() {
                     style={[
                       styles.filter,
                       on
-                        ? { backgroundColor: colors.ink, borderColor: colors.ink }
-                        : { backgroundColor: colors.surface, borderColor: colors.border },
+                        ? { backgroundColor: colors.chipOn, borderColor: colors.chipOn }
+                        : { backgroundColor: colors.chipOff, borderColor: colors.chipOffBorder },
                     ]}
                   >
-                    <Text style={[styles.filterText, { color: on ? colors.onBrand : colors.ink }]} numberOfLines={1}>
+                    <Text style={[styles.filterText, { color: on ? colors.chipOnInk : colors.ink }]} numberOfLines={1}>
                       {f.label}
                     </Text>
                   </PressKey>
@@ -473,9 +473,9 @@ function FilterChip({ label, on, onPress, testID }: { label: string; on: boolean
       accessibilityState={{ selected: on }}
       testID={testID}
       containerStyle={styles.filterCell}
-      style={[styles.filter, on ? { backgroundColor: colors.ink, borderColor: colors.ink } : { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[styles.filter, on ? { backgroundColor: colors.chipOn, borderColor: colors.chipOn } : { backgroundColor: colors.chipOff, borderColor: colors.chipOffBorder }]}
     >
-      <Text style={[styles.filterText, { color: on ? colors.onBrand : colors.ink }]} numberOfLines={1}>
+      <Text style={[styles.filterText, { color: on ? colors.chipOnInk : colors.ink }]} numberOfLines={1}>
         {label}
       </Text>
     </PressKey>
