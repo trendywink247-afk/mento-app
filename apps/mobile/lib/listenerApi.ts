@@ -1,6 +1,6 @@
 /** Typed client for the listener console (/listener/me endpoints). Same transport as
  * lib/api.ts, bound to the listener token instead of the member session. */
-import { ApiError, type ApiPage, type ExamAttempt, type Tier, apiRequest, apiRequestPage, collectPages } from '@/lib/api';
+import { API_BASE_URL, ApiError, type ApiPage, type ExamAttempt, type Tier, apiRequest, apiRequestPage, collectPages } from '@/lib/api';
 import { clearListenerSession, getListenerToken } from '@/lib/listenerSession';
 
 export type ListenerMe = {
@@ -197,6 +197,26 @@ export type Earnings = {
   completed_evaluations: number;
   mentorship_sessions: number;
   personal_requests: number;
+  /** What returned evaluations would have paid (a record; nothing is paid). Newer servers only. */
+  evaluation_paise?: number;
+  /** Answer evaluations switched on (evaluations_enabled). Newer servers only. */
+  evaluations_live?: boolean;
+};
+
+/** DECISIONS T.8: an answer in the mentor's queue. Nothing about who sent it. */
+export type MentorEvaluation = {
+  id: string;
+  kind: 'mains' | 'essay';
+  personal: boolean;
+  status: 'open' | 'claimed' | 'returned';
+  question: string | null;
+  note: string | null;
+  pages: number;
+  pages_available: boolean;
+  sent_at: string | null;
+  due_at: string | null;
+  feedback: string | null;
+  payout_paise: number;
 };
 
 export const listenerApi = {
@@ -204,6 +224,15 @@ export const listenerApi = {
 
   /** DECISIONS T.5: Earnings and Opportunities, stubs with real counts. */
   earnings: () => req<Earnings>('/listener/me/earnings'),
+  evaluations: () => req<MentorEvaluation[]>('/listener/me/evaluations'),
+  claimEvaluation: (id: string) =>
+    req<MentorEvaluation>(`/listener/me/evaluations/${id}/claim`, { method: 'POST' }),
+  returnEvaluation: (id: string, feedback: string) =>
+    req<MentorEvaluation>(`/listener/me/evaluations/${id}/return`, {
+      method: 'POST',
+      body: JSON.stringify({ feedback }),
+    }),
+  evaluationPageUrl: (id: string, idx: number) => `${API_BASE_URL}/listener/me/evaluations/${id}/pages/${idx}`,
 
   setStatus: (status: 'online' | 'away') =>
     req<ListenerMe>('/listener/me/status', { method: 'PATCH', body: JSON.stringify({ status }) }),

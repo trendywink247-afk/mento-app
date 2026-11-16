@@ -127,6 +127,20 @@ export default function ProfileTab() {
   const openMentor = () => void openMentorSide(router, application);
   const { colors } = useTheme();
   const flat = useFlatSurfaces();
+  // DECISIONS T.8: the row opens only when the server has evaluations switched on (a 404 = "soon").
+  const [evaluationsOn, setEvaluationsOn] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      let live = true;
+      api
+        .evaluations()
+        .then(() => live && setEvaluationsOn(true))
+        .catch(() => live && setEvaluationsOn(false));
+      return () => {
+        live = false;
+      };
+    }, []),
+  );
   const { t, locale, setLocale } = useI18n();
   const sheetOpen = useSheetOpen();
   const [persona, setPersona] = useState<Persona | null>(null);
@@ -272,9 +286,15 @@ export default function ProfileTab() {
                 right={chevron} onPress={() => router.navigate('/(tabs)/chats')} testID="profile-in-touch" />
               <Row icon="book-outline" tone="orange" title={t('tabs.journals')} body={t('myMento.journalSub')}
                 right={chevron} onPress={() => router.navigate('/(tabs)/journals')} testID="profile-journal" />
-              <Row icon="cloud-upload-outline" tone="sky" title={t('myMento.evaluate')} body={t('myMento.evaluateSub')}
-                right={<Text style={[styles.soon, { color: colors.inkMuted, backgroundColor: colors.surfaceAlt }]}>{t('myMento.soon')}</Text>}
-                quiet testID="profile-evaluate" />
+              {evaluationsOn ? (
+                <Row icon="cloud-upload-outline" tone="sky" title={t('myMento.evaluate')} body={t('myMento.evaluateSub')}
+                  right={<Ionicons name="chevron-forward" size={20} color={colors.inkMuted} />}
+                  onPress={() => router.push('/evaluate')} testID="profile-evaluate" />
+              ) : (
+                <Row icon="cloud-upload-outline" tone="sky" title={t('myMento.evaluate')} body={t('myMento.evaluateSub')}
+                  right={<Text style={[styles.soon, { color: colors.inkMuted, backgroundColor: colors.surfaceAlt }]}>{t('myMento.soon')}</Text>}
+                  quiet testID="profile-evaluate" />
+              )}
             </Entrance>
 
             <Entrance index={3} style={[styles.rows, flat && styles.rowsFlat]}>

@@ -12,7 +12,7 @@ type Picked = { base64: string; name: string; bytes: number };
 export type PickResult = { ok: true; file: Picked } | { ok: false; reason: 'unavailable' | 'cancelled' | 'too_big' | 'unreadable' };
 
 type Picker = {
-  getDocumentAsync: (o: { type: string[]; copyToCacheDirectory: boolean }) => Promise<{
+  getDocumentAsync: (o: { type: string[]; copyToCacheDirectory: boolean; multiple?: boolean }) => Promise<{
     canceled: boolean;
     assets?: { uri: string; name: string; mimeType?: string; size?: number }[];
   }>;
@@ -80,6 +80,39 @@ export async function pickDocument(): Promise<PickResult> {
     const bytes = decodedBytes(base64);
     if (bytes > MAX_DOCUMENT_BYTES) return { ok: false, reason: 'too_big' };
     return { ok: true, file: { base64, name: asset.name, bytes } };
+  } catch {
+    return { ok: false, reason: 'unreadable' };
+  }
+}
+
+export type PhotosResult =
+  | { ok: true; photos: string[]; skipped: number }
+  | { ok: false; reason: 'unavailable' | 'cancelled' | 'unreadable' };
+
+/** Photos of a written answer (DECISIONS T.8): up to `max`, each shrunk to 1600 px and re-saved as
+ * JPEG, which also drops the photo's hidden data (place, phone). Too-big ones are skipped and counted. */
+export async function pickPhotos(max: number): Promise<PhotosResult> {
+  const picker = loadPicker();
+  const manip = loadManip();
+  if (!picker || !manip) return { ok: false, reason: 'unavailable' };
+  try {
+    const res = await picker.getDocumentAsync({ type: ['image/*'], copyToCacheDirectory: true, multiple: true });
+    const assets = res.canceled ? [] : (res.assets ?? []);
+    if (!assets.length) return { ok: false, reason: 'cancelled' };
+    const photos: string[] = [];
+    let skipped = 0;
+    for (const asset of assets.slice(0, max)) {
+      const out = await manip.manipulateAsync(asset.uri, [{ resize: { width: 1600 } }], {
+        compress: 0.7,
+        format: manip.SaveFormat.JPEG,
+        base64: true,
+      });
+      if (!out.base64 || decodedBytes(out.base64) > MAX_DOCUMENT_BYTES) skipped += 1;
+      else photos.push(out.base64);
+    }
+    skipped += Math.max(0, assets.length - max);
+    if (!photos.length) return { ok: false, reason: 'unreadable' };
+    return { ok: true, photos, skipped };
   } catch {
     return { ok: false, reason: 'unreadable' };
   }

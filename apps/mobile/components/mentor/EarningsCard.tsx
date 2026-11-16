@@ -4,8 +4,9 @@
  * paid features are marked Soon. A failed load shows the zero card rather than an error.
  */
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { useI18n } from '@/lib/i18n';
@@ -26,7 +27,9 @@ const ZERO: Earnings = {
 export function EarningsCard() {
   const { colors } = useTheme();
   const { t } = useI18n();
+  const router = useRouter();
   const [e, setE] = useState<Earnings>(ZERO);
+  const live = Boolean(e.evaluations_live);
 
   useEffect(() => {
     let live = true;
@@ -47,11 +50,25 @@ export function EarningsCard() {
     { v: e.completed_evaluations, l: t('earnings.completed') },
     { v: e.mentorship_sessions, l: t('earnings.sessions') },
   ];
-  const opps: { icon: keyof typeof Ionicons.glyphMap; label: string; soon: boolean; right?: string }[] = [
-    { icon: 'cloud-upload-outline', label: t('earnings.evalRequests'), soon: true },
+  const opps: { icon: keyof typeof Ionicons.glyphMap; label: string; soon: boolean; right?: string; go?: () => void }[] = [
+    live
+      ? {
+          icon: 'cloud-upload-outline',
+          label: t('earnings.evalRequests'),
+          soon: false,
+          right: t('earnings.evalWaiting', { count: e.evaluation_requests }),
+          go: () => router.push('/mentor/evaluations'),
+        }
+      : { icon: 'cloud-upload-outline', label: t('earnings.evalRequests'), soon: true },
     { icon: 'link-outline', label: t('earnings.link'), soon: true },
     { icon: 'calendar-outline', label: t('earnings.paid'), soon: true },
-    { icon: 'receipt-outline', label: t('earnings.history'), soon: false, right: t('earnings.historyEmpty') },
+    {
+      icon: 'receipt-outline',
+      label: t('earnings.history'),
+      soon: false,
+      // A record of what returned evaluations would have paid; nothing is paid yet.
+      right: e.evaluation_paise ? t('earnings.recorded', { amount: `₹${Math.floor(e.evaluation_paise / 100).toLocaleString('en-IN')}` }) : t('earnings.historyEmpty'),
+    },
   ];
 
   return (
@@ -73,7 +90,14 @@ export function EarningsCard() {
       <Text style={[styles.group, { color: colors.inkMuted }]} accessibilityRole="header">{t('earnings.opportunities')}</Text>
       <EdgeSurface edge={colors.edgeSurface} style={[styles.list, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {opps.map((o, i) => (
-          <View key={o.label} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}>
+          <Pressable
+            key={o.label}
+            onPress={o.go}
+            disabled={!o.go}
+            accessibilityRole={o.go ? 'button' : undefined}
+            testID={o.go ? 'earnings-open-evaluations' : undefined}
+            style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border }]}
+          >
             <Ionicons name={o.icon} size={20} color={colors.accentInk} />
             <Text style={[type.body, styles.grow, { color: colors.ink }]}>{o.label}</Text>
             {o.soon ? (
@@ -81,7 +105,8 @@ export function EarningsCard() {
             ) : (
               <Text style={[type.caption, { color: colors.inkMuted }]}>{o.right}</Text>
             )}
-          </View>
+            {o.go ? <Ionicons name="chevron-forward" size={18} color={colors.inkMuted} /> : null}
+          </Pressable>
         ))}
       </EdgeSurface>
     </View>

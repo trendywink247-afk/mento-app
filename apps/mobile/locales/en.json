@@ -1710,7 +1710,9 @@
     "paid": "Paid one-to-one sessions",
     "history": "Earning history",
     "historyEmpty": "Nothing yet",
-    "soon": "SOON"
+    "soon": "SOON",
+    "evalWaiting": "%{count} waiting",
+    "recorded": "%{amount} recorded"
   },
   "myMento": {
     "title": "My Mento",
@@ -1939,5 +1941,48 @@
     "wrong": "That code did not work. Ask for a new one.",
     "resend": "Send a new code",
     "unavailable": "Email is not available yet. Try again later."
+  },
+  "evaluate": {
+    "title": "Get an answer evaluated",
+    "soon": "Coming soon. You will be able to send photos of a Mains answer or an essay and get written feedback from a mentor.",
+    "intro": "Send photos of a written answer. A Mentor or Mento Verified mentor reads it and writes feedback. They never see who you are.",
+    "introOne": "Send photos of a written answer to %{name}. They never see who you are.",
+    "kind_mains": "Mains answer",
+    "kind_essay": "Essay",
+    "question": "Question",
+    "questionPlaceholder": "The question you answered (optional)",
+    "note": "Note",
+    "notePlaceholder": "Anything the mentor should look at (optional)",
+    "choose": "Add photos",
+    "photosReady": "%{count} of %{max} photos added · add more",
+    "limits": "Photos only, up to %{max}. Hidden photo data such as place is removed.",
+    "send": "Send for feedback",
+    "sending": "Sending…",
+    "sent": "Sent. You will see the feedback here.",
+    "error": "That did not go through. Please try again.",
+    "unreadable": "That photo could not be read. Try another.",
+    "skipped": "%{count} photo(s) were too large or over the limit and were left out.",
+    "yours": "Your answers",
+    "mentor": "Mentor: %{name}",
+    "withdraw": "Withdraw",
+    "photoA11y": "Page %{n}",
+    "status_draft": "Draft",
+    "status_open": "Waiting",
+    "status_claimed": "Being read",
+    "status_returned": "Feedback ready",
+    "status_withdrawn": "Withdrawn",
+    "status_expired": "No one took it"
+  },
+  "mentorEval": {
+    "title": "Evaluation requests",
+    "intro": "Answers sent to all mentors, or to you by name. Take one, read it, and return written feedback. The amount is a record; nothing is paid yet.",
+    "personal": "For you",
+    "take": "Take this answer",
+    "due": "Return by %{when}, or it goes back to everyone.",
+    "feedback": "Feedback",
+    "feedbackPlaceholder": "What works, what to change, and one thing to practise (at least 40 characters)",
+    "return": "Return feedback",
+    "empty": "Nothing waiting right now.",
+    "returned": "Returned"
   }
 }

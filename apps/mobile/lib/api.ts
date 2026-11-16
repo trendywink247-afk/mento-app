@@ -756,6 +756,23 @@ async function requestPage<T>(path: string): Promise<ApiPage<T>> {
   }
 }
 
+/** DECISIONS T.8: an answer sent for evaluation, as the member sees it. */
+export type Evaluation = {
+  id: string;
+  kind: 'mains' | 'essay';
+  audience: 'everyone' | 'one';
+  status: 'draft' | 'open' | 'claimed' | 'returned' | 'withdrawn' | 'expired';
+  question: string | null;
+  note: string | null;
+  pages: number;
+  pages_available: boolean;
+  sent_at: string | null;
+  returned_at: string | null;
+  feedback: string | null;
+  mentor_name: string | null;
+  support?: { message: string; helplines: { name: string; number: string; hours: string }[] } | null;
+};
+
 export const api = {
   startOnboarding: (body: {
     dob: string; // YYYY-MM-DD
@@ -879,6 +896,26 @@ export const api = {
       { method: on ? 'POST' : 'DELETE' },
       true,
     ),
+
+  // --- Answer evaluations (DECISIONS T.8). A 404 means the switch is off: "coming soon". ---
+  evaluations: () => request<Evaluation[]>('/evaluations', {}, true),
+  startEvaluation: (body: {
+    kind: 'mains' | 'essay';
+    audience: 'everyone' | 'one';
+    listener_id?: string;
+    question?: string;
+    note?: string;
+  }) => request<Evaluation>('/evaluations', { method: 'POST', body: JSON.stringify(body) }, true),
+  addEvaluationPage: (id: string, contentBase64: string) =>
+    request<{ pages: number }>(
+      `/evaluations/${id}/pages`,
+      { method: 'POST', body: JSON.stringify({ content_base64: contentBase64 }) },
+      true,
+    ),
+  sendEvaluation: (id: string) => request<Evaluation>(`/evaluations/${id}/send`, { method: 'POST' }, true),
+  withdrawEvaluation: (id: string) => request<Evaluation>(`/evaluations/${id}`, { method: 'DELETE' }, true),
+  /** Where one photo is served (needs the member's bearer; see components/AuthedPhoto). */
+  evaluationPageUrl: (id: string, idx: number) => `${BASE_URL}/evaluations/${id}/pages/${idx}`,
 
   // --- Stay in touch (DECISIONS §L.6–7) ---
   stayInTouch: (convoId: string) =>
