@@ -259,7 +259,22 @@ export default function ProfileTab() {
               <CompanionSlot id="cardHang" size={56} inset={40} />
             </View>
 
+            {/* "My Mento", the access area (DECISIONS T.4): new features land here as rows. */}
+            <Entrance index={2} style={styles.rows}>
+              <Text style={[styles.group, { color: colors.inkMuted }]} accessibilityRole="header">{t('myMento.title')}</Text>
+              <Row icon="git-branch-outline" tone="indigo" title={t('tabs.path')} body={t('myMento.threadsSub')}
+                right={chevron} onPress={() => router.navigate('/(tabs)/path')} testID="profile-threads" />
+              <Row icon="people-outline" tone="green" title={t('inTouch.tabPlain')} body={t('myMento.inTouchSub')}
+                right={chevron} onPress={() => router.navigate('/(tabs)/chats')} testID="profile-in-touch" />
+              <Row icon="book-outline" tone="orange" title={t('tabs.journals')} body={t('myMento.journalSub')}
+                right={chevron} onPress={() => router.navigate('/(tabs)/journals')} testID="profile-journal" />
+              <Row icon="cloud-upload-outline" tone="sky" title={t('myMento.evaluate')} body={t('myMento.evaluateSub')}
+                right={<Text style={[styles.soon, { color: colors.inkMuted, backgroundColor: colors.surfaceAlt }]}>{t('myMento.soon')}</Text>}
+                quiet testID="profile-evaluate" />
+            </Entrance>
+
             <Entrance index={3} style={styles.rows}>
+              <Text style={[styles.group, { color: colors.inkMuted }]} accessibilityRole="header">{t('myMento.preferences')}</Text>
               <Row
                 icon="globe-outline"
                 tone="sky"
@@ -487,6 +502,8 @@ function MentorRow({
 }
 
 const styles = StyleSheet.create({
+  group: { fontFamily: font.sansBold, fontSize: 13, lineHeight: 18, letterSpacing: 0.3, marginTop: space.sm, marginLeft: 4 },
+  soon: { fontFamily: font.sansBold, fontSize: 11, lineHeight: 14, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, overflow: 'hidden' },
   safe: { flex: 1 },
   scroll: { paddingHorizontal: space.md, paddingBottom: space.lg, gap: 14 },
   title: { paddingTop: space.xs, paddingHorizontal: space.sm },

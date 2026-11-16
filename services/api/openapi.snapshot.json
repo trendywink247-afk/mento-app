@@ -142,6 +142,47 @@
             "default": false,
             "title": "Certify",
             "type": "boolean"
+          },
+          "exam_history_checked": {
+            "default": false,
+            "title": "Exam History Checked",
+            "type": "boolean"
+          },
+          "interview": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Interview",
+            "type": "integer"
+          },
+          "mains": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Mains",
+            "type": "integer"
+          },
+          "prelims": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Prelims",
+            "type": "integer"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "listener",
+                  "mentor"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
           }
         },
         "title": "AdminApplicationApproveIn",
@@ -819,12 +860,53 @@
             "title": "Categories",
             "type": "array"
           },
+          "exam_history_checked": {
+            "default": false,
+            "title": "Exam History Checked",
+            "type": "boolean"
+          },
+          "interview": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Interview",
+            "type": "integer"
+          },
+          "mains": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Mains",
+            "type": "integer"
+          },
           "max_concurrent": {
             "default": 3,
             "maximum": 20.0,
             "minimum": 1.0,
             "title": "Max Concurrent",
             "type": "integer"
+          },
+          "prelims": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Prelims",
+            "type": "integer"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "listener",
+                  "mentor"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
           }
         },
         "title": "AdminListenerCreateIn",
@@ -857,6 +939,22 @@
             "default": "sage",
             "title": "Companion Colour",
             "type": "string"
+          },
+          "exam_history": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam History"
+          },
+          "exam_history_checked": {
+            "default": false,
+            "title": "Exam History Checked",
+            "type": "boolean"
           },
           "id": {
             "title": "Id",
@@ -914,6 +1012,11 @@
               }
             ],
             "title": "Step Back Requested At"
+          },
+          "tier": {
+            "default": "listener",
+            "title": "Tier",
+            "type": "string"
           },
           "vetting_status": {
             "title": "Vetting Status",
@@ -1100,6 +1203,50 @@
         "title": "AdminReconcileOut",
         "type": "object"
       },
+      "AdminTierIn": {
+        "description": "Set a mentor's tier and exam history (DECISIONS R.4, R.7). Mento Verified stays the\ncertify action; this sets Peer listener <-> Mentor. `exam_history_checked` = an admin read\nthe proof, so the badges show to members.",
+        "properties": {
+          "exam_history_checked": {
+            "default": false,
+            "title": "Exam History Checked",
+            "type": "boolean"
+          },
+          "interview": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Interview",
+            "type": "integer"
+          },
+          "mains": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Mains",
+            "type": "integer"
+          },
+          "prelims": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Prelims",
+            "type": "integer"
+          },
+          "tier": {
+            "enum": [
+              "listener",
+              "mentor"
+            ],
+            "title": "Tier",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tier"
+        ],
+        "title": "AdminTierIn",
+        "type": "object"
+      },
       "AdminVerificationItem": {
         "properties": {
           "content_type": {
@@ -1228,6 +1375,165 @@
           "enforced"
         ],
         "title": "AllowanceOut",
+        "type": "object"
+      },
+      "AppConfigOut": {
+        "properties": {
+          "email_required_from_second_visit": {
+            "default": false,
+            "title": "Email Required From Second Visit",
+            "type": "boolean"
+          },
+          "signup_verification_required": {
+            "default": false,
+            "title": "Signup Verification Required",
+            "type": "boolean"
+          }
+        },
+        "title": "AppConfigOut",
+        "type": "object"
+      },
+      "Attempt": {
+        "description": "One UPSC attempt and the marks the member chose to give for it (R.14). Mains and\nOptional marks exist only for an attempt that reached Mains; Interview only one that\nreached the Interview. Fields beyond what the stage allows are dropped, never refused.",
+        "properties": {
+          "interview": {
+            "anyOf": [
+              {
+                "maximum": 275.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interview"
+          },
+          "mains_gs1": {
+            "anyOf": [
+              {
+                "maximum": 250.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mains Gs1"
+          },
+          "mains_gs2": {
+            "anyOf": [
+              {
+                "maximum": 250.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mains Gs2"
+          },
+          "mains_gs3": {
+            "anyOf": [
+              {
+                "maximum": 250.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mains Gs3"
+          },
+          "mains_gs4": {
+            "anyOf": [
+              {
+                "maximum": 250.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mains Gs4"
+          },
+          "optional_1": {
+            "anyOf": [
+              {
+                "maximum": 250.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optional 1"
+          },
+          "optional_2": {
+            "anyOf": [
+              {
+                "maximum": 250.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optional 2"
+          },
+          "prelims_csat": {
+            "anyOf": [
+              {
+                "maximum": 200.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prelims Csat"
+          },
+          "prelims_gs": {
+            "anyOf": [
+              {
+                "maximum": 200.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prelims Gs"
+          },
+          "stage": {
+            "default": "prelims",
+            "enum": [
+              "prelims",
+              "mains",
+              "interview"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "year": {
+            "maximum": 2100.0,
+            "minimum": 2000.0,
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year"
+        ],
+        "title": "Attempt",
         "type": "object"
       },
       "AttentionItem": {
@@ -1627,6 +1933,16 @@
             "title": "Conversations Held",
             "type": "integer"
           },
+          "exam_badges": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExamBadges"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "first_met_as": {
             "anyOf": [
               {
@@ -1724,6 +2040,17 @@
             "title": "Reply Within A Day",
             "type": "boolean"
           },
+          "seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seen"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -1737,6 +2064,11 @@
                 "type": "null"
               }
             ]
+          },
+          "tier": {
+            "default": "listener",
+            "title": "Tier",
+            "type": "string"
           }
         },
         "required": [
@@ -1862,6 +2194,130 @@
           "token"
         ],
         "title": "DevTokenOut",
+        "type": "object"
+      },
+      "EarningsOut": {
+        "description": "DECISIONS T.5: the mentor's Earnings and Opportunities, as stubs from day one of\ntesting. No money moves until payments are approved, so the balance is always zero and\n`payments_live` false; the counts are real, so the founder can size payouts later.",
+        "properties": {
+          "balance_paise": {
+            "default": 0,
+            "title": "Balance Paise",
+            "type": "integer"
+          },
+          "completed_evaluations": {
+            "default": 0,
+            "title": "Completed Evaluations",
+            "type": "integer"
+          },
+          "currency": {
+            "default": "INR",
+            "title": "Currency",
+            "type": "string"
+          },
+          "evaluation_requests": {
+            "default": 0,
+            "title": "Evaluation Requests",
+            "type": "integer"
+          },
+          "mentorship_sessions": {
+            "default": 0,
+            "title": "Mentorship Sessions",
+            "type": "integer"
+          },
+          "payments_live": {
+            "default": false,
+            "title": "Payments Live",
+            "type": "boolean"
+          },
+          "personal_requests": {
+            "default": 0,
+            "title": "Personal Requests",
+            "type": "integer"
+          }
+        },
+        "title": "EarningsOut",
+        "type": "object"
+      },
+      "EmailConfirmIn": {
+        "properties": {
+          "code": {
+            "maxLength": 6,
+            "minLength": 6,
+            "pattern": "^\\d{6}$",
+            "title": "Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "title": "EmailConfirmIn",
+        "type": "object"
+      },
+      "EmailStartIn": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "maxLength": 255,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "EmailStartIn",
+        "type": "object"
+      },
+      "EmailStatusOut": {
+        "properties": {
+          "has_email": {
+            "title": "Has Email",
+            "type": "boolean"
+          },
+          "required": {
+            "title": "Required",
+            "type": "boolean"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "has_email",
+          "verified",
+          "required"
+        ],
+        "title": "EmailStatusOut",
+        "type": "object"
+      },
+      "ExamBadges": {
+        "description": "How many times this mentor reached each UPSC stage (DECISIONS R.7, R.15). Served only\nafter an admin checked it; the app draws the P / M / I coins with these counts.",
+        "properties": {
+          "interview": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Interview",
+            "type": "integer"
+          },
+          "mains": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Mains",
+            "type": "integer"
+          },
+          "prelims": {
+            "default": 0,
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Prelims",
+            "type": "integer"
+          }
+        },
+        "title": "ExamBadges",
         "type": "object"
       },
       "ExportAllowanceDay": {
@@ -2309,6 +2765,17 @@
             "title": "Journal Entries",
             "type": "array"
           },
+          "mentee_profile": {
+            "anyOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mentee Profile"
+          },
           "notes": {
             "$ref": "#/components/schemas/ExportNotes"
           },
@@ -2719,6 +3186,16 @@
         "title": "FeedbackReceived",
         "type": "object"
       },
+      "Gender": {
+        "enum": [
+          "female",
+          "male",
+          "nonbinary",
+          "undisclosed"
+        ],
+        "title": "Gender",
+        "type": "string"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -3033,6 +3510,17 @@
           "created_at"
         ],
         "title": "JournalEntryOut",
+        "type": "object"
+      },
+      "LikeIn": {
+        "properties": {
+          "liked": {
+            "default": true,
+            "title": "Liked",
+            "type": "boolean"
+          }
+        },
+        "title": "LikeIn",
         "type": "object"
       },
       "ListenerApplicationIn": {
@@ -3452,6 +3940,11 @@
           "stream_token": {
             "title": "Stream Token",
             "type": "string"
+          },
+          "tier": {
+            "default": "listener",
+            "title": "Tier",
+            "type": "string"
           }
         },
         "required": [
@@ -3497,6 +3990,16 @@
             "default": "sage",
             "title": "Companion Colour",
             "type": "string"
+          },
+          "exam_badges": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExamBadges"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "first_met_as": {
             "anyOf": [
@@ -3553,8 +4056,24 @@
             ],
             "title": "Reply Within"
           },
+          "seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seen"
+          },
           "status": {
             "title": "Status",
+            "type": "string"
+          },
+          "tier": {
+            "default": "listener",
+            "title": "Tier",
             "type": "string"
           }
         },
@@ -3691,6 +4210,16 @@
             "title": "Conversations Held",
             "type": "integer"
           },
+          "exam_badges": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExamBadges"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "first_met_as": {
             "anyOf": [
               {
@@ -3761,8 +4290,24 @@
             ],
             "title": "Reply Within"
           },
+          "seen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seen"
+          },
           "status": {
             "title": "Status",
+            "type": "string"
+          },
+          "tier": {
+            "default": "listener",
+            "title": "Tier",
             "type": "string"
           }
         },
@@ -3894,6 +4439,16 @@
             ],
             "title": "Issue Category Label"
           },
+          "mentee_brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MenteeBriefOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "requester_companion_animal": {
             "anyOf": [
               {
@@ -3981,7 +4536,9 @@
             "enum": [
               "any",
               "in_service",
-              "peer"
+              "peer",
+              "listeners",
+              "mentorship"
             ],
             "title": "Audience",
             "type": "string"
@@ -4016,6 +4573,15 @@
       },
       "MatchRequest": {
         "properties": {
+          "audience": {
+            "default": "any",
+            "enum": [
+              "any",
+              "listeners"
+            ],
+            "title": "Audience",
+            "type": "string"
+          },
           "intro_message": {
             "anyOf": [
               {
@@ -4337,6 +4903,16 @@
             "title": "Member Masked",
             "type": "boolean"
           },
+          "mentee_brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MenteeBriefOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "persona_avatar": {
             "title": "Persona Avatar",
             "type": "string"
@@ -4368,6 +4944,453 @@
           "care_prompt"
         ],
         "title": "MemberBriefOut",
+        "type": "object"
+      },
+      "MenteeBriefOut": {
+        "description": "What the mentor receiving this member's request sees (R.6): no name, no contact.\n`attempts` carries marks only when `marks_visibility` allows this mentor's tier.",
+        "properties": {
+          "attempts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/Attempt"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "attempts_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts Count"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Stage"
+          },
+          "exam": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam"
+          },
+          "furthest_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Furthest Stage"
+          },
+          "help_with": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Help With",
+            "type": "array"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "marks_shown": {
+            "default": false,
+            "title": "Marks Shown",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "optional_subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optional Subject"
+          },
+          "prep_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prep Mode"
+          }
+        },
+        "title": "MenteeBriefOut",
+        "type": "object"
+      },
+      "MenteeProfileIn": {
+        "properties": {
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/Attempt"
+            },
+            "maxItems": 10,
+            "title": "Attempts",
+            "type": "array"
+          },
+          "attempts_count": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts Count"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "starting",
+                  "prelims_prep",
+                  "mains_prep",
+                  "interview_prep",
+                  "between_attempts"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Stage"
+          },
+          "exam": {
+            "anyOf": [
+              {
+                "const": "upsc",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam"
+          },
+          "furthest_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none",
+                  "prelims",
+                  "mains",
+                  "interview"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Furthest Stage"
+          },
+          "help_with": {
+            "items": {
+              "enum": [
+                "strategy",
+                "answer_writing",
+                "optional",
+                "current_affairs",
+                "revision",
+                "motivation",
+                "interview",
+                "other"
+              ],
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Help With",
+            "type": "array"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "maxLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "marks_visibility": {
+            "default": "mentors",
+            "enum": [
+              "nobody",
+              "mentors",
+              "everyone"
+            ],
+            "title": "Marks Visibility",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "optional_subject": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optional Subject"
+          },
+          "prep_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "self",
+                  "coaching",
+                  "both",
+                  "working"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prep Mode"
+          }
+        },
+        "title": "MenteeProfileIn",
+        "type": "object"
+      },
+      "MenteeProfileOut": {
+        "properties": {
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/Attempt"
+            },
+            "maxItems": 10,
+            "title": "Attempts",
+            "type": "array"
+          },
+          "attempts_count": {
+            "anyOf": [
+              {
+                "maximum": 10.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attempts Count"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "starting",
+                  "prelims_prep",
+                  "mains_prep",
+                  "interview_prep",
+                  "between_attempts"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Stage"
+          },
+          "exam": {
+            "anyOf": [
+              {
+                "const": "upsc",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exam"
+          },
+          "furthest_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none",
+                  "prelims",
+                  "mains",
+                  "interview"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Furthest Stage"
+          },
+          "help_with": {
+            "items": {
+              "enum": [
+                "strategy",
+                "answer_writing",
+                "optional",
+                "current_affairs",
+                "revision",
+                "motivation",
+                "interview",
+                "other"
+              ],
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Help With",
+            "type": "array"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "maxLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "marks_visibility": {
+            "default": "mentors",
+            "enum": [
+              "nobody",
+              "mentors",
+              "everyone"
+            ],
+            "title": "Marks Visibility",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "optional_subject": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Optional Subject"
+          },
+          "prep_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "self",
+                  "coaching",
+                  "both",
+                  "working"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prep Mode"
+          },
+          "support": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SupportOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "title": "MenteeProfileOut",
         "type": "object"
       },
       "MentorNoteIn": {
@@ -5729,6 +6752,47 @@
       },
       "VerificationDecisionIn": {
         "properties": {
+          "grant": {
+            "anyOf": [
+              {
+                "enum": [
+                  "verified",
+                  "mentor"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant"
+          },
+          "interview": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interview"
+          },
+          "mains": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mains"
+          },
           "note": {
             "anyOf": [
               {
@@ -5740,6 +6804,19 @@
               }
             ],
             "title": "Note"
+          },
+          "prelims": {
+            "anyOf": [
+              {
+                "maximum": 20.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prelims"
           }
         },
         "title": "VerificationDecisionIn",
@@ -6858,6 +7935,65 @@
         ]
       }
     },
+    "/api/v1/admin/listeners/{listener_id}/tier": {
+      "post": {
+        "description": "Peer listener <-> Mentor and the exam history behind the badges (DECISIONS R.4, R.7):\nan admin sets it after reading the mentor's prelims/mains proof (the Documents tab).\nNobody who has not cleared prelims mentors, so Mentor needs at least one prelims.\nAudited; counts only in the audit row.",
+        "operationId": "set_listener_tier_api_v1_admin_listeners__listener_id__tier_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "listener_id",
+            "required": true,
+            "schema": {
+              "title": "Listener Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminTierIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Set Listener Tier Api V1 Admin Listeners  Listener Id  Tier Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Set Listener Tier",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/v1/admin/me": {
       "get": {
         "operationId": "me_api_v1_admin_me_get",
@@ -7290,7 +8426,7 @@
     },
     "/api/v1/admin/verifications/{doc_id}/approve": {
       "post": {
-        "description": "Mark the mentor Mento Verified and wipe the file.",
+        "description": "Approve the document and wipe the file: Mento Verified, or Mentor with `grant`.",
         "operationId": "approve_api_v1_admin_verifications__doc_id__approve_post",
         "parameters": [
           {
@@ -7464,6 +8600,27 @@
         ]
       }
     },
+    "/api/v1/app-config": {
+      "get": {
+        "operationId": "app_config_api_v1_app_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "App Config",
+        "tags": [
+          "app-config"
+        ]
+      }
+    },
     "/api/v1/auth/refresh": {
       "post": {
         "operationId": "refresh_api_v1_auth_refresh_post",
@@ -7614,6 +8771,74 @@
           }
         ],
         "summary": "Messages",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/v1/chat/{conversation_id}/messages/{seq}/like": {
+      "post": {
+        "description": "DECISIONS T.7: like a message the other side wrote. Like only — no count is shown.",
+        "operationId": "like_api_v1_chat__conversation_id__messages__seq__like_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "seq",
+            "required": true,
+            "schema": {
+              "title": "Seq",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LikeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Like Api V1 Chat  Conversation Id  Messages  Seq  Like Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Like",
         "tags": [
           "chat"
         ]
@@ -9923,6 +11148,32 @@
         ]
       }
     },
+    "/api/v1/listener/me/earnings": {
+      "get": {
+        "operationId": "earnings_api_v1_listener_me_earnings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Earnings",
+        "tags": [
+          "listener-console"
+        ]
+      }
+    },
     "/api/v1/listener/me/heartbeat": {
       "post": {
         "description": "Native console presence pulse (every 5 min while focused + online). The\nsweep in services/matching marks a listener away 15 min after the last one.",
@@ -10614,6 +11865,53 @@
                 }
               ],
               "title": "Language"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tier",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "listener",
+                    "mentor",
+                    "verified"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tier"
+            }
+          },
+          {
+            "in": "query",
+            "name": "gender",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/Gender"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Gender"
+            }
+          },
+          {
+            "in": "query",
+            "name": "online",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Online",
+              "type": "boolean"
             }
           },
           {
@@ -11318,6 +12616,124 @@
         ]
       }
     },
+    "/api/v1/me/email": {
+      "get": {
+        "operationId": "email_status_api_v1_me_email_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmailStatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Email Status",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/email/confirm": {
+      "post": {
+        "operationId": "email_confirm_code_api_v1_me_email_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Email Confirm Code",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/email/start": {
+      "post": {
+        "operationId": "email_start_api_v1_me_email_start_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailStartIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Email Start",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/v1/me/export": {
       "get": {
         "description": "Everything this member's account holds, as one JSON document (T2.5) — the same\ninventory Start fresh erases (see `services/export.py` for what is left out and why:\nchat text lives on Stream; other people's data, secrets and safety records held\nabout the member are never included). Sent as a download; never cached.",
@@ -11340,6 +12756,93 @@
           }
         ],
         "summary": "Export Me",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/v1/me/mentee-profile": {
+      "delete": {
+        "operationId": "delete_mentee_profile_api_v1_me_mentee_profile_delete",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Delete Mentee Profile",
+        "tags": [
+          "me"
+        ]
+      },
+      "get": {
+        "operationId": "get_mentee_profile_api_v1_me_mentee_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MenteeProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Get Mentee Profile",
+        "tags": [
+          "me"
+        ]
+      },
+      "put": {
+        "operationId": "put_mentee_profile_api_v1_me_mentee_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MenteeProfileIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MenteeProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "_Bearer": []
+          }
+        ],
+        "summary": "Put Mentee Profile",
         "tags": [
           "me"
         ]

@@ -128,7 +128,11 @@ export type Listener = {
   tier?: Tier;
   /** DECISIONS R.7: admin-checked exam history; null until checked. */
   exam_badges?: ExamBadges | null;
+  /** DECISIONS T.6: last seen as a bucket, never a time. Older servers leave it out. */
+  seen?: Seen | null;
 };
+
+export type Seen = 'now' | 'day' | 'week' | 'earlier';
 
 export type Tier = 'listener' | 'mentor' | 'verified';
 export type ExamBadges = { prelims: number; mains: number; interview: number };
@@ -171,6 +175,7 @@ export type ListenerProfile = {
   languages?: string[];
   tier?: Tier;
   exam_badges?: ExamBadges | null;
+  seen?: Seen | null;
 };
 
 /** Who may take a question (server `services/tiers.py`). "listeners" = Connect now (listeners and
@@ -805,6 +810,10 @@ export const api = {
   ownChatMessages: (id: string) =>
     request<{ messages: { id: string; seq: number; sender: string; text: string; ts: string }[]; last_seq: number }>(
       `/chat/${encodeURIComponent(id)}/messages`, {}, true),
+  /** DECISIONS T.7: like (or unlike) a message the other side wrote in an own chat. */
+  likeOwnMessage: (id: string, seq: number, liked: boolean) =>
+    request<{ seq: number; liked: boolean }>(`/chat/${encodeURIComponent(id)}/messages/${seq}/like`,
+      { method: 'POST', body: JSON.stringify({ liked }) }, true),
   conversationState: (id: string) => request<ConversationState>(`/conversations/${encodeURIComponent(id)}/state`, {}, true),
 
   // --- Paths (Communities) ---

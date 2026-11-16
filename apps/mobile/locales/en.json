@@ -434,6 +434,8 @@
     "msgCopied": "Copied",
     "msgReport": "Report this chat",
     "msgClose": "Close",
+    "likedA11y": "You liked this. Tap to take the like back",
+    "likeHint": "Double-tap a message to like it",
     "msgActionsA11y": "Message options"
   },
   "crisis": {
@@ -1016,7 +1018,12 @@
     "usuallyHere": "Usually here %{note}",
     "quoted": "“%{line}”",
     "empty": "Nobody matches that right now.",
-    "namesNote": "Mentors keep the same name, so you can find them again."
+    "namesNote": "Mentors keep the same name, so you can find them again.",
+    "seen": {
+      "day": "Seen in the last day",
+      "week": "Seen this week",
+      "earlier": "Seen a while ago"
+    }
   },
   "profilePage": {
     "private": "Private",
@@ -1681,6 +1688,31 @@
     "systemSub": "Follows your phone.",
     "row": "Appearance",
     "rowSub": "Pastel, Light, Dark or System"
+  },
+  "earnings": {
+    "title": "Earnings",
+    "balance": "Balance",
+    "note": "Paid work opens with answer evaluations.",
+    "requests": "Evaluation requests",
+    "completed": "Completed",
+    "sessions": "Sessions",
+    "opportunities": "Opportunities",
+    "evalRequests": "Evaluation requests",
+    "link": "Create mentorship link",
+    "paid": "Paid one-to-one sessions",
+    "history": "Earning history",
+    "historyEmpty": "Nothing yet",
+    "soon": "SOON"
+  },
+  "myMento": {
+    "title": "My Mento",
+    "threadsSub": "Your UPSC path",
+    "inTouchSub": "Mentors you stay in touch with",
+    "journalSub": "Notes and saved messages",
+    "evaluate": "Get an answer evaluated",
+    "evaluateSub": "Upload a Mains answer or an essay",
+    "soon": "SOON",
+    "preferences": "Preferences"
   },
   "theme": {
     "title": "Theme",

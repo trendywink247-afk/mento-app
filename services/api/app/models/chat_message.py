@@ -69,6 +69,9 @@ class ChatMessage(Base):
     # Signal only, like SafetyFlag: the helpline card is rebuilt from it on replay.
     crisis_signal: Mapped[str | None] = mapped_column(String(32), nullable=True)
     redacted: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # DECISIONS T.7: the other side liked this message. One like per message, never a count;
+    # it goes with the row on Clean Wipe and retention.
+    liked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class ChatReadMarker(Base):

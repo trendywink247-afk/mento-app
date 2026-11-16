@@ -6,6 +6,8 @@ than in either router.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -73,7 +75,26 @@ def card(
         languages=list(li.languages or []),
         tier=tiers.tier_of(li),
         exam_badges=exam_badges(li),
+        seen=seen_bucket(li),
     )
+
+
+def seen_bucket(li: ListenerProfile, now: datetime | None = None) -> str | None:
+    """DECISIONS T.6: last seen as a coarse bucket — never a time, so a member can't
+    track a mentor's day. Online is "now"; otherwise how long since they were last online."""
+    if li.status == ListenerStatus.online:
+        return "now"
+    at = li.last_online_at
+    if at is None:
+        return None
+    if at.tzinfo is None:
+        at = at.replace(tzinfo=UTC)
+    gap = (now or datetime.now(UTC)) - at
+    if gap <= timedelta(days=1):
+        return "day"
+    if gap <= timedelta(days=7):
+        return "week"
+    return "earlier"
 
 
 def profile(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOut:
@@ -112,6 +133,7 @@ def profile(db: Session, li: ListenerProfile, user_id: str) -> ListenerProfileOu
         languages=list(li.languages or []),
         tier=tiers.tier_of(li),
         exam_badges=exam_badges(li),
+        seen=seen_bucket(li),
     )
 
 

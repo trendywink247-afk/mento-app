@@ -7,6 +7,8 @@ type Client = ReturnType<typeof createAuthenticatedOwnChat>;
 export type OwnScreenMessage = {
   id: string; text: string; user: { id: string }; created_at: string;
   crisis?: CrisisPayload;
+  /** DECISIONS T.7: for the like (the server keys a message by its seq). */
+  seq?: number; liked?: boolean;
 };
 export function ownMessageForScreen(message: OwnChatMessage): OwnScreenMessage {
   const payload = message.crisis;
@@ -15,7 +17,7 @@ export function ownMessageForScreen(message: OwnChatMessage): OwnScreenMessage {
       typeof line.name === 'string' && typeof line.number === 'string' && typeof line.hours === 'string')
     ? payload as CrisisPayload : undefined;
   return { id: message.id, text: message.text, user: { id: message.sender },
-    created_at: message.ts, ...(crisis ? { crisis } :
+    created_at: message.ts, seq: message.seq, liked: message.liked === true, ...(crisis ? { crisis } :
       Object.hasOwn(message, 'crisis') ? { crisis: undefined } : {}) };
 }
 export function ownMessageRead(snapshot: OwnChatSnapshot, id: string, actorId: string): boolean {

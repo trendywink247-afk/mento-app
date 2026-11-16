@@ -189,8 +189,21 @@ async function onConsoleError(e: unknown): Promise<void> {
   }
 }
 
+export type Earnings = {
+  balance_paise: number;
+  currency: string;
+  payments_live: boolean;
+  evaluation_requests: number;
+  completed_evaluations: number;
+  mentorship_sessions: number;
+  personal_requests: number;
+};
+
 export const listenerApi = {
   me: () => req<ListenerMe>('/listener/me'),
+
+  /** DECISIONS T.5: Earnings and Opportunities, stubs with real counts. */
+  earnings: () => req<Earnings>('/listener/me/earnings'),
 
   setStatus: (status: 'online' | 'away') =>
     req<ListenerMe>('/listener/me/status', { method: 'PATCH', body: JSON.stringify({ status }) }),

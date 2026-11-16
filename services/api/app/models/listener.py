@@ -55,6 +55,9 @@ class ListenerProfile(UUIDMixin, TimestampMixin, Base):
     # endpoint; reset to NULL when the listener sets themselves online, so a
     # listener that never heartbeats (seeds, the web console) is never swept.
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # DECISIONS T.6: when this mentor was last online, for "Seen today" on Peers. Stamped while
+    # online (heartbeats, sockets) and when they leave; only a coarse bucket ever leaves the server.
+    last_online_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Chat-profile fields (spec 2026-09-06 "Two in the room"). Mentor-editable via
     # PUT /listener/me/profile; admin can clear public_line but not set it.

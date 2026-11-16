@@ -97,7 +97,7 @@ def _touch(db: Session, listener_id: str) -> None:
     db.execute(
         update(ListenerProfile)
         .where(ListenerProfile.id == listener_id)
-        .values(last_seen_at=datetime.now(UTC))
+        .values(last_seen_at=datetime.now(UTC), last_online_at=datetime.now(UTC))
     )
     db.commit()
 

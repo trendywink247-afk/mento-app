@@ -48,6 +48,9 @@ class ListenerOut(BaseModel):
     tier: str = "listener"
     # DECISIONS R.7: admin-checked exam history, else null. Additive.
     exam_badges: ExamBadges | None = None
+    # DECISIONS T.6: "now" | "day" | "week" | "earlier", or null when never tracked. A coarse
+    # bucket only; the timestamp never leaves the server. Additive.
+    seen: str | None = None
 
 
 class ListenerProfileOut(BaseModel):
@@ -84,6 +87,8 @@ class ListenerProfileOut(BaseModel):
     languages: list[str] = []
     tier: str = "listener"
     exam_badges: ExamBadges | None = None
+    # DECISIONS T.6: the same coarse "last seen" bucket as the card. Additive.
+    seen: str | None = None
 
 
 class ConversationMentorOut(ListenerProfileOut):

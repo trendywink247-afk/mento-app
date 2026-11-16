@@ -17,7 +17,7 @@ const message = { id: 'm1', sender: 'member', sender_kind: 'member', seq: 7,
 test('existing thread receives server timestamp, sender identity and validated crisis metadata', () => {
   const crisis = { support: 'support', signal: 'risk', helplines: [{ name: 'help', number: '123', hours: 'always' }] };
   assert.deepEqual(plain(ownMessageForScreen({ ...message, crisis })), {
-    id: 'm1', text: 'hello', user: { id: 'member' }, created_at: message.ts, crisis,
+    id: 'm1', text: 'hello', user: { id: 'member' }, created_at: message.ts, seq: 7, liked: false, crisis,
   });
   assert.equal(ownMessageForScreen({ ...message, crisis: { helplines: 'bad' } }).crisis, undefined);
   assert.equal(Object.hasOwn(ownMessageForScreen(message), 'crisis'), false);

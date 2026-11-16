@@ -31,6 +31,7 @@ from fastapi import (
     status,
 )
 from fastapi.security import HTTPAuthorizationCredentials
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app import ratelimit
@@ -301,6 +302,21 @@ def messages(conversation_id: str, after: int = 0, who=Depends(_current_chat_ide
             "messages": chat.history(db, conversation_id, after),
             "last_seq": chat.last_seq(db, conversation_id),
         }
+
+
+class LikeIn(BaseModel):
+    liked: bool = True
+
+
+@router.post("/chat/{conversation_id}/messages/{seq}/like")
+def like(conversation_id: str, seq: int, body: LikeIn, who=Depends(_current_chat_identity)) -> dict:
+    """DECISIONS T.7: like a message the other side wrote. Like only — no count is shown."""
+    with SessionLocal() as db:
+        try:
+            liked = chat.like(db, conversation_id, who[1], seq, body.liked)
+        except chat.NotAllowed:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "no such message") from None
+    return {"seq": seq, "liked": liked}
 
 
 @router.post("/chat/{conversation_id}/wipe")

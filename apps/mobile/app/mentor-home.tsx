@@ -23,6 +23,7 @@ import { RequestTotals, UpNext } from '@/components/mentor/RequestQueueExtras';
 import { PresenceHeader } from '@/components/mentor/PresenceHeader';
 import { CertifiedBadge } from '@/components/CertifiedBadge';
 import { TierMark } from '@/components/TierMark';
+import { EarningsCard } from '@/components/mentor/EarningsCard';
 import { StayInTouchRow } from '@/components/mentor/StayInTouchRow';
 import { LineSheet } from '@/components/mentor/LineSheet';
 import { StayInTouchSheet } from '@/components/mentor/StayInTouchSheet';
@@ -758,6 +759,8 @@ function ConsoleBody({
               <Text style={[type.body, { color: colors.ink }]}>{c.me.public_line ? `"${c.me.public_line}"` : t('mentor.profileLineAdd')}</Text>
             </EdgeSurface>
           </Pressable>
+
+          <EarningsCard />
 
           <ProfileRow
             icon={c.me.certified ? 'ribbon' : 'ribbon-outline'}

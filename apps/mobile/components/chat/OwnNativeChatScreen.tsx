@@ -250,6 +250,15 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
       } else setSendError(true);
     } finally { setSending(false); }
   }
+  // DECISIONS T.7: the socket's `liked` frame updates the row; a failed call changes nothing.
+  const like = useCallback((id: string, liked: boolean) => {
+    const seq = rows.find(r => r.id === id)?.seq;
+    if (typeof seq !== 'number') return;
+    void api.likeOwnMessage(conversationId, seq, liked).catch(() => {
+      /* reason: a like is a small gesture; it can be tried again */
+    });
+  }, [rows, conversationId]);
+
   async function save(message: ThreadMsg) {
     if (!member || saved.has(message.id)) return;
     try {
@@ -317,7 +326,8 @@ export function OwnNativeChatScreen({ role, conversationId, onRetry }: {
             latest?.id === item.id && item.user.id !== actor)} nudge={member && latest?.id === item.id}
           isSaved={member && saved.has(item.id)} savedNow={savedNow.has(item.id)}
           onToggleSave={id => { if (member) setSaveOpen(previous => previous === id ? null : id); }}
-          onSave={message => void save(message)} onArrived={() => {}} onLongPress={setHeld} /> :
+          onSave={message => void save(message)} onArrived={() => {}} onLongPress={setHeld}
+          liked={item.liked === true} onLike={item.user.id !== actor && typeof item.seq === 'number' ? like : undefined} /> :
           <View style={{ alignItems: item.user.id === actor ? 'flex-end' : 'flex-start' }}>
             <Pressable delayLongPress={380} testID={`own-native-hold-${item.id}`}
               onLongPress={() => setHeld({ id: item.id, text: item.text, mine: item.user.id === actor, at: item.created_at })}>

@@ -293,7 +293,7 @@ def _standing_and_touch(members: set[str], listeners: set[str]) -> set[Identity]
                 db.execute(
                     update(ListenerProfile)
                     .where(ListenerProfile.id.in_(approved))
-                    .values(last_seen_at=datetime.now(UTC))
+                    .values(last_seen_at=datetime.now(UTC), last_online_at=datetime.now(UTC))
                 )
                 db.commit()
     return revoked

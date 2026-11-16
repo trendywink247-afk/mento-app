@@ -14,6 +14,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from pydantic import BaseModel
 from sqlalchemy import and_, case, func, or_, select, tuple_, update
 from sqlalchemy.orm import Session
 
@@ -244,6 +245,8 @@ def set_status(
     )
     was = listener.status
     listener.status = ListenerStatus(payload.status)
+    if ListenerStatus.online in (was, listener.status):
+        listener.last_online_at = datetime.now(UTC)  # "Seen …" on Peers (DECISIONS T.6)
     if listener.status == ListenerStatus.online:
         # Tracking (re)starts with the next heartbeat — see matching.sweep_stale_presence.
         listener.last_seen_at = None
@@ -299,6 +302,8 @@ def heartbeat(
         f"listener-heartbeat:{listener.id}", 30, 600, detail="Slow down — heartbeat limit reached."
     )
     listener.last_seen_at = datetime.now(UTC)
+    if listener.status == ListenerStatus.online:
+        listener.last_online_at = listener.last_seen_at
     db.commit()
     return OkResult(status="ok")
 
@@ -785,3 +790,43 @@ def delete_push_token(
     listener-owned token receiving pushes with no session to route the tap)."""
     push.delete_token(db, PushOwnerKind.listener, listener.id, payload.expo_push_token)
     return OkResult(status="ok")
+
+
+class EarningsOut(BaseModel):
+    """DECISIONS T.5: the mentor's Earnings and Opportunities, as stubs from day one of
+    testing. No money moves until payments are approved, so the balance is always zero and
+    `payments_live` false; the counts are real, so the founder can size payouts later."""
+
+    balance_paise: int = 0
+    currency: str = "INR"
+    payments_live: bool = False
+    evaluation_requests: int = 0
+    completed_evaluations: int = 0
+    mentorship_sessions: int = 0
+    personal_requests: int = 0
+
+
+@router.get("/me/earnings", response_model=EarningsOut)
+def earnings(
+    listener: ListenerProfile = Depends(current_listener),
+    db: Session = Depends(get_db),
+) -> EarningsOut:
+    sessions = db.scalar(
+        select(func.count())
+        .select_from(Conversation)
+        .where(
+            Conversation.listener_id == listener.id,
+            Conversation.status.in_(
+                (ConversationStatus.active, ConversationStatus.ended, ConversationStatus.wiped)
+            ),
+        )
+    )
+    personal = db.scalar(
+        select(func.count())
+        .select_from(ConversationRequest)
+        .where(
+            ConversationRequest.target_listener_id == listener.id,
+            ConversationRequest.broadcast.is_(False),
+        )
+    )
+    return EarningsOut(mentorship_sessions=sessions or 0, personal_requests=personal or 0)

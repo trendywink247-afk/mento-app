@@ -22,6 +22,8 @@ export type OwnChatMessage = {
   ts: string;
   crisis?: Record<string, unknown>;
   moderation?: { redacted: boolean };
+  /** DECISIONS T.7: the other side liked it. Older servers leave it out. */
+  liked?: boolean;
 };
 
 export type OwnChatPending = {
@@ -320,6 +322,9 @@ export function createOwnChatClient(scopeInput: OwnChatScope, dependencies: OwnC
         cancel(typingDeadline);
         if (peerTyping) typingDeadline = later(() => { peerTyping = false; notify(); }, 6_000);
         notify();
+      } else if (frame.t === 'liked' && isSeq(frame.seq) && typeof frame.liked === 'boolean') {
+        const m = messages.get(frame.seq);
+        if (m) { messages.set(frame.seq, { ...m, liked: frame.liked }); sorted = null; notify(); }
       } else if (frame.t === 'read' && typeof frame.by === 'string' && isSeq(frame.seq)) {
         read[frame.by] = Math.max(read[frame.by] ?? 0, frame.seq); notify();
       } else if ((frame.t === 'held' || frame.t === 'error') && typeof frame.client_id === 'string') {

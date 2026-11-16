@@ -18,6 +18,7 @@
  * Memoized with primitive props so composer keystrokes and typing events never re-render
  * the transcript.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { memo, useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -65,6 +66,10 @@ type Props = {
   onArrived: (id: string) => void;
   /** Holding a message opens its action sheet (copy, save, report). */
   onLongPress?: (m: ThreadMsg) => void;
+  /** DECISIONS T.7: this mentor message is liked. Like only — no count. */
+  liked?: boolean;
+  /** Double-tap likes; the heart under the bubble unlikes. Absent = no likes here. */
+  onLike?: (id: string, liked: boolean) => void;
 };
 
 export const ThreadRow = memo(function ThreadRow({
@@ -81,7 +86,21 @@ export const ThreadRow = memo(function ThreadRow({
   onSave,
   onArrived,
   onLongPress,
+  liked = false,
+  onLike,
 }: Props) {
+  const lastTap = useRef(0);
+  const tapBubble = () => {
+    const now = Date.now();
+    if (onLike && now - lastTap.current < 320) {
+      lastTap.current = 0;
+      onToggleSave(item.id); // undo the first tap's save key: a double tap only likes
+      if (!liked) onLike(item.id, true);
+      return;
+    }
+    lastTap.current = now;
+    onToggleSave(item.id);
+  };
   const { colors } = useTheme();
   const { t } = useI18n();
   const reduced = useReducedMotion();
@@ -156,7 +175,7 @@ export const ThreadRow = memo(function ThreadRow({
               />
             ) : null}
             <PressKey
-              onPress={() => onToggleSave(item.id)}
+              onPress={tapBubble}
               onLongPress={onLongPress ? () => onLongPress(item) : undefined}
               edge={colors.edgeSurface}
               travel={3}
@@ -173,6 +192,18 @@ export const ThreadRow = memo(function ThreadRow({
               <View style={styles.chipSeat} pointerEvents="none">
                 <SavedChip settle={savedNow} testID={`saved-${item.id}`} />
               </View>
+            ) : null}
+            {liked && onLike ? (
+              <Pressable
+                onPress={() => onLike(item.id, false)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.likedA11y')}
+                testID={`liked-${item.id}`}
+                style={[styles.likeSeat, { backgroundColor: colors.surface, borderColor: colors.bg }]}
+              >
+                <Ionicons name="heart" size={13} color={colors.accentInk} />
+              </Pressable>
             ) : null}
           </View>
 
@@ -201,9 +232,20 @@ const styles = StyleSheet.create({
   // The chip sits on the bubble's top-right corner, 2px proud of it.
   roomForChip: { paddingTop: 8 },
   chipSeat: { position: 'absolute', right: 14, top: -2 },
+  likeSeat: {
+    position: 'absolute',
+    right: 10,
+    bottom: -10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   mineWrap: { alignItems: 'flex-end', gap: 4 },
   status: { fontFamily: font.sans, fontSize: 12, lineHeight: 16, paddingRight: 6 },
-  theirsWrap: { alignItems: 'flex-start', gap: 8 },
+  theirsWrap: { alignItems: 'flex-start', gap: 12 },
   glow: {
     position: 'absolute',
     left: -GLOW_REACH,

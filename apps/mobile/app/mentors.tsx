@@ -30,7 +30,7 @@ import { screenCache } from '@/lib/screenCache';
 import { topicLabelKey } from '@/lib/topics';
 import { useSessionGuard } from '@/lib/useSessionGuard';
 import { useTheme } from '@/theme/ThemeProvider';
-import { font, radius, space, type, washInk } from '@/theme/tokens';
+import { font, radius, space, type } from '@/theme/tokens';
 
 /**
  * Browse mentors (board A25) — a deeper page (root stack, no tab bar): the pinned
@@ -233,9 +233,12 @@ export default function BrowseMentors() {
       .filter((x): x is string => Boolean(x))
       .filter((x, i, all) => all.indexOf(x) === i)
       .slice(0, 3);
+    // Last seen, not an online dot (DECISIONS T.6).
     const availability = l.available
       ? t('inTouch.hereNow')
-      : d?.availability_note
+      : l.seen && l.seen !== 'now'
+        ? t(`browse.seen.${l.seen}`)
+        : d?.availability_note
         ? t('browse.usuallyHere', { note: d.availability_note })
         : t('inTouch.away');
     const second = l.first_met_as
@@ -257,7 +260,7 @@ export default function BrowseMentors() {
         testID={`mentor-${l.id}`}
         style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
       >
-        <MentorFace animal={l.companion_animal} colour={l.companion_colour} size={52} presence={l.available} />
+        <MentorFace animal={l.companion_animal} colour={l.companion_colour} size={52} />
         <View style={styles.cardBody}>
           <View style={styles.cardHead}>
             <Text style={[styles.cardName, { color: colors.ink }]} numberOfLines={1}>
@@ -278,7 +281,7 @@ export default function BrowseMentors() {
             </Text>
           ) : null}
           <ExamEmblems badges={l.exam_badges} size={38} testID={`mentor-emblems-${l.id}`} />
-          <Text style={[styles.availability, { color: l.available ? washInk.green : colors.inkMuted }]} numberOfLines={1}>
+          <Text style={[styles.availability, { color: l.available ? colors.accentInk : colors.inkMuted }]} numberOfLines={1}>
             {availability}
           </Text>
           {l.reply_within ? (

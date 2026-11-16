@@ -129,7 +129,29 @@ def message_out(m: ChatMessage, text: str | None = None) -> dict:
         }
     if m.redacted:
         out["moderation"] = {"redacted": True}
+    out["liked"] = bool(m.liked)
     return out
+
+
+def like(db: Session, conversation_id: str, actor_id: str, seq: int, liked: bool) -> bool:
+    """DECISIONS T.7: the reader likes (or unlikes) one message the OTHER side wrote. One
+    like per message, so repeating it changes nothing and no count can be pumped. Both
+    sockets hear `liked`. Raises NotAllowed for a stranger, an own message or a wiped one."""
+    convo = db.get(Conversation, conversation_id)
+    if convo is None or convo.chat_backend != "own" or side_of(convo, actor_id) is None:
+        raise NotAllowed("not_found")
+    row = db.execute(
+        select(ChatMessage).where(
+            ChatMessage.conversation_id == conversation_id, ChatMessage.seq == seq
+        )
+    ).scalar_one_or_none()
+    if row is None or row.sender_id == actor_id:
+        raise NotAllowed("not_found")
+    if row.liked != liked:
+        row.liked = liked
+        db.commit()
+        publish(conversation_id, {"t": "liked", "seq": seq, "liked": liked})
+    return liked
 
 
 def message_id_for(conversation_id: str, sender_id: str, client_id: str) -> str:
