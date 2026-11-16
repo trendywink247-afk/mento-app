@@ -440,13 +440,13 @@ Source: the 2026-11-16 profile design call; the working map of every profile fea
 
 Source: the 2026-11-16 evening call and the "Mentee Application Architecture V1.1" document; screens on the "Mento Screens v1.1" canvas. Where this section disagrees with an earlier one, this section wins.
 
-**1. Layout: direction A ("Familiar").** Chats with filter chips (All, In touch, Unread), Archived as a row, a round + opening a sheet with Connect now and Start guidance; Peers as a searchable list with filter chips; labelled bottom tabs Chats, Threads, Journal, Profile. No companion shown by default.
+**1. Layout: direction A ("Familiar").** Chats with filter chips (All, In touch, Unread), Archived as a row, a round + opening a sheet with Connect now and Start guidance; Peers as a searchable list with filter chips; labelled bottom tabs Chats, Path, Journal, Profile. No companion shown by default.
 
 **2. Looks.** Light becomes the flat direction-A design. Dark follows the same design. Pastel keeps the same layout but keeps the pillow ("bubbly") keys and surfaces; Light and Dark use flat ones.
 
-**3. Words.** "Start guidance" replaces "Start mentorship"; "Peers" replaces "Find your mentor"; "Threads" replaces My Path; "In touch" stays the name for connections. Contacts come later (one to two months).
+**3. Words.** "Start guidance" replaces "Start mentorship"; "Peers" replaces "Find your mentor"; "In touch" stays the name for connections. **Path keeps its name** (founder correction, 2026-11-16): "Threads" is a part inside Journal, not the Path tab. Contacts come later (one to two months).
 
-**4. Member profile access area ("My Mento").** Threads, In touch, Journal, and "Get an answer evaluated" marked Soon. Preferences and Account and support follow.
+**4. Member profile access area ("My Mento").** Path, In touch, Journal, and "Get an answer evaluated" marked Soon. Preferences and Account and support follow.
 
 **5. Mentor earnings now (brings part of Module B into scope).** The mentor profile drops the path for Earnings and Opportunities: balance, evaluation requests, completed evaluations, mentorship sessions, create a mentorship link, paid one-to-one sessions, earning history. Stubs and metrics from day one of testing; no money moves until payments are approved.
 
