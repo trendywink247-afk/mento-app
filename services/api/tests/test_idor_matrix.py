@@ -80,6 +80,7 @@ _plan(
 _plan(
     BOTH,
     "GET /chat/{conversation_id}/messages",
+    "POST /chat/{conversation_id}/messages/{seq}/like",
     "POST /chat/{conversation_id}/wipe",
 )
 _plan(
@@ -255,6 +256,7 @@ class World:
             "entry_id": self.eid,
             "doc_id": self.did,
             "listener_id": self.mentor_1,
+            "seq": "1",
         }
         out = path
         while "{" in out:

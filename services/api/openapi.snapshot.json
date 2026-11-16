@@ -8804,11 +8804,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LikeIn"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/LikeIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
