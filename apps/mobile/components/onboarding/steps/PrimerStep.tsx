@@ -73,7 +73,7 @@ export function PrimerStep({
         <Text style={[type.eyebrow, { color: COMPANION_COLORS.sage.accentEdge }]}>{t('mentorPrimer.eyebrow')}</Text>
         <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
           {t('mentorPrimer.headline')}
-          <Text style={{ color: colors.accent }}>{t('mentorPrimer.headlineAccent')}</Text>
+          <Text style={{ color: colors.titleAccent }}>{t('mentorPrimer.headlineAccent')}</Text>
         </Text>
         {compact ? null : <Text style={[type.body, { color: colors.inkMuted }]}>{t('mentorPrimer.sub')}</Text>}
       </Entrance>

@@ -110,7 +110,7 @@ export function AgeStep({ onNext }: { onNext: () => void }) {
         <Entrance index={0}>
           <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
             {t('onboarding.age.headline')}
-            <Text style={{ color: colors.accent }}>{t('onboarding.age.headlineAccent')}</Text>
+            <Text style={{ color: colors.titleAccent }}>{t('onboarding.age.headlineAccent')}</Text>
           </Text>
         </Entrance>
         <Entrance index={1}>

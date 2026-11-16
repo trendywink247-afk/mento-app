@@ -18,7 +18,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
 import { moodLabelKey, moodLevel, type DayPage } from '@/lib/journalDays';
 import { COMPANION_COLORS } from '@/theme/companion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, washInk } from '@/theme/tokens';
 
 const RULE = 28;
@@ -52,6 +52,8 @@ export function DayBook({
   onOpenChat: (conversationId: string) => void;
 }) {
   const { colors } = useTheme();
+  // Light and Dark (WhatsApp): a plain page, no book cover, stitching or ribbon.
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const level = moodLevel(page.mood);
   const moodKey = moodLabelKey(page.mood);
@@ -62,20 +64,24 @@ export function DayBook({
   return (
     <View testID="day-book">
       {/* The ribbon hangs from under the cover. */}
-      <View style={styles.ribbon} pointerEvents="none">
+      <View style={[styles.ribbon, flat && styles.hidden]} pointerEvents="none">
         <Svg width={14} height={30} viewBox="0 0 14 30">
           <Path d="M0 0H14V30L7 21.6L0 30Z" fill={colors.accentEdge} />
         </Svg>
       </View>
       <View style={styles.coverBox}>
-        <View pointerEvents="none" style={[styles.coverEdge, { backgroundColor: colors.accentEdge }]} />
-        <View style={[styles.cover, { backgroundColor: colors.accent }]}>
-          <View pointerEvents="none" style={[styles.stitch, { borderColor: colors.onAccent }]} />
+        {flat ? null : <View pointerEvents="none" style={[styles.coverEdge, { backgroundColor: colors.accentEdge }]} />}
+        <View style={[styles.cover, { backgroundColor: colors.accent }, flat && styles.coverFlat]}>
+          {flat ? null : <View pointerEvents="none" style={[styles.stitch, { borderColor: colors.onAccent }]} />}
           {/* Pages underneath: two slivers below the top page. */}
           <View style={styles.pagesBox}>
-            <View pointerEvents="none" style={[styles.pageUnder, styles.pageUnder2, { backgroundColor: colors.border }]} />
-            <View pointerEvents="none" style={[styles.pageUnder, styles.pageUnder1, { backgroundColor: colors.surfaceAlt }]} />
-            <View pointerEvents="none" style={[styles.pageUnder, styles.pageUnder0, { backgroundColor: colors.border }]} />
+            {flat ? null : (
+              <>
+                <View pointerEvents="none" style={[styles.pageUnder, styles.pageUnder2, { backgroundColor: colors.border }]} />
+                <View pointerEvents="none" style={[styles.pageUnder, styles.pageUnder1, { backgroundColor: colors.surfaceAlt }]} />
+                <View pointerEvents="none" style={[styles.pageUnder, styles.pageUnder0, { backgroundColor: colors.border }]} />
+              </>
+            )}
             <View
               style={[styles.pageTop, quiet ? styles.pageQuiet : null, { backgroundColor: colors.surface }]}
               accessibilityLabel={`${weekday}, ${date}`}
@@ -83,7 +89,7 @@ export function DayBook({
               <View>
                 <Text style={[styles.ago, { color: colors.inkMuted }]}>{ago}</Text>
                 <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header" testID="day-title">
-                  {weekday}, <Text style={{ color: colors.accent }}>{date}</Text>
+                  {weekday}, <Text style={{ color: colors.titleAccent }}>{date}</Text>
                 </Text>
               </View>
 
@@ -207,6 +213,8 @@ export function DayBook({
 }
 
 const styles = StyleSheet.create({
+  hidden: { display: 'none' },
+  coverFlat: { backgroundColor: 'transparent', padding: 0, borderRadius: 0 },
   ribbon: { position: 'absolute', left: 52, bottom: -12, zIndex: 0 },
   coverBox: { paddingBottom: 4, zIndex: 1 },
   coverEdge: { ...StyleSheet.absoluteFillObject, top: 4, borderRadius: radius.lg },

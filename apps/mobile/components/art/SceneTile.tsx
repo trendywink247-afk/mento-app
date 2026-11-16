@@ -7,8 +7,11 @@
 import { Image } from 'react-native';
 
 import { SCENES, type SceneName } from '@/assets/scenes';
+import { useFlatSurfaces } from '@/theme/ThemeProvider';
 
 export function SceneTile({ name, size = 140 }: { name: SceneName; size?: number }) {
+  // Light and Dark (WhatsApp) carry no illustrations; the words beside the art stand alone.
+  if (useFlatSurfaces()) return null;
   return (
     <Image
       source={SCENES[name]}

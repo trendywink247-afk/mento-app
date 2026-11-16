@@ -89,7 +89,7 @@ export function AgeGateStep({ onBack, onPassed }: { onBack: () => void; onPassed
         <Entrance index={0}>
           <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
             {t('publicApply.ageHeadline')}
-            <Text style={{ color: colors.accent }}>{t('publicApply.ageHeadlineAccent')}</Text>
+            <Text style={{ color: colors.titleAccent }}>{t('publicApply.ageHeadlineAccent')}</Text>
           </Text>
         </Entrance>
         <Entrance index={1}>

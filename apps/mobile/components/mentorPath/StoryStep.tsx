@@ -117,7 +117,7 @@ export function StoryStep({
           <Entrance index={0}>
             <Text style={[type.displayHeadline, styles.headline, { color: colors.ink }]} accessibilityRole="header">
               {t('publicApply.headline')}
-              <Text style={{ color: colors.accent }}>{t('publicApply.headlineAccent')}</Text>
+              <Text style={{ color: colors.titleAccent }}>{t('publicApply.headlineAccent')}</Text>
             </Text>
           </Entrance>
           <Entrance index={1}>

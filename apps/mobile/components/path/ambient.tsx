@@ -23,7 +23,7 @@ import Svg, { Defs, LinearGradient, RadialGradient, Rect, Stop } from 'react-nat
 import { hexToRgba01, mixRgba } from '@/components/motion/color';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { drift, duration, easing, stage as stageMotion } from '@/theme/motion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { budgetRepeats, useMotionBudget } from '@/lib/motionBudget';
 
 /** The accent taken most of the way to white — the face of a CHOSEN route row (board A26:
@@ -86,7 +86,12 @@ export function StageSheen() {
 const BLOB_W = 520;
 const BLOB_H = 460;
 
+/** Light and Dark (WhatsApp) draw no sky; Pastel keeps its drifting blob. */
 export function SkyBlob() {
+  return useFlatSurfaces() ? null : <SkyBlobDrawn />;
+}
+
+function SkyBlobDrawn() {
   const reduced = useReducedMotion();
   const { colors } = useTheme();
   const p = useSharedValue(0);

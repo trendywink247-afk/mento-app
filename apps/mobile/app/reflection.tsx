@@ -168,7 +168,7 @@ export default function ReflectionScreen() {
             <Entrance index={0}>
               <Text style={[styles.headline, { color: colors.ink }]} accessibilityRole="header">
                 {t('reflection.headline')}
-                <Text style={{ color: colors.accent }}>{t('reflection.headlineAccent')}</Text>
+                <Text style={{ color: colors.titleAccent }}>{t('reflection.headlineAccent')}</Text>
                 {t('reflection.headlineEnd')}
               </Text>
             </Entrance>

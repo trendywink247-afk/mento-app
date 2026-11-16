@@ -109,7 +109,7 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
         >
           <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
             {t('onboarding.role.headline')}
-            <Text style={{ color: colors.accent }}>{t('onboarding.role.headlineAccent')}</Text>
+            <Text style={{ color: colors.titleAccent }}>{t('onboarding.role.headlineAccent')}</Text>
           </Text>
         </Entrance>
       </View>

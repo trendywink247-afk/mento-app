@@ -19,7 +19,7 @@ import { useI18n, type TKey } from '@/lib/i18n';
 import { MOOD_SCALE, moodLabelKey, type MoodStep } from '@/lib/journalDays';
 import { screenCache } from '@/lib/screenCache';
 import { useSessionGuard } from '@/lib/useSessionGuard';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { font, radius, space, type } from '@/theme/tokens';
 
 /**
@@ -39,6 +39,7 @@ export default function JournalWriteScreen() {
   useSessionGuard();
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t, locale } = useI18n();
   const [prompt, setPrompt] = useState(0);
   const [text, setText] = useState('');
@@ -130,7 +131,7 @@ export default function JournalWriteScreen() {
                     containerStyle={styles.fill}
                     style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]}
                   >
-                    <View pointerEvents="none" style={[styles.margin, { backgroundColor: colors.accentTintEdge }]} />
+                    {flat ? null : <View pointerEvents="none" style={[styles.margin, { backgroundColor: colors.accentTintEdge }]} />}
                     <Text style={[styles.entryLabel, { color: colors.inkMuted }]} nativeID="write-entry-label">
                       {t('journalPage.entryLabel')}
                     </Text>

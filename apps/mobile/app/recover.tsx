@@ -88,6 +88,11 @@ export default function RecoverScreen() {
                 spellCheck={false}
                 accessibilityLabel={t('recovery.enterA11y')}
                 onSubmitEditing={() => void submit()}
+                // 34 characters do not fit one line on a phone at this size: wrap instead of
+                // clipping the placeholder (founder's phone, 2026-11-16).
+                multiline
+                blurOnSubmit
+                returnKeyType="go"
                 style={[styles.input, { color: colors.ink }]}
                 testID="recover-input"
               />
@@ -120,5 +125,5 @@ const styles = StyleSheet.create({
   body: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.lg, gap: 14 },
   grow: { flex: 1 },
   field: { borderWidth: 1, paddingHorizontal: 14, minHeight: 56, justifyContent: 'center' },
-  input: { fontFamily: font.sansBold, fontSize: 17, letterSpacing: 0.5, paddingVertical: 12 },
+  input: { fontFamily: font.sansBold, fontSize: 17, letterSpacing: 0.5, paddingVertical: 12, minHeight: 72, textAlignVertical: 'top' },
 });

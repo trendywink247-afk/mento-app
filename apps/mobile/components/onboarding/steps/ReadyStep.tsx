@@ -71,7 +71,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
         <Entrance index={0}>
           <Text style={[type.displayHeadline, styles.center, { color: colors.ink }]} accessibilityRole="header">
             {t('onboarding.ready.headline')}
-            <Text style={{ color: colors.accent }}>{t('onboarding.ready.headlineAccent')}</Text>
+            <Text style={{ color: colors.titleAccent }}>{t('onboarding.ready.headlineAccent')}</Text>
           </Text>
         </Entrance>
         <Entrance index={1}>

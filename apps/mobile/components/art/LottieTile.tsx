@@ -19,7 +19,7 @@ import { Platform, View } from 'react-native';
 import { SceneTile } from '@/components/art/SceneTile';
 import type { ComponentProps } from 'react';
 import { useReducedMotion } from '@/lib/useReducedMotion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 
 type SceneName = ComponentProps<typeof SceneTile>['name'];
 
@@ -43,6 +43,8 @@ export function LottieTile({
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
+  if (flat) return null;
 
   // Still art when motion is unwelcome OR the screen is leaving/behind a push —
   // the DotLottie canvas must never be alive on an unfocused web screen.

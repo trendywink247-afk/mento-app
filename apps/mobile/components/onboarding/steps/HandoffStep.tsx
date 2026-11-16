@@ -191,7 +191,7 @@ export function HandoffStep({
           <Entrance index={3}>
             <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
               {error ? t('mentorHandoff.errorHeadline') : t('mentorHandoff.headline')}
-              {error ? null : <Text style={{ color: colors.accent }}>{t('mentorHandoff.headlineAccent')}</Text>}
+              {error ? null : <Text style={{ color: colors.titleAccent }}>{t('mentorHandoff.headlineAccent')}</Text>}
             </Text>
           </Entrance>
           <Entrance index={4}>

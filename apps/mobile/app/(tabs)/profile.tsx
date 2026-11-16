@@ -322,9 +322,9 @@ export default function ProfileTab() {
                           accessibilityState={{ selected }}
                           accessibilityLabel={label}
                           testID={`profile-lang-${l}`}
-                          style={[styles.langKey, selected && { backgroundColor: colors.ink }]}
+                          style={[styles.langKey, selected && { backgroundColor: colors.chipOn }]}
                         >
-                          <Text style={[type.label, { color: selected ? colors.onBrand : colors.ink }]}>{label}</Text>
+                          <Text style={[type.label, { color: selected ? colors.chipOnInk : colors.ink }]}>{label}</Text>
                         </PressKey>
                       );
                     })}

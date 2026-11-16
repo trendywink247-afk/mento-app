@@ -119,7 +119,7 @@ export default function MentorReading() {
             </Text>
             <Text style={[styles.h1, { color: colors.ink }]} accessibilityRole="header">
               {t(current.title)}
-              <Text style={{ color: colors.accent }}>{t(current.accent)}</Text>
+              <Text style={{ color: colors.titleAccent }}>{t(current.accent)}</Text>
             </Text>
             {current.card ? (
               <>

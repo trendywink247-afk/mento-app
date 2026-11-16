@@ -192,7 +192,7 @@ export default function FindTheThreadsScreen() {
                 <View style={styles.titleRow}>
                   <Text style={[type.displayHeadline, styles.title, { color: colors.ink }]} accessibilityRole="header">
                     {t('journalPage.threadsLead')}
-                    <Text style={{ color: colors.accent }}>{t('journalPage.threadsAccent')}</Text>
+                    <Text style={{ color: colors.titleAccent }}>{t('journalPage.threadsAccent')}</Text>
                   </Text>
                   <View style={[styles.beta, { backgroundColor: wash.orange }]}>
                     <Text style={[styles.betaText, { color: washInk.orange }]}>{t('journals.beta')}</Text>

@@ -7,9 +7,14 @@
 import { ReactNode, useState } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 
-export function LinedPaper({
+/** Light and Dark (WhatsApp): a plain field, no ruled lines. Pastel keeps the notebook. */
+export function LinedPaper(props: { children: ReactNode; rule: number; style?: StyleProp<ViewStyle> }) {
+  return useFlatSurfaces() ? <View style={props.style}>{props.children}</View> : <RuledPaper {...props} />;
+}
+
+function RuledPaper({
   children,
   rule,
   style,

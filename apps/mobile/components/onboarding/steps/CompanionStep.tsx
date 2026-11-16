@@ -222,7 +222,7 @@ export function CompanionStep({
           <View style={styles.headText}>
             <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
               {t('onboarding.companion.headline')}
-              <Text style={{ color: colors.accent }}>{t('onboarding.companion.headlineAccent')}</Text>
+              <Text style={{ color: colors.titleAccent }}>{t('onboarding.companion.headlineAccent')}</Text>
             </Text>
           </View>
           <View

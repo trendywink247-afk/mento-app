@@ -96,7 +96,7 @@ export function EmailStep({ onNext }: { onNext: () => void }) {
         <Entrance index={0}>
           <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
             {t('onboarding.email.headline')}
-            <Text style={{ color: colors.accent }}>{t('onboarding.email.headlineAccent')}</Text>
+            <Text style={{ color: colors.titleAccent }}>{t('onboarding.email.headlineAccent')}</Text>
           </Text>
         </Entrance>
         <Entrance index={1}>

@@ -213,7 +213,10 @@ export default function JournalScreen() {
             <Text style={[type.caption, { color: colors.inkMuted }]}>{when}</Text>
           </View>
         ) : null}
-        <Text style={[type.body, { color: colors.ink }]}>{item.body}</Text>
+        {/* A mood saved with no note carries its own word as the body: say it once. */}
+        {cfg.channel === 'mood' && item.meta.mood && item.body.trim().toLowerCase() === String(item.meta.mood).toLowerCase() ? null : (
+          <Text style={[type.body, { color: colors.ink }]}>{item.body}</Text>
+        )}
         {cfg.channel === 'mentor_notes' ? (
           <Text style={[type.caption, { color: colors.inkMuted, marginTop: space.xs }]}>
             {item.meta.listener_persona ? `${item.meta.listener_persona} · ` : ''}
@@ -223,12 +226,14 @@ export default function JournalScreen() {
         {cfg.composer === 'note' || (cfg.channel === 'mood' && !item.meta.mood) ? (
           <Text style={[type.caption, { color: colors.inkMuted, marginTop: space.xs }]}>{when}</Text>
         ) : null}
-        <PrimaryButton
-          label={t('journals.remove')}
-          variant="link"
-          onPress={() => remove(item.id)}
-          testID={`entry-remove-${item.id}`}
-        />
+        <View style={styles.removeRow}>
+          <PrimaryButton
+            label={t('journals.remove')}
+            variant="link"
+            onPress={() => remove(item.id)}
+            testID={`entry-remove-${item.id}`}
+          />
+        </View>
       </EdgeSurface>
     );
   };
@@ -426,6 +431,7 @@ export default function JournalScreen() {
 }
 
 const styles = StyleSheet.create({
+  removeRow: { alignSelf: 'flex-end' },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginBottom: space.md },
   title: { fontFamily: font.serifBold, fontSize: 26, lineHeight: 33 },
   composer: { borderRadius: radius.lg, padding: space.md, gap: space.sm },

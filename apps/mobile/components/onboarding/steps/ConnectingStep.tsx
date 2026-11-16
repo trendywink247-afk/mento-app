@@ -260,7 +260,7 @@ export function ConnectingStep({
     phase === 'found' && foundName ? (
       <>
         {t('connecting.foundA', { name: foundName })}
-        <Text style={{ color: colors.accent }}>{t('connecting.foundAccent')}</Text>
+        <Text style={{ color: colors.titleAccent }}>{t('connecting.foundAccent')}</Text>
         {t('connecting.foundB')}
       </>
     ) : phase === 'error' ? (
@@ -270,7 +270,7 @@ export function ConnectingStep({
     ) : (
       <>
         {t('connecting.findingA')}
-        <Text style={{ color: colors.accent }}>{t('connecting.findingAccent')}</Text>
+        <Text style={{ color: colors.titleAccent }}>{t('connecting.findingAccent')}</Text>
         {t('connecting.findingB')}
       </>
     );

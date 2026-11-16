@@ -661,7 +661,7 @@ function ConsoleBody({
       {tab === 'chats' ? (
         <Entrance index={1} style={styles.section}>
           <Text style={[styles.display, { color: colors.ink }]} accessibilityRole="header">
-            {t('mentor.chatsLead')} <Text style={{ color: colors.accent }}>{t('mentor.chatsAccent')}</Text>
+            {t('mentor.chatsLead')} <Text style={{ color: colors.titleAccent }}>{t('mentor.chatsAccent')}</Text>
           </Text>
           <View style={[styles.seg, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]} accessibilityRole="tablist">
             {(
