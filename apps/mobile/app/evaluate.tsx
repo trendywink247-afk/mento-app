@@ -114,7 +114,7 @@ export default function Evaluate() {
           {t('evaluate.soon')}
         </Text>
       ) : state === 'loading' ? null : (
-        <>
+        <View style={styles.form}>
           <Text style={[type.body, { color: colors.inkMuted }]}>
             {toOne ? t('evaluate.introOne', { name: params.name ?? '' }) : t('evaluate.intro')}
           </Text>
@@ -238,16 +238,17 @@ export default function Evaluate() {
               })}
             </View>
           ) : null}
-        </>
+        </View>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  form: { gap: space.md, marginTop: space.sm },
   kinds: { flexDirection: 'row', gap: space.sm },
   kind: { paddingHorizontal: 16, paddingVertical: 10, borderWidth: 1 },
-  input: { minHeight: 56, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, textAlignVertical: 'top', ...type.body },
+  input: { minHeight: 64, borderWidth: 1, borderRadius: radius.md, paddingHorizontal: 14, paddingVertical: 12, textAlignVertical: 'top', ...type.body },
   list: { gap: space.sm, marginTop: space.md },
   item: { padding: space.md, gap: 6, borderWidth: 1, borderRadius: radius.lg },
   itemTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
