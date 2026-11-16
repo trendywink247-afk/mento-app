@@ -24,13 +24,14 @@
         "backgroundImage": "./assets/icon/adaptive-background.png",
         "backgroundColor": "#2E0A85"
       },
-      "versionCode": 20,
+      "versionCode": 21,
       "permissions": [],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.ACTIVITY_RECOGNITION"
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.READ_MEDIA_IMAGES"
       ]
     },
     "web": {

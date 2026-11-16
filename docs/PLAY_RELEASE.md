@@ -37,7 +37,7 @@ In the current console: Test and release, App integrity, App signing, **Upload k
 3. Check before uploading: `jarsigner -verify -certs <aab>` says "jar verified" with the
    certificate above; the merged manifest (`android/app/build/intermediates/merged_manifest/release/`
    in `~/build/prod/apps/mobile`) shows `chat.mento.app`, the version code, and none of the blocked
-   permissions (`SYSTEM_ALERT_WINDOW`, storage, `ACTIVITY_RECOGNITION`).
+   permissions (`SYSTEM_ALERT_WINDOW`, storage, `ACTIVITY_RECOGNITION`, `READ_MEDIA_IMAGES`).
 
 4. Record the build's native fingerprint for production OTA (`/opt/mento-prod/state/store_fp`,
    docs/OTA.md), so `ops/ota-publish.sh prod` only ships updates this build can run.

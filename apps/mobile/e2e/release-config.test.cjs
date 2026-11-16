@@ -89,7 +89,7 @@ console.log('PASS: separate local acceptance install rejects provider, OTA, stor
 {
   const production = resolveConfig('production');
   assert.ok(Number.isInteger(production.android.versionCode) && production.android.versionCode >= 10);
-  for (const permission of ['SYSTEM_ALERT_WINDOW', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'ACTIVITY_RECOGNITION']) {
+  for (const permission of ['SYSTEM_ALERT_WINDOW', 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'ACTIVITY_RECOGNITION', 'READ_MEDIA_IMAGES']) {
     assert.ok(production.android.blockedPermissions.includes(`android.permission.${permission}`));
   }
   const signing = (config) => config.plugins.some(p => p === './plugins/withReleaseSigning');
