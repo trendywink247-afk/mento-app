@@ -18,14 +18,15 @@ import { radius, space, type } from '@/theme/tokens';
  * Profile row, so Profile keeps only what people reach for. */
 export default function Theme() {
   const router = useRouter();
-  const { colors, setCompanionShown } = useTheme();
+  const { colors, companionColor, setCompanionShown } = useTheme();
   const { t } = useI18n();
   const animal = useCompanionAnimal() ?? null;
 
   // "Show my companion" (DECISIONS R.3). Turning it on with none chosen yet (skipped at
   // signup) opens the companion pick, which ends on My Chats with it shown.
   const openPicker = () => {
-    setDraft({ role: 'mentee', sessionBacked: true, fromTheme: true });
+    // Opens on what they have now, so keeping the colour needs no extra tap.
+    setDraft({ role: 'mentee', sessionBacked: true, fromTheme: true, companionAnimal: animal, companionColour: companionColor });
     router.push({ pathname: '/onboarding', params: { step: 'companion' } });
   };
   const changeCompanionShown = (next: boolean) => {

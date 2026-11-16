@@ -265,15 +265,21 @@ export function CompanionStep({
               />
             </View>
           </View>
-          <PrimaryButton
-            label={t('onboarding.companion.skip')}
-            variant="link"
-            onPress={skip}
-            testID="companion-skip"
-          />
-          <Text style={[type.caption, styles.changeLater, { color: colors.inkMuted }]}>
-            {t('onboarding.companion.changeLater')}
-          </Text>
+          {/* From Profile > Theme: no Skip (Theme's own switch turns the companion off) and no
+              "change it later" line (they are changing it now). */}
+          {draft.fromTheme ? null : (
+            <>
+              <PrimaryButton
+                label={t('onboarding.companion.skip')}
+                variant="link"
+                onPress={skip}
+                testID="companion-skip"
+              />
+              <Text style={[type.caption, styles.changeLater, { color: colors.inkMuted }]}>
+                {t('onboarding.companion.changeLater')}
+              </Text>
+            </>
+          )}
         </>
       }
     >
