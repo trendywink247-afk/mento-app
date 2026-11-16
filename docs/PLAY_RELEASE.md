@@ -42,6 +42,10 @@ In the current console: Test and release, App integrity, App signing, **Upload k
 4. Record the build's native fingerprint for production OTA (`/opt/mento-prod/state/store_fp`,
    docs/OTA.md), so `ops/ota-publish.sh prod` only ships updates this build can run.
 
+Play Console links: privacy policy `https://app.mento.chat/privacy`, delete account
+`https://app.mento.chat/delete-account` (static pages in `apps/mobile/public/`, tested by
+`e2e/public-pages.test.cjs`), contact geekspacetech02@gmail.com.
+
 5. Upload to **Internal testing**, then **Closed testing**, then apply for production. Never
    upload straight to production.
 
