@@ -28,7 +28,9 @@ log() { echo "[bluegreen] $*" >&2; }
 # MENTO_ENV_FILE (exported by deploy.sh) is also compose's interpolation source.
 dc() { docker compose ${MENTO_ENV_FILE:+--env-file "$MENTO_ENV_FILE"} --profile green "$@"; }
 
-running() { dc ps --status running --services 2>/dev/null | grep -qx "$1"; }
+# grep reads all of its input (no -q): with pipefail, `grep -q` stops at the first match and
+# the writer can die of SIGPIPE, which made a running service look stopped under load.
+running() { dc ps --status running --services 2>/dev/null | grep -x -- "$1" >/dev/null; }
 
 # State storage must be available before starting/removing any API containers.
 mkdir -p "$STATE_DIR"
