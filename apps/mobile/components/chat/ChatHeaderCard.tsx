@@ -307,7 +307,8 @@ export function ChatHeaderCard({
                 testID="chat-stay-key"
                 accessibilityLabel={t(stay === 'in_touch' ? 'chat.stay.inA11y' : stay === 'asked' ? 'chat.stay.askedA11y' : 'chat.stay.askA11y', { name })}
                 style={[
-                  styles.stayKey,
+                  styles.key,
+                  styles.optionsKey,
                   stay === 'in_touch'
                     ? { backgroundColor: colors.accentTint, borderColor: colors.accentTint }
                     : { backgroundColor: colors.surfaceAlt, borderColor: colors.border },
@@ -315,16 +316,13 @@ export function ChatHeaderCard({
               >
                 <Ionicons
                   name={stay === 'in_touch' ? 'people' : 'people-outline'}
-                  size={16}
+                  size={20}
                   color={stay === 'in_touch' ? colors.accentInk : colors.ink}
                 />
-                <Text
-                  style={[styles.stayText, { color: stay === 'in_touch' ? colors.accentInk : colors.ink }]}
-                  numberOfLines={1}
-                  maxFontSizeMultiplier={1.3}
-                >
-                  {t(stay === 'in_touch' ? 'chat.stay.in' : stay === 'asked' ? 'chat.stay.asked' : 'chat.stay.ask')}
-                </Text>
+                {stay === 'asked' ? (
+                  // Asked and waiting: a small accent dot, the words are in the label.
+                  <View style={[styles.stayDot, { backgroundColor: colors.accent, borderColor: colors.surfaceAlt }]} />
+                ) : null}
               </PressKey>
             ) : null}
 
@@ -397,8 +395,7 @@ const styles = StyleSheet.create({
   },
   key: { width: KEY, height: KEY, alignItems: 'center', justifyContent: 'center' },
   optionsKey: { borderWidth: 1 },
-  stayKey: { height: KEY, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1 },
-  stayText: { fontFamily: font.sansBold, fontSize: 13 },
+  stayDot: { position: 'absolute', top: 8, right: 8, width: 10, height: 10, borderRadius: 5, borderWidth: 2 },
   identityContainer: { flex: 1, minWidth: 0 },
   identity: { flexDirection: 'row', alignItems: 'center', gap: space.sm + 4, minHeight: AVATAR },
   avatarBox: { width: AVATAR, height: AVATAR },
