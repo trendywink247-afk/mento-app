@@ -15,6 +15,9 @@ export type OnboardingDraft = {
    * was passed server-side at hand-off, so there is no DOB in memory — and the
    * journey must NOT mint a second account. Resumes at the companion pick. */
   sessionBacked?: boolean;
+  /** Opened from Profile > Theme to change the companion: the pick is saved and the
+   * person goes straight back to Theme, with no Ready screen and no role change. */
+  fromTheme?: boolean;
 };
 
 const draft: OnboardingDraft = {};

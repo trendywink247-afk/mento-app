@@ -25,7 +25,7 @@ export default function Theme() {
   // "Show my companion" (DECISIONS R.3). Turning it on with none chosen yet (skipped at
   // signup) opens the companion pick, which ends on My Chats with it shown.
   const openPicker = () => {
-    setDraft({ role: 'mentee', sessionBacked: true });
+    setDraft({ role: 'mentee', sessionBacked: true, fromTheme: true });
     router.push({ pathname: '/onboarding', params: { step: 'companion' } });
   };
   const changeCompanionShown = (next: boolean) => {
@@ -37,7 +37,7 @@ export default function Theme() {
   };
 
   return (
-    <Screen onBack={() => router.back()} scroll>
+    <Screen onBack={() => router.back()} scroll keyboardTaps="handled">
       <View style={styles.page}>
         <Text style={[type.displayHeadline, { color: colors.ink }]} accessibilityRole="header">
           {t('theme.title')}

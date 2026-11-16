@@ -18,6 +18,7 @@ export function Screen({
   scroll = false,
   bg = 'cream',
   bottomEdge = true,
+  keyboardTaps,
 }: {
   children: ReactNode;
   footer?: ReactNode;
@@ -27,12 +28,15 @@ export function Screen({
   bg?: 'cream' | 'lavender';
   /** false on the tab screens: the floating tab bar lies over their foot, so they pad it themselves. */
   bottomEdge?: boolean;
+  /** 'handled' when the page has a text field with buttons beside it: the first tap on Save
+   * or Cancel then reaches the button instead of only closing the keyboard. */
+  keyboardTaps?: 'handled';
 }) {
   const { colors } = useTheme();
   const { t } = useI18n();
   const Body = scroll ? ScrollView : View;
   const bodyProps = scroll
-    ? { contentContainerStyle: styles.scrollContent, showsVerticalScrollIndicator: false }
+    ? { contentContainerStyle: styles.scrollContent, showsVerticalScrollIndicator: false, keyboardShouldPersistTaps: keyboardTaps }
     : { style: styles.body };
   const lavender = bg === 'lavender';
 

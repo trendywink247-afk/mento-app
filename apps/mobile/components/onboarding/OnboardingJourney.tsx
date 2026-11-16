@@ -168,7 +168,31 @@ export function OnboardingJourney() {
 
   // One press, one haptic: the key that calls this already fired its own on press-in
   // (PressKey intent) — a second one here made every Continue buzz twice.
+  // From Profile > Theme: save the pick on the device and the account, then back to Theme.
+  // Only a name typed here replaces the one they have; skipping keeps the plain look.
+  const finishThemePick = useCallback(async () => {
+    const draft = getDraft();
+    if (draft.companionAnimal) {
+      await saveCompanionAnimal(draft.companionAnimal);
+      void api
+        .saveCompanion({
+          companion_animal: draft.companionAnimal,
+          ...(draft.companionColour ? { companion_colour: draft.companionColour } : {}),
+          ...(draft.companionName ? { companion_name: draft.companionName } : {}),
+        })
+        .catch(() => {
+          /* reason: best-effort sync; the next companion/colour change retries */
+        });
+    }
+    clearDraft();
+    router.back();
+  }, [router]);
+
   const goNext = useCallback(() => {
+    if (getDraft().fromTheme && step === 'companion') {
+      void finishThemePick();
+      return;
+    }
     // A mentor switching to talk becomes a mentee the moment they confirm a companion.
     if (resume && step === 'companion') void saveRole('mentee');
     // The resume ends at Ready: the member side opens on My Chats (no match is started —
@@ -178,11 +202,16 @@ export function OnboardingJourney() {
       return;
     }
     setStep((s) => order[Math.min(order.indexOf(s) + 1, order.length - 1)]);
-  }, [order, step, resume, finishResume]);
+  }, [order, step, resume, finishResume, finishThemePick]);
 
   const goBack = useCallback(() => {
     // Session-backed resume: there is no email/age step behind the pick — back means
     // "never mind", and they are still a mentor.
+    if (getDraft().fromTheme && step === 'companion') {
+      clearDraft();
+      router.back();
+      return;
+    }
     if (resume && step === 'companion') {
       clearDraft();
       router.replace('/mentor-home');
