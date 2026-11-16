@@ -136,6 +136,17 @@ export async function getCompanionColor(): Promise<string | null> {
 /** The chosen growth-companion animal — the star of the identity (DECISIONS §I.5). */
 export async function saveCompanionAnimal(animal: string): Promise<void> {
   await store.setItemAsync(COMPANION_ANIMAL_KEY, animal);
+  companionAnimalListeners.forEach((fn) => fn(animal));
+}
+
+// Screens that are already mounted (the tabs, when the pick is made from Profile > Theme)
+// hear a new choice at once instead of keeping the old animal until the next launch.
+const companionAnimalListeners = new Set<(animal: string) => void>();
+export function onCompanionAnimalSaved(fn: (animal: string) => void): () => void {
+  companionAnimalListeners.add(fn);
+  return () => {
+    companionAnimalListeners.delete(fn);
+  };
 }
 
 export async function getCompanionAnimal(): Promise<string | null> {

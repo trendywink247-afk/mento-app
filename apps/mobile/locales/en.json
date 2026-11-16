@@ -1684,7 +1684,9 @@
   "theme": {
     "title": "Theme",
     "row": "Theme",
-    "rowSub": "Companion, colour and appearance"
+    "rowSub": "Companion, colour and appearance",
+    "changeCompanion": "Change companion",
+    "pickCompanion": "Choose a companion"
   },
   "chatActions": {
     "pin": "Pin",

@@ -7,7 +7,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { EdgeSurface } from '@/components/EdgeSurface';
 import { PushStyleSwitch } from '@/components/PushStyleSwitch';
 import { IconBadge } from '@/components/IconBadge';
-import type { CompanionAnimal } from '@/components/art/Companions';
 import { CompanionPerches, CompanionSlot, useCompanionPlacement } from '@/components/art/PerchedCompanion';
 import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
@@ -19,7 +18,8 @@ import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
 import { canReapply, openMentorSide, reapplyAt, stateOf } from '@/lib/mentorPath';
 import { screenCache } from '@/lib/screenCache';
-import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
+import { getPersona, type Persona } from '@/lib/session';
+import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { checkAndApplyUpdate, runningUpdate, type UpdateStatus } from '@/lib/updates';
 import { useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
@@ -126,7 +126,7 @@ export default function ProfileTab() {
   const { t, locale, setLocale } = useI18n();
   const sheetOpen = useSheetOpen();
   const [persona, setPersona] = useState<Persona | null>(null);
-  const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
+  const animal = useCompanionAnimal() ?? null;
   // The status card starts from its last-loaded value so it does not pop in on every return.
   const [application, setApplication] = useState<ListenerApplication | null>(
     screenCache.get('application') ?? null,
@@ -196,9 +196,6 @@ export default function ProfileTab() {
     let active = true;
     void getPersona().then((p) => {
       if (active) setPersona(p);
-    });
-    void getCompanionAnimal().then((a) => {
-      if (active) setAnimal((a as CompanionAnimal | null) ?? null);
     });
     return () => {
       active = false;

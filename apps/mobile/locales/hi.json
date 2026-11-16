@@ -1684,7 +1684,9 @@
   "theme": {
     "title": "थीम",
     "row": "थीम",
-    "rowSub": "साथी, रंग और लुक"
+    "rowSub": "साथी, रंग और लुक",
+    "changeCompanion": "साथी बदलें",
+    "pickCompanion": "साथी चुनें"
   },
   "chatActions": {
     "pin": "पिन करें",

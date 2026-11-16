@@ -1,17 +1,16 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AppearancePicker } from '@/components/AppearancePicker';
 import { EdgeSurface } from '@/components/EdgeSurface';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { Screen } from '@/components/Screen';
-import type { CompanionAnimal } from '@/components/art/Companions';
 import { ColourSwatches } from '@/components/profile/ColourSwatches';
 import { CompanionNameRow } from '@/components/profile/CompanionNameRow';
 import { CompanionSwitch } from '@/components/profile/CompanionSwitch';
 import { useI18n } from '@/lib/i18n';
 import { setDraft } from '@/lib/onboardingDraft';
-import { getCompanionAnimal } from '@/lib/session';
+import { useCompanionAnimal } from '@/lib/useCompanionAnimal';
 import { useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -21,24 +20,17 @@ export default function Theme() {
   const router = useRouter();
   const { colors, setCompanionShown } = useTheme();
   const { t } = useI18n();
-  const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void getCompanionAnimal().then((a) => {
-      if (active) setAnimal((a as CompanionAnimal | null) ?? null);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  const animal = useCompanionAnimal() ?? null;
 
   // "Show my companion" (DECISIONS R.3). Turning it on with none chosen yet (skipped at
   // signup) opens the companion pick, which ends on My Chats with it shown.
+  const openPicker = () => {
+    setDraft({ role: 'mentee', sessionBacked: true });
+    router.push({ pathname: '/onboarding', params: { step: 'companion' } });
+  };
   const changeCompanionShown = (next: boolean) => {
     if (next && !animal) {
-      setDraft({ role: 'mentee', sessionBacked: true });
-      router.push({ pathname: '/onboarding', params: { step: 'companion' } });
+      openPicker();
       return;
     }
     setCompanionShown(next);
@@ -61,6 +53,12 @@ export default function Theme() {
           <CompanionNameRow animal={animal} />
           <ColourSwatches />
           <Text style={[type.caption, styles.pad, { color: colors.inkMuted }]}>{t('profile.recolour')}</Text>
+          <PrimaryButton
+            label={animal ? t('theme.changeCompanion') : t('theme.pickCompanion')}
+            variant="link"
+            onPress={openPicker}
+            testID="theme-change-companion"
+          />
         </EdgeSurface>
 
         <CompanionSwitch onChange={changeCompanionShown} testID="profile-companion-shown" />
