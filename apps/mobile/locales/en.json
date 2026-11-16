@@ -1681,6 +1681,11 @@
     "row": "Appearance",
     "rowSub": "Pastel, Light, Dark or System"
   },
+  "theme": {
+    "title": "Theme",
+    "row": "Theme",
+    "rowSub": "Companion, colour and appearance"
+  },
   "chatActions": {
     "pin": "Pin",
     "unpin": "Unpin",

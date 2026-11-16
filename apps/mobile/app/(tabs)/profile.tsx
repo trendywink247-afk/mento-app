@@ -13,40 +13,32 @@ import { SettleBack, useSheetOpen } from '@/components/motion/BoardSheet';
 import { Entrance } from '@/components/motion/Entrance';
 import { PressKey } from '@/components/motion/PressKey';
 import { useTabDockHeight } from '@/components/tabDock';
-import { CompanionNameRow } from '@/components/profile/CompanionNameRow';
-import { CompanionSwitch } from '@/components/profile/CompanionSwitch';
 import { RecoveryCard } from '@/components/profile/RecoveryCard';
 import { api, type ListenerApplication } from '@/lib/api';
 import type { PlacementSlot } from '@/lib/companionPlacement';
 import { useI18n } from '@/lib/i18n';
 import { canReapply, openMentorSide, reapplyAt, stateOf } from '@/lib/mentorPath';
-import { setDraft } from '@/lib/onboardingDraft';
 import { screenCache } from '@/lib/screenCache';
 import { getCompanionAnimal, getPersona, type Persona } from '@/lib/session';
 import { checkAndApplyUpdate, runningUpdate, type UpdateStatus } from '@/lib/updates';
 import { useTheme } from '@/theme/ThemeProvider';
-import { COMPANION_COLOR_LABELS, COMPANION_COLORS, type CompanionColor } from '@/theme/companion';
+import { COMPANION_COLORS } from '@/theme/companion';
 import { font, radius, space, type, wash, washEdge, type Wash } from '@/theme/tokens';
 
-const COLOR_KEYS = Object.keys(COMPANION_COLORS) as CompanionColor[];
 
 /** The member's companion standing on the identity card (board A09). */
 const HERO = 132;
-const SWATCH = 44;
-const SWATCH_RING = 5; // the selected swatch's ring sits this far outside it
 
 /** Where the companion can be on this screen (lib/companionPlacement.ts). Home is where the
  * board draws it: standing, large, on the identity card — when it is out, that corner of the
  * card is simply empty and it is somewhere else on the page. Every other place uses the same
  * reserved corner or the clear ground around it, so it never covers a word: on the card's
- * top edge, on the growth card's top edge (napping there at night), or hanging under the
+ * top edge, or hanging under the
  * identity card for the animals that can. `bubble` / `besideAvatar` keep their old ids —
  * stored placements and specs know them. */
 const PERCHES: PlacementSlot[] = [
   { id: 'bubble', type: 'top', level: 'mid', home: true },
   { id: 'besideAvatar', type: 'lean', level: 'high' },
-  { id: 'growthTop', type: 'top', level: 'mid' },
-  { id: 'growthNap', type: 'nap', level: 'mid' },
   { id: 'cardHang', type: 'hang', level: 'mid' },
 ];
 
@@ -130,27 +122,9 @@ export default function ProfileTab() {
   // Mentor Home on top of Profile; anything else → the mentor path (story / application /
   // where it stands).
   const openMentor = () => void openMentorSide(router, application);
-  const { colors, companionColor, setCompanionColor, setCompanionShown } = useTheme();
+  const { colors } = useTheme();
   const { t, locale, setLocale } = useI18n();
-  // "Show my companion" (DECISIONS R.3). Turning it on with none chosen yet (skipped at
-  // signup) opens the companion pick, which ends on My Chats with it shown.
-  const changeCompanionShown = (next: boolean) => {
-    if (next && !animal) {
-      setDraft({ role: 'mentee', sessionBacked: true });
-      router.push({ pathname: '/onboarding', params: { step: 'companion' } });
-      return;
-    }
-    setCompanionShown(next);
-  };
   const sheetOpen = useSheetOpen();
-  // The recolour lands on the device at once (the whole app re-accents) and on the account
-  // in the background — a failed save shows nothing and never undoes the choice.
-  const recolour = (key: CompanionColor) => {
-    setCompanionColor(key);
-    void api.saveCompanion({ companion_colour: key }).catch(() => {
-      /* reason: best-effort sync; the device copy is what the app reads */
-    });
-  };
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
   // The status card starts from its last-loaded value so it does not pop in on every return.
@@ -171,7 +145,6 @@ export default function ProfileTab() {
       .catch(() => setPushPreview(!next))
       .finally(() => setPushBusy(false));
   };
-  const [swatch, setSwatch] = useState(SWATCH);
   const running = runningUpdate();
   // The hero place only exists once the animal is known — until then there is no home slot.
   // A sheet over the screen (Start fresh) hides the companion.
@@ -289,66 +262,6 @@ export default function ProfileTab() {
               <CompanionSlot id="cardHang" size={56} inset={40} />
             </View>
 
-            <View style={[styles.furniture, hosts('growthTop', 'growthNap')]}>
-              <CompanionSlot id="growthTop" size={56} inset={36} />
-              <CompanionSlot id="growthNap" size={56} inset={36} />
-              <Entrance index={2}>
-                <EdgeSurface
-                  edge={colors.edgeAlt}
-                  travel={3}
-                  radius={radius.lg}
-                  style={[styles.growth, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
-                >
-                  <Text style={[styles.rowTitle, styles.growthText, { color: colors.ink }]}>
-                    {t('profile.companionTitle')}
-                  </Text>
-                  <CompanionNameRow animal={animal} />
-                  <View
-                    style={styles.swatches}
-                    onLayout={(e) => {
-                      // Seven 44px keys fit a 390 phone; a 360 one gets slightly smaller keys
-                      // rather than a second row. The ring's room is part of the sum.
-                      const room = e.nativeEvent.layout.width - 2 * SWATCH_RING;
-                      setSwatch(Math.min(SWATCH, Math.floor((room - (COLOR_KEYS.length - 1) * 2) / COLOR_KEYS.length)));
-                    }}
-                  >
-                    {COLOR_KEYS.map((key) => {
-                      const selected = key === companionColor;
-                      const set = COMPANION_COLORS[key];
-                      return (
-                        <View key={key} style={{ width: swatch, height: swatch + 4 }}>
-                          {selected ? (
-                            <View
-                              pointerEvents="none"
-                              style={[
-                                styles.ring,
-                                { width: swatch + 2 * SWATCH_RING, height: swatch + 2 * SWATCH_RING, borderColor: colors.ink },
-                              ]}
-                            />
-                          ) : null}
-                          <PressKey
-                            onPress={() => recolour(key)}
-                            edge={selected ? 'transparent' : set.accentEdge}
-                            radius={radius.pill}
-                            intent="select"
-                            accessibilityState={{ selected }}
-                            accessibilityLabel={t('onboarding.companion.themeA11y', { label: COMPANION_COLOR_LABELS[key] })}
-                            testID={`profile-colour-${key}`}
-                            style={{ width: swatch, height: swatch, backgroundColor: set.accent }}
-                          >
-                            {null}
-                          </PressKey>
-                        </View>
-                      );
-                    })}
-                  </View>
-                  <Text style={[type.caption, styles.growthText, { color: colors.inkMuted }]}>
-                    {t('profile.recolour')}
-                  </Text>
-                </EdgeSurface>
-              </Entrance>
-            </View>
-
             <Entrance index={3} style={styles.rows}>
               <Row
                 icon="globe-outline"
@@ -385,16 +298,14 @@ export default function ProfileTab() {
 
               <PushStyleSwitch value={pushPreview} onChange={changePushStyle} disabled={pushBusy} testID="profile-push-style" />
 
-              <CompanionSwitch onChange={changeCompanionShown} testID="profile-companion-shown" />
-
               <Row
-                icon="contrast-outline"
+                icon="color-palette-outline"
                 tone="indigo"
-                title={t('appearance.row')}
-                body={t('appearance.rowSub')}
+                title={t('theme.row')}
+                body={t('theme.rowSub')}
                 right={chevron}
-                onPress={() => router.push('/appearance')}
-                testID="profile-appearance"
+                onPress={() => router.push('/theme')}
+                testID="profile-theme"
               />
 
               <Row
@@ -606,22 +517,6 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: radius.pill,
     zIndex: 1,
-  },
-  growth: { paddingTop: 14, paddingHorizontal: 14, paddingBottom: 12, gap: space.sm, borderWidth: 1 },
-  growthText: { paddingHorizontal: 2 },
-  swatches: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: SWATCH_RING,
-    paddingTop: SWATCH_RING,
-    paddingBottom: 2,
-  },
-  ring: {
-    position: 'absolute',
-    left: -SWATCH_RING,
-    top: -SWATCH_RING,
-    borderRadius: radius.pill,
-    borderWidth: 2,
   },
   rows: { gap: 12 },
   row: {

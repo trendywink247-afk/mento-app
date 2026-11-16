@@ -190,9 +190,11 @@ async function run(browser, reduced, storageState) {
   console.log(`[${label}] OK it stays put for 2.8 s (${resting.slot}); breathing ${reduced ? 'off' : 'on'} (${scales.map((s) => s.toFixed(4)).join(' ')})`);
 
   if (!reduced) {
-    // --- Profile recolour reaches the account -------------------------------------------------------
+    // --- Theme page recolour reaches the account -------------------------------------------------------
     const token = await page.evaluate(() => globalThis.localStorage.getItem('mento.session_token'));
     await arrive(page, 'profile', label);
+    // Colour lives on the Theme page, one row down from Profile (DECISIONS S.7).
+    await tid('profile-theme').click();
     await tid('profile-colour-plum').click();
     let me = await serverMe(token);
     for (let i = 0; i < 20 && me.companion_colour !== 'plum'; i += 1) {
