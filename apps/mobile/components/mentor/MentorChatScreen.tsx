@@ -31,7 +31,7 @@ import { ensureListenerConnected, getListenerStreamClient } from '@/lib/listener
 import { leaveToMentorHome } from '@/lib/leaveToChats';
 import { requireNativeStreamOwner } from '@/lib/nativeChatOwner';
 import { mentorFaces } from '@/lib/mentorFaces';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 /** Where the options card sits: under the header card's first row (board: top 104). */
@@ -65,6 +65,7 @@ export default function MentorChatScreen() {
 function StreamMentorChatScreen() {
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const { id, channel: channelId, member, masked } = useLocalSearchParams<{
     id: string;
@@ -213,9 +214,9 @@ function StreamMentorChatScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']} testID="mentor-chat-screen">
-      <SageSky shape="top" />
-      <View style={styles.headerWrap}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: flat ? colors.surface : colors.bg }]} edges={['top', 'bottom']} testID="mentor-chat-screen">
+      {flat ? null : <SageSky shape="top" />}
+      <View style={[styles.headerWrap, flat && styles.headerWrapFlat]}>
         <MentorChatHeader
           memberName={member}
           brief={brief}
@@ -313,6 +314,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   headerWrap: { paddingHorizontal: 12, paddingTop: space.sm, zIndex: 3 },
+  headerWrapFlat: { paddingHorizontal: 0, paddingTop: 0, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.08)' },
   footer: { paddingTop: space.sm, gap: space.xs, borderTopWidth: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   retry: { paddingHorizontal: space.lg, paddingVertical: space.sm },

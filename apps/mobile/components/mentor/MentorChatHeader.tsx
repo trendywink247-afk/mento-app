@@ -6,7 +6,7 @@ import { MemberDisc } from '@/components/mentor/MemberDisc';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
 import type { MemberBrief } from '@/lib/listenerApi';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS, accentFor } from '@/theme/companion';
 import { radius, space, type, wash, washEdge } from '@/theme/tokens';
 
@@ -33,6 +33,8 @@ export function MentorChatHeader({
   onHelplines: () => void;
 }) {
   const { colors } = useTheme();
+  // Light and Dark (WhatsApp): a flat app bar, plain icons, a small grey avatar.
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const plum = COMPANION_COLORS.plum.accentEdge;
   const sage = COMPANION_COLORS.sage.accentEdge;
@@ -44,7 +46,7 @@ export function MentorChatHeader({
       edge={colors.edgeSurface}
       travel={4}
       radius={radius.lg}
-      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, flat && styles.cardFlat]}
       testID="mentor-chat-header"
     >
       <View style={styles.top}>
@@ -71,10 +73,10 @@ export function MentorChatHeader({
           style={styles.who}
           testID="member-header"
         >
-          <View style={styles.discWrap}>
+          <View style={[styles.discWrap, flat && styles.discWrapFlat]}>
             <MemberDisc
               name={memberName}
-              size={56}
+              size={flat ? 40 : 56}
               animal={brief?.companion_animal}
               colour={brief?.companion_colour}
               ring={brief?.companion_animal ? accentFor(brief.companion_colour).accentTintEdge : undefined}
@@ -84,7 +86,7 @@ export function MentorChatHeader({
             ) : null}
           </View>
           <View style={styles.whoText}>
-            <Text style={[styles.name, { color: colors.ink }]} numberOfLines={1}>
+            <Text style={[styles.name, flat && styles.nameFlat, { color: colors.ink }]} numberOfLines={1}>
               {memberName}
             </Text>
             <View style={styles.presenceRow}>
@@ -102,10 +104,11 @@ export function MentorChatHeader({
           radius={radius.pill}
           intent="navigate"
           testID="mentor-helplines"
-          style={[styles.helplines, { backgroundColor: wash.green, borderColor: washEdge.green }]}
+          accessibilityLabel={t('mentorChatPage.helplines')}
+          style={flat ? styles.plainKey : [styles.helplines, { backgroundColor: wash.green, borderColor: washEdge.green }]}
         >
-          <Ionicons name="call-outline" size={18} color={sage} />
-          <Text style={[type.label, { color: sage }]}>{t('mentorChatPage.helplines')}</Text>
+          <Ionicons name="call-outline" size={flat ? 22 : 18} color={flat ? colors.inkMuted : sage} />
+          {flat ? null : <Text style={[type.label, { color: sage }]}>{t('mentorChatPage.helplines')}</Text>}
         </PressKey>
         <PressKey
           onPress={onOptions}
@@ -114,17 +117,17 @@ export function MentorChatHeader({
           radius={radius.pill}
           accessibilityLabel={t('mentorChatPage.optionsA11y')}
           testID="mentor-chat-menu"
-          style={[styles.options, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+          style={flat ? styles.plainKey : [styles.options, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
         >
-          <Ionicons name="ellipsis-horizontal" size={22} color={colors.ink} />
+          <Ionicons name={flat ? 'ellipsis-vertical' : 'ellipsis-horizontal'} size={22} color={flat ? colors.inkMuted : colors.ink} />
         </PressKey>
       </View>
 
       {path ? (
         <View style={[styles.strip, { backgroundColor: colors.surfaceAlt, borderTopColor: colors.border }]}>
           <Text style={[styles.eyebrow, { color: colors.inkMuted }]}>{t('mentorChatPage.path')}</Text>
-          <View style={[styles.pathChip, { backgroundColor: wash.indigo }]}>
-            <Text style={[styles.chipText, { color: plum }]} numberOfLines={1}>
+          <View style={[styles.pathChip, { backgroundColor: flat ? colors.surface : wash.indigo }]}>
+            <Text style={[styles.chipText, { color: flat ? colors.inkMuted : plum }]} numberOfLines={1}>
               {path}
             </Text>
           </View>
@@ -136,6 +139,10 @@ export function MentorChatHeader({
 
 const styles = StyleSheet.create({
   card: { borderWidth: 1, overflow: 'hidden', padding: 0 },
+  cardFlat: { borderWidth: 0, borderRadius: 0 },
+  discWrapFlat: { width: 42, height: 42 },
+  nameFlat: { fontSize: 17, lineHeight: 22 },
+  plainKey: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent', borderWidth: 0 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: space.sm, paddingLeft: space.xs, paddingRight: 12 },
   back: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: 'transparent' },
   whoWrap: { flex: 1, minWidth: 0 },

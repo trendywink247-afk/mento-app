@@ -4,7 +4,8 @@ import { COMPANION_GENERATED } from '@/assets/companions/generated';
 
 import { Companion } from '@/components/art/Companion';
 import type { CompanionAnimal } from '@/components/art/Companions';
-import { useTheme } from '@/theme/ThemeProvider';
+import { MentorFace } from '@/components/art/MentorFace';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS, accentFor } from '@/theme/companion';
 import { radius, type, wash } from '@/theme/tokens';
 
@@ -54,6 +55,9 @@ export function MemberDisc({
   still?: boolean;
 }) {
   const { colors } = useTheme();
+  // Light and Dark (WhatsApp): every person is the same plain grey avatar.
+  const flat = useFlatSurfaces();
+  if (flat) return <MentorFace animal={null} colour={null} size={size} />;
   if (animal) {
     const tint = accentFor(colour).accentTint;
     const disc = (

@@ -24,7 +24,7 @@ import { leaveToMentorHome } from '@/lib/leaveToChats';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { accentFor, COMPANION_COLORS } from '@/theme/companion';
 import { duration, easing } from '@/theme/motion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { colors as base, radius, space, type, wash, washEdge } from '@/theme/tokens';
 
 /** A deeper page comes in from the side (FINAL_SPEC: 48px, 0.5 s); reduced: a short fade. */
@@ -51,6 +51,7 @@ function DeepArrival({ children }: { children: ReactNode }) {
 export default function MemberBriefScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const breathing = useBreathing();
   const { id, member, masked } = useLocalSearchParams<{ id: string; member?: string; masked?: string }>();
@@ -150,7 +151,7 @@ export default function MemberBriefScreen() {
               accessibilityRole="image"
               accessibilityLabel={t('memberBrief.companionA11y', { name })}
             >
-              {animal ? (
+              {animal && !flat ? (
                 <Animated.View style={[styles.originBottom, breathing]}>
                   <Companion animal={animal as CompanionAnimal} size={112} awake />
                 </Animated.View>
