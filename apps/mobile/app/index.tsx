@@ -20,7 +20,7 @@ import { hasPendingTap } from '@/lib/notifications';
 import { useFrameSize } from '@/lib/useFrameSize';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { getRole, getSessionToken } from '@/lib/session';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { duration, easing, forkArrival } from '@/theme/motion';
 import { radius, space, type } from '@/theme/tokens';
 import { BoundedLottie } from '@/components/art/BoundedLottie';
@@ -52,6 +52,7 @@ const LOTTIE_BAND = { width: 0.775, ground: 0.869 };
 export default function Landing() {
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   // The frame, not the window: on a wide browser the app draws into a 480 column.
   const { width, height } = useFrameSize();
@@ -236,29 +237,34 @@ export default function Landing() {
           </View>
         </Animated.View>
 
-        {/* The two chat cards hover over the stage's top corners (board: 14 from each edge). */}
-        <View
-          style={[styles.cardMember, { top: memberTop, maxWidth: cardMax }]}
-          pointerEvents="none"
-          onLayout={(e) => setMemberCard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
-        >
-          <Entrance index={3}>
-            <Animated.View style={[styles.cardOriginMember, cardExit]}>
-              <FloatingChatCard side="member" text={t('landing.cardMember')} />
-            </Animated.View>
-          </Entrance>
-        </View>
-        <View
-          style={[styles.cardMentor, { top: mentorTop, maxWidth: cardMax }]}
-          pointerEvents="none"
-          onLayout={(e) => setMentorCard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
-        >
-          <Entrance index={6}>
-            <Animated.View style={[styles.cardOriginMentor, cardExit]}>
-              <FloatingChatCard side="mentor" text={t('landing.cardMentor')} />
-            </Animated.View>
-          </Entrance>
-        </View>
+        {/* Light and Dark (WhatsApp): no floating cards. */}
+        {flat ? null : (
+          <>
+            {/* The two chat cards hover over the stage's top corners (board: 14 from each edge). */}
+            <View
+              style={[styles.cardMember, { top: memberTop, maxWidth: cardMax }]}
+              pointerEvents="none"
+              onLayout={(e) => setMemberCard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+            >
+              <Entrance index={3}>
+                <Animated.View style={[styles.cardOriginMember, cardExit]}>
+                  <FloatingChatCard side="member" text={t('landing.cardMember')} />
+                </Animated.View>
+              </Entrance>
+            </View>
+            <View
+              style={[styles.cardMentor, { top: mentorTop, maxWidth: cardMax }]}
+              pointerEvents="none"
+              onLayout={(e) => setMentorCard({ w: e.nativeEvent.layout.width, h: e.nativeEvent.layout.height })}
+            >
+              <Entrance index={6}>
+                <Animated.View style={[styles.cardOriginMentor, cardExit]}>
+                  <FloatingChatCard side="mentor" text={t('landing.cardMentor')} />
+                </Animated.View>
+              </Entrance>
+            </View>
+          </>
+        )}
 
         <View style={[styles.column, { paddingTop: topPad, paddingBottom: bottomPad }]}>
           <Entrance index={0}>
@@ -289,13 +295,15 @@ export default function Landing() {
                 <Entrance index={3} style={styles.lastWord}>
                   <Text
                     onLayout={(e) => setWordW(e.nativeEvent.layout.width)}
-                    style={[type.displayHero, styles.headline, { color: colors.accent }]}
+                    style={[type.displayHero, styles.headline, { color: colors.titleAccent }]}
                   >
                     {t('landing.headline3')}
                   </Text>
-                  <View style={styles.underline}>
-                    <HandUnderline width={wordW} color={colors.accent} />
-                  </View>
+                  {flat ? null : (
+                    <View style={styles.underline}>
+                      <HandUnderline width={wordW} color={colors.accent} />
+                    </View>
+                  )}
                 </Entrance>
               </View>
               <Entrance index={4}>
