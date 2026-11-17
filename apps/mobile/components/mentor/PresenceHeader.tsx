@@ -83,7 +83,8 @@ export function PresenceHeader({
                 Chats and the chat header (server mentor_face). The device's member companion
                 is only a fallback for a server that does not send it. */}
             <View testID={`self-mentor-${face}`}>
-              <Companion animal={face} size={90} awake />
+              {/* Light and Dark (WhatsApp): no animal on the mentor's own home. */}
+              {flat ? null : <Companion animal={face} size={90} awake />}
             </View>
           </Animated.View>
         </View>
@@ -95,7 +96,7 @@ export function PresenceHeader({
         <Text style={[styles.h1, styles.clearOfPerch, { color: colors.ink }]} accessibilityRole="header">
           {t('mentorHomePage.greeting')}
           {'\n'}
-          <Text style={{ color: colors.accent }}>{me.persona_name}</Text>
+          <Text style={{ color: colors.titleAccent }}>{me.persona_name}</Text>
         </Text>
         <Text style={[type.caption, styles.hint, styles.clearOfPerch, { color: colors.inkMuted }]} testID="mentor-rotation-hint">
           {rotation}

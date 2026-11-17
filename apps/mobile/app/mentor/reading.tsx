@@ -14,7 +14,7 @@ import { SageSky } from '@/components/motion/SageSky';
 import { useBreathing } from '@/components/motion/useBreathing';
 import { useI18n, type TKey } from '@/lib/i18n';
 import { leaveToMentorHome } from '@/lib/leaveToChats';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 /**
@@ -68,6 +68,7 @@ const LAST = READING.length - 1;
 export default function MentorReading() {
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const breathing = useBreathing();
   const [page, setPage] = useState(0);
@@ -147,7 +148,7 @@ export default function MentorReading() {
             accessibilityLabel={t('mentorReading.companionA11y')}
           >
             <Animated.View style={[styles.originBottom, breathing]}>
-              <Companion animal="Owl" size={84} awake />
+              {flat ? null : <Companion animal="Owl" size={84} awake />}
             </Animated.View>
           </View>
           <View style={styles.keys}>

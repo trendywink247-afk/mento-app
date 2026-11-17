@@ -100,7 +100,7 @@ export default function JournalWriteScreen() {
                 <View style={styles.promptBox}>
                   {/* Keyed: a new prompt arrives the way the first one did. */}
                   <Entrance key={prompt} distance={8}>
-                    <Text style={[styles.prompt, { color: colors.accent }]} testID="write-prompt">
+                    <Text style={[styles.prompt, { color: colors.titleAccent }]} testID="write-prompt">
                       {t(PROMPTS[prompt])}
                     </Text>
                   </Entrance>

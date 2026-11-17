@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, type } from '@/theme/tokens';
 
@@ -21,6 +21,7 @@ export function MentorPageHeader({
   backLabel?: string;
 }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   return (
     <View style={styles.row}>
@@ -37,7 +38,7 @@ export function MentorPageHeader({
         <Ionicons name="chevron-back" size={22} color={colors.ink} />
       </PressKey>
       <View style={styles.text}>
-        <Text style={[type.caption, styles.eyebrow, { color: COMPANION_COLORS.sage.accentEdge }]} numberOfLines={2}>
+        <Text style={[type.caption, styles.eyebrow, { color: flat ? colors.inkMuted : COMPANION_COLORS.sage.accentEdge }]} numberOfLines={2}>
           {eyebrow}
         </Text>
         <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">

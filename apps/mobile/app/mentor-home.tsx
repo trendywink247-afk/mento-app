@@ -8,6 +8,7 @@ import { EdgeSurface } from '@/components/EdgeSurface';
 import { IconBadge } from '@/components/IconBadge';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Companion } from '@/components/art/Companion';
+import { MentorFace } from '@/components/art/MentorFace';
 import type { CompanionAnimal } from '@/components/art/Companions';
 import { PushStyleSwitch } from '@/components/PushStyleSwitch';
 import { ChatActionsSheet } from '@/components/chats/ChatActionsSheet';
@@ -42,7 +43,7 @@ import { registerPush } from '@/lib/pushNotifications';
 import { useMentorConsole } from '@/lib/useMentorConsole';
 import { useListenerHeartbeat } from '@/lib/useListenerHeartbeat';
 import { useSessionGuard } from '@/lib/useSessionGuard';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type } from '@/theme/tokens';
 
 /** Mentor Home (DECISIONS §K.7): the mentor side — the native console itself (spec
@@ -55,6 +56,7 @@ export default function MentorHome() {
   useSessionGuard();
   const router = useRouter();
   const { colors, elevation } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const [persona, setPersona] = useState<Persona | null>(null);
   const [animal, setAnimal] = useState<CompanionAnimal | null>(null);
@@ -237,9 +239,11 @@ export default function MentorHome() {
       {!showConsole ? (
         <Entrance index={0}>
           <View style={styles.hero} testID="mentor-home">
-            <Tilt3D maxTilt={6}>
-              <Companion animal={animal} size={96} />
-            </Tilt3D>
+            {flat ? null : (
+              <Tilt3D maxTilt={6}>
+                <Companion animal={animal} size={96} />
+              </Tilt3D>
+            )}
             <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">
               {t('mentorHome.title')}
             </Text>
@@ -389,6 +393,7 @@ function ConsoleBody({
 }) {
   const router = useRouter();
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const c = useMentorConsole(t('mentor.atCapacity'), t('mentor.requestTaken'));
   useListenerHeartbeat(c.me?.status === 'online');
@@ -741,7 +746,11 @@ function ConsoleBody({
       {tab === 'profile' ? (
         <Entrance index={1} style={styles.section}>
           <EdgeSurface edge={colors.edgeSurface} style={[styles.profile, { backgroundColor: colors.surface, borderColor: colors.border }]} testID="mentor-profile">
-            <Companion animal={(c.me.companion_animal as CompanionAnimal | undefined) ?? animal} size={84} awake />
+            {flat ? (
+              <MentorFace animal={null} colour={null} size={84} />
+            ) : (
+              <Companion animal={(c.me.companion_animal as CompanionAnimal | undefined) ?? animal} size={84} awake />
+            )}
             <Text style={[styles.display, { color: colors.ink, fontSize: 26, lineHeight: 34 }]}>{c.me.persona_name}</Text>
             {c.me.name_changes_at ? (
               <Text style={[type.caption, { color: colors.inkMuted }]}>{t('mentorHomePage.rotationLine')}</Text>
@@ -853,6 +862,7 @@ function ProfileRow({
   testID: string;
 }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${title}. ${sub}`} testID={testID}>
       <EdgeSurface edge={colors.edgeSurface} style={[styles.profileRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -873,6 +883,7 @@ function ProfileRow({
  * holds the section's place, rather than a stray caption under the heading. */
 function EmptyNote({ title, body, testID }: { title: string; body: string; testID: string }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   return (
     <View
       style={[styles.empty, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}
