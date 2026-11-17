@@ -43,9 +43,9 @@ export function MentorChatHeader({
 
   return (
     <EdgeSurface
-      edge={colors.edgeSurface}
+      edge={flat ? "transparent" : colors.edgeSurface}
       travel={4}
-      radius={radius.lg}
+      radius={flat ? 0 : radius.lg}
       style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }, flat && styles.cardFlat]}
       testID="mentor-chat-header"
     >

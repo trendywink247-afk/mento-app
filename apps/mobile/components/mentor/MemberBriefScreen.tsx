@@ -131,7 +131,7 @@ export default function MemberBriefScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.bg }]} edges={['top', 'bottom']}>
-      <SageSky shape="top" />
+      {flat ? null : <SageSky shape="top" />}
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <MentorPageHeader
           eyebrow={t('memberBrief.eyebrow')}
@@ -141,6 +141,20 @@ export default function MemberBriefScreen() {
         />
 
         <DeepArrival>
+          {flat ? (
+            // Light and Dark (WhatsApp): a centred profile — plain avatar, name, status.
+            <View style={styles.whoFlat}>
+              <MemberDisc name={name} size={96} />
+              <Text style={[styles.name, styles.centerText, { color: colors.ink }]} accessibilityRole="header" numberOfLines={2}>
+                {name}
+              </Text>
+              <Text style={[type.note, { color: colors.inkMuted }]}>{away ? t('mentor.masked') : t('mentorChatPage.member')}</Text>
+              {myName ? (
+                <Text style={[type.caption, styles.centerText, { color: colors.inkMuted }]}>{t('memberBrief.knowYou', { name: myName })}</Text>
+              ) : null}
+            </View>
+          ) : (
+          <>
           {/* Who: their companion in their colour, standing over a tint disc, on the card. */}
           <View style={styles.whoZone}>
             <View style={[styles.tintDisc, { backgroundColor: tint.accentTint, borderColor: tint.accentTintEdge }]} />
@@ -179,6 +193,8 @@ export default function MemberBriefScreen() {
               ) : null}
             </EdgeSurface>
           </View>
+          </>
+          )}
 
           {loading && !brief ? (
             <View style={styles.center}>
@@ -226,7 +242,7 @@ export default function MemberBriefScreen() {
               <Entrance index={2}>
                 <EdgeSurface
                   edge={washEdge.green}
-                  style={[styles.care, { backgroundColor: wash.green, borderColor: washEdge.green }]}
+                  style={[styles.care, flat ? { backgroundColor: colors.surfaceAlt, borderColor: colors.surfaceAlt } : { backgroundColor: wash.green, borderColor: washEdge.green }]}
                 >
                   <View style={[styles.careBadge, { backgroundColor: colors.surface }]}>
                     <Ionicons name="heart-outline" size={20} color={COMPANION_COLORS.sage.accentEdge} />
@@ -303,6 +319,8 @@ const styles = StyleSheet.create({
   content: { flexGrow: 1, paddingHorizontal: space.lg, paddingTop: space.sm, paddingBottom: space.lg, gap: 12 },
   deep: { flexGrow: 1, gap: 12 },
   whoZone: { paddingTop: 64 },
+  whoFlat: { alignItems: 'center', gap: 4, paddingTop: space.sm, paddingBottom: space.sm },
+  centerText: { textAlign: 'center' },
   tintDisc: { position: 'absolute', left: 12, top: 6, width: 104, height: 104, borderRadius: radius.pill, borderWidth: 1 },
   whoArt: { position: 'absolute', left: 24, top: 0, width: 80, height: 112, zIndex: 2, alignItems: 'center', justifyContent: 'flex-end' },
   originBottom: { transformOrigin: 'bottom' },

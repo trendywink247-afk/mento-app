@@ -5,7 +5,7 @@ import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { EndConfirmSheet } from '@/components/mentor/EndConfirmSheet';
 import { PressKey } from '@/components/motion/PressKey';
 import { useI18n } from '@/lib/i18n';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, space, type, wash } from '@/theme/tokens';
 
@@ -35,6 +35,8 @@ export function MentorOptionsMenu({
   onClose: () => void;
 }) {
   const { colors, elevation } = useTheme();
+  // Light and Dark (WhatsApp): menu icons are plain, no tinted discs.
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   // Android Back closes this menu, never the chat under it.
   useEffect(() => {
@@ -68,7 +70,7 @@ export function MentorOptionsMenu({
               testID="mentor-menu-report"
               style={styles.item}
             >
-              <View style={[styles.badge, { backgroundColor: wash.orange }]}>
+              <View style={[styles.badge, { backgroundColor: flat ? 'transparent' : wash.orange }]}>
                 <Ionicons name="flag-outline" size={18} color={COMPANION_COLORS.mustard.accentEdge} />
               </View>
               <Text style={[type.cardTitle, { color: colors.ink }]}>{t('mentorChatPage.report')}</Text>
@@ -84,7 +86,7 @@ export function MentorOptionsMenu({
                 testID="mentor-menu-suggest"
                 style={styles.item}
               >
-                <View style={[styles.badge, { backgroundColor: wash.orange }]}>
+                <View style={[styles.badge, { backgroundColor: flat ? 'transparent' : wash.orange }]}>
                   <Ionicons name="school-outline" size={18} color={COMPANION_COLORS.mustard.accentEdge} />
                 </View>
                 <View style={{ flex: 1 }}>
@@ -104,7 +106,7 @@ export function MentorOptionsMenu({
               testID="mentor-menu-end"
               style={styles.item}
             >
-              <View style={[styles.badge, { backgroundColor: wash.danger }]}>
+              <View style={[styles.badge, { backgroundColor: flat ? 'transparent' : wash.danger }]}>
                 <Ionicons name="close-circle-outline" size={18} color={colors.danger} />
               </View>
               <Text style={[type.cardTitle, { color: colors.danger }]}>{t('mentorChatPage.end')}</Text>

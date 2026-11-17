@@ -7,7 +7,7 @@ import { PressKey } from '@/components/motion/PressKey';
 import type { ChannelLive } from '@/lib/useMentorConsole';
 import { useI18n, type TFunc } from '@/lib/i18n';
 import type { ListenerConversation } from '@/lib/listenerApi';
-import { useTheme } from '@/theme/ThemeProvider';
+import { flatRowStyle, useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { COMPANION_COLORS } from '@/theme/companion';
 import { radius, space, type } from '@/theme/tokens';
 
@@ -67,6 +67,8 @@ export function ConversationRow({
   onLongPress?: () => void;
 }) {
   const { colors } = useTheme();
+  // Light and Dark (WhatsApp): rows sit on the page with a hairline, no card.
+  const flat = useFlatSurfaces();
   const { t, locale } = useI18n();
   const active = conversation.status === 'active';
   const typing = active && !!live?.typing;
@@ -86,7 +88,7 @@ export function ConversationRow({
         travel={4}
         radius={radius.md}
         testID={`mentor-convo-row-${conversation.id}`}
-        style={[styles.quietRow, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
+        style={[styles.quietRow, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }, flat && flatRowStyle(colors.border)]}
       >
         {/* reason: the row's identity half is chrome INSIDE the warm surface, not a card of
             its own — face and edge are both surfaceAlt (no visible lip, as the board draws
@@ -172,6 +174,7 @@ export function ConversationRow({
       style={[
         styles.row,
         { backgroundColor: active ? colors.surface : colors.surfaceAlt, borderColor: colors.border },
+        flat && flatRowStyle(colors.border),
       ]}
     >
       <MemberDisc
