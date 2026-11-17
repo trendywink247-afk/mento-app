@@ -38,6 +38,8 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
   // Companion is optional in the draft (Surprise Me edge / direct deep link): fall back
   // gracefully rather than blocking the path to a conversation.
   const animal = (draft.companionAnimal as CompanionAnimal | null) ?? 'Panda';
+  // The companion just picked greets on Ready in every look (founder, 2026-11-17).
+  const showCompanion = companionShown || Boolean(draft.companionAnimal);
   // The member's own name for it, when they gave one: "Terracotta Cat · Miso".
   const companionName = draft.companionName ?? null;
   const colourLabel =
@@ -66,7 +68,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
     >
       {/* No companion: the headline and the promises sit together in the middle, with no
         * empty stage between them (QA 2026-11-15). */}
-      {companionShown ? null : <View style={styles.grow} />}
+      {showCompanion ? null : <View style={styles.grow} />}
       <View style={styles.head}>
         <Entrance index={0}>
           <Text style={[type.displayHeadline, styles.center, { color: colors.ink }]} accessibilityRole="header">
@@ -80,7 +82,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
       </View>
 
       {/* No companion chosen (skipped, DECISIONS R.3): no stage and no name pill. */}
-      {companionShown ? (
+      {showCompanion ? (
         <>
           {/* The stage has no arrival: it is simply already there. */}
           <View style={[styles.stage, { width: stage, height: stage }]}>
@@ -122,7 +124,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
         </>
       ) : null}
 
-      <View style={companionShown ? styles.grow : styles.gap} />
+      <View style={showCompanion ? styles.grow : styles.gap} />
 
       <Entrance index={3}>
         <EdgeSurface
@@ -148,7 +150,7 @@ export function ReadyStep({ onNext }: { onNext: () => void }) {
           />
         </EdgeSurface>
       </Entrance>
-      {companionShown ? null : <View style={styles.grow} />}
+      {showCompanion ? null : <View style={styles.grow} />}
     </StepScaffold>
   );
 }
