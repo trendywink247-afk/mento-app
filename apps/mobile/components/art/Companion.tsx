@@ -39,6 +39,7 @@ import { ReactiveCompanion, isSleepyHour, type CompanionTrigger } from '@/compon
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { character, duration, easing } from '@/theme/motion';
 import { BoundedLottie } from '@/components/art/BoundedLottie';
+import { useFlatSurfaces } from '@/theme/ThemeProvider';
 
 export type { CompanionTrigger, CompanionPose };
 
@@ -69,7 +70,12 @@ function restingPose(): CompanionPose {
   return isSleepyHour() ? 'sleepy' : 'idle';
 }
 
-export function Companion({
+/** Light and Dark are WhatsApp (founder, 2026-11-16): companions belong to Pastel only. */
+export function Companion(props: Parameters<typeof CompanionArt>[0]) {
+  return useFlatSurfaces() ? null : <CompanionArt {...props} />;
+}
+
+function CompanionArt({
   animal,
   size = 72,
   waveTrigger = 0,

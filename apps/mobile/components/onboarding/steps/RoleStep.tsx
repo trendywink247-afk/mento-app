@@ -14,7 +14,7 @@ import { setDraft } from '@/lib/onboardingDraft';
 import { saveRole, type Role } from '@/lib/session';
 import { useFrameSize } from '@/lib/useFrameSize';
 import { duration, forkArrival, stagger } from '@/theme/motion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { radius, space, type, type Wash } from '@/theme/tokens';
 
 /** The board lets the band start 12px under the sub line (it is absolutely placed there,
@@ -73,6 +73,7 @@ function Door({
  * advancing. No haptic fires here beyond the key's own press. */
 export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
   const { colors } = useTheme();
+  const flat = useFlatSurfaces();
   const { t } = useI18n();
   const { width } = useFrameSize();
   // Entered from the landing, the fork plays the board's T01 arrival: the doors rise out of
@@ -125,7 +126,7 @@ export function RoleStep({ onPick }: { onPick: (role: Role) => void }) {
             duration={duration.slow}
             style={[styles.band, { width, height: bandH }]}
           >
-            <PlaygroundBand width={width} height={bandH} startAfter={forkArrival.art + duration.slow} />
+            {flat ? null : <PlaygroundBand width={width} height={bandH} startAfter={forkArrival.art + duration.slow} />}
           </Entrance>
         ) : null}
       </View>

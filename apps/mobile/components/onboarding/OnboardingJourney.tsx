@@ -42,7 +42,7 @@ import { enterMentorPath } from '@/lib/mentorPath';
 import { saveCompanionAnimal, saveRole, type Role } from '@/lib/session';
 import { useReducedMotion } from '@/lib/useReducedMotion';
 import { duration, easing, forkArrival } from '@/theme/motion';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useFlatSurfaces, useTheme } from '@/theme/ThemeProvider';
 import { space } from '@/theme/tokens';
 
 /** The hard cap on the "found someone" beat — theatre never spends the <30s promise.
@@ -93,6 +93,8 @@ export function OnboardingJourney() {
   const insets = useSafeAreaInsets();
   const reduced = useReducedMotion();
   const { companionShown } = useTheme();
+  // Light and Dark carry no companion, so the pick is skipped there (Pastel keeps it).
+  const plain = useFlatSurfaces();
   const [celebrate, setCelebrate] = useState(0);
   // The chosen animal — the star from the moment of choice (DECISIONS §I.5).
   const [companionAnimal, setCompanionAnimal] = useState<CompanionAnimal | null>(
@@ -103,7 +105,8 @@ export function OnboardingJourney() {
   // Fixed for the journey's life: a resume never turns into a new account's journey.
   const [resume] = useState(() => Boolean(getDraft().sessionBacked));
   const { signup_verification_required: verifyOn } = useAppConfig();
-  const order = withVerify(resume ? RESUME_ORDER : role === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER, verifyOn);
+  const baseOrder = resume ? RESUME_ORDER : role === 'mentor' ? MENTOR_ORDER : MENTEE_ORDER;
+  const order = withVerify(plain ? baseOrder.filter((s) => s !== 'companion') : baseOrder, verifyOn);
 
   const [step, setStep] = useState<Step>(() => {
     const requested = params.step as Step | undefined;
@@ -121,6 +124,10 @@ export function OnboardingJourney() {
     const pastAgeGate = Boolean(getDraft().dob) || Boolean(getDraft().sessionBacked);
     return pastAgeGate && requestedOrder.includes(requested) ? requested : 'role';
   });
+
+  useEffect(() => {
+    if (plain && step === 'companion' && !getDraft().fromTheme) setStep('ready');
+  }, [plain, step]);
 
   // Which way the flow last moved — the hand-over plays in reverse going back (board T02).
   const lastIndex = useRef(order.indexOf(step));
@@ -196,13 +203,15 @@ export function OnboardingJourney() {
     // A mentor switching to talk becomes a mentee the moment they confirm a companion.
     if (resume && step === 'companion') void saveRole('mentee');
     // The resume ends at Ready: the member side opens on My Chats (no match is started —
-    // they came to look around, and a chat is one tap away there).
+    // they came to look around, and a chat is one tap away there). With no companion step
+    // (Light and Dark), Ready is where the mentor becomes a mentee.
     if (resume && step === 'ready') {
-      void finishResume();
+      if (plain) void saveRole('mentee').finally(() => void finishResume());
+      else void finishResume();
       return;
     }
     setStep((s) => order[Math.min(order.indexOf(s) + 1, order.length - 1)]);
-  }, [order, step, resume, finishResume, finishThemePick]);
+  }, [order, step, resume, plain, finishResume, finishThemePick]);
 
   const goBack = useCallback(() => {
     // Session-backed resume: there is no email/age step behind the pick — back means
@@ -212,7 +221,7 @@ export function OnboardingJourney() {
       router.back();
       return;
     }
-    if (resume && step === 'companion') {
+    if (resume && (step === 'companion' || (plain && step === 'ready'))) {
       clearDraft();
       router.replace('/mentor-home');
       return;
@@ -220,7 +229,7 @@ export function OnboardingJourney() {
     const i = order.indexOf(step);
     if (i <= 0) router.back();
     else setStep(order[i - 1]);
-  }, [step, router, order]);
+  }, [step, router, order, resume, plain]);
 
   // The fork: remember the branch, then advance to the age gate (shared by both).
   const onRolePicked = useCallback((r: Role) => {
@@ -333,7 +342,8 @@ export function OnboardingJourney() {
   );
 
   const backable = BACKABLE.includes(step);
-  const dots = resume ? RESUME_DOTS : role === 'mentor' ? MENTOR_DOTS : MENTEE_DOTS;
+  const allDots = resume ? RESUME_DOTS : role === 'mentor' ? MENTOR_DOTS : MENTEE_DOTS;
+  const dots = plain ? allDots.filter((s) => s !== 'companion') : allDots;
   const dotIndex = step === 'role' ? -1 : dots.indexOf(step);
 
   return (
