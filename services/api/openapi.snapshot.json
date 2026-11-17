@@ -2224,6 +2224,11 @@
             "title": "Evaluation Requests",
             "type": "integer"
           },
+          "evaluations_eligible": {
+            "default": false,
+            "title": "Evaluations Eligible",
+            "type": "boolean"
+          },
           "evaluations_live": {
             "default": false,
             "title": "Evaluations Live",

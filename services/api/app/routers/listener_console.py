@@ -808,6 +808,9 @@ class EarningsOut(BaseModel):
     evaluation_paise: int = 0
     # Whether answer evaluations are switched on (evaluations_enabled).
     evaluations_live: bool = False
+    # Whether THIS mentor may take evaluations (approved Mentor or Mento Verified). A peer
+    # listener sees the row as for mentors only, not as an empty queue.
+    evaluations_eligible: bool = False
 
 
 @router.get("/me/earnings", response_model=EarningsOut)
@@ -842,4 +845,5 @@ def earnings(
         out.completed_evaluations = ev["returned"]
         out.evaluation_paise = ev["paise"]
         out.evaluations_live = True
+        out.evaluations_eligible = evaluations.can_evaluate(listener)
     return out

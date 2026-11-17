@@ -282,3 +282,13 @@ def test_payout_falls_with_turnaround():
     assert evaluations.payout_for("essay", t0, t0 + timedelta(hours=40)) == 50000
     assert evaluations.payout_for("essay", t0, t0 + timedelta(days=3)) == 40000
     assert evaluations.payout_for("essay", t0, t0 + timedelta(days=9)) == 30000
+
+
+def test_earnings_say_who_may_evaluate(client, db_session, on):
+    s = seed_chat(db_session)  # a peer listener
+    head = {"Authorization": f"Bearer {s.mentor}"}
+    peer = client.get(f"{API}/listener/me/earnings", headers=head).json()
+    assert peer["evaluations_live"] is True and peer["evaluations_eligible"] is False
+    _mentor(db_session, s, tier="mentor")
+    mentor = client.get(f"{API}/listener/me/earnings", headers=head).json()
+    assert mentor["evaluations_eligible"] is True

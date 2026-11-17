@@ -1712,6 +1712,7 @@
     "historyEmpty": "अभी कुछ नहीं",
     "soon": "जल्द",
     "evalWaiting": "%{count} इंतज़ार में",
+    "mentorsOnly": "सिर्फ़ मेंटर",
     "recorded": "%{amount} दर्ज"
   },
   "myMento": {

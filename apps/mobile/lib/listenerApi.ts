@@ -201,6 +201,8 @@ export type Earnings = {
   evaluation_paise?: number;
   /** Answer evaluations switched on (evaluations_enabled). Newer servers only. */
   evaluations_live?: boolean;
+  /** This mentor may take evaluations (Mentor or Mento Verified); absent on older servers. */
+  evaluations_eligible?: boolean;
 };
 
 /** DECISIONS T.8: an answer in the mentor's queue. Nothing about who sent it. */

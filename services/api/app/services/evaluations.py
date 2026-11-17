@@ -135,6 +135,11 @@ def _mine(db: Session, user_id: str, evaluation_id: str) -> AnswerEvaluation:
     return ev
 
 
+def can_evaluate(li: ListenerProfile | None) -> bool:
+    """Approved Mentors and Mento Verified take evaluations; peer listeners do not."""
+    return _can_evaluate(li)
+
+
 def _can_evaluate(li: ListenerProfile | None) -> bool:
     return (
         li is not None

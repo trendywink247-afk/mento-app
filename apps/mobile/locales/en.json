@@ -1712,6 +1712,7 @@
     "historyEmpty": "Nothing yet",
     "soon": "SOON",
     "evalWaiting": "%{count} waiting",
+    "mentorsOnly": "Mentors only",
     "recorded": "%{amount} recorded"
   },
   "myMento": {

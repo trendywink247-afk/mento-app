@@ -30,6 +30,8 @@ export function EarningsCard() {
   const router = useRouter();
   const [e, setE] = useState<Earnings>(ZERO);
   const live = Boolean(e.evaluations_live);
+  // Older servers do not say; treat them as eligible so nothing that worked disappears.
+  const eligible = e.evaluations_eligible ?? true;
 
   useEffect(() => {
     let live = true;
@@ -51,7 +53,9 @@ export function EarningsCard() {
     { v: e.mentorship_sessions, l: t('earnings.sessions') },
   ];
   const opps: { icon: keyof typeof Ionicons.glyphMap; label: string; soon: boolean; right?: string; go?: () => void }[] = [
-    live
+    live && !eligible
+      ? { icon: 'cloud-upload-outline', label: t('earnings.evalRequests'), soon: false, right: t('earnings.mentorsOnly') }
+      : live
       ? {
           icon: 'cloud-upload-outline',
           label: t('earnings.evalRequests'),
